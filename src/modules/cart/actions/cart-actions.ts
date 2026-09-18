@@ -1,0 +1,99 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+import { ProductStatus } from "@/generated/prisma/enums";
+import { db } from "@/lib/database";
+import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+
+import { cartOwnerWhere, findOrCreateActiveCart, getCartIdentity } from "../infrastructure/cart-access";
+
+const cartItemSchema = z.object({
+  variantId: z.string().cuid(),
+  quantity: z.number().int().min(1).max(99),
+});
+
+export type CartActionState = { error?: string; success?: string };
+
+export async function addToCartAction(variantId: string, quantity: number): Promise<CartActionState> {
+  const parsed = cartItemSchema.safeParse({ variantId, quantity });
+  if (!parsed.success) return { error: "Escolha uma quantidade válida." };
+
+  try {
+    const identity = await getCartIdentity(true);
+    if (!identity) throw new ApplicationError({ code: "UNAUTHORIZED", message: "Não foi possível abrir o carrinho." });
+
+    const variant = await db.productVariant.findFirst({
+      where: {
+        id: parsed.data.variantId,
+        active: true,
+        product: { status: ProductStatus.APPROVED },
+      },
+      include: { inventory: true },
+    });
+    if (!variant) throw new ApplicationError({ code: "NOT_FOUND", message: "Esta variante não está disponível." });
+
+    const cart = await findOrCreateActiveCart(identity);
+    const item = await db.cartItem.findUnique({ where: { cartId_variantId: { cartId: cart.id, variantId } } });
+    const nextQuantity = (item?.quantity ?? 0) + parsed.data.quantity;
+    if ((variant.inventory?.availableQuantity ?? 0) < nextQuantity) {
+      throw new ApplicationError({
+        code: "OUT_OF_STOCK",
+        message: "A quantidade solicitada não está disponível.",
+        statusCode: 409,
+      });
+    }
+
+    await db.cartItem.upsert({
+      where: { cartId_variantId: { cartId: cart.id, variantId } },
+      create: { cartId: cart.id, variantId, quantity: parsed.data.quantity },
+      update: { quantity: nextQuantity },
+    });
+
+    revalidatePath("/cart");
+    return { success: "Produto adicionado ao carrinho." };
+  } catch (error) {
+    return { error: asApplicationError(error).message };
+  }
+}
+
+export async function updateCartItemAction(cartItemId: string, quantity: number): Promise<CartActionState> {
+  const parsed = z.object({ cartItemId: z.string().cuid(), quantity: z.number().int().min(0).max(99) }).safeParse({
+    cartItemId,
+    quantity,
+  });
+  if (!parsed.success) return { error: "Quantidade inválida." };
+
+  try {
+    const identity = await getCartIdentity();
+    if (!identity) throw new ApplicationError({ code: "NOT_FOUND", message: "Carrinho não encontrado." });
+    const item = await db.cartItem.findFirst({
+      where: { id: cartItemId, cart: { ...cartOwnerWhere(identity), status: "ACTIVE" } },
+      include: { variant: { include: { inventory: true } } },
+    });
+    if (!item) throw new ApplicationError({ code: "NOT_FOUND", message: "Item não encontrado no carrinho." });
+
+    if (parsed.data.quantity === 0) {
+      await db.cartItem.delete({ where: { id: item.id } });
+    } else {
+      if ((item.variant.inventory?.availableQuantity ?? 0) < parsed.data.quantity) {
+        throw new ApplicationError({
+          code: "OUT_OF_STOCK",
+          message: "A quantidade solicitada não está disponível.",
+          statusCode: 409,
+        });
+      }
+      await db.cartItem.update({ where: { id: item.id }, data: { quantity: parsed.data.quantity } });
+    }
+    revalidatePath("/cart");
+    revalidatePath("/checkout");
+    return { success: "Carrinho atualizado." };
+  } catch (error) {
+    return { error: asApplicationError(error).message };
+  }
+}
+
+export async function removeCartItemAction(cartItemId: string): Promise<CartActionState> {
+  return updateCartItemAction(cartItemId, 0);
+}

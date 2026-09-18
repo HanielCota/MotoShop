@@ -1,0 +1,11 @@
+import { serve } from "inngest/next";
+
+import { inngest } from "@/lib/inngest/client";
+import { reconcileMercadoPagoWebhook } from "@/modules/payments/workflows/mercado-pago-webhook-workflow";
+import { sendOrderPaymentNotification } from "@/modules/notifications/workflows/order-payment-notification-workflow";
+import { sendSellerOrderFulfillmentNotification } from "@/modules/notifications/workflows/seller-order-fulfillment-notification-workflow";
+
+export const { GET, POST, PUT } = serve({
+  client: inngest,
+  functions: [reconcileMercadoPagoWebhook, sendOrderPaymentNotification, sendSellerOrderFulfillmentNotification],
+});

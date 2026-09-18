@@ -1,0 +1,74 @@
+"use server";
+
+import { Prisma } from "@/generated/prisma/client";
+import { revalidatePath } from "next/cache";
+
+import { db } from "@/lib/database";
+import { slugify } from "@/lib/utils";
+import { requireSellerAccess } from "@/modules/auth/application/authorization";
+import { asApplicationError } from "@/shared/errors/application-error";
+
+import { storeProfileSchema } from "../schemas/store-profile";
+
+export type StoreProfileActionState = { error?: string; success?: string };
+
+export async function updateStoreProfileAction(
+  _previousState: StoreProfileActionState,
+  formData: FormData,
+): Promise<StoreProfileActionState> {
+  const context = await requireSellerAccess("SELLER_MANAGE");
+  const parsed = storeProfileSchema.safeParse({
+    name: formData.get("name"),
+    slug: slugify(String(formData.get("slug") ?? "")),
+    description: String(formData.get("description") ?? "").trim(),
+  });
+
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os dados da loja." };
+
+  try {
+    const store = await db.store.findFirst({
+      where: { id: context.store.id, sellerId: context.seller.id },
+      select: { id: true, name: true, slug: true, description: true },
+    });
+    if (!store) return { error: "Loja não encontrada." };
+
+    const updatedStore = await db.store.update({
+      where: { id: store.id },
+      data: {
+        name: parsed.data.name,
+        slug: parsed.data.slug,
+        description: parsed.data.description || null,
+      },
+      select: { id: true, name: true, slug: true, description: true },
+    });
+
+    await db.auditLog.create({
+      data: {
+        action: "STORE_PROFILE_UPDATED",
+        entityType: "STORE",
+        entityId: updatedStore.id,
+        actorUserId: context.session.user.id,
+        metadata: {
+          sellerId: context.seller.id,
+          previous: { name: store.name, slug: store.slug, description: store.description },
+          current: {
+            name: updatedStore.name,
+            slug: updatedStore.slug,
+            description: updatedStore.description,
+          },
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    revalidatePath("/seller");
+    revalidatePath(`/loja/${store.slug}`);
+    revalidatePath(`/loja/${updatedStore.slug}`);
+    revalidatePath("/sitemap.xml");
+    return { success: "Perfil público atualizado." };
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return { error: "Este identificador de loja já está em uso." };
+    }
+    return { error: asApplicationError(error).message };
+  }
+}
