@@ -10,7 +10,16 @@ export const sellerOrderStatusValues = [
   "CANCELLATION_REQUESTED",
   "CANCELLED",
 ] as const;
-export const shipmentStatusValues = ["ALL", "PENDING", "READY_TO_SHIP", "SHIPPED", "IN_TRANSIT", "DELIVERED", "EXCEPTION", "CANCELLED"] as const;
+export const shipmentStatusValues = [
+  "ALL",
+  "PENDING",
+  "READY_TO_SHIP",
+  "SHIPPED",
+  "IN_TRANSIT",
+  "DELIVERED",
+  "EXCEPTION",
+  "CANCELLED",
+] as const;
 export const sellerOrderSortValues = ["newest", "oldest"] as const;
 
 export const sellerOrdersSearchParams = {

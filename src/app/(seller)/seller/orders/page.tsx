@@ -6,6 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { formatMoneyInCents } from "@/lib/utils";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { ShipmentActions } from "@/modules/shipping/components/shipment-actions";
+import { OwnShipmentActions } from "@/modules/shipping/components/own-shipping-forms";
+import { hasSellerPermission } from "@/modules/auth/domain/seller-permissions";
+import { canAdvanceOwnShipment } from "@/modules/shipping/domain/own-shipping";
 import { listSellerOrders } from "@/modules/shipping/queries/seller-orders";
 import { loadSellerOrdersSearchParams } from "@/modules/shipping/search-params";
 
@@ -67,7 +70,7 @@ export default async function SellerOrdersPage({
           <CardDescription>{result.total} pedido(s) encontrados.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-6 sm:items-end" method="get">
+          <form className="mb-5 grid gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-6" method="get">
             <label className="flex flex-col gap-2 text-sm font-medium">
               Buscar pedido
               <input
@@ -101,24 +104,40 @@ export default async function SellerOrdersPage({
               >
                 <option value="ALL">Todos</option>
                 {Object.entries(shipmentStatusLabels).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
                 ))}
               </select>
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Ordenação
-              <select className="border-input bg-background h-10 rounded-md border px-3 text-sm" name="sort" defaultValue={params.sort}>
+              <select
+                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
+                name="sort"
+                defaultValue={params.sort}
+              >
                 <option value="newest">Mais recentes</option>
                 <option value="oldest">Mais antigos</option>
               </select>
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
               De
-              <input className="border-input bg-background h-10 rounded-md border px-3 text-sm" name="from" type="date" defaultValue={params.from ?? ""} />
+              <input
+                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
+                name="from"
+                type="date"
+                defaultValue={params.from ?? ""}
+              />
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Até
-              <input className="border-input bg-background h-10 rounded-md border px-3 text-sm" name="to" type="date" defaultValue={params.to ?? ""} />
+              <input
+                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
+                name="to"
+                type="date"
+                defaultValue={params.to ?? ""}
+              />
             </label>
             <button className="bg-primary text-primary-foreground h-10 rounded-md px-4 text-sm font-medium">
               Filtrar
@@ -172,12 +191,48 @@ export default async function SellerOrdersPage({
                       ) : null}
                     </div>
 
-                    <ShipmentActions
-                      sellerOrderId={order.id}
-                      canPurchase={order.status === "PAID" || order.status === "PROCESSING"}
-                      hasShipment={Boolean(shipment?.externalShipmentId)}
-                      hasTrackingCode={Boolean(shipment?.trackingCode)}
-                    />
+                    {shipment?.provider === "OWN" && order.order.shippingAddress ? (
+                      <section
+                        className="bg-muted grid gap-2 rounded-md p-3 text-sm"
+                        aria-label="Dados da entrega própria"
+                      >
+                        <h4 className="font-semibold">Preparar entrega</h4>
+                        <ul className="list-inside list-disc">
+                          {order.items.map((item) => (
+                            <li key={item.id}>
+                              {item.quantity} × {item.productNameSnapshot} · {item.variantDescriptionSnapshot} · SKU{" "}
+                              {item.skuSnapshot}
+                            </li>
+                          ))}
+                        </ul>
+                        <address className="break-words not-italic">
+                          {order.order.shippingAddress.recipient}
+                          <br />
+                          {order.order.shippingAddress.street}, {order.order.shippingAddress.number}
+                          {order.order.shippingAddress.complement ? ` · ${order.order.shippingAddress.complement}` : ""}
+                          <br />
+                          {order.order.shippingAddress.neighborhood} · {order.order.shippingAddress.city}/
+                          {order.order.shippingAddress.state}
+                          <br />
+                          CEP {order.order.shippingAddress.postalCode} · Telefone {order.order.customerPhone}
+                        </address>
+                      </section>
+                    ) : null}
+                    {hasSellerPermission(context.membership.role, "ORDER_UPDATE") &&
+                      (shipment?.provider === "OWN" ? (
+                        <OwnShipmentActions
+                          sellerOrderId={order.id}
+                          canShip={canAdvanceOwnShipment(order.status, shipment.status, "SHIPPED")}
+                          canDeliver={canAdvanceOwnShipment(order.status, shipment.status, "DELIVERED")}
+                        />
+                      ) : (
+                        <ShipmentActions
+                          sellerOrderId={order.id}
+                          canPurchase={order.status === "PAID" || order.status === "PROCESSING"}
+                          hasShipment={Boolean(shipment?.externalShipmentId)}
+                          hasTrackingCode={Boolean(shipment?.trackingCode)}
+                        />
+                      ))}
                   </article>
                 );
               })}

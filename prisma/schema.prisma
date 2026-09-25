@@ -173,33 +173,34 @@ enum SellerSubscriptionStatus {
 }
 
 model User {
-  id                   String                @id @default(cuid())
-  name                 String
-  email                String                @unique
-  emailVerified        Boolean               @default(false)
-  emailOrderUpdatesEnabled Boolean            @default(true)
-  image                String?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  accounts             Account[]
-  sessions             Session[]
-  memberships          SellerMember[]
-  carts                Cart[]
-  orders               Order[]
-  inventoryMovements   InventoryMovement[]   @relation("InventoryMovementActor")
-  reviewedProducts     Product[]             @relation("ProductReviewer")
-  couponRedemptions    CouponRedemption[]
-  returnRequests       ReturnRequest[]
-  auditLogs            AuditLog[]
-  productReviews       ProductReview[]
-  sellerReviews        SellerReview[]
-  questionsAsked       ProductQuestion[]     @relation("QuestionAsker")
-  questionsAnswered    ProductQuestion[]     @relation("QuestionAnswerer")
-  cancellationRequests CancellationRequest[]
-  disputes             Dispute[]             @relation("DisputeRequester")
-  resolvedDisputes     Dispute[]             @relation("DisputeResolver")
-  favorites            Favorite[]
-  customerAddresses    CustomerAddress[]
+  id                       String                @id @default(cuid())
+  name                     String
+  email                    String                @unique
+  emailVerified            Boolean               @default(false)
+  emailOrderUpdatesEnabled Boolean               @default(true)
+  image                    String?
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+  accounts                 Account[]
+  sessions                 Session[]
+  memberships              SellerMember[]
+  carts                    Cart[]
+  orders                   Order[]
+  inventoryMovements       InventoryMovement[]   @relation("InventoryMovementActor")
+  reviewedProducts         Product[]             @relation("ProductReviewer")
+  couponRedemptions        CouponRedemption[]
+  returnRequests           ReturnRequest[]
+  auditLogs                AuditLog[]
+  productReviews           ProductReview[]
+  sellerReviews            SellerReview[]
+  questionsAsked           ProductQuestion[]     @relation("QuestionAsker")
+  questionsAnswered        ProductQuestion[]     @relation("QuestionAnswerer")
+  cancellationRequests     CancellationRequest[]
+  disputes                 Dispute[]             @relation("DisputeRequester")
+  resolvedDisputes         Dispute[]             @relation("DisputeResolver")
+  favorites                Favorite[]
+  customerAddresses        CustomerAddress[]
+  savedMotorcycles         SavedMotorcycle[]
 
   @@map("users")
 }
@@ -276,9 +277,27 @@ model Seller {
   cancellationRequests   CancellationRequest[]
   disputes               Dispute[]
   subscriptions          SellerSubscription[]
+  shippingMethods        SellerShippingMethod[]
 
   @@index([status])
   @@map("sellers")
+}
+
+model SellerShippingMethod {
+  id                    String   @id @default(cuid())
+  sellerId              String
+  name                  String
+  postalCodeStart       String
+  postalCodeEnd         String
+  priceInCents          Int
+  estimatedDeliveryDays Int
+  active                Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  seller                Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@index([sellerId, active])
+  @@map("seller_shipping_methods")
 }
 
 model SellerMember {
@@ -570,10 +589,26 @@ model MotorcycleFitment {
   updatedAt         DateTime               @updatedAt
   motorcycleModel   MotorcycleModel        @relation(fields: [motorcycleModelId], references: [id], onDelete: Restrict)
   compatibilities   ProductCompatibility[]
+  savedMotorcycles  SavedMotorcycle[]
 
   @@unique([motorcycleModelId, version, displacementCc, year])
   @@index([motorcycleModelId, year])
   @@map("motorcycle_fitments")
+}
+
+model SavedMotorcycle {
+  id                  String            @id @default(cuid())
+  userId              String
+  motorcycleFitmentId String
+  isPrimary           Boolean           @default(false)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  motorcycleFitment   MotorcycleFitment @relation(fields: [motorcycleFitmentId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, motorcycleFitmentId])
+  @@index([userId, isPrimary])
+  @@map("saved_motorcycles")
 }
 
 model ProductCompatibility {
@@ -684,6 +719,8 @@ model SellerOrder {
   storeNameSnapshot             String
   itemsSubtotalInCents          Int
   discountAmountInCents         Int                   @default(0)
+  marketplaceDiscountInCents    Int                   @default(0)
+  sellerDiscountInCents         Int                   @default(0)
   shippingAmountInCents         Int                   @default(0)
   customerShippingAmountInCents Int                   @default(0)
   marketplaceSubsidyInCents     Int                   @default(0)

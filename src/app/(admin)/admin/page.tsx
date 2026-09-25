@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Route } from "next";
 
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,8 @@ import { listAuditLogsForAdmin } from "@/modules/admin/queries/audit-logs";
 import { listSellerOrdersForAdmin } from "@/modules/admin/queries/orders";
 import { retryWebhookEventAction } from "@/modules/admin/actions/webhook-actions";
 import { CommissionForm } from "@/modules/admin/components/commission-form";
+import { SellerCommissionForm } from "@/modules/admin/components/seller-commission-form";
+import { IntegrationReadiness } from "@/modules/admin/components/integration-readiness";
 import { getMarketplaceConfiguration } from "@/modules/admin/queries/marketplace-configuration";
 import { listNotificationDeliveriesForAdmin } from "@/modules/admin/queries/notification-deliveries";
 import { listWebhookEventsForAdmin } from "@/modules/admin/queries/webhook-events";
@@ -46,6 +49,7 @@ import {
 import { listSellerOptionsForAdmin, listSellersForAdmin } from "@/modules/sellers/queries/sellers";
 import { VipSubscriptionForm } from "@/modules/subscriptions/components/vip-subscription-form";
 import { formatMoneyInCents } from "@/lib/utils";
+import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 
 const returnStatusLabels: Record<string, string> = {
   REQUESTED: "Solicitada",
@@ -118,7 +122,12 @@ export default async function AdminHomePage({
     notificationResult,
     marketplaceConfiguration,
   ] = await Promise.all([
-    listSellersForAdmin({ status: params.sellerStatus, q: params.sellerQ, sort: params.sellerSort, page: params.sellerPage }),
+    listSellersForAdmin({
+      status: params.sellerStatus,
+      q: params.sellerQ,
+      sort: params.sellerSort,
+      page: params.sellerPage,
+    }),
     listSellerOptionsForAdmin(),
     listProductReviewQueue({
       status: params.productReviewStatus,
@@ -317,9 +326,10 @@ export default async function AdminHomePage({
 
   return (
     <div className="flex flex-col gap-6">
+      <IntegrationReadiness />
       <Card>
         <CardHeader>
-          <CardTitle>Catálogo controlado pelo MotoShop</CardTitle>
+          <CardTitle>Catálogo controlado pela Moto Shop</CardTitle>
           <CardDescription>
             Sellers usam estas categorias, marcas e motos aprovadas. Desativar preserva o histórico e impede novos usos.
           </CardDescription>
@@ -431,7 +441,10 @@ export default async function AdminHomePage({
             <CardDescription>Monitore recebimento, processamento e falhas de integrações críticas.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_180px_160px_150px_150px_auto] sm:items-end" method="get">
+            <form
+              className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_180px_160px_150px_150px_auto] sm:items-end"
+              method="get"
+            >
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Buscar evento
                 <input
@@ -459,36 +472,44 @@ export default async function AdminHomePage({
                 >
                   <option value="ALL">Todos</option>
                   {Object.entries(webhookStatusLabels).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
                   ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              De
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="webhookFrom"
-                type="date"
-                defaultValue={params.webhookFrom ?? ""}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Até
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="webhookTo"
-                type="date"
-                defaultValue={params.webhookTo ?? ""}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Ordenação
-              <select className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="webhookSort" defaultValue={params.webhookSort}>
-                <option value="newest">Mais recentes</option>
-                <option value="oldest">Mais antigos</option>
-              </select>
-            </label>
-            <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">Filtrar</button>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                De
+                <input
+                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  name="webhookFrom"
+                  type="date"
+                  defaultValue={params.webhookFrom ?? ""}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Até
+                <input
+                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  name="webhookTo"
+                  type="date"
+                  defaultValue={params.webhookTo ?? ""}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Ordenação
+                <select
+                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  name="webhookSort"
+                  defaultValue={params.webhookSort}
+                >
+                  <option value="newest">Mais recentes</option>
+                  <option value="oldest">Mais antigos</option>
+                </select>
+              </label>
+              <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+                Filtrar
+              </button>
             </form>
             {webhookResult.events.length === 0 ? (
               <p className="text-muted-foreground text-sm">Nenhum webhook encontrado.</p>
@@ -497,12 +518,16 @@ export default async function AdminHomePage({
                 {webhookResult.events.map((event) => (
                   <div key={event.id} className="py-3 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-medium">{event.type} · {event.provider}</span>
+                      <span className="font-medium">
+                        {event.type} · {event.provider}
+                      </span>
                       <Badge variant={event.status === "FAILED" ? "destructive" : "outline"}>
                         {webhookStatusLabels[event.status] ?? event.status}
                       </Badge>
                     </div>
-                    <p className="text-muted-foreground mt-1 text-xs">{event.externalId} · {new Intl.DateTimeFormat("pt-BR").format(event.receivedAt)}</p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {event.externalId} · {new Intl.DateTimeFormat("pt-BR").format(event.receivedAt)}
+                    </p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       {event.error ? <p className="text-destructive text-xs">{event.error}</p> : null}
                       {event.status === "FAILED" ? (
@@ -517,9 +542,29 @@ export default async function AdminHomePage({
             )}
             {webhookResult.pageCount > 1 ? (
               <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Paginação de webhooks">
-                {webhookResult.page > 1 ? <Link href={adminHref({ webhookPage: webhookResult.page - 1 })} className="rounded-md border px-3 py-2 text-sm">Anterior</Link> : <span />}
-                <span className="text-muted-foreground text-xs">Página {webhookResult.page} de {webhookResult.pageCount} · {webhookResult.total}</span>
-                {webhookResult.page < webhookResult.pageCount ? <Link href={adminHref({ webhookPage: webhookResult.page + 1 })} className="rounded-md border px-3 py-2 text-sm">Próxima</Link> : <span />}
+                {webhookResult.page > 1 ? (
+                  <Link
+                    href={adminHref({ webhookPage: webhookResult.page - 1 })}
+                    className="rounded-md border px-3 py-2 text-sm"
+                  >
+                    Anterior
+                  </Link>
+                ) : (
+                  <span />
+                )}
+                <span className="text-muted-foreground text-xs">
+                  Página {webhookResult.page} de {webhookResult.pageCount} · {webhookResult.total}
+                </span>
+                {webhookResult.page < webhookResult.pageCount ? (
+                  <Link
+                    href={adminHref({ webhookPage: webhookResult.page + 1 })}
+                    className="rounded-md border px-3 py-2 text-sm"
+                  >
+                    Próxima
+                  </Link>
+                ) : (
+                  <span />
+                )}
               </nav>
             ) : null}
           </CardContent>
@@ -527,10 +572,13 @@ export default async function AdminHomePage({
         <Card>
           <CardHeader>
             <CardTitle>Entregas de notificações</CardTitle>
-            <CardDescription>Acompanhe e-mails transacionais enviados pelo MotoShop.</CardDescription>
+            <CardDescription>Acompanhe e-mails transacionais enviados pela Moto Shop.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_180px_160px_150px_150px_auto] sm:items-end" method="get">
+            <form
+              className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_180px_160px_150px_150px_auto] sm:items-end"
+              method="get"
+            >
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Buscar entrega
                 <input
@@ -558,36 +606,44 @@ export default async function AdminHomePage({
                 >
                   <option value="ALL">Todos</option>
                   {Object.entries(notificationStatusLabels).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
                   ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              De
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="notificationFrom"
-                type="date"
-                defaultValue={params.notificationFrom ?? ""}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Até
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="notificationTo"
-                type="date"
-                defaultValue={params.notificationTo ?? ""}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Ordenação
-              <select className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="notificationSort" defaultValue={params.notificationSort}>
-                <option value="newest">Mais recentes</option>
-                <option value="oldest">Mais antigos</option>
-              </select>
-            </label>
-            <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">Filtrar</button>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                De
+                <input
+                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  name="notificationFrom"
+                  type="date"
+                  defaultValue={params.notificationFrom ?? ""}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Até
+                <input
+                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  name="notificationTo"
+                  type="date"
+                  defaultValue={params.notificationTo ?? ""}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Ordenação
+                <select
+                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  name="notificationSort"
+                  defaultValue={params.notificationSort}
+                >
+                  <option value="newest">Mais recentes</option>
+                  <option value="oldest">Mais antigos</option>
+                </select>
+              </label>
+              <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+                Filtrar
+              </button>
             </form>
             {notificationResult.deliveries.length === 0 ? (
               <p className="text-muted-foreground text-sm">Nenhuma entrega encontrada.</p>
@@ -601,7 +657,9 @@ export default async function AdminHomePage({
                         {notificationStatusLabels[delivery.status] ?? delivery.status}
                       </Badge>
                     </div>
-                    <p className="text-muted-foreground mt-1 text-xs">{delivery.recipientEmail} · {delivery.subject}</p>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {delivery.recipientEmail} · {delivery.subject}
+                    </p>
                     {delivery.error ? <p className="text-destructive mt-1 text-xs">{delivery.error}</p> : null}
                   </div>
                 ))}
@@ -609,9 +667,29 @@ export default async function AdminHomePage({
             )}
             {notificationResult.pageCount > 1 ? (
               <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Paginação de notificações">
-                {notificationResult.page > 1 ? <Link href={adminHref({ notificationPage: notificationResult.page - 1 })} className="rounded-md border px-3 py-2 text-sm">Anterior</Link> : <span />}
-                <span className="text-muted-foreground text-xs">Página {notificationResult.page} de {notificationResult.pageCount} · {notificationResult.total}</span>
-                {notificationResult.page < notificationResult.pageCount ? <Link href={adminHref({ notificationPage: notificationResult.page + 1 })} className="rounded-md border px-3 py-2 text-sm">Próxima</Link> : <span />}
+                {notificationResult.page > 1 ? (
+                  <Link
+                    href={adminHref({ notificationPage: notificationResult.page - 1 })}
+                    className="rounded-md border px-3 py-2 text-sm"
+                  >
+                    Anterior
+                  </Link>
+                ) : (
+                  <span />
+                )}
+                <span className="text-muted-foreground text-xs">
+                  Página {notificationResult.page} de {notificationResult.pageCount} · {notificationResult.total}
+                </span>
+                {notificationResult.page < notificationResult.pageCount ? (
+                  <Link
+                    href={adminHref({ notificationPage: notificationResult.page + 1 })}
+                    className="rounded-md border px-3 py-2 text-sm"
+                  >
+                    Próxima
+                  </Link>
+                ) : (
+                  <span />
+                )}
               </nav>
             ) : null}
           </CardContent>
@@ -625,7 +703,10 @@ export default async function AdminHomePage({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-7 lg:items-end" method="get">
+          <form
+            className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-7 lg:items-end"
+            method="get"
+          >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Buscar pedido
               <input
@@ -659,7 +740,9 @@ export default async function AdminHomePage({
               >
                 <option value="">Todas as lojas</option>
                 {sellerOptions.map((seller) => (
-                  <option key={seller.id} value={seller.id}>{seller.store?.name ?? "Sem loja"}</option>
+                  <option key={seller.id} value={seller.id}>
+                    {seller.store?.name ?? "Sem loja"}
+                  </option>
                 ))}
               </select>
             </label>
@@ -680,18 +763,32 @@ export default async function AdminHomePage({
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenação
-              <select className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="adminOrderSort" defaultValue={params.adminOrderSort}>
+              <select
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="adminOrderSort"
+                defaultValue={params.adminOrderSort}
+              >
                 <option value="newest">Mais recentes</option>
                 <option value="oldest">Mais antigos</option>
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               De
-              <input className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="adminOrderFrom" type="date" defaultValue={params.adminOrderFrom ?? ""} />
+              <input
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="adminOrderFrom"
+                type="date"
+                defaultValue={params.adminOrderFrom ?? ""}
+              />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Até
-              <input className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="adminOrderTo" type="date" defaultValue={params.adminOrderTo ?? ""} />
+              <input
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="adminOrderTo"
+                type="date"
+                defaultValue={params.adminOrderTo ?? ""}
+              />
             </label>
             <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
               Filtrar
@@ -797,12 +894,15 @@ export default async function AdminHomePage({
         <CardHeader>
           <CardTitle>Cupons do marketplace</CardTitle>
           <CardDescription>
-            Crie descontos globais financiados pelo MotoShop. Valores são centavos e percentuais usam basis points.
+            Crie descontos globais financiados pela Moto Shop. Valores são centavos e percentuais usam basis points.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <CouponForm ownerType="MARKETPLACE" />
-          <form className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_180px_180px_auto] sm:items-end" method="get">
+          <form
+            className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_180px_180px_auto] sm:items-end"
+            method="get"
+          >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Buscar cupom
               <input
@@ -909,7 +1009,10 @@ export default async function AdminHomePage({
           <CardDescription>Aprove lojas antes de liberar a operação do catálogo.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_180px_180px_auto] sm:items-end" method="get">
+          <form
+            className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_180px_180px_auto] sm:items-end"
+            method="get"
+          >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Buscar seller
               <input
@@ -957,6 +1060,7 @@ export default async function AdminHomePage({
               {sellers.map((seller) => (
                 <div
                   key={seller.id}
+                  data-testid={`seller-review-${seller.id}`}
                   className="flex flex-col gap-3 py-4 md:flex-row md:items-center md:justify-between"
                 >
                   <div>
@@ -967,6 +1071,7 @@ export default async function AdminHomePage({
                     <p className="text-muted-foreground text-sm">
                       {seller.members[0]?.user.email} · {seller._count.products} produto(s)
                     </p>
+                    <SellerCommissionForm sellerId={seller.id} commissionBpsOverride={seller.commissionBpsOverride} />
                   </div>
                   {seller.status === "PENDING" ? (
                     <div className="flex gap-2">
@@ -1035,7 +1140,10 @@ export default async function AdminHomePage({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-6 lg:items-end" method="get">
+          <form
+            className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-6 lg:items-end"
+            method="get"
+          >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Status do cancelamento
               <select
@@ -1066,21 +1174,37 @@ export default async function AdminHomePage({
               >
                 <option value="">Todos</option>
                 {sellerOptions.map((seller) => (
-                  <option key={seller.id} value={seller.id}>{seller.store?.name ?? "Sem loja"}</option>
+                  <option key={seller.id} value={seller.id}>
+                    {seller.store?.name ?? "Sem loja"}
+                  </option>
                 ))}
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               De
-              <input className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="cancellationFrom" type="date" defaultValue={params.cancellationFrom ?? ""} />
+              <input
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="cancellationFrom"
+                type="date"
+                defaultValue={params.cancellationFrom ?? ""}
+              />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Até
-              <input className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="cancellationTo" type="date" defaultValue={params.cancellationTo ?? ""} />
+              <input
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="cancellationTo"
+                type="date"
+                defaultValue={params.cancellationTo ?? ""}
+              />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenação
-              <select className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="cancellationSort" defaultValue={params.cancellationSort}>
+              <select
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="cancellationSort"
+                defaultValue={params.cancellationSort}
+              >
                 <option value="oldest">Mais antigos</option>
                 <option value="newest">Mais recentes</option>
               </select>
@@ -1160,7 +1284,10 @@ export default async function AdminHomePage({
           <CardDescription>Faça a mediação entre cliente e seller com histórico auditável.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-6 lg:items-end" method="get">
+          <form
+            className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-6 lg:items-end"
+            method="get"
+          >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Status da disputa
               <select
@@ -1191,21 +1318,37 @@ export default async function AdminHomePage({
               >
                 <option value="">Todos</option>
                 {sellerOptions.map((seller) => (
-                  <option key={seller.id} value={seller.id}>{seller.store?.name ?? "Sem loja"}</option>
+                  <option key={seller.id} value={seller.id}>
+                    {seller.store?.name ?? "Sem loja"}
+                  </option>
                 ))}
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               De
-              <input className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="disputeFrom" type="date" defaultValue={params.disputeFrom ?? ""} />
+              <input
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="disputeFrom"
+                type="date"
+                defaultValue={params.disputeFrom ?? ""}
+              />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Até
-              <input className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="disputeTo" type="date" defaultValue={params.disputeTo ?? ""} />
+              <input
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="disputeTo"
+                type="date"
+                defaultValue={params.disputeTo ?? ""}
+              />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenação
-              <select className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="disputeSort" defaultValue={params.disputeSort}>
+              <select
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="disputeSort"
+                defaultValue={params.disputeSort}
+              >
                 <option value="oldest">Mais antigos</option>
                 <option value="newest">Mais recentes</option>
               </select>
@@ -1277,7 +1420,10 @@ export default async function AdminHomePage({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-6 lg:items-end" method="get">
+          <form
+            className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-6 lg:items-end"
+            method="get"
+          >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Status da devolução
               <select
@@ -1310,21 +1456,37 @@ export default async function AdminHomePage({
               >
                 <option value="">Todos</option>
                 {sellerOptions.map((seller) => (
-                  <option key={seller.id} value={seller.id}>{seller.store?.name ?? "Sem loja"}</option>
+                  <option key={seller.id} value={seller.id}>
+                    {seller.store?.name ?? "Sem loja"}
+                  </option>
                 ))}
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               De
-              <input className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="returnFrom" type="date" defaultValue={params.returnFrom ?? ""} />
+              <input
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="returnFrom"
+                type="date"
+                defaultValue={params.returnFrom ?? ""}
+              />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Até
-              <input className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="returnTo" type="date" defaultValue={params.returnTo ?? ""} />
+              <input
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="returnTo"
+                type="date"
+                defaultValue={params.returnTo ?? ""}
+              />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenação
-              <select className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="returnSort" defaultValue={params.returnSort}>
+              <select
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="returnSort"
+                defaultValue={params.returnSort}
+              >
                 <option value="oldest">Mais antigos</option>
                 <option value="newest">Mais recentes</option>
               </select>
@@ -1406,7 +1568,10 @@ export default async function AdminHomePage({
           <CardDescription>Produtos submetidos pelos sellers para publicação.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-8 lg:items-end" method="get">
+          <form
+            className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-8 lg:items-end"
+            method="get"
+          >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Buscar produto
               <input
@@ -1426,7 +1591,8 @@ export default async function AdminHomePage({
                 <option value="">Todas</option>
                 {catalog.categories.map((category) => (
                   <option key={category.id} value={category.id}>
-                    {category.parent ? `${category.parent.name} / ` : ""}{category.name}
+                    {category.parent ? `${category.parent.name} / ` : ""}
+                    {category.name}
                   </option>
                 ))}
               </select>
@@ -1440,7 +1606,9 @@ export default async function AdminHomePage({
               >
                 <option value="">Todas</option>
                 {catalog.brands.map((brand) => (
-                  <option key={brand.id} value={brand.id}>{brand.name}</option>
+                  <option key={brand.id} value={brand.id}>
+                    {brand.name}
+                  </option>
                 ))}
               </select>
             </label>
@@ -1453,17 +1621,29 @@ export default async function AdminHomePage({
               >
                 <option value="">Todos</option>
                 {sellerOptions.map((seller) => (
-                  <option key={seller.id} value={seller.id}>{seller.store?.name ?? "Sem loja"}</option>
+                  <option key={seller.id} value={seller.id}>
+                    {seller.store?.name ?? "Sem loja"}
+                  </option>
                 ))}
               </select>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               De
-              <input className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="productReviewFrom" type="date" defaultValue={params.productReviewFrom ?? ""} />
+              <input
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="productReviewFrom"
+                type="date"
+                defaultValue={params.productReviewFrom ?? ""}
+              />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Até
-              <input className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="productReviewTo" type="date" defaultValue={params.productReviewTo ?? ""} />
+              <input
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="productReviewTo"
+                type="date"
+                defaultValue={params.productReviewTo ?? ""}
+              />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Status da revisão
@@ -1479,7 +1659,11 @@ export default async function AdminHomePage({
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenação
-              <select className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="productReviewSort" defaultValue={params.productReviewSort}>
+              <select
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="productReviewSort"
+                defaultValue={params.productReviewSort}
+              >
                 <option value="oldest">Mais antigas</option>
                 <option value="newest">Mais recentes</option>
               </select>
@@ -1493,16 +1677,53 @@ export default async function AdminHomePage({
           ) : (
             <div className="divide-border divide-y">
               {products.map((product) => (
-                <div key={product.id} className="flex flex-col gap-4 py-4">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-medium">{product.name}</h3>
-                      <Badge variant="outline">{product.status}</Badge>
+                <div key={product.id} data-testid={`product-review-${product.id}`} className="flex flex-col gap-4 py-4">
+                  <div className="flex flex-col gap-4 sm:flex-row">
+                    <div className="bg-muted flex aspect-square w-full shrink-0 items-center justify-center overflow-hidden rounded-md border sm:w-28">
+                      {product.images[0] && getPublicStorageUrl(product.images[0].storageKey) ? (
+                        <Image
+                          src={getPublicStorageUrl(product.images[0].storageKey)!}
+                          alt={product.images[0].altText ?? product.name}
+                          width={112}
+                          height={112}
+                          unoptimized
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-muted-foreground px-2 text-center text-xs">Sem foto pública</span>
+                      )}
                     </div>
-                    <p className="text-muted-foreground text-sm">
-                      {product.seller.store?.name} · {product.brand.name} · {product.category.name}
-                    </p>
-                    <p className="text-muted-foreground mt-1 text-sm">{product.description}</p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="font-medium">{product.name}</h3>
+                        <Badge variant="outline">{product.status}</Badge>
+                      </div>
+                      <p className="text-muted-foreground text-sm">
+                        {product.seller.store?.name} · {product.brand.name} · {product.category.name}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-sm">{product.description}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {product.variants
+                          .filter((variant) => variant.active)
+                          .map((variant) => (
+                            <span key={variant.id} className="rounded-md border px-2 py-1 text-xs">
+                              {variant.title} · {variant.sku} · {formatMoneyInCents(variant.priceInCents)} · estoque{" "}
+                              {variant.inventory?.availableQuantity ?? 0}
+                            </span>
+                          ))}
+                      </div>
+                      {product.compatibilities.length > 0 ? (
+                        <p className="text-muted-foreground mt-2 text-xs">
+                          Compatível com:{" "}
+                          {product.compatibilities
+                            .map(
+                              ({ motorcycleFitment: fitment }) =>
+                                `${fitment.motorcycleModel.manufacturer.name} ${fitment.motorcycleModel.name} ${fitment.year}`,
+                            )
+                            .join(", ")}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
                   {product.status === "SUBMITTED" ? (
                     <ProductStatusActions productId={product.id} />
@@ -1548,7 +1769,10 @@ export default async function AdminHomePage({
           <CardDescription>Consulte alterações críticas com ator, entidade e metadados registrados.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-4 lg:grid-cols-6 lg:items-end" method="get">
+          <form
+            className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-4 lg:grid-cols-6 lg:items-end"
+            method="get"
+          >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ação
               <input
@@ -1605,7 +1829,11 @@ export default async function AdminHomePage({
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenação
-              <select className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="auditSort" defaultValue={params.auditSort}>
+              <select
+                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                name="auditSort"
+                defaultValue={params.auditSort}
+              >
                 <option value="newest">Mais recentes</option>
                 <option value="oldest">Mais antigos</option>
               </select>

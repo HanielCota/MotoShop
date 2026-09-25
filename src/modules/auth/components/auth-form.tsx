@@ -35,7 +35,9 @@ export function AuthForm() {
       return;
     }
 
-    router.push((searchParams.get("next") || (mode === "sign-up" ? "/seller" : "/products")) as Route);
+    const next = searchParams.get("next");
+    const safeNext = next?.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : undefined;
+    router.push((safeNext || (mode === "sign-up" ? "/seller" : "/products")) as Route);
     router.refresh();
   }
 

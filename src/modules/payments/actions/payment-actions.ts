@@ -7,9 +7,8 @@ import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { hashGuestToken } from "@/modules/cart/infrastructure/cart-access";
 import { getCustomerOrder } from "@/modules/returns/queries/customer-orders";
 import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
-import { mercadoPagoProvider } from "@/lib/payment/mercado-pago-provider";
 
-import { reconcileMercadoPagoPayment } from "../application/reconcile-payment";
+import { recoverPayment } from "../application/recover-payment";
 
 const refreshPaymentSchema = z.object({
   orderNumber: z.string().trim().min(1).max(40),
@@ -30,10 +29,10 @@ export async function refreshPendingPaymentAction(
 
   try {
     const session = await getCurrentSession();
-    const identity = session
-      ? { userId: session.user.id }
-      : parsed.data.accessToken
-        ? { guestAccessTokenHash: hashGuestToken(parsed.data.accessToken) }
+    const identity = parsed.data.accessToken
+      ? { guestAccessTokenHash: hashGuestToken(parsed.data.accessToken) }
+      : session
+        ? { userId: session.user.id }
         : null;
     if (!identity) {
       throw new ApplicationError({ code: "UNAUTHORIZED", message: "Acesse o pedido pelo link seguro do checkout." });
@@ -42,18 +41,12 @@ export async function refreshPendingPaymentAction(
     const order = await getCustomerOrder(parsed.data.orderNumber, identity);
     const payment = order?.payments[0];
     if (!payment) throw new ApplicationError({ code: "NOT_FOUND", message: "Pagamento não encontrado." });
-    if (!["PENDING", "PROCESSING"].includes(payment.status)) {
+    if (!["PENDING", "PROCESSING", "AUTHORIZED"].includes(payment.status)) {
       return { success: `O pagamento já está ${payment.status.toLowerCase()}.` };
     }
-    if (!payment.externalId) {
-      throw new ApplicationError({
-        code: "CONFLICT",
-        message: "O pagamento ainda não possui identificador externo. Aguarde o processamento automático.",
-      });
-    }
-
-    const providerResult = await mercadoPagoProvider.getPayment(payment.externalId);
-    await reconcileMercadoPagoPayment({ externalId: payment.externalId, result: providerResult });
+    const recovery = await recoverPayment(payment.id);
+    if (recovery.outcome === "UNRESOLVED")
+      return { success: "A cobrança ainda não foi localizada. O pedido continua pendente; não faça outro pagamento." };
     revalidatePath(`/orders/${parsed.data.orderNumber}`);
     return { success: "Status do pagamento atualizado." };
   } catch (error) {

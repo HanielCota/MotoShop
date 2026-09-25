@@ -45,7 +45,7 @@ export class R2StorageProvider implements StorageProvider {
 
   private getConfig() {
     if (!env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY || !env.R2_BUCKET_NAME) {
-      throw new ApplicationError({ code: "CONFIGURATION_ERROR", message: "Cloudflare R2 is not configured." });
+      throw new ApplicationError({ code: "CONFIGURATION_ERROR", message: "O armazenamento de imagens ainda não está configurado." });
     }
 
     return {

@@ -1,21 +1,24 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 
 import { updateProductAction, type ProductActionState } from "@/modules/products/actions/product-actions";
 
-import { VariantsEditor } from "./product-form";
+import { VariantsEditor, type VariantDraft } from "./product-form";
+import { type Measurements } from "../domain/product-commercial-fields";
+import { MeasurementFields } from "./measurement-fields";
 
 type Option = { id: string; name: string };
 type FitmentOption = { id: string; label: string };
-type ProductValues = {
+type ProductValues = Measurements & {
   id: string;
+  revision: string;
   name: string;
   slug: string;
   description: string;
   categoryId: string;
   brandId: string;
-  variants: { id: string; title: string; sku: string; priceInCents: number; stock: number }[];
+  variants: (Omit<VariantDraft, "key"> & { id: string })[];
   motorcycleFitmentIds: string[];
 };
 
@@ -37,7 +40,15 @@ export function ProductEditForm({
   const [state, action, pending] = useActionState(updateProductAction.bind(null, product.id), initialState);
 
   return (
-    <form action={action} className="grid gap-4 sm:grid-cols-2">
+    <form
+      action={action}
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        startTransition(() => action(data));
+      }}
+      className="grid gap-4 sm:grid-cols-2"
+    >
       <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
         Nome
         <input className={inputClassName} name="name" defaultValue={product.name} required />
@@ -91,7 +102,11 @@ export function ProductEditForm({
         </select>
         <span className="text-muted-foreground text-xs">Use Ctrl/Cmd para selecionar mais de uma moto.</span>
       </label>
-      <VariantsEditor initialVariants={product.variants.map((variant) => ({ ...variant, key: variant.id }))} />
+      <MeasurementFields values={product} />
+      <VariantsEditor
+        key={product.revision}
+        initialVariants={product.variants.map((variant) => ({ ...variant, key: variant.id }))}
+      />
       {state.error ? (
         <p className="text-destructive text-sm sm:col-span-2" role="alert">
           {state.error}

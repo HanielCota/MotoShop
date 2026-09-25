@@ -51,7 +51,7 @@ export async function createSellerAction(
     });
 
     revalidatePath("/seller");
-    return { success: "Solicitação enviada. O MotoShop precisa aprovar sua loja antes do cadastro de produtos." };
+    return { success: "Solicitação enviada. A Moto Shop precisa aprovar sua loja antes do cadastro de produtos." };
   } catch (error) {
     const applicationError = asApplicationError(error);
     if (applicationError.code === "INTERNAL_ERROR") {

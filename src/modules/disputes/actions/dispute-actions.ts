@@ -43,7 +43,7 @@ export async function requestDisputeAction(input: unknown): Promise<DisputeActio
     });
     revalidatePath(`/orders/${parsed.data.orderNumber}`);
     revalidatePath("/admin");
-    return { success: "Disputa aberta. O MotoShop fará a mediação." };
+    return { success: "Disputa aberta. A Moto Shop fará a mediação." };
   } catch (error) {
     return { error: asApplicationError(error).message };
   }

@@ -1930,6 +1930,21 @@ Regras:
 
 Decisões adicionais do MVP:
 
+- A garagem pessoal `SavedMotorcycle` pertence ao `User` e referencia exclusivamente `MotorcycleFitment` da base administrada. Cada usuário pode salvar a mesma configuração uma vez; um índice parcial permite no máximo uma moto principal. A primeira vira principal, e remover a principal promove a próxima configuração ativa disponível. Consultas e mutações sempre filtram `userId` no servidor.
+- A moto principal aparece como seleção inicial na landing e como atalho explícito no catálogo; o filtro efetivo continua representado por `?moto=<fitmentId>` na URL. No detalhe do produto, ausência de relacionamento de compatibilidade significa "não confirmada", nunca incompatibilidade comprovada.
+
+- Formulários de produto permitem peso embalado em gramas e dimensões da embalagem em milímetros, como inteiros positivos opcionais no rascunho. Valores nulos na variante herdam o campo correspondente do produto. Não inventar medidas ao preencher o formulário.
+- Promoções são configuradas por variante em rascunhos/rejeitados, com preço positivo inferior ao normal e limites temporais opcionais. As datas do formulário usam UTC−03:00 explícito e são persistidas em UTC; início/fim vazios representam limites abertos. Para remover a promoção, limpar preço e datas. Alterações comerciais registram snapshot de antes/depois na auditoria transacional.
+- A comissão individual é editada exclusivamente no Admin, em percentual com até duas casas decimais, persistida como basis points. Campo vazio remove o override; zero é uma comissão explícita de 0%. Atualizações concorrentes com valor anterior divergente são rejeitadas, a alteração é auditada e nunca modifica snapshots de pedidos antigos.
+
+- Frete próprio usa `SellerShippingMethod`: faixa de CEP inclusiva, preço fixo em centavos por `SellerOrder` e prazo em dias úteis após confirmação do pagamento. Novas modalidades ficam desativadas; somente `SELLER_MANAGE` pode criar/ativar/desativar. Pedidos preservam o snapshot da cotação. Alterações de valores são feitas criando outra modalidade e desativando a anterior.
+- Entregas próprias (`Shipment.provider = OWN`) são atualizadas manualmente com `ORDER_UPDATE`, ownership e auditoria transacional: pedido pago → enviado → entregue. Não compram etiquetas nem chamam Melhor Envio. Rastreio é opcional.
+- Financiamento de desconto de cupom usa `marketplaceDiscountInCents`/`sellerDiscountInCents` no `SellerOrder`; os campos `marketplaceSubsidyInCents`/`sellerSubsidyInCents` continuam exclusivos de frete grátis.
+- Confirmação de venda exige pagamento `APPROVED`; `AUTHORIZED` ainda aguarda captura. Timeout incerto preserva pedido/reserva pendente para reconciliação, sem liberar estoque ou emitir outra cobrança automaticamente.
+- O adapter atual do Mercado Pago não implementa repasse 1:N. A flag de ambiente não habilita essa capacidade; checkout real multi-seller permanece bloqueado até integração homologada. Simulação de pagamentos ocorre exclusivamente por injeção de provider em testes, sem rota pública ou modo fake em produção.
+- Busca, ranking e paginação públicos são calculados no PostgreSQL em `public-product-page.ts`; só os produtos da página são carregados pelo Prisma. SQL parametrizado preserva sinais de relevância, estoque, avaliações e VIP, com desempate estável.
+- Testes de integração e navegador usam contas `@example.test`, identificadores únicos e limpeza restrita aos registros da execução. Nunca resetar o banco compartilhado nem usar credenciais reais de pagamento nos testes.
+
 - O plano VIP é representado por `SellerSubscription`, com validade e status persistidos.
 - No MVP, a ativação/renovação do VIP é administrativa; não simular cobrança recorrente antes da integração de assinatura do Mercado Pago.
 - Produtos de sellers com VIP ativo recebem identificação de conteúdo patrocinado.
@@ -1978,6 +1993,8 @@ Decisões adicionais do MVP:
 - Uso de cupom deve ser consultado por agregação/count do banco, sem serializar resgates completos para as páginas operacionais.
 - O detalhe do pedido pode expor ao próprio cliente o histórico dos pagamentos e transações vinculados ao `Order`, sem revelar metadados sensíveis do provider.
 - Reconsulta manual de pagamento aceita somente pedidos autorizados por sessão ou token guest seguro, limita-se a pagamentos pendentes e reutiliza o reconciliador idempotente.
+- Cartão de crédito usa Secure Fields do MercadoPago.js (iframes) e token descartável; PAN, validade e CVV nunca passam pelo servidor da Moto Shop. A primeira versão aceita crédito em uma parcela, definida no servidor. A Public Key pertence à mesma aplicação/ambiente do Access Token; somente a Public Key chega ao navegador. A URL opcional `MERCADO_PAGO_NOTIFICATION_URL` é enviada por cobrança e exige assinatura secreta configurada, sem sobrescrever configurações globais de outras integrações. Cartões e webhook real permanecem sujeitos à homologação.
+- Recuperação de pagamento sem ID externo consulta por referência do pedido e exige resultado único, com validação de ID, referência, valor, moeda e método. Nunca cria nova cobrança. Busca vazia, timeout ou ambiguidade preservam reservas. O Inngest agenda recuperação paginada a cada dez minutos para pendências com mais de dois minutos; depende do serviço ativo. Expiração local de QR/idade do pedido não autoriza liberar estoque: é necessária recusa/cancelamento confirmado pelo provider.
 - Filas administrativas devem combinar busca textual, status e paginação no `where` do banco, limitando o payload serializado.
 - A busca de seller deve considerar loja e membros, mas nunca remover o filtro de status ou a proteção administrativa.
 - A moderação de produtos pode localizar nome, slug, SKU ou loja sem expor dados privados do seller além do necessário à revisão.
@@ -2074,7 +2091,8 @@ Decisões adicionais do MVP:
 - A vitrine pública da loja pode filtrar disponibilidade server-side mantendo seller aprovado e paginação.
 - A vitrine pública da loja pode filtrar promoções usando a mesma semântica de promoção ativa do storefront.
 - A busca da vitrine pública deve consultar nome, marca, categoria e SKU dentro do seller selecionado, preservando filtros na URL.
-- A homepage pública (`/`) é uma landing comercial server-rendered; seus destaques devem vir de produtos aprovados e categorias/marcas ativas, sem dados fictícios.
+- A homepage pública (`/`) é uma landing comercial server-rendered. Antes do lançamento, pode exibir uma vitrine de demonstração solicitada pelo responsável, desde que produtos, preços e condições estejam claramente marcados como ilustrativos, não criem registros no catálogo e não ofereçam compra direta. Na versão de lançamento, os destaques devem vir apenas de produtos aprovados e categorias/marcas ativas; remover a vitrine mock ao ativar a vitrine real.
+- A marca pública é **Moto Shop**. Em textos de interface, SEO, e-mails e mensagens para pessoas, usar o artigo feminino: **a Moto Shop**, **da Moto Shop**, **na Moto Shop**, **pela Moto Shop**. Não usar "o MotoShop". Identificadores técnicos internos e nomes de arquivos não precisam ser renomeados.
 
 ---
 

@@ -5,18 +5,25 @@ import type { Route } from "next";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoneyInCents } from "@/lib/utils";
-import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
+import { getCategoryLabel } from "@/modules/catalog/category-labels";
+import { getProductOffer } from "@/modules/products/domain/product-offer";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 import type { listApprovedProducts } from "@/modules/products/queries/products";
 
 type ApprovedProduct = Awaited<ReturnType<typeof listApprovedProducts>>["products"][number];
 
-export function ProductGrid({ products }: { products: ApprovedProduct[] }) {
+export function ProductGrid({
+  products,
+  emptyMessage = "Nenhum produto aprovado corresponde aos filtros.",
+}: {
+  products: ApprovedProduct[];
+  emptyMessage?: string;
+}) {
   if (products.length === 0) {
     return (
       <Card>
         <CardContent className="py-10 text-center">
-          <p className="text-muted-foreground">Nenhum produto aprovado corresponde aos filtros.</p>
+          <p className="text-muted-foreground">{emptyMessage}</p>
         </CardContent>
       </Card>
     );
@@ -25,12 +32,16 @@ export function ProductGrid({ products }: { products: ApprovedProduct[] }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {products.map((product) => {
-        const variant = product.variants[0];
-        const inStock = (variant?.inventory?.availableQuantity ?? 0) > 0;
+        const offer = getProductOffer(product.variants);
+        const inStock = offer.availableQuantity > 0;
         const imageUrl = product.images[0] ? getPublicStorageUrl(product.images[0].storageKey) : null;
         return (
           <Card key={product.id}>
-            <Link href={`/products/${product.slug}`} className="bg-muted block overflow-hidden rounded-t-xl">
+            <Link
+              href={`/products/${product.slug}`}
+              aria-label={`Ver ${product.name}`}
+              className="bg-muted block overflow-hidden rounded-t-xl"
+            >
               {imageUrl ? (
                 <Image
                   src={imageUrl}
@@ -47,12 +58,12 @@ export function ProductGrid({ products }: { products: ApprovedProduct[] }) {
               )}
             </Link>
             <CardHeader>
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <Link
                   href={`/categoria/${product.category.slug}` as Route}
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  <Badge variant="outline">{product.category.name}</Badge>
+                  <Badge variant="outline">{getCategoryLabel(product.category)}</Badge>
                 </Link>
                 <div className="flex items-center gap-2">
                   {product.isVip ? <Badge variant="secondary">Patrocinado · VIP</Badge> : null}
@@ -80,10 +91,11 @@ export function ProductGrid({ products }: { products: ApprovedProduct[] }) {
             <CardContent className="flex items-end justify-between gap-3">
               <div>
                 <p className="text-lg font-semibold">
-                  {variant ? formatMoneyInCents(getCurrentPriceInCents(variant)) : "Sob consulta"}
+                  {offer.hasPriceRange ? <span className="block text-xs font-normal">A partir de</span> : null}
+                  {offer.priceInCents !== null ? formatMoneyInCents(offer.priceInCents) : "Sob consulta"}
                 </p>
                 <p className="text-muted-foreground text-xs">
-                  {inStock ? `${variant?.inventory?.availableQuantity} em estoque` : "Indisponível"}
+                  {inStock ? "Em estoque · confira as variações" : "Indisponível"}
                 </p>
               </div>
               <Link className="text-sm font-medium underline underline-offset-4" href={`/products/${product.slug}`}>

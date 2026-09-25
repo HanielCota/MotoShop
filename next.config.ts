@@ -4,6 +4,7 @@ import type { NextConfig } from "next";
 const storagePublicUrl = process.env.R2_PUBLIC_URL ? new URL(process.env.R2_PUBLIC_URL) : undefined;
 
 const nextConfig: NextConfig = {
+  ...(process.env.NEXT_TEST_DIST_DIR ? { distDir: process.env.NEXT_TEST_DIST_DIR } : {}),
   typedRoutes: true,
   images: {
     remotePatterns: [

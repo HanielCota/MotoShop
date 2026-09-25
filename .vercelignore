@@ -1,0 +1,12 @@
+.env*
+.next/
+.next-e2e/
+.next-garage-check/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+.neon/
+src/generated/
+public/*.psd
+*.tsbuildinfo

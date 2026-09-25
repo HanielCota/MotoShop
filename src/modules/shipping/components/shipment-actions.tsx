@@ -18,12 +18,7 @@ type ShipmentActionsProps = {
 
 const initialState: FulfillmentActionState = {};
 
-export function ShipmentActions({
-  sellerOrderId,
-  canPurchase,
-  hasShipment,
-  hasTrackingCode,
-}: ShipmentActionsProps) {
+export function ShipmentActions({ sellerOrderId, canPurchase, hasShipment, hasTrackingCode }: ShipmentActionsProps) {
   const [purchaseState, purchaseAction, purchasePending] = useActionState(
     async (previousState: FulfillmentActionState, formData: FormData) => {
       void previousState;
@@ -48,20 +43,19 @@ export function ShipmentActions({
     },
     initialState,
   );
-  const feedback =
-    purchaseState.error
-      ? { message: purchaseState.error, isError: true }
-      : purchaseState.success
-        ? { message: purchaseState.success, isError: false }
-        : generateState.error
-          ? { message: generateState.error, isError: true }
-          : generateState.success
-            ? { message: generateState.success, isError: false }
-            : trackingState.error
-              ? { message: trackingState.error, isError: true }
-              : trackingState.success
-                ? { message: trackingState.success, isError: false }
-                : undefined;
+  const feedback = purchaseState.error
+    ? { message: purchaseState.error, isError: true }
+    : purchaseState.success
+      ? { message: purchaseState.success, isError: false }
+      : generateState.error
+        ? { message: generateState.error, isError: true }
+        : generateState.success
+          ? { message: generateState.success, isError: false }
+          : trackingState.error
+            ? { message: trackingState.error, isError: true }
+            : trackingState.success
+              ? { message: trackingState.success, isError: false }
+              : undefined;
 
   return (
     <div className="flex flex-col gap-2">

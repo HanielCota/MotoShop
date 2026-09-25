@@ -141,7 +141,7 @@ export class MelhorEnvioProvider implements ShippingProvider {
     if (!env.MELHOR_ENVIO_TOKEN) {
       throw new ApplicationError({
         code: "CONFIGURATION_ERROR",
-        message: "Melhor Envio ainda não está configurado no ambiente do MotoShop.",
+        message: "Melhor Envio ainda não está configurado no ambiente da Moto Shop.",
         statusCode: 503,
       });
     }
@@ -157,10 +157,11 @@ export class MelhorEnvioProvider implements ShippingProvider {
         Authorization: `Bearer ${env.MELHOR_ENVIO_TOKEN}`,
         "Content-Type": "application/json",
         Accept: "application/json",
-        "User-Agent": env.MELHOR_ENVIO_USER_AGENT ?? "MotoShop (suporte@example.com)",
+        "User-Agent": env.MELHOR_ENVIO_USER_AGENT ?? "Moto Shop (suporte@example.com)",
       },
       ...(input.body ? { body: JSON.stringify(input.body) } : {}),
       cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {

@@ -12,6 +12,57 @@ const baseInput = {
 };
 
 describe("productInputSchema", () => {
+  const variant = { title: "M", sku: "SKU-M", priceInCents: 10000, stock: 2 };
+  it("accepts packaging overrides and a scheduled promotion", () => {
+    const result = productInputSchema.safeParse({
+      ...baseInput,
+      weightInGrams: 1000,
+      variants: [
+        {
+          ...variant,
+          weightInGrams: 1200,
+          promotionalPriceInCents: 8000,
+          promotionStartsAt: new Date("2026-09-24T12:00:00Z"),
+          promotionEndsAt: new Date("2026-09-25T12:00:00Z"),
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+  it.each([0, -1, 1.5, 2147483648])("rejects invalid packaging measurement %s", (weightInGrams) => {
+    expect(productInputSchema.safeParse({ ...baseInput, weightInGrams, variants: [variant] }).success).toBe(false);
+    expect(productInputSchema.safeParse({ ...baseInput, variants: [{ ...variant, weightInGrams }] }).success).toBe(
+      false,
+    );
+  });
+  it.each([0, -1, 10000, 11000, 99.5])("rejects invalid promotional price %s", (promotionalPriceInCents) => {
+    expect(
+      productInputSchema.safeParse({ ...baseInput, variants: [{ ...variant, promotionalPriceInCents }] }).success,
+    ).toBe(false);
+  });
+  it("rejects dates without a price and a reversed period", () => {
+    const start = new Date("2026-09-24T12:00:00Z");
+    expect(
+      productInputSchema.safeParse({ ...baseInput, variants: [{ ...variant, promotionStartsAt: start }] }).success,
+    ).toBe(false);
+    expect(
+      productInputSchema.safeParse({
+        ...baseInput,
+        variants: [{ ...variant, promotionalPriceInCents: 5000, promotionStartsAt: start, promotionEndsAt: start }],
+      }).success,
+    ).toBe(false);
+  });
+  it("allows open-ended promotions and removal", () => {
+    expect(
+      productInputSchema.safeParse({ ...baseInput, variants: [{ ...variant, promotionalPriceInCents: 5000 }] }).success,
+    ).toBe(true);
+    expect(
+      productInputSchema.safeParse({
+        ...baseInput,
+        variants: [{ ...variant, promotionalPriceInCents: null, promotionStartsAt: null, promotionEndsAt: null }],
+      }).success,
+    ).toBe(true);
+  });
   it("accepts multiple variants with independent pricing and stock", () => {
     const result = productInputSchema.safeParse({
       ...baseInput,

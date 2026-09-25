@@ -29,7 +29,7 @@ export async function addSellerMemberAction(
 
   try {
     const user = await db.user.findUnique({ where: { email: parsed.data.email } });
-    if (!user) return { error: "O usuário precisa criar uma conta no MotoShop antes de ser adicionado." };
+    if (!user) return { error: "O usuário precisa criar uma conta na Moto Shop antes de ser adicionado." };
     if (user.id === context.session.user.id) return { error: "O responsável atual já faz parte da equipe." };
 
     const existingMembership = await db.sellerMember.findFirst({ where: { userId: user.id } });

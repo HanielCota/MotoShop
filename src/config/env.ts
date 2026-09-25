@@ -20,6 +20,23 @@ const serverEnvSchema = z
     BETTER_AUTH_URL: z.url().default("http://localhost:3000"),
     ADMIN_EMAILS: optionalString,
     MERCADO_PAGO_ACCESS_TOKEN: optionalString,
+    MERCADO_PAGO_PUBLIC_KEY: z.preprocess(
+      emptyStringToUndefined,
+      z
+        .string()
+        .regex(
+          /^(TEST|APP_USR)-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i,
+          "Use a Mercado Pago Public Key, never an Access Token",
+        )
+        .optional(),
+    ),
+    MERCADO_PAGO_NOTIFICATION_URL: z.preprocess(
+      emptyStringToUndefined,
+      z
+        .url()
+        .refine((value) => value.startsWith("https://"), "Webhook URL must use HTTPS")
+        .optional(),
+    ),
     MERCADO_PAGO_API_URL: optionalUrl,
     MERCADO_PAGO_MULTI_SELLER_ENABLED: optionalBoolean,
     MERCADO_PAGO_WEBHOOK_SECRET: optionalString,
@@ -29,6 +46,8 @@ const serverEnvSchema = z
     MELHOR_ENVIO_USER_AGENT: optionalString,
     LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
     SENTRY_DSN: optionalUrl,
+    INNGEST_EVENT_KEY: optionalString,
+    INNGEST_SIGNING_KEY: optionalString,
     UPSTASH_REDIS_REST_URL: optionalUrl,
     UPSTASH_REDIS_REST_TOKEN: optionalString,
     R2_ACCOUNT_ID: optionalString,

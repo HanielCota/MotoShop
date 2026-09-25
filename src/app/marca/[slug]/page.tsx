@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!brand) return { title: "Marca não encontrada" };
   return {
     title: `Produtos ${brand.name}`,
-    description: `Encontre produtos ${brand.name} para motocross no MotoShop.`,
+    description: `Encontre produtos ${brand.name} para motocross na Moto Shop.`,
     alternates: { canonical: `/marca/${brand.slug}` },
   };
 }

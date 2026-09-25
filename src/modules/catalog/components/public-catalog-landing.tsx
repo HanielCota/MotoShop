@@ -42,7 +42,7 @@ export function PublicCatalogLanding({
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6">
       <div>
-        <Badge variant="secondary">Catálogo MotoShop</Badge>
+        <Badge variant="secondary">Catálogo da Moto Shop</Badge>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-5xl">{title}</h1>
         <p className="text-muted-foreground mt-3 max-w-2xl">{description}</p>
       </div>

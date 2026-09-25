@@ -1,6 +1,9 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
+import { env } from "@/config/env";
+import { logger } from "@/lib/logger";
+import type { PaymentProvider } from "@/shared/payment/payment-provider";
 
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
@@ -18,28 +21,52 @@ import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 import { ApplicationError } from "@/shared/errors/application-error";
 
 import { shippingSelectionsSchema, type CheckoutInput } from "../schemas/checkout";
-import { quoteShippingForActiveCart } from "./shipping-quotes";
+import { quoteShippingForCart } from "./shipping-quotes";
 
 type CheckoutSession = Awaited<ReturnType<typeof getCurrentSession>>;
 export type CheckoutResult = { orderNumber: string; guestAccessToken?: string };
 
-export async function executeCheckout(input: {
-  data: CheckoutInput;
-  identity: CartIdentity;
-  session: CheckoutSession;
-}): Promise<CheckoutResult> {
-  const existingOrder = await findExistingOrder(input.data.checkoutIdempotencyKey);
-  if (existingOrder) return { orderNumber: existingOrder };
+export async function executeCheckout(
+  input: {
+    data: CheckoutInput;
+    identity: CartIdentity;
+    session: CheckoutSession;
+  },
+  paymentProvider: PaymentProvider = mercadoPagoProvider,
+): Promise<CheckoutResult> {
+  // The injected provider is server-side only; no request or environment flag enables fake payments.
+  const guestAccessToken =
+    "guestAccessTokenHash" in input.identity
+      ? createHmac("sha256", env.BETTER_AUTH_SECRET)
+          .update(`checkout:${input.identity.guestAccessTokenHash}:${input.data.checkoutIdempotencyKey}`)
+          .digest("hex")
+      : undefined;
+  const existingOrder = await findExistingOrder(input.data.checkoutIdempotencyKey, input.identity, guestAccessToken);
+  if (existingOrder) return { orderNumber: existingOrder, ...(guestAccessToken ? { guestAccessToken } : {}) };
+  if (
+    paymentProvider === mercadoPagoProvider &&
+    ((input.data.paymentMethodId !== "pix" && !env.MERCADO_PAGO_PUBLIC_KEY) ||
+      (env.MERCADO_PAGO_NOTIFICATION_URL && !env.MERCADO_PAGO_WEBHOOK_SECRET))
+  ) {
+    throw new ApplicationError({
+      code: "CONFIGURATION_ERROR",
+      message: "A configuração de pagamento ainda precisa ser concluída pela Moto Shop.",
+    });
+  }
+  if (paymentProvider === mercadoPagoProvider && !env.MERCADO_PAGO_ACCESS_TOKEN)
+    throw new ApplicationError({
+      code: "CONFIGURATION_ERROR",
+      message: "O pagamento ainda não está disponível. Nenhuma cobrança foi criada.",
+    });
 
   const selections = parseShippingSelections(input.data.shippingSelections);
   const cart = await findActiveCart(input.identity);
   const coupon = await findActiveCoupon(input.data.couponCode, input.data.customerEmail, input.session?.user.id);
-  const quoteGroups = await quoteShippingForActiveCart(input.data.postalCode);
+  const quoteGroups = await quoteShippingForCart(cart, input.data.postalCode);
   const sellerCharges = await calculateSellerCharges(cart.items, quoteGroups, selections, coupon);
-  assertPaymentCanHandleSellers(sellerCharges.length);
+  assertPaymentCanHandleSellers(sellerCharges.length, paymentProvider);
 
   const orderNumber = createOrderNumber();
-  const guestAccessToken = input.session ? undefined : randomUUID();
   const order = await reserveCartAndCreateOrder({
     input,
     cart,
@@ -50,30 +77,51 @@ export async function executeCheckout(input: {
   });
 
   try {
-    const paymentResult = await mercadoPagoProvider.createPayment({
+    const paymentResult = await paymentProvider.createPayment({
       orderNumber,
       amountInCents: order.totalAmountInCents,
       payerEmail: input.data.customerEmail,
+      payerTaxId: input.data.customerTaxId,
       paymentMethodId: input.data.paymentMethodId,
+      ...(input.data.paymentToken ? { paymentToken: input.data.paymentToken } : {}),
+      ...(input.data.issuerId ? { issuerId: input.data.issuerId } : {}),
+      installments: 1,
       applicationFeeInCents: sumMoneyInCents(sellerCharges.map((charge) => charge.commissionInCents)),
       idempotencyKey: input.data.checkoutIdempotencyKey,
       sellerCount: sellerCharges.length,
     });
     await finalizePayment({ order, paymentResult });
   } catch (error) {
-    await releaseFailedCheckout(order.orderId, order.paymentId, cart.id);
-    throw error;
+    // A timeout can happen AFTER the provider accepted a charge. Keep the order and
+    // reservation pending for reconciliation instead of allowing a second charge.
+    logger.error({
+      event: "checkout.payment_confirmation_pending",
+      orderId: order.orderId,
+      errorType: error instanceof Error ? error.name : "UnknownError",
+    });
   }
 
   return { orderNumber, ...(guestAccessToken ? { guestAccessToken } : {}) };
 }
 
-async function findExistingOrder(idempotencyKey: string): Promise<string | undefined> {
+async function findExistingOrder(
+  idempotencyKey: string,
+  identity: CartIdentity,
+  guestAccessToken?: string,
+): Promise<string | undefined> {
   const transaction = await db.paymentTransaction.findUnique({
     where: { idempotencyKey },
     include: { payment: { include: { order: true } } },
   });
-  return transaction?.payment.order.orderNumber;
+  if (!transaction) return undefined;
+  const order = transaction.payment.order;
+  const owned =
+    "userId" in identity
+      ? order.userId === identity.userId
+      : Boolean(guestAccessToken && order.guestAccessTokenHash === hashGuestToken(guestAccessToken));
+  if (!owned)
+    throw new ApplicationError({ code: "CONFLICT", message: "Esta tentativa de compra não pertence à sua sessão." });
+  return order.orderNumber;
 }
 
 function parseShippingSelections(value: string): Record<string, string> {
@@ -107,7 +155,7 @@ async function findActiveCart(identity: CartIdentity) {
 
 async function calculateSellerCharges(
   items: Awaited<ReturnType<typeof findActiveCart>>["items"],
-  quoteGroups: Awaited<ReturnType<typeof quoteShippingForActiveCart>>,
+  quoteGroups: Awaited<ReturnType<typeof quoteShippingForCart>>,
   selections: Record<string, string>,
   coupon?: Awaited<ReturnType<typeof findActiveCoupon>>,
 ) {
@@ -176,13 +224,18 @@ async function calculateSellerCharges(
       charge.items[0]?.variant.product.seller.commissionBpsOverride ?? marketplaceConfig.defaultCommissionBps;
     const commissionInCents = calculateCommissionInCents(totals.itemsSubtotalInCents, commissionBps);
     const sellerFundedDiscount = coupon?.fundedBy === "SELLER" ? discountInCents : 0;
+    if (totals.itemsSubtotalInCents - sellerFundedDiscount - commissionInCents < 0)
+      throw new ApplicationError({
+        code: "CONFLICT",
+        message: "Este cupom não pode ser combinado com as condições atuais da loja.",
+      });
     return {
       ...charge,
       totals,
       commissionBps,
       commissionInCents,
-      marketplaceSubsidyInCents: coupon?.fundedBy === "MARKETPLACE" ? discountInCents : 0,
-      sellerSubsidyInCents: sellerFundedDiscount,
+      marketplaceDiscountInCents: coupon?.fundedBy === "MARKETPLACE" ? discountInCents : 0,
+      sellerDiscountInCents: sellerFundedDiscount,
       sellerNetAmountInCents: totals.itemsSubtotalInCents - sellerFundedDiscount - commissionInCents,
     };
   });
@@ -226,8 +279,8 @@ async function findActiveCoupon(code: string | undefined, customerEmail: string,
   return coupon;
 }
 
-function assertPaymentCanHandleSellers(sellerCount: number): void {
-  if (!mercadoPagoProvider.supportsSellerCount(sellerCount)) {
+function assertPaymentCanHandleSellers(sellerCount: number, provider: PaymentProvider): void {
+  if (!provider.supportsSellerCount(sellerCount)) {
     throw new ApplicationError({
       code: "CONFIGURATION_ERROR",
       message: "O pagamento com múltiplos sellers depende da habilitação do split 1:N no Mercado Pago.",
@@ -251,7 +304,37 @@ async function reserveCartAndCreateOrder(input: {
   const totalShippingInCents = sumMoneyInCents(
     input.sellerCharges.map((charge) => charge.totals.shippingAmountInCents),
   );
+  if (totalAmountInCents <= 0)
+    throw new ApplicationError({ code: "CONFLICT", message: "O total da compra deve ser maior que zero." });
   return db.$transaction(async (tx) => {
+    const converted = await tx.cart.updateMany({
+      where: { id: input.cart.id, status: "ACTIVE" },
+      data: { status: "CONVERTED" },
+    });
+    if (converted.count !== 1)
+      throw new ApplicationError({
+        code: "CONFLICT",
+        message: "Este carrinho já está sendo finalizado. Consulte seus pedidos antes de tentar novamente.",
+      });
+    for (const item of input.cart.items) {
+      const fresh = await tx.productVariant.findFirst({
+        where: {
+          id: item.variantId,
+          active: true,
+          product: {
+            status: "APPROVED",
+            seller: { status: { in: ["APPROVED", "ACTIVE"] } },
+            category: { active: true },
+            brand: { active: true },
+          },
+        },
+      });
+      if (!fresh || getCurrentPriceInCents(fresh) !== getCurrentPriceInCents(item.variant))
+        throw new ApplicationError({
+          code: "CONFLICT",
+          message: "Um produto mudou de preço ou disponibilidade. Revise o carrinho.",
+        });
+    }
     const order = await tx.order.create({
       data: {
         orderNumber: input.orderNumber,
@@ -271,6 +354,26 @@ async function reserveCartAndCreateOrder(input: {
     });
 
     for (const charge of input.sellerCharges) {
+      if (charge.shipping.provider === "OWN") {
+        const method = await tx.sellerShippingMethod.findFirst({
+          where: {
+            id: charge.shipping.serviceCode.slice(4),
+            sellerId: charge.sellerId,
+            active: true,
+            postalCodeStart: { lte: input.input.data.postalCode },
+            postalCodeEnd: { gte: input.input.data.postalCode },
+            priceInCents: charge.shipping.priceInCents,
+            ...(charge.shipping.estimatedDeliveryDays !== undefined
+              ? { estimatedDeliveryDays: charge.shipping.estimatedDeliveryDays }
+              : {}),
+          },
+        });
+        if (!method)
+          throw new ApplicationError({
+            code: "CONFLICT",
+            message: "A modalidade de entrega mudou. Calcule o frete novamente.",
+          });
+      }
       const sellerOrder = await tx.sellerOrder.create({
         data: {
           orderId: order.id,
@@ -281,8 +384,8 @@ async function reserveCartAndCreateOrder(input: {
           discountAmountInCents: charge.totals.discountAmountInCents,
           shippingAmountInCents: charge.totals.shippingAmountInCents,
           customerShippingAmountInCents: charge.totals.customerShippingAmountInCents,
-          marketplaceSubsidyInCents: charge.marketplaceSubsidyInCents,
-          sellerSubsidyInCents: charge.sellerSubsidyInCents,
+          marketplaceDiscountInCents: charge.marketplaceDiscountInCents,
+          sellerDiscountInCents: charge.sellerDiscountInCents,
           commissionBps: charge.commissionBps,
           marketplaceCommissionInCents: charge.commissionInCents,
           sellerNetAmountInCents: charge.sellerNetAmountInCents,
@@ -298,12 +401,12 @@ async function reserveCartAndCreateOrder(input: {
                 : {}),
             },
           },
-          items: { create: charge.items.map((item) => createOrderItem(item, charge.sellerId)) },
+          items: { create: charge.items.map((item) => createOrderItem(item)) },
         },
       });
       if (!sellerOrder.id)
         throw new ApplicationError({ code: "INTERNAL_ERROR", message: "Não foi possível criar o pedido do seller." });
-      await reserveInventory(tx, charge);
+      await reserveInventory(tx, charge, order.id);
     }
 
     const payment = await tx.payment.create({
@@ -322,7 +425,6 @@ async function reserveCartAndCreateOrder(input: {
       },
       include: { transactions: true },
     });
-    await tx.cart.update({ where: { id: input.cart.id }, data: { status: "CONVERTED" } });
     if (input.coupon) {
       await tx.$queryRaw`SELECT id FROM "coupons" WHERE id = ${input.coupon.id} FOR UPDATE`;
       const coupon = await tx.coupon.findUniqueOrThrow({ where: { id: input.coupon.id } });
@@ -339,6 +441,9 @@ async function reserveCartAndCreateOrder(input: {
       ]);
       if (
         !coupon.active ||
+        (coupon.startsAt !== null && coupon.startsAt > new Date()) ||
+        (coupon.endsAt !== null && coupon.endsAt < new Date()) ||
+        coupon.updatedAt.getTime() !== input.coupon.updatedAt.getTime() ||
         (coupon.globalUsageLimit !== null && globalUsage >= coupon.globalUsageLimit) ||
         (coupon.perCustomerUsageLimit !== null && customerUsage >= coupon.perCustomerUsageLimit)
       ) {
@@ -374,37 +479,33 @@ function createShippingAddress(data: CheckoutInput) {
   };
 }
 
-function createOrderItem(
-  item: {
-    variantId: string;
-    quantity: number;
-    variant: {
-      productId: string;
-      sku: string;
-      title: string;
-      attributes: unknown;
+function createOrderItem(item: {
+  variantId: string;
+  quantity: number;
+  variant: {
+    productId: string;
+    sku: string;
+    title: string;
+    attributes: unknown;
+    weightInGrams: number | null;
+    heightInMillimeters: number | null;
+    widthInMillimeters: number | null;
+    lengthInMillimeters: number | null;
+    product: {
+      name: string;
       weightInGrams: number | null;
       heightInMillimeters: number | null;
       widthInMillimeters: number | null;
       lengthInMillimeters: number | null;
-      product: {
-        name: string;
-        weightInGrams: number | null;
-        heightInMillimeters: number | null;
-        widthInMillimeters: number | null;
-        lengthInMillimeters: number | null;
-      };
-      priceInCents: number;
-      promotionalPriceInCents: number | null;
-      promotionStartsAt: Date | null;
-      promotionEndsAt: Date | null;
     };
-  },
-  sellerId: string,
-) {
+    priceInCents: number;
+    promotionalPriceInCents: number | null;
+    promotionStartsAt: Date | null;
+    promotionEndsAt: Date | null;
+  };
+}) {
   const unitPriceInCents = getCurrentPriceInCents(item.variant);
   return {
-    sellerId,
     productId: item.variant.productId,
     variantId: item.variantId,
     productNameSnapshot: item.variant.product.name,
@@ -424,6 +525,7 @@ function createOrderItem(
 async function reserveInventory(
   tx: Parameters<Parameters<typeof db.$transaction>[0]>[0],
   charge: Awaited<ReturnType<typeof calculateSellerCharges>>[number],
+  orderId: string,
 ) {
   for (const item of charge.items) {
     const inventory = item.variant.inventory;
@@ -447,7 +549,7 @@ async function reserveInventory(
         availableQuantityAfter: after.availableQuantity,
         reservedQuantityAfter: after.reservedQuantity,
         referenceType: "ORDER",
-        referenceId: charge.sellerId,
+        referenceId: orderId,
         reason: "Checkout reservation",
         inventoryId: inventory.id,
         variantId: item.variantId,
@@ -462,10 +564,12 @@ async function finalizePayment(input: {
   paymentResult: Awaited<ReturnType<typeof mercadoPagoProvider.createPayment>>;
 }) {
   await db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "orders" WHERE id = ${input.order.orderId} FOR UPDATE`;
     const order = await tx.order.findUniqueOrThrow({
       where: { id: input.order.orderId },
       include: { sellerOrders: { include: { items: true } } },
     });
+    if (order.status !== "PENDING_PAYMENT") return;
     await tx.payment.update({
       where: { id: input.order.paymentId },
       data: {
@@ -480,32 +584,30 @@ async function finalizePayment(input: {
     await tx.paymentTransaction.update({
       where: { id: input.order.paymentTransactionId },
       data: {
-        status: input.paymentResult.status === "APPROVED" ? "SUCCEEDED" : "PENDING",
+        status: ["FAILED", "CANCELLED"].includes(input.paymentResult.status)
+          ? "FAILED"
+          : input.paymentResult.status === "APPROVED"
+            ? "SUCCEEDED"
+            : "PENDING",
         externalId: input.paymentResult.externalId,
         processedAt: input.paymentResult.paidAt ?? null,
       },
     });
-    const paid = input.paymentResult.status === "APPROVED" || input.paymentResult.status === "AUTHORIZED";
+    const paid = input.paymentResult.status === "APPROVED";
+    const failed = ["FAILED", "CANCELLED"].includes(input.paymentResult.status);
+    if (failed) {
+      await releaseOrderReservations(tx, order.sellerOrders, order.id, "Payment declined");
+      await tx.couponRedemption.deleteMany({ where: { orderId: order.id } });
+    }
     if (paid) await commitOrderReservations(tx, order.sellerOrders, order.id);
-    await tx.order.update({ where: { id: input.order.orderId }, data: { status: paid ? "PAID" : "PENDING_PAYMENT" } });
+    await tx.order.update({
+      where: { id: input.order.orderId },
+      data: { status: failed ? "CANCELLED" : paid ? "PAID" : "PENDING_PAYMENT" },
+    });
     await tx.sellerOrder.updateMany({
       where: { orderId: input.order.orderId },
-      data: { status: paid ? "PAID" : "PENDING_PAYMENT" },
+      data: { status: failed ? "CANCELLED" : paid ? "PAID" : "PENDING_PAYMENT" },
     });
-  });
-}
-
-async function releaseFailedCheckout(orderId: string, paymentId: string, cartId: string): Promise<void> {
-  await db.$transaction(async (tx) => {
-    const order = await tx.order.findUniqueOrThrow({
-      where: { id: orderId },
-      include: { sellerOrders: { include: { items: true } } },
-    });
-    await releaseOrderReservations(tx, order.sellerOrders, orderId, "Payment provider failure");
-    await tx.payment.update({ where: { id: paymentId }, data: { status: "FAILED", failedAt: new Date() } });
-    await tx.order.update({ where: { id: orderId }, data: { status: "CANCELLED" } });
-    await tx.sellerOrder.updateMany({ where: { orderId }, data: { status: "CANCELLED" } });
-    await tx.cart.update({ where: { id: cartId }, data: { status: "ACTIVE" } });
   });
 }
 

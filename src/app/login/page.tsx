@@ -6,8 +6,8 @@ export default function LoginPage() {
     <main className="mx-auto flex min-h-[calc(100vh-10rem)] w-full max-w-md items-center px-4 py-10">
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Acessar o MotoShop</CardTitle>
-          <CardDescription>Entre para operar sua loja ou crie uma conta de seller.</CardDescription>
+          <CardTitle>Acessar a Moto Shop</CardTitle>
+          <CardDescription>Acesse sua conta para acompanhar pedidos, salvar favoritos ou administrar sua loja.</CardDescription>
         </CardHeader>
         <CardContent>
           <Suspense fallback={<p className="text-muted-foreground text-sm">Carregando...</p>}>

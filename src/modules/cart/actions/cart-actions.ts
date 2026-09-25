@@ -28,7 +28,12 @@ export async function addToCartAction(variantId: string, quantity: number): Prom
       where: {
         id: parsed.data.variantId,
         active: true,
-        product: { status: ProductStatus.APPROVED },
+        product: {
+          status: ProductStatus.APPROVED,
+          seller: { status: { in: ["APPROVED", "ACTIVE"] } },
+          category: { active: true },
+          brand: { active: true },
+        },
       },
       include: { inventory: true },
     });

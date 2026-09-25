@@ -93,7 +93,7 @@ async function settleReservedInventory(
       await tx.inventoryMovement.create({
         data: {
           type: movementType,
-          quantityChange: returnToAvailable ? item.quantity : 0,
+          quantityChange: returnToAvailable ? item.quantity : -item.quantity,
           availableQuantityAfter: after.availableQuantity,
           reservedQuantityAfter: after.reservedQuantity,
           referenceType: "ORDER",

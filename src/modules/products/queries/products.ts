@@ -3,9 +3,7 @@ import "server-only";
 import { Prisma, ProductStatus } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
 
-import { rankProducts } from "../domain/product-ranking";
-import { getCurrentPriceInCents, hasActivePromotion } from "../domain/pricing";
-import type { ProductSort } from "../search-params";
+import { findPublicProductPage, type PublicProductFilter } from "./public-product-page";
 import type { SellerProductSort, SellerProductStatus, SellerProductStock } from "../seller-search-params";
 
 function parseProductReviewDate(value: string | null | undefined, endOfDay: boolean) {
@@ -48,8 +46,18 @@ export async function listSellerProducts(
   const requestedPage = Math.max(input.page ?? 1, 1);
   const query = input.query?.trim();
   const status = input.status && input.status !== "ALL" ? (input.status as ProductStatus) : undefined;
-  const minPrice = typeof input.minPriceInCents === "number" && Number.isSafeInteger(input.minPriceInCents) && input.minPriceInCents >= 0 ? input.minPriceInCents : undefined;
-  const maxPrice = typeof input.maxPriceInCents === "number" && Number.isSafeInteger(input.maxPriceInCents) && input.maxPriceInCents >= 0 ? input.maxPriceInCents : undefined;
+  const minPrice =
+    typeof input.minPriceInCents === "number" &&
+    Number.isSafeInteger(input.minPriceInCents) &&
+    input.minPriceInCents >= 0
+      ? input.minPriceInCents
+      : undefined;
+  const maxPrice =
+    typeof input.maxPriceInCents === "number" &&
+    Number.isSafeInteger(input.maxPriceInCents) &&
+    input.maxPriceInCents >= 0
+      ? input.maxPriceInCents
+      : undefined;
   const variantFilter: Prisma.ProductVariantWhereInput = {
     ...(minPrice !== undefined || maxPrice !== undefined ? { active: true } : {}),
     ...(input.stock === "OUT" ? { active: true, inventory: { availableQuantity: 0 } } : {}),
@@ -66,7 +74,12 @@ export async function listSellerProducts(
         }
       : {}),
     ...(minPrice !== undefined || maxPrice !== undefined
-      ? { priceInCents: { ...(minPrice !== undefined ? { gte: minPrice } : {}), ...(maxPrice !== undefined ? { lte: maxPrice } : {}) } }
+      ? {
+          priceInCents: {
+            ...(minPrice !== undefined ? { gte: minPrice } : {}),
+            ...(maxPrice !== undefined ? { lte: maxPrice } : {}),
+          },
+        }
       : {}),
   };
   const where: Prisma.ProductWhereInput = {
@@ -155,6 +168,10 @@ export async function listProductReviewQueue(
         category: true,
         brand: true,
         variants: { include: { inventory: true } },
+        images: { orderBy: { sortOrder: "asc" }, take: 1 },
+        compatibilities: {
+          include: { motorcycleFitment: { include: { motorcycleModel: { include: { manufacturer: true } } } } },
+        },
       },
       orderBy: [
         { submittedAt: input.sort === "newest" ? "desc" : "asc" },
@@ -168,53 +185,16 @@ export async function listProductReviewQueue(
   return { products, total, page: Math.min(requestedPage, pageCount), pageCount };
 }
 
-export async function listApprovedProducts(input?: {
-  query?: string | null;
-  motorcycleFitmentId?: string | null;
-  motorcycleFitmentIds?: string[] | null;
-  categoryId?: string | null;
-  brandId?: string | null;
-  sellerId?: string | null;
-  sort?: ProductSort;
-  page?: number;
-  pageSize?: number;
-  availability?: "ALL" | "IN_STOCK" | "OUT_OF_STOCK";
-  minPriceInCents?: number | null;
-  maxPriceInCents?: number | null;
-  promotion?: "ALL" | "ON_SALE";
-}) {
-  const query = input?.query?.trim();
-  const pageSize = Math.min(Math.max(input?.pageSize ?? 12, 1), 48);
-  const requestedPage = Math.max(input?.page ?? 1, 1);
+export async function listApprovedProducts(input: PublicProductFilter = {}) {
   const now = new Date();
+  const page = await findPublicProductPage(input, now);
   const products = await db.product.findMany({
     where: {
-      status: ProductStatus.APPROVED,
-      seller: { status: { in: ["APPROVED", "ACTIVE"] }, ...(input?.sellerId ? { id: input.sellerId } : {}) },
-      ...(query
-        ? {
-            OR: [
-              { name: { contains: query, mode: "insensitive" } },
-              { description: { contains: query, mode: "insensitive" } },
-              { brand: { name: { contains: query, mode: "insensitive" } } },
-              { category: { name: { contains: query, mode: "insensitive" } } },
-              { seller: { store: { name: { contains: query, mode: "insensitive" } } } },
-              { variants: { some: { sku: { contains: query, mode: "insensitive" } } } },
-            ],
-          }
-        : {}),
-      ...(input?.motorcycleFitmentIds?.length
-        ? { compatibilities: { some: { motorcycleFitmentId: { in: input.motorcycleFitmentIds } } } }
-        : input?.motorcycleFitmentId
-          ? { compatibilities: { some: { motorcycleFitmentId: input.motorcycleFitmentId } } }
-          : {}),
-      ...(input?.categoryId ? { categoryId: input.categoryId } : {}),
-      ...(input?.brandId ? { brandId: input.brandId } : {}),
-      ...(input?.availability === "IN_STOCK"
-        ? { variants: { some: { active: true, inventory: { availableQuantity: { gt: 0 } } } } }
-        : input?.availability === "OUT_OF_STOCK"
-          ? { variants: { none: { active: true, inventory: { availableQuantity: { gt: 0 } } } } }
-          : {}),
+      id: { in: page.ids },
+      status: "APPROVED",
+      seller: { status: { in: ["APPROVED", "ACTIVE"] } },
+      category: { active: true },
+      brand: { active: true },
     },
     include: {
       seller: {
@@ -232,61 +212,21 @@ export async function listApprovedProducts(input?: {
       variants: { where: { active: true }, include: { inventory: true } },
       _count: { select: { productReviews: true } },
     },
-    orderBy: { createdAt: "desc" },
   });
-
-  const requestedMinPrice = input?.minPriceInCents;
-  const requestedMaxPrice = input?.maxPriceInCents;
-  const minPriceInCents =
-    requestedMinPrice !== null &&
-    requestedMinPrice !== undefined &&
-    Number.isSafeInteger(requestedMinPrice) &&
-    requestedMinPrice >= 0
-      ? requestedMinPrice
-      : undefined;
-  const maxPriceInCents =
-    requestedMaxPrice !== null &&
-    requestedMaxPrice !== undefined &&
-    Number.isSafeInteger(requestedMaxPrice) &&
-    requestedMaxPrice >= 0
-      ? requestedMaxPrice
-      : undefined;
-  const priceFilteredProducts = products.filter((product) => {
-    if (input?.promotion === "ON_SALE" && !product.variants.some((variant) => hasActivePromotion(variant, now))) {
-      return false;
-    }
-    if (minPriceInCents === undefined && maxPriceInCents === undefined) return true;
-    return product.variants.some((variant) => {
-      const price = getCurrentPriceInCents(variant, now);
-      return (minPriceInCents === undefined || price >= minPriceInCents) &&
-        (maxPriceInCents === undefined || price <= maxPriceInCents);
-    });
-  });
-
-  const rankedProducts = rankProducts(
-    priceFilteredProducts.map((product) => ({
-      ...product,
-      isInStock: product.variants.some((variant) => (variant.inventory?.availableQuantity ?? 0) > 0),
-      reviewCount: product._count.productReviews,
-      isVip: product.seller.subscriptions.length > 0,
-    })),
-    query,
-  );
-
-  const sortedProducts = [...rankedProducts].sort((a, b) => {
-    if (input?.sort === "newest") return b.createdAt.getTime() - a.createdAt.getTime();
-    if (input?.sort === "price_asc" || input?.sort === "price_desc") {
-      const aPrice = a.variants[0] ? getCurrentPriceInCents(a.variants[0], now) : Number.MAX_SAFE_INTEGER;
-      const bPrice = b.variants[0] ? getCurrentPriceInCents(b.variants[0], now) : Number.MAX_SAFE_INTEGER;
-      return input.sort === "price_asc" ? aPrice - bPrice : bPrice - aPrice;
-    }
-    return 0;
-  });
-
-  const total = sortedProducts.length;
-  const pageCount = Math.max(Math.ceil(total / pageSize), 1);
-  const page = Math.min(requestedPage, pageCount);
-  return { products: sortedProducts.slice((page - 1) * pageSize, page * pageSize), total, page, pageCount };
+  const positions = new Map(page.ids.map((id, index) => [id, index]));
+  return {
+    products: products
+      .map((product) => ({
+        ...product,
+        isInStock: product.variants.some((variant) => (variant.inventory?.availableQuantity ?? 0) > 0),
+        reviewCount: product._count.productReviews,
+        isVip: product.seller.subscriptions.length > 0,
+      }))
+      .sort((a, b) => positions.get(a.id)! - positions.get(b.id)!),
+    total: page.total,
+    page: page.page,
+    pageCount: page.pageCount,
+  };
 }
 
 export async function getApprovedProductBySlug(
@@ -302,10 +242,22 @@ export async function getApprovedProductBySlug(
   const pageSize = 6;
   const requestedReviewPage = Math.max(input.reviewPage ?? 1, 1);
   const requestedQuestionPage = Math.max(input.questionPage ?? 1, 1);
-  const reviewRating = typeof input.reviewRating === "number" && Number.isInteger(input.reviewRating) && input.reviewRating >= 1 && input.reviewRating <= 5 ? input.reviewRating : undefined;
+  const reviewRating =
+    typeof input.reviewRating === "number" &&
+    Number.isInteger(input.reviewRating) &&
+    input.reviewRating >= 1 &&
+    input.reviewRating <= 5
+      ? input.reviewRating
+      : undefined;
   const now = new Date();
   const product = await db.product.findFirst({
-    where: { slug, status: ProductStatus.APPROVED, seller: { status: { in: ["APPROVED", "ACTIVE"] } } },
+    where: {
+      slug,
+      status: ProductStatus.APPROVED,
+      category: { active: true },
+      brand: { active: true },
+      seller: { status: { in: ["APPROVED", "ACTIVE"] } },
+    },
     include: {
       seller: {
         include: {
@@ -339,7 +291,7 @@ export async function getApprovedProductBySlug(
           askedBy: { select: { name: true } },
           answeredBy: { select: { name: true } },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: input.questionSort === "oldest" ? "asc" : "desc" },
         skip: (requestedQuestionPage - 1) * pageSize,
         take: pageSize,
       },
@@ -350,7 +302,10 @@ export async function getApprovedProductBySlug(
   if (!product) return null;
 
   const [reviewSummary, reviewCount] = await Promise.all([
-    db.productReview.aggregate({ where: { productId: product.id, ...(reviewRating ? { rating: reviewRating } : {}) }, _avg: { rating: true } }),
+    db.productReview.aggregate({
+      where: { productId: product.id, ...(reviewRating ? { rating: reviewRating } : {}) },
+      _avg: { rating: true },
+    }),
     db.productReview.count({ where: { productId: product.id, ...(reviewRating ? { rating: reviewRating } : {}) } }),
   ]);
   const reviewPageCount = Math.max(Math.ceil(reviewCount / pageSize), 1);
@@ -370,7 +325,13 @@ export async function getApprovedProductBySlug(
 
 export async function getApprovedProductSeoBySlug(slug: string) {
   return db.product.findFirst({
-    where: { slug, status: ProductStatus.APPROVED, seller: { status: { in: ["APPROVED", "ACTIVE"] } } },
+    where: {
+      slug,
+      status: ProductStatus.APPROVED,
+      category: { active: true },
+      brand: { active: true },
+      seller: { status: { in: ["APPROVED", "ACTIVE"] } },
+    },
     select: {
       name: true,
       slug: true,

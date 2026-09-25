@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!category) return { title: "Categoria não encontrada" };
   return {
     title: category.name,
-    description: `Produtos de ${category.name} para motocross no MotoShop.`,
+    description: `Produtos de ${category.name} para motocross na Moto Shop.`,
     alternates: { canonical: `/categoria/${category.slug}` },
   };
 }
@@ -29,7 +29,7 @@ export default async function CategoryPage({ params, searchParams }: { params: P
   return (
     <PublicCatalogLanding
       title={`${parentLabel}${category.name}`}
-      description={`Produtos de ${category.name} aprovados pelo MotoShop, com estoque e sellers verificados.`}
+      description={`Produtos de ${category.name} aprovados pela Moto Shop, com estoque e lojas verificadas.`}
       result={result}
       allProductsHref={`/products?category=${category.id}`}
       baseHref={`/categoria/${category.slug}`}

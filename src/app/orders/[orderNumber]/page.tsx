@@ -12,6 +12,8 @@ import { RequestCancellationForm } from "@/modules/returns/components/request-ca
 import { RequestReturnForm } from "@/modules/returns/components/request-return-form";
 import { getCustomerOrder } from "@/modules/returns/queries/customer-orders";
 import { PaymentRefreshForm } from "@/modules/payments/components/payment-refresh-form";
+import { PixPaymentInstructions } from "@/modules/payments/components/pix-payment-instructions";
+import { getPixInstructions } from "@/modules/payments/domain/pix-instructions";
 
 const orderStatusLabels: Record<string, string> = {
   PENDING_PAYMENT: "Aguardando pagamento",
@@ -75,10 +77,10 @@ export default async function CustomerOrderPage({
 }) {
   const [{ orderNumber }, { accessToken }] = await Promise.all([params, searchParams]);
   const session = await getCurrentSession();
-  const identity = session
-    ? { userId: session.user.id }
-    : accessToken
-      ? { guestAccessTokenHash: hashGuestToken(accessToken) }
+  const identity = accessToken
+    ? { guestAccessTokenHash: hashGuestToken(accessToken) }
+    : session
+      ? { userId: session.user.id }
       : null;
   if (!identity) notFound();
 
@@ -240,35 +242,52 @@ export default async function CustomerOrderPage({
           {order.payments.length === 0 ? (
             <p className="text-muted-foreground text-sm">Nenhum pagamento registrado.</p>
           ) : (
-            order.payments.map((payment) => (
-              <div key={payment.id} className="rounded-lg border p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{payment.method ?? payment.provider}</p>
-                    <p className="text-muted-foreground text-sm">
-                      {formatMoneyInCents(payment.amountInCents)} · {new Intl.DateTimeFormat("pt-BR").format(payment.createdAt)}
+            order.payments.map((payment) => {
+              const pixInstructions = getPixInstructions(payment);
+              return (
+                <div key={payment.id} className="rounded-lg border p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-medium">{payment.method ?? payment.provider}</p>
+                      <p className="text-muted-foreground text-sm">
+                        {formatMoneyInCents(payment.amountInCents)} ·{" "}
+                        {new Intl.DateTimeFormat("pt-BR").format(payment.createdAt)}
+                      </p>
+                    </div>
+                    <Badge
+                      variant={
+                        payment.status === "FAILED" || payment.status === "CANCELLED" ? "destructive" : "secondary"
+                      }
+                    >
+                      {paymentStatusLabels[payment.status] ?? payment.status}
+                    </Badge>
+                  </div>
+                  {pixInstructions ? <PixPaymentInstructions {...pixInstructions} /> : null}
+                  {payment.method === "pix" &&
+                  ["PENDING", "PROCESSING"].includes(payment.status) &&
+                  !pixInstructions ? (
+                    <p className="text-muted-foreground mt-3 text-sm">
+                      O código Pix ainda não está disponível. Consulte o status em instantes.
                     </p>
-                  </div>
-                  <Badge variant={payment.status === "FAILED" || payment.status === "CANCELLED" ? "destructive" : "secondary"}>
-                    {paymentStatusLabels[payment.status] ?? payment.status}
-                  </Badge>
+                  ) : null}
+                  {payment.transactions.length > 0 ? (
+                    <ul className="text-muted-foreground mt-3 space-y-1 text-xs">
+                      {payment.transactions.map((transaction) => (
+                        <li key={transaction.id}>
+                          {transaction.type} · {transaction.status} ·{" "}
+                          {new Intl.DateTimeFormat("pt-BR").format(transaction.createdAt)}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {["PENDING", "PROCESSING", "AUTHORIZED"].includes(payment.status) ? (
+                    <div className="mt-3">
+                      <PaymentRefreshForm orderNumber={order.orderNumber} {...(accessToken ? { accessToken } : {})} />
+                    </div>
+                  ) : null}
                 </div>
-                {payment.transactions.length > 0 ? (
-                  <ul className="text-muted-foreground mt-3 space-y-1 text-xs">
-                    {payment.transactions.map((transaction) => (
-                      <li key={transaction.id}>
-                        {transaction.type} · {transaction.status} · {new Intl.DateTimeFormat("pt-BR").format(transaction.createdAt)}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                {["PENDING", "PROCESSING"].includes(payment.status) ? (
-                  <div className="mt-3">
-                    <PaymentRefreshForm orderNumber={order.orderNumber} {...(accessToken ? { accessToken } : {})} />
-                  </div>
-                ) : null}
-              </div>
-            ))
+              );
+            })
           )}
         </CardContent>
       </Card>

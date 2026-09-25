@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 460" role="img" aria-label="Ilustração de capacete de motocross">
+  <defs>
+    <linearGradient id="shell" x1=".12" y1=".12" x2=".89" y2=".92"><stop stop-color="#686b6c"/><stop offset=".38" stop-color="#303437"/><stop offset="1" stop-color="#111315"/></linearGradient>
+    <linearGradient id="visor" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#56616a"/><stop offset="1" stop-color="#0a0d10"/></linearGradient>
+    <linearGradient id="flare"><stop stop-color="#ffb978"/><stop offset=".45" stop-color="#ff6900"/><stop offset="1" stop-color="#aa3100"/></linearGradient>
+    <filter id="shadow"><feGaussianBlur stdDeviation="12"/></filter>
+  </defs>
+  <ellipse cx="305" cy="381" rx="192" ry="24" fill="#000" opacity=".43" filter="url(#shadow)"/>
+  <path d="M133 253c0-100 65-162 163-164 86-2 153 50 171 134l-53 17-25 92-77 48-144-18-45-70z" fill="url(#shell)" stroke="#929897" stroke-width="5"/>
+  <path d="M174 168c57-71 157-82 225-24l-16 26c-66-38-127-30-180 29z" fill="url(#flare)"/>
+  <path d="M404 151l103 23-96 47-24-12z" fill="#1a1c1d" stroke="#aeb4b5" stroke-width="5"/>
+  <path d="M236 206c76-42 153-38 199 11l-25 65c-56-26-130-17-184 4l-46-23z" fill="url(#visor)" stroke="#c9d0ce" stroke-width="7"/>
+  <path d="M246 220c68-22 125-23 160 8" fill="none" stroke="#ffffff" stroke-opacity=".26" stroke-width="7"/>
+  <path d="M179 264l80 38 140-14-17 41-59 36-141-21-42-52z" fill="#232629" stroke="#939d9b" stroke-width="5"/>
+  <path d="M154 292l101 27 96-2-30 43-150-5-34-43z" fill="url(#flare)" stroke="#311f18" stroke-width="5"/>
+  <path d="M166 329l56 7m-44 7 42 6m144-35-24 38" stroke="#1b1a1a" stroke-width="7" stroke-linecap="round"/>
+  <path d="M145 241c4-28 10-49 20-70l30 16-14 77z" fill="#16191b" stroke="#a2a9a7" stroke-width="4"/>
+  <path d="M304 96c42 2 85 21 108 48" fill="none" stroke="#ffffff" stroke-opacity=".2" stroke-width="8" stroke-linecap="round"/>
+</svg>

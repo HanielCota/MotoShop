@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState, useTransition } from "react";
+import { FormEvent, useRef, useState, useTransition } from "react";
 import type { Route } from "next";
 
 import { Button } from "@/components/ui/button";
 import { formatMoneyInCents } from "@/lib/utils";
 import type { CustomerAddress } from "@/modules/customers/queries/customer-addresses";
+import { SecureCardFields, type SecureCardHandle } from "@/modules/payments/components/secure-card-fields";
 
 import { createCheckoutAction, type CheckoutActionState } from "../actions/checkout-actions";
 import { quoteShippingAction } from "../actions/shipping-actions";
@@ -48,9 +49,11 @@ const initialForm: CheckoutFormState = {
 export function CheckoutForm({
   savedAddresses = [],
   cartSummary,
+  cardPublicKey,
 }: {
   savedAddresses?: CustomerAddress[];
   cartSummary: { itemCount: number; itemsSubtotalInCents: number };
+  cardPublicKey?: string;
 }) {
   const router = useRouter();
   const [form, setForm] = useState(() => {
@@ -65,13 +68,23 @@ export function CheckoutForm({
   const [message, setMessage] = useState<string>();
   const [isQuoting, startQuote] = useTransition();
   const [isSubmitting, startSubmit] = useTransition();
+  const checkoutKey = useRef<string | null>(null);
+  const card = useRef<SecureCardHandle>(null);
+  const submitting = useRef(false);
+  const [paymentType, setPaymentType] = useState<"pix" | "card">("pix");
 
   function updateField(field: keyof CheckoutFormState, value: string) {
+    if (field === "postalCode") {
+      setQuotes([]);
+      setSelections({});
+    }
     setSelectedAddressId("");
     setForm((current) => ({ ...current, [field]: value }));
   }
 
   function selectSavedAddress(addressId: string) {
+    setQuotes([]);
+    setSelections({});
     setSelectedAddressId(addressId);
     const address = savedAddresses.find((item) => item.id === addressId);
     if (address) setForm((current) => applySavedAddress(current, address));
@@ -98,22 +111,39 @@ export function CheckoutForm({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting.current) return;
+    submitting.current = true;
     setMessage(undefined);
     startSubmit(async () => {
-      const formData = new FormData();
-      Object.entries(form).forEach(([key, value]) => formData.append(key, value));
-      formData.append("paymentMethodId", "pix");
-      formData.append("checkoutIdempotencyKey", crypto.randomUUID());
-      formData.append("shippingSelections", JSON.stringify(selections));
-      const result: CheckoutActionState = await createCheckoutAction({}, formData);
-      if (result.error) {
-        setMessage(result.error);
-        return;
-      }
-      if (result.orderNumber) {
-        const params = new URLSearchParams({ orderNumber: result.orderNumber });
-        if (result.guestAccessToken) params.set("accessToken", result.guestAccessToken);
-        router.push(`/checkout/success?${params.toString()}` as Route);
+      try {
+        const formData = new FormData();
+        Object.entries(form).forEach(([key, value]) => formData.append(key, value));
+        if (paymentType === "card") {
+          if (!card.current) throw new Error("Aguarde o carregamento dos campos do cartão.");
+          const tokenized = await card.current.tokenize();
+          Object.entries(tokenized).forEach(([key, value]) => formData.append(key, value));
+        } else formData.append("paymentMethodId", "pix");
+        checkoutKey.current ??= crypto.randomUUID();
+        formData.append("checkoutIdempotencyKey", checkoutKey.current);
+        formData.append("shippingSelections", JSON.stringify(selections));
+        const result: CheckoutActionState = await createCheckoutAction({}, formData);
+        if (result.error) {
+          setMessage(result.error);
+          return;
+        }
+        if (result.orderNumber) {
+          router.push(
+            `/orders/${encodeURIComponent(result.orderNumber)}${result.guestAccessToken ? `?accessToken=${encodeURIComponent(result.guestAccessToken)}` : ""}` as Route,
+          );
+        }
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "Não foi possível concluir. Consulte seu pedido antes de tentar novamente.",
+        );
+      } finally {
+        submitting.current = false;
       }
     });
   }
@@ -147,7 +177,15 @@ export function CheckoutForm({
               required
             />
             <Field label="Telefone" name="customerPhone" value={form.customerPhone} onChange={updateField} required />
-            <Field label="CPF (se necessário)" name="customerTaxId" value={form.customerTaxId} onChange={updateField} />
+            <Field
+              label="CPF do comprador"
+              name="customerTaxId"
+              value={form.customerTaxId}
+              onChange={updateField}
+              maxLength={14}
+              inputMode="numeric"
+              required
+            />
           </div>
         </section>
 
@@ -230,9 +268,32 @@ export function CheckoutForm({
 
       <aside className="h-fit rounded-xl border p-4 sm:p-6">
         <h2 className="font-semibold">Pagamento</h2>
-        <p className="text-muted-foreground mt-2 text-sm">
-          Pagamento via Pix com confirmação server-side do Mercado Pago.
-        </p>
+        <fieldset className="mt-3 space-y-2" disabled={isSubmitting}>
+          <legend className="sr-only">Forma de pagamento</legend>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="paymentType"
+              checked={paymentType === "pix"}
+              onChange={() => setPaymentType("pix")}
+            />
+            Pix
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="radio"
+              name="paymentType"
+              checked={paymentType === "card"}
+              disabled={!cardPublicKey}
+              onChange={() => setPaymentType("card")}
+            />
+            Cartão de crédito · 1 parcela
+          </label>
+          {!cardPublicKey ? (
+            <p className="text-muted-foreground text-xs">Cartão ainda indisponível. Você pode continuar com Pix.</p>
+          ) : null}
+        </fieldset>
+        {paymentType === "card" && cardPublicKey ? <SecureCardFields publicKey={cardPublicKey} ref={card} /> : null}
         <label className="mt-4 flex flex-col gap-2 text-sm font-medium">
           Cupom de desconto
           <input
@@ -256,7 +317,9 @@ export function CheckoutForm({
             <span>Total estimado</span>
             <span>{formatMoneyInCents(estimatedTotalInCents)}</span>
           </div>
-          {form.couponCode ? <p className="text-muted-foreground text-xs">O cupom será validado novamente no servidor.</p> : null}
+          {form.couponCode ? (
+            <p className="text-muted-foreground text-xs">O cupom será validado novamente no servidor.</p>
+          ) : null}
         </div>
         {message ? (
           <p className="text-destructive mt-4 text-sm" role="alert">
@@ -293,6 +356,7 @@ function Field({
   type = "text",
   required,
   maxLength,
+  inputMode,
 }: {
   label: string;
   name: keyof CheckoutFormState;
@@ -301,6 +365,7 @@ function Field({
   type?: string;
   required?: boolean;
   maxLength?: number;
+  inputMode?: "numeric";
 }) {
   return (
     <label className="flex flex-col gap-2 text-sm font-medium">
@@ -312,6 +377,7 @@ function Field({
         value={value}
         required={required}
         maxLength={maxLength}
+        inputMode={inputMode}
         onChange={(event) => onChange(name, event.target.value)}
       />
     </label>

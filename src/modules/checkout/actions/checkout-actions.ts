@@ -17,9 +17,10 @@ export async function createCheckoutAction(
 ): Promise<CheckoutActionState> {
   const parsed = checkoutSchema.safeParse({
     customerName: formData.get("customerName"),
+    couponCode: formData.get("couponCode"),
     customerEmail: formData.get("customerEmail"),
     customerPhone: formData.get("customerPhone"),
-    customerTaxId: formData.get("customerTaxId") || undefined,
+    customerTaxId: formData.get("customerTaxId"),
     postalCode: String(formData.get("postalCode") ?? "").replace(/\D/g, ""),
     street: formData.get("street"),
     number: formData.get("number"),
@@ -28,6 +29,8 @@ export async function createCheckoutAction(
     city: formData.get("city"),
     state: formData.get("state"),
     paymentMethodId: formData.get("paymentMethodId"),
+    paymentToken: formData.get("paymentToken") || undefined,
+    issuerId: formData.get("issuerId") || undefined,
     checkoutIdempotencyKey: formData.get("checkoutIdempotencyKey"),
     shippingSelections: formData.get("shippingSelections"),
   });

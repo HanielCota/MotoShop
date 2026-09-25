@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { env } from "@/config/env";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
@@ -42,7 +43,11 @@ export default async function CheckoutPage() {
         <p className="text-muted-foreground text-sm">Compra segura</p>
         <h1 className="text-3xl font-semibold tracking-tight">Checkout</h1>
       </div>
-      <CheckoutForm savedAddresses={savedAddresses} cartSummary={cartSummary} />
+      <CheckoutForm
+        savedAddresses={savedAddresses}
+        cartSummary={cartSummary}
+        {...(env.MERCADO_PAGO_PUBLIC_KEY ? { cardPublicKey: env.MERCADO_PAGO_PUBLIC_KEY } : {})}
+      />
     </main>
   );
 }

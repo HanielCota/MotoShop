@@ -6,6 +6,7 @@ import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { listActiveMotorcycleFitmentsForProduct } from "@/modules/catalog/queries/admin-catalog";
 import { ProductImageManager } from "@/modules/products/components/product-image-manager";
 import { ProductEditForm } from "@/modules/products/components/product-edit-form";
+import { formatPromotionDate, getMeasurements } from "@/modules/products/domain/product-commercial-fields";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
@@ -30,12 +31,17 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
     <Card>
       <CardHeader>
         <CardTitle>Editar produto</CardTitle>
-        <CardDescription>Atualize o rascunho antes de enviá-lo para revisão.</CardDescription>
+        <CardDescription>
+          Rascunho salvo. Confira os dados, adicione fotos abaixo e depois envie o produto para aprovação pelo painel da
+          loja.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <ProductEditForm
           product={{
             id: product.id,
+            revision: product.updatedAt.toISOString(),
+            ...getMeasurements(product),
             name: product.name,
             slug: product.slug,
             description: product.description,
@@ -46,6 +52,10 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
               title: variant.title,
               sku: variant.sku,
               priceInCents: variant.priceInCents,
+              ...getMeasurements(variant),
+              promotionalPriceInCents: variant.promotionalPriceInCents,
+              promotionStartsAt: formatPromotionDate(variant.promotionStartsAt),
+              promotionEndsAt: formatPromotionDate(variant.promotionEndsAt),
               stock: variant.inventory?.availableQuantity ?? 0,
             })),
             motorcycleFitmentIds: product.compatibilities.map((compatibility) => compatibility.motorcycleFitmentId),

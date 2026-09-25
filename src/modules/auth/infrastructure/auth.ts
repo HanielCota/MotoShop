@@ -7,7 +7,7 @@ import { env } from "@/config/env";
 import { db } from "@/lib/database";
 
 export const auth = betterAuth({
-  appName: "MotoShop",
+  appName: "Moto Shop",
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
   emailAndPassword: {

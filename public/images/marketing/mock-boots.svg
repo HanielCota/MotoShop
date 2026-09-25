@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 460" role="img" aria-label="Ilustração de botas de motocross">
+  <defs>
+    <linearGradient id="leather" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#6d7373"/><stop offset=".35" stop-color="#353a3b"/><stop offset="1" stop-color="#121617"/></linearGradient>
+    <linearGradient id="orange"><stop stop-color="#ffad63"/><stop offset=".45" stop-color="#ff6900"/><stop offset="1" stop-color="#ae3500"/></linearGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="13"/></filter>
+  </defs>
+  <ellipse cx="297" cy="392" rx="190" ry="21" fill="#000" opacity=".4" filter="url(#blur)"/>
+  <g transform="rotate(-9 215 245)">
+    <path d="M146 93h113l-3 214 48 38 46 11 6 30H132l-23-18 8-71 19-52z" fill="url(#leather)" stroke="#aab0ad" stroke-width="5"/>
+    <path d="M151 101h101l-8 64h-86zm-7 91h102l-7 79-32 43-75-24z" fill="#202525" stroke="#8e9592" stroke-width="4"/>
+    <path d="M132 279l64 31 47-5-13 43-94-10z" fill="url(#orange)"/>
+    <path d="M131 345l105 3 45 19 71 2 1 18H131l-17-18z" fill="#111413" stroke="#a3a8a5" stroke-width="4"/>
+    <path d="M161 159h79m-87 42h83m-88 43h83" stroke="url(#orange)" stroke-width="13" stroke-linecap="round"/>
+    <path d="M198 151v20m-7 20v19m-10 26v18" stroke="#cad0cd" stroke-width="11" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(145 16) rotate(12 215 245)">
+    <path d="M146 93h113l-3 214 48 38 46 11 6 30H132l-23-18 8-71 19-52z" fill="url(#leather)" stroke="#aab0ad" stroke-width="5"/>
+    <path d="M151 101h101l-8 64h-86zm-7 91h102l-7 79-32 43-75-24z" fill="#202525" stroke="#8e9592" stroke-width="4"/>
+    <path d="M132 279l64 31 47-5-13 43-94-10z" fill="url(#orange)"/>
+    <path d="M131 345l105 3 45 19 71 2 1 18H131l-17-18z" fill="#111413" stroke="#a3a8a5" stroke-width="4"/>
+    <path d="M161 159h79m-87 42h83m-88 43h83" stroke="url(#orange)" stroke-width="13" stroke-linecap="round"/>
+    <path d="M198 151v20m-7 20v19m-10 26v18" stroke="#cad0cd" stroke-width="11" stroke-linecap="round"/>
+  </g>
+</svg>

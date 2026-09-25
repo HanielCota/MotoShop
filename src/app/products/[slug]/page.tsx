@@ -18,6 +18,8 @@ import { getApprovedProductBySlug, getApprovedProductSeoBySlug } from "@/modules
 import { loadProductInteractionSearchParams } from "@/modules/products/interaction-search-params";
 import { env } from "@/config/env";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
+import { getCategoryLabel } from "@/modules/catalog/category-labels";
+import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
 
 function averageRating(reviews: { rating: number }[]) {
   if (reviews.length === 0) return null;
@@ -59,7 +61,14 @@ export default async function ProductPage({
   ]);
   if (!product) notFound();
 
-  const isFavorite = session ? await isProductFavorited(session.user.id, product.id) : false;
+  const [isFavorite, primaryMotorcycle] = session
+    ? await Promise.all([isProductFavorited(session.user.id, product.id), getPrimarySavedMotorcycle(session.user.id)])
+    : [false, null];
+  const matchesPrimaryMotorcycle = primaryMotorcycle
+    ? product.compatibilities.some(
+        (compatibility) => compatibility.motorcycleFitmentId === primaryMotorcycle.motorcycleFitmentId,
+      )
+    : false;
   const productRating = product.productReviewAverage;
   const sellerRating = averageRating(product.seller.sellerReviews);
   const prices = product.variants.map((variant) => getCurrentPriceInCents(variant));
@@ -105,11 +114,13 @@ export default async function ProductPage({
         <Card>
           <CardHeader>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">{product.category.name}</Badge>
+              <Badge variant="outline">{getCategoryLabel(product.category)}</Badge>
               <Badge variant="secondary">{product.brand.name}</Badge>
               {product.seller.subscriptions.length > 0 ? <Badge>Patrocinado · VIP</Badge> : null}
             </div>
-            <CardTitle className="text-3xl">{product.name}</CardTitle>
+            <CardTitle className="text-3xl">
+              <h1>{product.name}</h1>
+            </CardTitle>
             <CardDescription>
               Vendido por{" "}
               {product.seller.store ? (
@@ -117,8 +128,8 @@ export default async function ProductPage({
                   {product.seller.store.name}
                 </Link>
               ) : null}
-              {productRating ? ` · Produto ${productRating.toFixed(1)}/5 (${product.productReviews.length})` : ""}
-              {sellerRating ? ` · Seller ${sellerRating.toFixed(1)}/5` : ""}
+              {productRating ? ` · Produto ${productRating.toFixed(1)}/5 (${product.productReviewCount})` : ""}
+              {sellerRating ? ` · Loja ${sellerRating.toFixed(1)}/5` : ""}
             </CardDescription>
             <div className="pt-2">
               {session ? (
@@ -155,6 +166,40 @@ export default async function ProductPage({
             <p className="leading-7">{product.description}</p>
             <div className="mt-6">
               <h2 className="font-semibold">Compatibilidade</h2>
+              {primaryMotorcycle ? (
+                <div className="mt-3 rounded-lg border border-[#f4c8ad] bg-[#fff4eb] p-3 text-sm">
+                  <p className="font-semibold">
+                    {matchesPrimaryMotorcycle
+                      ? "Compatibilidade cadastrada para sua moto principal"
+                      : "Compatibilidade com sua moto principal não confirmada"}
+                  </p>
+                  <p className="mt-1 text-slate-700">
+                    {primaryMotorcycle.motorcycleFitment.motorcycleModel.manufacturer.name}{" "}
+                    {primaryMotorcycle.motorcycleFitment.motorcycleModel.name} ·{" "}
+                    {primaryMotorcycle.motorcycleFitment.year}
+                    {primaryMotorcycle.motorcycleFitment.version
+                      ? ` · ${primaryMotorcycle.motorcycleFitment.version}`
+                      : ""}
+                    .{" "}
+                    {matchesPrimaryMotorcycle
+                      ? "Confira também a versão e as informações do fabricante."
+                      : "Confira as configurações listadas abaixo antes de comprar."}
+                  </p>
+                  <Link
+                    href="/account/motorcycles"
+                    className="mt-2 inline-block font-medium text-[#a63a0b] underline underline-offset-4"
+                  >
+                    Trocar moto principal
+                  </Link>
+                </div>
+              ) : (
+                <Link
+                  href="/account/motorcycles"
+                  className="mt-2 inline-block text-sm font-medium text-[#a63a0b] underline underline-offset-4"
+                >
+                  Salve sua moto para conferir a compatibilidade aqui
+                </Link>
+              )}
               {product.compatibilities.length === 0 ? (
                 <p className="text-muted-foreground mt-2 text-sm">Compatibilidade ainda não informada.</p>
               ) : (
@@ -163,12 +208,12 @@ export default async function ProductPage({
                     <li key={compatibility.id} className="rounded-full border px-3 py-1">
                       <Link
                         className="hover:underline"
-                        href={
-                          `/moto/${compatibility.motorcycleFitment.motorcycleModel.manufacturer.slug}/${compatibility.motorcycleFitment.motorcycleModel.slug}/${compatibility.motorcycleFitment.year}` as Route
-                        }
+                        href={`/products?moto=${encodeURIComponent(compatibility.motorcycleFitmentId)}` as Route}
                       >
                         {compatibility.motorcycleFitment.motorcycleModel.manufacturer.name}{" "}
-                        {compatibility.motorcycleFitment.motorcycleModel.name} · {compatibility.motorcycleFitment.year}
+                        {compatibility.motorcycleFitment.motorcycleModel.name} ·{" "}
+                        {compatibility.motorcycleFitment.version || "padrão"} ·{" "}
+                        {compatibility.motorcycleFitment.displacementCc} cc · {compatibility.motorcycleFitment.year}
                       </Link>
                     </li>
                   ))}
@@ -213,25 +258,45 @@ export default async function ProductPage({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <form className="flex flex-wrap items-end gap-3 rounded-md border p-3" method="get">
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Filtrar por nota
-                <select className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="reviewRating" defaultValue={interactionParams.reviewRating ?? ""}>
-                  <option value="">Todas as notas</option>
-                  {[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} estrela{rating === 1 ? "" : "s"}</option>)}
-                </select>
-              </label>
-              {interactionParams.questionSort !== "newest" ? <input type="hidden" name="questionSort" value={interactionParams.questionSort} /> : null}
-              {interactionParams.questionPage > 1 ? <input type="hidden" name="questionPage" value={interactionParams.questionPage} /> : null}
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Ordenar avaliações
-                <select className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="reviewSort" defaultValue={interactionParams.reviewSort}>
-                  <option value="newest">Mais recentes</option>
-                  <option value="oldest">Mais antigas</option>
-                </select>
-              </label>
-              <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">Filtrar</button>
-            </form>
+            {product.productReviewCount > 0 ? (
+              <form className="flex flex-wrap items-end gap-3 rounded-md border p-3" method="get">
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  Filtrar por nota
+                  <select
+                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                    name="reviewRating"
+                    defaultValue={interactionParams.reviewRating ?? ""}
+                  >
+                    <option value="">Todas as notas</option>
+                    {[5, 4, 3, 2, 1].map((rating) => (
+                      <option key={rating} value={rating}>
+                        {rating} estrela{rating === 1 ? "" : "s"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {interactionParams.questionSort !== "newest" ? (
+                  <input type="hidden" name="questionSort" value={interactionParams.questionSort} />
+                ) : null}
+                {interactionParams.questionPage > 1 ? (
+                  <input type="hidden" name="questionPage" value={interactionParams.questionPage} />
+                ) : null}
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  Ordenar avaliações
+                  <select
+                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                    name="reviewSort"
+                    defaultValue={interactionParams.reviewSort}
+                  >
+                    <option value="newest">Mais recentes</option>
+                    <option value="oldest">Mais antigas</option>
+                  </select>
+                </label>
+                <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+                  Filtrar
+                </button>
+              </form>
+            ) : null}
             {product.productReviews.length === 0 ? (
               <p className="text-muted-foreground text-sm">
                 As primeiras avaliações aparecerão aqui após compras verificadas.
@@ -283,22 +348,36 @@ export default async function ProductPage({
         <Card>
           <CardHeader>
             <CardTitle>Dúvidas sobre o produto</CardTitle>
-            <CardDescription>Veja respostas do seller e ajude a comunidade.</CardDescription>
+            <CardDescription>Veja respostas da loja e ajude a comunidade do motocross.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <form className="flex flex-wrap items-end gap-3 rounded-md border p-3" method="get">
-              {interactionParams.reviewRating ? <input type="hidden" name="reviewRating" value={interactionParams.reviewRating} /> : null}
-              {interactionParams.reviewSort !== "newest" ? <input type="hidden" name="reviewSort" value={interactionParams.reviewSort} /> : null}
-              {interactionParams.reviewPage > 1 ? <input type="hidden" name="reviewPage" value={interactionParams.reviewPage} /> : null}
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Ordenar perguntas
-                <select className="border-input bg-background h-9 rounded-md border px-3 text-sm" name="questionSort" defaultValue={interactionParams.questionSort}>
-                  <option value="newest">Mais recentes</option>
-                  <option value="oldest">Mais antigas</option>
-                </select>
-              </label>
-              <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">Aplicar</button>
-            </form>
+            {product.questionCount > 0 ? (
+              <form className="flex flex-wrap items-end gap-3 rounded-md border p-3" method="get">
+                {interactionParams.reviewRating ? (
+                  <input type="hidden" name="reviewRating" value={interactionParams.reviewRating} />
+                ) : null}
+                {interactionParams.reviewSort !== "newest" ? (
+                  <input type="hidden" name="reviewSort" value={interactionParams.reviewSort} />
+                ) : null}
+                {interactionParams.reviewPage > 1 ? (
+                  <input type="hidden" name="reviewPage" value={interactionParams.reviewPage} />
+                ) : null}
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  Ordenar perguntas
+                  <select
+                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                    name="questionSort"
+                    defaultValue={interactionParams.questionSort}
+                  >
+                    <option value="newest">Mais recentes</option>
+                    <option value="oldest">Mais antigas</option>
+                  </select>
+                </label>
+                <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+                  Aplicar
+                </button>
+              </form>
+            ) : null}
             {product.questions.length === 0 ? (
               <p className="text-muted-foreground text-sm">Ainda não há perguntas. Seja o primeiro a perguntar.</p>
             ) : (
@@ -310,11 +389,11 @@ export default async function ProductPage({
                   </p>
                   {question.answer ? (
                     <div className="bg-muted/40 mt-3 rounded-md p-3 text-sm">
-                      <p className="font-medium">Resposta do seller</p>
+                      <p className="font-medium">Resposta da loja</p>
                       <p className="mt-1 text-slate-700">{question.answer}</p>
                     </div>
                   ) : (
-                    <p className="text-muted-foreground mt-3 text-sm">Aguardando resposta do seller.</p>
+                    <p className="text-muted-foreground mt-3 text-sm">Aguardando resposta da loja.</p>
                   )}
                 </article>
               ))
@@ -365,14 +444,21 @@ export default async function ProductPage({
 
 function interactionHref(
   slug: string,
-  params: { reviewRating: number | null; reviewSort: "newest" | "oldest"; reviewPage: number; questionPage: number; questionSort: "newest" | "oldest" },
+  params: {
+    reviewRating: number | null;
+    reviewSort: "newest" | "oldest";
+    reviewPage: number;
+    questionPage: number;
+    questionSort: "newest" | "oldest";
+  },
   reviewPage?: number,
   questionPage?: number,
 ): Route {
   const query = new URLSearchParams();
   const nextReviewPage = reviewPage ?? params.reviewPage;
   const nextQuestionPage = questionPage ?? params.questionPage;
-  if (params.reviewRating !== null && params.reviewRating !== undefined) query.set("reviewRating", String(params.reviewRating));
+  if (params.reviewRating !== null && params.reviewRating !== undefined)
+    query.set("reviewRating", String(params.reviewRating));
   if (params.reviewSort !== "newest") query.set("reviewSort", params.reviewSort);
   if (params.questionSort !== "newest") query.set("questionSort", params.questionSort);
   if (nextReviewPage > 1) query.set("reviewPage", String(nextReviewPage));

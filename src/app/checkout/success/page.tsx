@@ -27,7 +27,7 @@ export default async function CheckoutSuccessPage({
               className={buttonVariants({ variant: "outline" })}
               href={`/orders/${encodeURIComponent(params.orderNumber)}${params.accessToken ? `?accessToken=${encodeURIComponent(params.accessToken)}` : ""}`}
             >
-              Acompanhar pedido
+              Ver pagamento e acompanhar pedido
             </Link>
           ) : null}
           <Link className={buttonVariants()} href="/products">

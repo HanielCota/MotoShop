@@ -16,7 +16,7 @@ export default async function NewProductPage() {
     <Card>
       <CardHeader>
         <CardTitle>Novo produto</CardTitle>
-        <CardDescription>Crie um rascunho. A publicação depende da aprovação do MotoShop.</CardDescription>
+        <CardDescription>Crie um rascunho. A publicação depende da aprovação da Moto Shop.</CardDescription>
       </CardHeader>
       <CardContent>
         <ProductForm

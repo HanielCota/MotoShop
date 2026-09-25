@@ -1,8 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 
 import { createProductAction, type ProductActionState } from "@/modules/products/actions/product-actions";
+import { formatPriceInputFromCents } from "@/modules/products/domain/price-input";
+import { type Measurements } from "../domain/product-commercial-fields";
+import { MeasurementFields } from "./measurement-fields";
 
 type Option = { id: string; name: string };
 type FitmentOption = { id: string; label: string };
@@ -23,7 +26,15 @@ export function ProductForm({
   const [state, action, pending] = useActionState(createProductAction, initialState);
 
   return (
-    <form action={action} className="grid gap-4 sm:grid-cols-2">
+    <form
+      action={action}
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData(event.currentTarget);
+        startTransition(() => action(data));
+      }}
+      className="grid gap-4 sm:grid-cols-2"
+    >
       <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
         Nome
         <input className={inputClassName} name="name" required />
@@ -72,6 +83,7 @@ export function ProductForm({
         </select>
         <span className="text-muted-foreground text-xs">Use Ctrl/Cmd para selecionar mais de uma moto.</span>
       </label>
+      <MeasurementFields />
       <VariantsEditor initialVariants={[{ key: "new-variant", title: "", sku: "", priceInCents: "", stock: "" }]} />
       {state.error ? (
         <p className="text-destructive text-sm sm:col-span-2" role="alert">
@@ -93,13 +105,16 @@ export function ProductForm({
   );
 }
 
-type VariantDraft = {
+export type VariantDraft = Measurements & {
   key: string;
   id?: string;
   title: string;
   sku: string;
   priceInCents: number | string;
   stock: number | string;
+  promotionalPriceInCents?: number | null;
+  promotionStartsAt?: string;
+  promotionEndsAt?: string;
 };
 
 export function VariantsEditor({ initialVariants }: { initialVariants: VariantDraft[] }) {
@@ -146,13 +161,18 @@ export function VariantsEditor({ initialVariants }: { initialVariants: VariantDr
               <input className={inputClassName} name="sku" defaultValue={variant.sku} required />
             </label>
             <label className="flex flex-col gap-2 text-xs font-medium">
-              Preço em centavos
+              Preço (R$)
               <input
                 className={inputClassName}
-                name="priceInCents"
-                type="number"
-                min="1"
-                defaultValue={variant.priceInCents}
+                name="price"
+                type="text"
+                inputMode="decimal"
+                placeholder="899,90"
+                defaultValue={
+                  typeof variant.priceInCents === "number"
+                    ? formatPriceInputFromCents(variant.priceInCents)
+                    : variant.priceInCents
+                }
                 required
               />
             </label>
@@ -167,6 +187,48 @@ export function VariantsEditor({ initialVariants }: { initialVariants: VariantDr
                 required
               />
             </label>
+            <fieldset className="grid min-w-0 gap-3 rounded-lg border p-3 sm:col-span-4 sm:grid-cols-3">
+              <legend className="px-1 text-sm font-medium">Promoção da variação {index + 1}</legend>
+              <label className="flex min-w-0 flex-col gap-2 text-xs font-medium">
+                Preço promocional (R$)
+                <input
+                  className={inputClassName}
+                  name="promotionalPrice"
+                  inputMode="decimal"
+                  placeholder="Opcional"
+                  defaultValue={
+                    variant.promotionalPriceInCents == null
+                      ? ""
+                      : formatPriceInputFromCents(variant.promotionalPriceInCents)
+                  }
+                />
+              </label>
+              <label className="flex min-w-0 flex-col gap-2 text-xs font-medium">
+                Início da promoção
+                <input
+                  className={inputClassName + " min-w-0"}
+                  name="promotionStartsAt"
+                  type="datetime-local"
+                  defaultValue={variant.promotionStartsAt ?? ""}
+                />
+              </label>
+              <label className="flex min-w-0 flex-col gap-2 text-xs font-medium">
+                Término da promoção
+                <input
+                  className={inputClassName + " min-w-0"}
+                  name="promotionEndsAt"
+                  type="datetime-local"
+                  defaultValue={variant.promotionEndsAt ?? ""}
+                />
+              </label>
+              <p className="text-muted-foreground text-xs sm:col-span-3">
+                Horários em UTC−03:00 (Brasília). Sem início: imediata. Sem término: sem prazo. Para remover, limpe o
+                preço promocional e as datas.
+              </p>
+            </fieldset>
+            <div className="min-w-0 sm:col-span-4">
+              <MeasurementFields values={variant} variant />
+            </div>
             <button
               type="button"
               onClick={() => removeVariant(variant.key)}

@@ -1,62 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { ProductStatus } from "@/generated/prisma/enums";
 import { db } from "@/lib/database";
-import { slugify } from "@/lib/utils";
 import { requireAdminAccess, requireSellerAccess } from "@/modules/auth/application/authorization";
 import { adjustAvailableInventory } from "@/modules/inventory/domain/inventory-balance";
 import { ApplicationError, asApplicationError } from "@/shared/errors/application-error";
 
-import { productInputSchema } from "../schemas/product-input";
+import { getProductReviewIssues } from "../domain/product-review-readiness";
+import { createSellerProduct, updateSellerProduct } from "../application/save-product";
+import { parseProductForm } from "../schemas/parse-product-form";
 
 export type ProductActionState = { error?: string; success?: string };
-
-function parseProductForm(formData: FormData) {
-  const variantTitles = formData.getAll("variantTitle");
-  const variantSkus = formData.getAll("sku");
-  const variantPrices = formData.getAll("priceInCents");
-  const variantStocks = formData.getAll("stock");
-  const variantIds = formData.getAll("variantId");
-
-  return productInputSchema.safeParse({
-    name: formData.get("name"),
-    slug: slugify(String(formData.get("slug") || formData.get("name") || "")),
-    description: formData.get("description"),
-    categoryId: formData.get("categoryId"),
-    brandId: formData.get("brandId"),
-    variants: variantTitles.map((_, index) => ({
-      id: typeof variantIds[index] === "string" && variantIds[index] ? variantIds[index] : undefined,
-      title: variantTitles[index],
-      sku: variantSkus[index],
-      priceInCents: variantPrices[index],
-      stock: variantStocks[index],
-    })),
-    motorcycleFitmentIds: formData
-      .getAll("motorcycleFitmentIds")
-      .filter((value): value is string => typeof value === "string"),
-  });
-}
-
-async function getValidFitmentIds(ids: string[]) {
-  const uniqueIds = [...new Set(ids)];
-  if (uniqueIds.length === 0) return [];
-  const fitments = await db.motorcycleFitment.findMany({
-    where: {
-      id: { in: uniqueIds },
-      motorcycleModel: { active: true, manufacturer: { active: true } },
-    },
-    select: { id: true },
-  });
-  if (fitments.length !== uniqueIds.length)
-    throw new ApplicationError({
-      code: "VALIDATION_ERROR",
-      message: "Uma ou mais motos selecionadas não estão disponíveis.",
-      statusCode: 400,
-    });
-  return uniqueIds;
-}
 
 export async function createProductAction(
   _previousState: ProductActionState,
@@ -69,74 +26,14 @@ export async function createProductAction(
     return { error: "Cada variação precisa ter um SKU diferente." };
   }
 
+  let createdProductId: string;
   try {
-    const [category, brand] = await Promise.all([
-      db.category.findFirst({ where: { id: parsed.data.categoryId, active: true } }),
-      db.brand.findFirst({ where: { id: parsed.data.brandId, active: true } }),
-    ]);
-    if (!category || !brand)
-      throw new ApplicationError({
-        code: "VALIDATION_ERROR",
-        message: "Categoria ou marca inválida.",
-        statusCode: 400,
-      });
-
-    const fitmentIds = await getValidFitmentIds(parsed.data.motorcycleFitmentIds);
-
-    await db.$transaction(async (tx) => {
-      const product = await tx.product.create({
-        data: {
-          name: parsed.data.name,
-          slug: parsed.data.slug,
-          description: parsed.data.description,
-          sellerId: context.seller.id,
-          storeId: context.store.id,
-          categoryId: category.id,
-          brandId: brand.id,
-        },
-      });
-      for (const variantInput of parsed.data.variants) {
-        const variant = await tx.productVariant.create({
-          data: {
-            productId: product.id,
-            sellerId: context.seller.id,
-            sku: variantInput.sku,
-            title: variantInput.title,
-            priceInCents: variantInput.priceInCents,
-          },
-        });
-        const inventory = await tx.inventory.create({
-          data: { variantId: variant.id, sellerId: context.seller.id, availableQuantity: variantInput.stock },
-        });
-        if (variantInput.stock > 0) {
-          await tx.inventoryMovement.create({
-            data: {
-              type: "MANUAL_IN",
-              quantityChange: variantInput.stock,
-              availableQuantityAfter: variantInput.stock,
-              reservedQuantityAfter: 0,
-              reason: "Estoque inicial do produto",
-              inventoryId: inventory.id,
-              variantId: variant.id,
-              sellerId: context.seller.id,
-              actorUserId: context.session.user.id,
-            },
-          });
-        }
-      }
-      if (fitmentIds.length > 0) {
-        await tx.productCompatibility.createMany({
-          data: fitmentIds.map((motorcycleFitmentId) => ({
-            productId: product.id,
-            motorcycleFitmentId,
-            sellerId: context.seller.id,
-          })),
-        });
-      }
-    });
+    createdProductId = await createSellerProduct(
+      { sellerId: context.seller.id, storeId: context.store.id, userId: context.session.user.id },
+      parsed.data,
+    );
     revalidatePath("/seller");
     revalidatePath("/products");
-    return { success: "Produto criado como rascunho." };
   } catch (error) {
     const applicationError = asApplicationError(error);
     return {
@@ -146,18 +43,42 @@ export async function createProductAction(
           : applicationError.message,
     };
   }
+  redirect(`/seller/products/${createdProductId}/edit`);
 }
 
-export async function submitProductAction(productId: string): Promise<void> {
+export async function submitProductAction(productId: string): Promise<ProductActionState> {
   const context = await requireSellerAccess("PRODUCT_UPDATE");
-  const product = await db.product.findFirst({ where: { id: productId, sellerId: context.seller.id } });
-  if (!product || (product.status !== ProductStatus.DRAFT && product.status !== ProductStatus.REJECTED)) return;
-  await db.product.update({
-    where: { id: product.id },
+  const product = await db.product.findFirst({
+    where: {
+      id: productId,
+      sellerId: context.seller.id,
+      status: { in: [ProductStatus.DRAFT, ProductStatus.REJECTED] },
+    },
+    select: {
+      id: true,
+      category: { select: { active: true } },
+      brand: { select: { active: true } },
+      variants: { select: { active: true, priceInCents: true } },
+    },
+  });
+  if (!product) return { error: "Produto não encontrado ou já enviado para revisão." };
+  const issues = getProductReviewIssues(product);
+  if (issues.length > 0) return { error: issues[0] ?? "Confira os dados do produto." };
+  const updated = await db.product.updateMany({
+    where: {
+      id: product.id,
+      sellerId: context.seller.id,
+      status: { in: [ProductStatus.DRAFT, ProductStatus.REJECTED] },
+      category: { active: true },
+      brand: { active: true },
+      variants: { some: { active: true, priceInCents: { gt: 0 } } },
+    },
     data: { status: ProductStatus.SUBMITTED, submittedAt: new Date(), rejectionReason: null },
   });
+  if (updated.count === 0) return { error: "O produto mudou. Atualize a página e tente novamente." };
   revalidatePath("/seller");
   revalidatePath("/admin");
+  return { success: "Produto enviado para aprovação." };
 }
 
 export async function updateProductAction(
@@ -173,140 +94,13 @@ export async function updateProductAction(
   }
 
   try {
-    const product = await db.product.findFirst({
-      where: {
-        id: productId,
-        sellerId: context.seller.id,
-        status: { in: [ProductStatus.DRAFT, ProductStatus.REJECTED] },
-      },
-      include: { variants: { orderBy: { createdAt: "asc" } } },
-    });
-    if (!product) return { error: "Somente produtos editáveis com variante podem ser alterados." };
-
-    const [category, brand] = await Promise.all([
-      db.category.findFirst({ where: { id: parsed.data.categoryId, active: true } }),
-      db.brand.findFirst({ where: { id: parsed.data.brandId, active: true } }),
-    ]);
-    if (!category || !brand) return { error: "Categoria ou marca inválida." };
-
-    const fitmentIds = await getValidFitmentIds(parsed.data.motorcycleFitmentIds);
-
-    await db.$transaction(async (tx) => {
-      await tx.product.update({
-        where: { id: product.id },
-        data: {
-          name: parsed.data.name,
-          slug: parsed.data.slug,
-          description: parsed.data.description,
-          categoryId: parsed.data.categoryId,
-          brandId: parsed.data.brandId,
-        },
-      });
-      const existingVariantsById = new Map(product.variants.map((variant) => [variant.id, variant]));
-      const submittedVariantIds = new Set<string>();
-      for (const variantInput of parsed.data.variants) {
-        if (variantInput.id) {
-          const variant = existingVariantsById.get(variantInput.id);
-          if (!variant || submittedVariantIds.has(variant.id)) {
-            throw new ApplicationError({
-              code: "VALIDATION_ERROR",
-              message: "Uma ou mais variações não pertencem a este produto.",
-              statusCode: 400,
-            });
-          }
-          submittedVariantIds.add(variant.id);
-          await tx.productVariant.update({
-            where: { id: variant.id },
-            data: {
-              sku: variantInput.sku,
-              title: variantInput.title,
-              priceInCents: variantInput.priceInCents,
-              active: true,
-            },
-          });
-          const inventory = await tx.inventory.findFirst({
-            where: { variantId: variant.id, sellerId: context.seller.id },
-          });
-          if (!inventory)
-            throw new ApplicationError({
-              code: "NOT_FOUND",
-              message: "Estoque não encontrado para uma variação.",
-              statusCode: 404,
-            });
-          const quantityChange = variantInput.stock - inventory.availableQuantity;
-          if (quantityChange !== 0) {
-            const balance = adjustAvailableInventory(inventory, quantityChange);
-            await tx.inventory.update({
-              where: { id: inventory.id },
-              data: { availableQuantity: balance.availableQuantity, version: { increment: 1 } },
-            });
-            await tx.inventoryMovement.create({
-              data: {
-                type: quantityChange > 0 ? "MANUAL_IN" : "MANUAL_OUT",
-                quantityChange,
-                availableQuantityAfter: balance.availableQuantity,
-                reservedQuantityAfter: balance.reservedQuantity,
-                reason: "Atualização da variação pelo seller",
-                inventoryId: inventory.id,
-                variantId: variant.id,
-                sellerId: context.seller.id,
-                actorUserId: context.session.user.id,
-              },
-            });
-          }
-        } else {
-          const variant = await tx.productVariant.create({
-            data: {
-              productId: product.id,
-              sellerId: context.seller.id,
-              sku: variantInput.sku,
-              title: variantInput.title,
-              priceInCents: variantInput.priceInCents,
-            },
-          });
-          const inventory = await tx.inventory.create({
-            data: { variantId: variant.id, sellerId: context.seller.id, availableQuantity: variantInput.stock },
-          });
-          if (variantInput.stock > 0) {
-            await tx.inventoryMovement.create({
-              data: {
-                type: "MANUAL_IN",
-                quantityChange: variantInput.stock,
-                availableQuantityAfter: variantInput.stock,
-                reservedQuantityAfter: 0,
-                reason: "Nova variação adicionada pelo seller",
-                inventoryId: inventory.id,
-                variantId: variant.id,
-                sellerId: context.seller.id,
-                actorUserId: context.session.user.id,
-              },
-            });
-          }
-        }
-      }
-      const variantsToDeactivate = product.variants
-        .filter((variant) => !submittedVariantIds.has(variant.id))
-        .map((variant) => variant.id);
-      if (variantsToDeactivate.length > 0) {
-        await tx.productVariant.updateMany({
-          where: { id: { in: variantsToDeactivate }, productId: product.id, sellerId: context.seller.id },
-          data: { active: false },
-        });
-      }
-      await tx.productCompatibility.deleteMany({ where: { productId: product.id, sellerId: context.seller.id } });
-      if (fitmentIds.length > 0) {
-        await tx.productCompatibility.createMany({
-          data: fitmentIds.map((motorcycleFitmentId) => ({
-            productId: product.id,
-            motorcycleFitmentId,
-            sellerId: context.seller.id,
-          })),
-        });
-      }
-    });
-
+    const updatedProductId = await updateSellerProduct(
+      { sellerId: context.seller.id, storeId: context.store.id, userId: context.session.user.id },
+      productId,
+      parsed.data,
+    );
     revalidatePath("/seller");
-    revalidatePath(`/seller/products/${product.id}/edit`);
+    revalidatePath(`/seller/products/${updatedProductId}/edit`);
     return { success: "Produto atualizado." };
   } catch (error) {
     const applicationError = asApplicationError(error);
@@ -392,19 +186,42 @@ export async function adjustInventoryAction(variantId: string, quantityChange: n
 
 export async function approveProductAction(productId: string): Promise<ProductActionState> {
   const session = await requireAdminAccess();
-  const product = await db.product.findFirst({ where: { id: productId, status: ProductStatus.SUBMITTED } });
+  const product = await db.product.findFirst({
+    where: { id: productId, status: ProductStatus.SUBMITTED },
+    select: {
+      id: true,
+      status: true,
+      category: { select: { active: true } },
+      brand: { select: { active: true } },
+      variants: { select: { active: true, priceInCents: true } },
+      seller: { select: { status: true } },
+    },
+  });
   if (!product) return { error: "Produto não encontrado ou já revisado." };
-  await db.$transaction([
-    db.product.update({
-      where: { id: product.id },
+  if (product.seller.status !== "APPROVED" && product.seller.status !== "ACTIVE") {
+    return { error: "A loja precisa estar ativa antes da aprovação do produto." };
+  }
+  const issues = getProductReviewIssues(product);
+  if (issues.length > 0) return { error: issues[0] ?? "Confira os dados do produto." };
+  const approved = await db.$transaction(async (tx) => {
+    const updated = await tx.product.updateMany({
+      where: {
+        id: product.id,
+        status: ProductStatus.SUBMITTED,
+        seller: { status: { in: ["APPROVED", "ACTIVE"] } },
+        category: { active: true },
+        brand: { active: true },
+        variants: { some: { active: true, priceInCents: { gt: 0 } } },
+      },
       data: {
         status: ProductStatus.APPROVED,
         reviewedAt: new Date(),
         reviewedByUserId: session.user.id,
         rejectionReason: null,
       },
-    }),
-    db.auditLog.create({
+    });
+    if (updated.count === 0) return false;
+    await tx.auditLog.create({
       data: {
         action: "PRODUCT_APPROVED",
         entityType: "Product",
@@ -412,8 +229,10 @@ export async function approveProductAction(productId: string): Promise<ProductAc
         metadata: { previousStatus: product.status, nextStatus: ProductStatus.APPROVED },
         actorUserId: session.user.id,
       },
-    }),
-  ]);
+    });
+    return true;
+  });
+  if (!approved) return { error: "O produto ou a loja mudou. Atualize a página e tente novamente." };
   revalidatePath("/admin");
   revalidatePath("/products");
   return { success: "Produto aprovado." };
@@ -425,17 +244,18 @@ export async function rejectProductAction(productId: string, formData: FormData)
   if (cleanReason.length < 5) return { error: "Informe o motivo da rejeição." };
   const product = await db.product.findFirst({ where: { id: productId, status: ProductStatus.SUBMITTED } });
   if (!product) return { error: "Produto não encontrado ou já revisado." };
-  await db.$transaction([
-    db.product.update({
-      where: { id: product.id },
+  const rejected = await db.$transaction(async (tx) => {
+    const updated = await tx.product.updateMany({
+      where: { id: product.id, status: ProductStatus.SUBMITTED },
       data: {
         status: ProductStatus.REJECTED,
         rejectionReason: cleanReason,
         reviewedAt: new Date(),
         reviewedByUserId: session.user.id,
       },
-    }),
-    db.auditLog.create({
+    });
+    if (updated.count === 0) return false;
+    await tx.auditLog.create({
       data: {
         action: "PRODUCT_REJECTED",
         entityType: "Product",
@@ -443,8 +263,10 @@ export async function rejectProductAction(productId: string, formData: FormData)
         metadata: { previousStatus: product.status, nextStatus: ProductStatus.REJECTED, reason: cleanReason },
         actorUserId: session.user.id,
       },
-    }),
-  ]);
+    });
+    return true;
+  });
+  if (!rejected) return { error: "O produto já foi revisado. Atualize a página." };
   revalidatePath("/admin");
   revalidatePath("/seller");
   return { success: "Produto rejeitado." };

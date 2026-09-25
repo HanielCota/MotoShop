@@ -47,7 +47,7 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
           name="description"
           defaultValue={store.description ?? ""}
           maxLength={500}
-          placeholder="Apresente sua loja para os clientes do MotoShop."
+          placeholder="Apresente sua loja para os clientes da Moto Shop."
         />
       </label>
       {state.error ? (

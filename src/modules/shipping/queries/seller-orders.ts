@@ -50,10 +50,16 @@ export async function listSellerOrders(
                 ],
               },
             },
-            { items: { some: { OR: [
-              { productNameSnapshot: { contains: query, mode: "insensitive" as const } },
-              { skuSnapshot: { contains: query, mode: "insensitive" as const } },
-            ] } } },
+            {
+              items: {
+                some: {
+                  OR: [
+                    { productNameSnapshot: { contains: query, mode: "insensitive" as const } },
+                    { skuSnapshot: { contains: query, mode: "insensitive" as const } },
+                  ],
+                },
+              },
+            },
           ],
         }
       : {}),

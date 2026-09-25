@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!store) return { title: "Loja não encontrada" };
   return {
     title: store.name,
-    description: store.description ?? `Produtos da loja ${store.name} no marketplace MotoShop.`,
+    description: store.description ?? `Produtos da loja ${store.name} no marketplace da Moto Shop.`,
     alternates: { canonical: `/loja/${store.slug}` },
   };
 }
@@ -90,7 +90,7 @@ export default async function PublicStorePage({
             />
           ) : null}
           <div>
-            <Badge variant="secondary">Loja no MotoShop</Badge>
+            <Badge variant="secondary">Loja na Moto Shop</Badge>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-5xl">{store.name}</h1>
           </div>
         </div>
@@ -111,7 +111,7 @@ export default async function PublicStorePage({
           <CardHeader>
             <CardTitle>Avaliações da loja</CardTitle>
             <CardDescription>
-              Comentários de clientes que compraram no MotoShop · nota média {rating?.toFixed(1)}/5
+              Comentários de clientes que compraram na Moto Shop · nota média {rating?.toFixed(1)}/5
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

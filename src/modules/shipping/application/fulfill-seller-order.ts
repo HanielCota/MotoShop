@@ -21,6 +21,7 @@ export type FulfillSellerOrderInput = {
 
 export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput) {
   const sellerOrder = await getSellerOrderForFulfillment(input.sellerOrderId);
+  assertIntegratedShipment(sellerOrder.shipment?.provider);
   if (sellerOrder.status !== "PAID" && sellerOrder.status !== "PROCESSING") {
     throw new ApplicationError({
       code: "CONFLICT",
@@ -70,6 +71,7 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
 
 export async function generateSellerOrderShipment(sellerOrderId: string, actorUserId: string) {
   const shipment = await getShipment(sellerOrderId);
+  assertIntegratedShipment(shipment.provider);
   if (!shipment.externalShipmentId)
     throw new ApplicationError({ code: "CONFLICT", message: "A etiqueta ainda não foi comprada." });
 
@@ -88,6 +90,7 @@ export async function generateSellerOrderShipment(sellerOrderId: string, actorUs
 
 export async function refreshSellerOrderTracking(sellerOrderId: string, actorUserId: string) {
   const shipment = await getShipment(sellerOrderId);
+  assertIntegratedShipment(shipment.provider);
   if (!shipment.externalShipmentId)
     throw new ApplicationError({ code: "CONFLICT", message: "A etiqueta ainda não foi comprada." });
 
@@ -112,7 +115,7 @@ export async function refreshSellerOrderTracking(sellerOrderId: string, actorUse
   return updatedShipment;
 }
 
-async function enqueueFulfillmentNotification(sellerOrderId: string) {
+export async function enqueueFulfillmentNotification(sellerOrderId: string) {
   const sellerOrder = await db.sellerOrder.findUnique({
     where: { id: sellerOrderId },
     select: {
@@ -143,7 +146,7 @@ async function enqueueFulfillmentNotification(sellerOrderId: string) {
   }
 }
 
-async function syncFulfillmentStatuses(
+export async function syncFulfillmentStatuses(
   tx: Prisma.TransactionClient,
   sellerOrderId: string,
   shipmentStatus: ShipmentStatus,
@@ -208,6 +211,14 @@ async function getShipment(sellerOrderId: string) {
   if (!sellerOrder?.shipment)
     throw new ApplicationError({ code: "NOT_FOUND", message: "Envio do seller não encontrado." });
   return sellerOrder.shipment;
+}
+
+function assertIntegratedShipment(provider: string | undefined) {
+  if (provider !== "MELHOR_ENVIO")
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "Use a atualização manual para entregas próprias da loja.",
+    });
 }
 
 function buildShipmentData(sellerOrder: Awaited<ReturnType<typeof getSellerOrderForFulfillment>>) {
