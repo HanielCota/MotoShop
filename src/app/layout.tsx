@@ -27,7 +27,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           Limit suppression to this element; child components retain hydration checks. */}
       <body
         suppressHydrationWarning
-        className="min-h-screen bg-[#f8f9fa] text-slate-900 antialiased selection:bg-[#2563eb] selection:text-white"
+        className="bg-background text-foreground selection:bg-primary selection:text-primary-foreground min-h-screen antialiased"
       >
         <StorefrontNavigation />
         {children}

@@ -4,18 +4,26 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, ShoppingBag, UserRound, X } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export function StorefrontNavigation() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
 
   if (!pathname || pathname === "/" || /^\/(admin|api|seller)(\/|$)/.test(pathname)) return null;
 
   const catalogActive = pathname === "/products" || pathname.startsWith("/products/");
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#171716] text-white shadow-sm">
+    <header
+      className="sticky top-0 z-50 border-b border-white/10 bg-[#171716] text-white shadow-sm"
+      onKeyDown={(event) => {
+        if (event.key !== "Escape" || !menuOpen) return;
+        setMenuOpen(false);
+        menuButton.current?.focus();
+      }}
+    >
       <div className="mx-auto flex min-h-[68px] w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
         <Link href="/" className="flex min-h-11 shrink-0 items-center" aria-label="Moto Shop, página inicial">
           <Image
@@ -66,6 +74,7 @@ export function StorefrontNavigation() {
             <ShoppingBag aria-hidden="true" className="size-5" />
           </Link>
           <button
+            ref={menuButton}
             type="button"
             aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
             aria-expanded={menuOpen}
@@ -78,35 +87,34 @@ export function StorefrontNavigation() {
         </div>
       </div>
 
-      {menuOpen ? (
-        <nav
-          id="storefront-mobile-navigation"
-          aria-label="Navegação mobile"
-          className="border-t border-white/10 bg-[#171716] px-4 py-2 md:hidden"
+      <nav
+        id="storefront-mobile-navigation"
+        aria-label="Navegação mobile"
+        className="border-t border-white/10 bg-[#171716] px-4 py-2 md:hidden"
+        hidden={!menuOpen}
+      >
+        <Link
+          href="/products"
+          onClick={() => setMenuOpen(false)}
+          className="flex min-h-11 items-center border-b border-white/10 text-sm font-medium"
         >
-          <Link
-            href="/products"
-            onClick={() => setMenuOpen(false)}
-            className="flex min-h-11 items-center border-b border-white/10 text-sm font-medium"
-          >
-            Catálogo
-          </Link>
-          <Link
-            href="/account/motorcycles"
-            onClick={() => setMenuOpen(false)}
-            className="flex min-h-11 items-center border-b border-white/10 text-sm font-medium"
-          >
-            Minhas motos
-          </Link>
-          <Link
-            href="/seller"
-            onClick={() => setMenuOpen(false)}
-            className="flex min-h-11 items-center text-sm font-medium"
-          >
-            Para lojistas
-          </Link>
-        </nav>
-      ) : null}
+          Catálogo
+        </Link>
+        <Link
+          href="/account/motorcycles"
+          onClick={() => setMenuOpen(false)}
+          className="flex min-h-11 items-center border-b border-white/10 text-sm font-medium"
+        >
+          Minhas motos
+        </Link>
+        <Link
+          href="/seller"
+          onClick={() => setMenuOpen(false)}
+          className="flex min-h-11 items-center text-sm font-medium"
+        >
+          Para lojistas
+        </Link>
+      </nav>
     </header>
   );
 }

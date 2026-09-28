@@ -126,16 +126,45 @@
   html {
     @apply font-sans;
     scroll-behavior: smooth;
+    color-scheme: light;
   }
 
-  body {
-    background: #f8f9fa;
-    color: #0f172a;
+  html.dark {
+    color-scheme: dark;
   }
 
-  ::selection {
-    background: #2563eb;
-    color: #ffffff;
+  input[type="number"] {
+    appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+
+  input:not([type="hidden"]):focus-visible,
+  textarea:focus-visible,
+  button:focus-visible,
+  summary:focus-visible {
+    outline-color: var(--ring);
+    outline-offset: 2px;
+  }
+
+  input:-webkit-autofill,
+  textarea:-webkit-autofill {
+    -webkit-text-fill-color: var(--foreground);
+    box-shadow: 0 0 0 1000px var(--background) inset;
+    caret-color: var(--foreground);
+  }
+
+  * {
+    scrollbar-color: var(--muted-foreground) transparent;
+    scrollbar-width: thin;
+  }
+
+  details[open] > summary svg {
+    transform: rotate(180deg);
   }
 }
 
