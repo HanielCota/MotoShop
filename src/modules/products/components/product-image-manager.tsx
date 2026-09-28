@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
+import { AlertDialog } from "@base-ui/react/alert-dialog";
+import { Upload } from "lucide-react";
 
 import {
   attachProductImageAction,
@@ -10,6 +12,7 @@ import {
   reorderProductImagesAction,
   type ProductImageResult,
 } from "@/modules/products/actions/product-image-actions";
+import { uploadImageToImageKit } from "@/shared/storage/upload-image";
 
 type ProductImage = { id: string; storageKey: string; altText: string | null; url: string | null };
 
@@ -28,6 +31,7 @@ export function ProductImageManager({
   const [success, setSuccess] = useState<string>();
   const [uploading, setUploading] = useState(false);
   const [busyImageId, setBusyImageId] = useState<string>();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function uploadFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -47,16 +51,12 @@ export function ProductImageManager({
         });
         if ("error" in upload) throw new Error(upload.error);
 
-        const response = await fetch(upload.url, {
-          method: "PUT",
-          headers: { "Content-Type": file.type },
-          body: file,
-        });
-        if (!response.ok) throw new Error("Não foi possível enviar a imagem para o storage.");
+        const fileId = await uploadImageToImageKit({ url: upload.url, fields: upload.fields, file });
 
         const attached: ProductImageResult = await attachProductImageAction({
           productId,
           storageKey: upload.key,
+          fileId,
           altText: file.name.replace(/\.[^.]+$/, ""),
         });
         if ("error" in attached) throw new Error(attached.error);
@@ -98,18 +98,22 @@ export function ProductImageManager({
   }
 
   async function removeImage(imageId: string) {
-    if (!window.confirm("Remover esta imagem do produto?")) return;
     setError(undefined);
     setSuccess(undefined);
     setBusyImageId(imageId);
-    const result = await removeProductImageAction({ imageId });
-    setBusyImageId(undefined);
-    if (result.error) {
-      setError(result.error);
-      return;
+    try {
+      const result = await removeProductImageAction({ imageId });
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setImages((current) => current.filter((image) => image.id !== imageId));
+      setSuccess("Imagem removida.");
+    } catch {
+      setError("Não foi possível remover a imagem. Tente novamente.");
+    } finally {
+      setBusyImageId(undefined);
     }
-    setImages((current) => current.filter((image) => image.id !== imageId));
-    setSuccess("Imagem removida.");
   }
 
   return (
@@ -133,7 +137,7 @@ export function ProductImageManager({
                 />
               ) : (
                 <div className="text-muted-foreground flex aspect-square items-center justify-center p-2 text-center text-xs">
-                  URL pública do R2 não configurada
+                  Serviço de imagens não configurado
                 </div>
               )}
               <div className="flex flex-wrap items-center gap-1 border-t p-2">
@@ -158,28 +162,62 @@ export function ProductImageManager({
                 >
                   →
                 </button>
-                <button
-                  type="button"
-                  className="text-destructive rounded border px-2 py-1 text-xs disabled:opacity-50"
-                  aria-label="Remover imagem"
-                  disabled={uploading || busyImageId !== undefined}
-                  onClick={() => void removeImage(image.id)}
-                >
-                  Remover
-                </button>
+                <AlertDialog.Root>
+                  <AlertDialog.Trigger
+                    className="text-destructive rounded border px-2 py-1 text-xs disabled:opacity-50"
+                    aria-label="Remover imagem"
+                    disabled={uploading || busyImageId !== undefined}
+                  >
+                    Remover
+                  </AlertDialog.Trigger>
+                  <AlertDialog.Portal>
+                    <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-black/55" />
+                    <AlertDialog.Popup className="bg-background text-foreground fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[min(92vw,28rem)] -translate-x-1/2 -translate-y-1/2 space-y-4 overflow-y-auto rounded-xl border p-5 shadow-xl">
+                      <AlertDialog.Title className="text-lg font-semibold">Remover imagem?</AlertDialog.Title>
+                      <AlertDialog.Description className="text-muted-foreground text-sm">
+                        Esta imagem será retirada do produto. Essa ação não pode ser desfeita.
+                      </AlertDialog.Description>
+                      <div className="flex justify-end gap-2">
+                        <AlertDialog.Close className="rounded-md border px-4 py-2 text-sm font-medium">Manter imagem</AlertDialog.Close>
+                        <AlertDialog.Close
+                          className="bg-destructive text-white rounded-md px-4 py-2 text-sm font-medium"
+                          onClick={() => void removeImage(image.id)}
+                        >
+                          Remover
+                        </AlertDialog.Close>
+                      </div>
+                    </AlertDialog.Popup>
+                  </AlertDialog.Portal>
+                </AlertDialog.Root>
               </div>
             </div>
           ))}
         </div>
       ) : null}
       <input
+        ref={fileInputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
         multiple
         disabled={uploading || images.length >= 8}
-        onChange={(event) => void uploadFiles(event.target.files)}
-        className="block w-full text-sm"
+        onChange={(event) => {
+          const files = event.currentTarget.files;
+          void uploadFiles(files);
+          event.currentTarget.value = "";
+        }}
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
       />
+      <button
+        type="button"
+        disabled={uploading || images.length >= 8}
+        onClick={() => fileInputRef.current?.click()}
+        className="border-input bg-background hover:bg-accent focus-visible:ring-ring/40 inline-flex min-h-10 items-center gap-2 rounded-md border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <Upload aria-hidden="true" className="size-4" />
+        {uploading ? "Enviando imagens..." : "Adicionar imagens"}
+      </button>
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
       {success ? <p className="text-sm text-emerald-700">{success}</p> : null}
       {uploading ? <p className="text-muted-foreground text-sm">Enviando...</p> : null}

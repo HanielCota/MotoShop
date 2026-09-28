@@ -23,8 +23,6 @@
     "inngest:dev": "pnpm dlx inngest-cli@latest dev"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1128.0",
-    "@aws-sdk/s3-request-presigner": "^3.1128.0",
     "@base-ui/react": "^1.8.0",
     "@better-auth/prisma-adapter": "^1.7.3",
     "@hookform/resolvers": "^5.9.1",

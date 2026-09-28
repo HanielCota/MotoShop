@@ -1,4 +1,9 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+
+import { DesignSelect } from "@/components/ui/design-select";
 
 import { startTransition, useActionState } from "react";
 
@@ -23,8 +28,6 @@ type ProductValues = Measurements & {
 };
 
 const initialState: ProductActionState = {};
-const inputClassName =
-  "border-input bg-background focus:ring-ring/40 h-10 w-full rounded-md border px-3 text-sm outline-none focus:ring-3";
 
 export function ProductEditForm({
   product,
@@ -51,15 +54,15 @@ export function ProductEditForm({
     >
       <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
         Nome
-        <input className={inputClassName} name="name" defaultValue={product.name} required />
+        <Input name="name" defaultValue={product.name} required />
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium">
         Slug
-        <input className={inputClassName} name="slug" defaultValue={product.slug} required />
+        <Input name="slug" defaultValue={product.slug} required />
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
         Descrição
-        <textarea
+        <Textarea
           className="border-input bg-background focus:ring-ring/40 min-h-28 rounded-md border px-3 py-2 text-sm outline-none focus:ring-3"
           name="description"
           defaultValue={product.description}
@@ -68,28 +71,38 @@ export function ProductEditForm({
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium">
         Categoria
-        <select className={inputClassName} name="categoryId" defaultValue={product.categoryId} required>
+        <DesignSelect
+          aria-label="Categoria"
+          name="categoryId"
+          defaultValue={product.categoryId}
+          required
+        >
           {categories.map((option) => (
             <option key={option.id} value={option.id}>
               {option.name}
             </option>
           ))}
-        </select>
+        </DesignSelect>
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium">
         Marca
-        <select className={inputClassName} name="brandId" defaultValue={product.brandId} required>
+        <DesignSelect
+          aria-label="Marca"
+          name="brandId"
+          defaultValue={product.brandId}
+          required
+        >
           {brands.map((option) => (
             <option key={option.id} value={option.id}>
               {option.name}
             </option>
           ))}
-        </select>
+        </DesignSelect>
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
         Compatibilidade com motos
-        <select
-          className={inputClassName + " min-h-32 py-2"}
+        <DesignSelect
+          aria-label="Compatibilidade com motos"
           name="motorcycleFitmentIds"
           multiple
           defaultValue={product.motorcycleFitmentIds}
@@ -99,8 +112,8 @@ export function ProductEditForm({
               {fitment.label}
             </option>
           ))}
-        </select>
-        <span className="text-muted-foreground text-xs">Use Ctrl/Cmd para selecionar mais de uma moto.</span>
+        </DesignSelect>
+        <span className="text-muted-foreground text-xs">Selecione uma ou mais motos; não é preciso usar Ctrl/Cmd.</span>
       </label>
       <MeasurementFields values={product} />
       <VariantsEditor
@@ -117,12 +130,9 @@ export function ProductEditForm({
           {state.success}
         </p>
       ) : null}
-      <button
-        className="bg-primary text-primary-foreground hover:bg-primary/80 h-10 rounded-md px-4 text-sm font-medium disabled:opacity-50 sm:col-span-2"
-        disabled={pending}
-      >
+      <Button type="submit" className="rounded-md px-4 sm:col-span-2" disabled={pending}>
         {pending ? "Salvando..." : "Salvar alterações"}
-      </button>
+      </Button>
     </form>
   );
 }

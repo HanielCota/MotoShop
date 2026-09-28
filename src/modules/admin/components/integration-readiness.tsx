@@ -33,15 +33,9 @@ export function IntegrationReadiness() {
     },
     {
       name: "Fotos de produtos e lojas",
-      description: "Armazenamento e exibição pública das imagens no R2.",
-      configured: Boolean(
-        env.R2_ACCOUNT_ID &&
-        env.R2_ACCESS_KEY_ID &&
-        env.R2_SECRET_ACCESS_KEY &&
-        env.R2_BUCKET_NAME &&
-        env.R2_PUBLIC_URL,
-      ),
-      missing: "Credenciais, bucket e URL pública do R2",
+      description: "Armazenamento e exibição pública das imagens no ImageKit.",
+      configured: Boolean(env.IMAGEKIT_PUBLIC_KEY && env.IMAGEKIT_PRIVATE_KEY && env.IMAGEKIT_URL_ENDPOINT),
+      missing: "Chaves pública e privada e URL endpoint do ImageKit",
     },
     {
       name: "E-mails",

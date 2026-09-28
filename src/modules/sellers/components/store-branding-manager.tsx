@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   attachStoreBrandingImageAction,
@@ -9,6 +9,7 @@ import {
   type StoreBrandingImageType,
   type StoreBrandingResult,
 } from "../actions/store-branding-actions";
+import { uploadImageToImageKit } from "@/shared/storage/upload-image";
 
 type StoreBrandingImages = {
   logoUrl: string | null;
@@ -41,14 +42,13 @@ export function StoreBrandingManager({ initialImages }: { initialImages: StoreBr
       });
       if ("error" in upload) throw new Error(upload.error);
 
-      const response = await fetch(upload.url, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!response.ok) throw new Error("Não foi possível enviar a imagem para o storage.");
+      const fileId = await uploadImageToImageKit({ url: upload.url, fields: upload.fields, file });
 
-      const attached: StoreBrandingResult = await attachStoreBrandingImageAction({ imageType, storageKey: upload.key });
+      const attached: StoreBrandingResult = await attachStoreBrandingImageAction({
+        imageType,
+        storageKey: upload.key,
+        fileId,
+      });
       if ("error" in attached) throw new Error(attached.error);
       if (attached.image.url) {
         setImages((current) => ({
@@ -58,7 +58,7 @@ export function StoreBrandingManager({ initialImages }: { initialImages: StoreBr
         setSuccess(`${imageType === "logo" ? "Logo" : "Banner"} atualizado.`);
       } else {
         setSuccess(
-          `${imageType === "logo" ? "Logo" : "Banner"} associado. Configure R2_PUBLIC_URL para exibi-lo na vitrine.`,
+          `${imageType === "logo" ? "Logo" : "Banner"} associado. Configure IMAGEKIT_URL_ENDPOINT para exibi-lo na vitrine.`,
         );
       }
     } catch (uploadError) {
@@ -130,6 +130,7 @@ function BrandingImageField({
   onFile: (file: File | null) => void;
   aspectClassName: string;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   return (
     <div className="space-y-3">
       <div>
@@ -152,21 +153,29 @@ function BrandingImageField({
           </div>
         )}
       </div>
-      <label className="text-primary inline-flex cursor-pointer text-sm font-medium underline underline-offset-4">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => fileInputRef.current?.click()}
+        className="text-primary focus-visible:ring-ring/40 inline-flex min-h-10 items-center rounded-md text-sm font-medium underline underline-offset-4 focus-visible:outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50"
+      >
         {imageUrl ? "Substituir imagem" : "Enviar imagem"}
-        <input
-          id={inputId}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          disabled={disabled}
-          className="sr-only"
-          onChange={(event) => {
-            const file = event.currentTarget.files?.[0] ?? null;
-            event.currentTarget.value = "";
-            onFile(file);
-          }}
-        />
-      </label>
+      </button>
+      <input
+        ref={fileInputRef}
+        id={inputId}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        disabled={disabled}
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(event) => {
+          const file = event.currentTarget.files?.[0] ?? null;
+          event.currentTarget.value = "";
+          onFile(file);
+        }}
+      />
     </div>
   );
 }

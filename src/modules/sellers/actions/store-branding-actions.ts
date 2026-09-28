@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { db } from "@/lib/database";
-import { R2StorageProvider } from "@/lib/storage/r2-storage-provider";
+import { ImageKitStorageProvider } from "@/lib/storage/imagekit-storage-provider";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { asApplicationError } from "@/shared/errors/application-error";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
@@ -24,12 +24,16 @@ const uploadInputSchema = z.object({
   contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
   sizeInBytes: z.number().int().positive().max(maxImageSizeInBytes),
 });
-const attachInputSchema = z.object({ imageType: imageTypeSchema, storageKey: z.string().min(1).max(300) });
+const attachInputSchema = z.object({
+  imageType: imageTypeSchema,
+  storageKey: z.string().min(1).max(300),
+  fileId: z.string().regex(/^[a-f0-9]{24}$/i),
+});
 
 export type StoreBrandingImageType = z.infer<typeof imageTypeSchema>;
 export type StoreBrandingUploadResult =
-  | { error: string; url?: never; key?: never; expiresAt?: never }
-  | { error?: never; url: string; key: string; expiresAt: string };
+  | { error: string; url?: never; key?: never; expiresAt?: never; fields?: never }
+  | { error?: never; url: string; key: string; expiresAt: string; fields: Record<string, string> };
 export type StoreBrandingResult =
   | { error: string; image?: never }
   | { error?: never; image: { imageType: StoreBrandingImageType; storageKey: string; url: string | null } };
@@ -55,8 +59,8 @@ export async function createStoreBrandingUploadUrlAction(input: unknown): Promis
     const parsed = uploadInputSchema.parse(input);
     const extension = allowedContentTypes[parsed.contentType];
     const key = `stores/${context.seller.id}/${parsed.imageType}/${randomUUID()}.${extension}`;
-    const result = await new R2StorageProvider().createUploadUrl({ key, contentType: parsed.contentType });
-    return { url: result.url, key: result.key, expiresAt: result.expiresAt.toISOString() };
+    const result = await new ImageKitStorageProvider().createUploadUrl({ key, contentType: parsed.contentType });
+    return { url: result.url, key: result.key, expiresAt: result.expiresAt.toISOString(), fields: result.fields };
   } catch (error) {
     return { error: asApplicationError(error).message };
   }
@@ -69,6 +73,12 @@ export async function attachStoreBrandingImageAction(input: unknown): Promise<St
     if (!hasValidStoreImageKey(parsed.storageKey, context.seller.id, parsed.imageType)) {
       return { error: "A imagem não pertence a esta loja." };
     }
+    await new ImageKitStorageProvider().verifyImage({
+      key: parsed.storageKey,
+      fileId: parsed.fileId,
+      maxSizeInBytes: maxImageSizeInBytes,
+      contentTypes: Object.keys(allowedContentTypes),
+    });
 
     const field = fieldForImageType(parsed.imageType);
     const previousStore = await db.store.findFirst({

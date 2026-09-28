@@ -4,7 +4,10 @@ const mocks = vi.hoisted(() => ({
   productFindFirst: vi.fn(),
   imageCount: vi.fn(),
   imageCreate: vi.fn(),
+  imageFindFirst: vi.fn(),
+  lock: vi.fn(),
   createUploadUrl: vi.fn(),
+  verifyImage: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
@@ -14,14 +17,21 @@ vi.mock("@/lib/database", () => ({
   db: {
     product: { findFirst: mocks.productFindFirst },
     productImage: { count: mocks.imageCount, create: mocks.imageCreate },
+    $transaction: async (callback: (tx: unknown) => unknown) =>
+      callback({
+        $queryRaw: mocks.lock,
+        product: { findFirst: mocks.productFindFirst },
+        productImage: { count: mocks.imageCount, create: mocks.imageCreate, findFirst: mocks.imageFindFirst },
+      }),
   },
 }));
 vi.mock("@/modules/auth/application/authorization", () => ({
   requireSellerAccess: vi.fn(async () => ({ seller: { id: "seller-a" } })),
 }));
-vi.mock("@/lib/storage/r2-storage-provider", () => ({
-  R2StorageProvider: class {
+vi.mock("@/lib/storage/imagekit-storage-provider", () => ({
+  ImageKitStorageProvider: class {
     createUploadUrl = mocks.createUploadUrl;
+    verifyImage = mocks.verifyImage;
   },
 }));
 vi.mock("@/shared/storage/public-storage-url", () => ({ getPublicStorageUrl: vi.fn(() => null) }));
@@ -34,6 +44,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.productFindFirst.mockResolvedValue({ id: productId, sellerId: "seller-a" });
   mocks.imageCount.mockResolvedValue(0);
+  mocks.imageFindFirst.mockResolvedValue(null);
   mocks.createUploadUrl.mockResolvedValue({
     key: `products/seller-a/${productId}/photo.jpg`,
     url: "https://storage.example.test/upload",
@@ -47,6 +58,27 @@ beforeEach(() => {
 });
 
 describe("seller product image upload", () => {
+  it("checks capacity again under the product lock before attaching", async () => {
+    mocks.imageCount.mockResolvedValue(8);
+    const result = await attachProductImageAction({
+      productId,
+      storageKey: `products/seller-a/${productId}/photo.jpg`,
+      fileId: "123456789012345678901234",
+    });
+    expect(result.error).toContain("8 imagens");
+    expect(mocks.lock).toHaveBeenCalled();
+    expect(mocks.imageCreate).not.toHaveBeenCalled();
+  });
+  it("rejects an image if the product was submitted during upload", async () => {
+    mocks.productFindFirst.mockResolvedValueOnce({ id: productId }).mockResolvedValueOnce(null);
+    const result = await attachProductImageAction({
+      productId,
+      storageKey: `products/seller-a/${productId}/photo.jpg`,
+      fileId: "123456789012345678901234",
+    });
+    expect(result.error).toContain("edição");
+    expect(mocks.imageCreate).not.toHaveBeenCalled();
+  });
   it("creates a short-lived upload URL under the seller's product prefix", async () => {
     const result = await createProductImageUploadUrlAction({
       productId,
@@ -67,6 +99,7 @@ describe("seller product image upload", () => {
     const result = await attachProductImageAction({
       productId,
       storageKey: `products/seller-b/${productId}/photo.jpg`,
+      fileId: "123456789012345678901234",
     });
 
     expect(result.error).toMatch(/não pertence/i);

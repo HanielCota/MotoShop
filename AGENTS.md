@@ -258,26 +258,20 @@ Não executar processos longos dentro de uma request HTTP.
 
 ## Storage
 
-- **Cloudflare R2**
-- SDK compatível com S3.
+- **ImageKit Forever Free** para imagens de produto e identidade da loja. Decisão do responsável: não ativar R2 nem plano com cobrança de excedentes.
 
-Usar preferencialmente:
-
-- `@aws-sdk/client-s3`
-- `@aws-sdk/s3-request-presigner`
-
-Uploads devem, quando possível, ser feitos diretamente do cliente para o R2 através de URL assinada.
+Uploads devem, quando possível, ser feitos diretamente do cliente com autenticação temporária gerada no servidor. Após o upload, o servidor deve confirmar caminho, tipo e tamanho do asset antes de associá-lo ao produto ou à loja.
 
 Evitar:
 
 ```text
-Browser -> Next.js -> arquivo grande -> R2
+Browser -> Next.js -> arquivo grande -> ImageKit
 ```
 
 Preferir:
 
 ```text
-Browser -> Signed URL -> R2
+Browser -> autenticação temporária -> ImageKit
 ```
 
 ---
@@ -1689,7 +1683,7 @@ Jobs:
 Inngest
 
 Storage:
-Cloudflare R2
+ImageKit Forever Free
 
 Email:
 Resend
@@ -1900,7 +1894,7 @@ Zod + React Hook Form
 Zustand + nuqs
 Upstash Redis
 Inngest
-Cloudflare R2
+ImageKit Forever Free
 Resend
 Mercado Pago
 Melhor Envio
@@ -1951,7 +1945,7 @@ Decisões adicionais do MVP:
 - O VIP é um sinal pequeno de ranking, depois de relevância, disponibilidade e reputação; não garante o primeiro resultado.
 - Categorias, marcas, fabricantes, modelos e fitments são governados pelo Admin; sellers apenas selecionam referências ativas.
 - A compatibilidade do produto é persistida por relacionamento estruturado e pode conter múltiplos fitments.
-- Imagens de produto usam upload direto para o R2 por URL assinada; a persistência de `ProductImage` exige ownership server-side e o R2 público é opcional via `R2_PUBLIC_URL`.
+- Imagens de produto usam upload direto para ImageKit com autenticação temporária; a persistência de `ProductImage` exige ownership e conferência do asset no servidor. A URL pública depende de `IMAGEKIT_URL_ENDPOINT`.
 - A gestão inicial da equipe adiciona apenas usuários já cadastrados; convites externos e transferência de ownership ficam fora do MVP.
 - Busca, filtros, ordenação e paginação do storefront são estado da URL e devem ser carregados, filtrados e paginados no servidor; o ranking de relevância continua considerando disponibilidade, reputação e o sinal comercial limitado do VIP.
 - Favoritos são persistidos em `Favorite`, com unicidade por usuário e produto; somente produtos aprovados podem ser salvos e a lista exige autenticação.
@@ -1962,10 +1956,10 @@ Decisões adicionais do MVP:
 - SEO público usa `generateMetadata`, canonical URLs, `sitemap.ts`, `robots.ts` e JSON-LD sanitizado; somente produtos aprovados e referências ativas entram no sitemap.
 - Vitrines públicas só podem expor sellers com status `APPROVED` ou `ACTIVE` e devem listar exclusivamente produtos `APPROVED` pertencentes ao `sellerId` da loja.
 - O perfil público da loja (`name`, `slug` e `description`) pode ser alterado apenas com `SELLER_MANAGE`, sempre validando `sellerId` no servidor e registrando `AuditLog`; dados de origem e frete continuam privados.
-- Logo e banner da loja usam chaves explícitas no `Store`, upload direto para o R2 e associação server-side com prefixo do seller; a vitrine só deriva URLs públicas dos assets associados.
+- Logo e banner da loja usam chaves explícitas no `Store`, upload direto para ImageKit e associação server-side com prefixo do seller e conferência do asset; a vitrine só deriva URLs públicas dos assets associados.
 - Cards públicos de produto podem exibir apenas a primeira `ProductImage` associada; a URL é derivada no servidor e o card sempre mantém fallback textual quando não houver imagem pública.
 - A vitrine pública agrega a nota do seller no servidor e serializa no máximo seis avaliações recentes, sempre filtradas pelo `sellerId` da loja e originadas de compras verificadas.
-- A galeria de `ProductImage` só pode ser reordenada ou removida pelo seller dono de produto `DRAFT`/`REJECTED`; a primeira posição é a capa pública e a limpeza do R2 não fica dentro de transação de banco.
+- A galeria de `ProductImage` só pode ser reordenada ou removida pelo seller dono de produto `DRAFT`/`REJECTED`; a primeira posição é a capa pública e a limpeza do ImageKit não fica dentro de transação de banco.
 - O fulfillment sincroniza o status do `SellerOrder` a partir do envio dentro de transação; depois recalcula o `Order` global, permitindo estados parciais e sem regredir cancelamentos.
 - Notificações de fulfillment são eventos do Inngest e usam `NotificationDelivery` com chave `sellerOrderId + status`; falha de enfileiramento não desfaz a mudança operacional do pedido.
 - Preferências de e-mail de atualização pertencem ao `User` e são verificadas no workflow antes do envio; não expor preferências de outro usuário.
@@ -2092,6 +2086,12 @@ Decisões adicionais do MVP:
 - A vitrine pública da loja pode filtrar promoções usando a mesma semântica de promoção ativa do storefront.
 - A busca da vitrine pública deve consultar nome, marca, categoria e SKU dentro do seller selecionado, preservando filtros na URL.
 - A homepage pública (`/`) é uma landing comercial server-rendered. Antes do lançamento, pode exibir uma vitrine de demonstração solicitada pelo responsável, desde que produtos, preços e condições estejam claramente marcados como ilustrativos, não criem registros no catálogo e não ofereçam compra direta. Na versão de lançamento, os destaques devem vir apenas de produtos aprovados e categorias/marcas ativas; remover a vitrine mock ao ativar a vitrine real.
+- A vitrine mock foi removida: a homepage mostra até quatro produtos aprovados, de sellers ativos/aprovados e com estoque disponível; sem elegíveis, usa estado vazio. Não apresentar preço ou disponibilidade inventados.
+- Exceção explícita aprovada para apresentação antes do catálogo oficial: produtos marcados `isDemo` podem existir no banco com fotos locais geradas e valores/estoque ilustrativos. Devem ser identificados como demonstração no storefront, nunca entrar no carrinho/checkout (checagem server-side), não emitir Product JSON-LD nem entrar no sitemap. O seed é isolado por slugs `demo-*` e deve permanecer idempotente; nenhuma loja ou produto real pode ser sobrescrito. As lojas demo ficam `PENDING` até o código de bloqueio estar publicado.
+- Recuperação de senha e verificação de e-mail usam os tokens nativos do Better Auth e envio pelo provider de e-mail do projeto. Sem Resend configurado, não oferecer recuperação funcional; exigir verificação de e-mail apenas com `AUTH_REQUIRE_EMAIL_VERIFICATION=true` e envio configurado, para evitar bloquear contas existentes acidentalmente.
+- Vínculo posterior de pedido guest exige token de acesso não previsível, sessão autenticada e mesmo e-mail do pedido; a atualização é condicional e revoga o token no mesmo passo para impedir dupla vinculação.
+- Rate limiting de autenticação e mutations sensíveis usa contador atômico no PostgreSQL como solução de MVP enquanto Upstash não está configurado; chaves persistidas são hashes e nunca contêm token ou e-mail em claro. Monitorar crescimento da tabela e migrar o armazenamento para Upstash se o volume justificar.
+- Perguntas e avaliações públicas podem ser ocultadas/restauradas pelo Admin sem exclusão física. Consultas públicas ignoram itens ocultos, e cada alteração gera AuditLog. O histórico pessoal do pedido permanece acessível ao próprio cliente.
 - A marca pública é **Moto Shop**. Em textos de interface, SEO, e-mails e mensagens para pessoas, usar o artigo feminino: **a Moto Shop**, **da Moto Shop**, **na Moto Shop**, **pela Moto Shop**. Não usar "o MotoShop". Identificadores técnicos internos e nomes de arquivos não precisam ser renomeados.
 
 ---
