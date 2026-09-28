@@ -36,6 +36,8 @@ test("store registration → approval → product → publication → catalog �
       headers: { origin: String(testInfo.project.use.baseURL) },
     });
     expect(signup.ok()).toBe(true);
+    // Isolated test fixture only; production administrators must verify email.
+    await testDb.user.update({ where: { email: adminEmail }, data: { emailVerified: true } });
     const adminPage = await admin.newPage();
     await adminPage.goto("/admin");
     const fixtureStore = await testDb.store.findUniqueOrThrow({ where: { slug } });

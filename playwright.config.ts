@@ -1,5 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+import { config } from "dotenv";
+import { requireTestDatabaseUrl } from "./tests/support/test-environment";
+
+config({ path: ".env.local", quiet: true });
+const testDatabaseUrl = requireTestDatabaseUrl(process.env);
+if (process.env.PLAYWRIGHT_BASE_URL)
+  throw new Error("Use the isolated local E2E server; remote targets may contain production data.");
 
 process.env.E2E_ADMIN_EMAIL ??= `e2e-admin-${randomUUID()}@example.test`;
 
@@ -29,6 +36,15 @@ export default defineConfig({
         webServer: {
           command: `node node_modules/next/dist/bin/next dev --hostname 127.0.0.1 --port ${playwrightPort}`,
           env: {
+            DATABASE_URL: testDatabaseUrl,
+            AUTH_REQUIRE_EMAIL_VERIFICATION: "false",
+            IMAGEKIT_PRIVATE_KEY: "",
+            IMAGEKIT_PUBLIC_KEY: "",
+            IMAGEKIT_URL_ENDPOINT: "",
+            INNGEST_EVENT_KEY: "",
+            INNGEST_SIGNING_KEY: "",
+            UPSTASH_REDIS_REST_URL: "",
+            UPSTASH_REDIS_REST_TOKEN: "",
             ADMIN_EMAILS: process.env.E2E_ADMIN_EMAIL,
             BETTER_AUTH_URL: `http://127.0.0.1:${playwrightPort}`,
             NEXT_TEST_DIST_DIR: ".next-e2e",

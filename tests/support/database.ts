@@ -1,9 +1,11 @@
 import { config } from "dotenv";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "../../src/generated/prisma/client";
+import { requireTestDatabaseUrl } from "./test-environment";
 config({ path: ".env.local", quiet: true });
-if (!process.env.DATABASE_URL) throw new Error("A development DATABASE_URL is required for integration tests.");
-export const testDb = new PrismaClient({ adapter: new PrismaNeon({ connectionString: process.env.DATABASE_URL }) });
+export const testDb = new PrismaClient({
+  adapter: new PrismaNeon({ connectionString: requireTestDatabaseUrl(process.env) }),
+});
 
 // Only delete exact fixture IDs/emails recorded by this test run. Never reset the database.
 export async function cleanupFixtures(input: {
