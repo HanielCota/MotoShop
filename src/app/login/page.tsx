@@ -1,21 +1,14 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Suspense } from "react";
 import { AuthForm } from "@/modules/auth/components/auth-form";
+import { AuthPageShell } from "@/modules/auth/components/auth-page-shell";
+import { authEmailConfigured, authEmailVerificationRequired } from "@/modules/auth/infrastructure/auth";
 
 export default function LoginPage() {
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-10rem)] w-full max-w-md items-center px-4 py-10">
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Acessar a Moto Shop</CardTitle>
-          <CardDescription>Acesse sua conta para acompanhar pedidos, salvar favoritos ou administrar sua loja.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Suspense fallback={<p className="text-muted-foreground text-sm">Carregando...</p>}>
-            <AuthForm />
-          </Suspense>
-        </CardContent>
-      </Card>
-    </main>
+    <AuthPageShell>
+      <Suspense fallback={<p className="text-muted-foreground text-sm">Carregando...</p>}>
+        <AuthForm emailEnabled={authEmailConfigured} verificationRequired={authEmailVerificationRequired} />
+      </Suspense>
+    </AuthPageShell>
   );
 }
-import { Suspense } from "react";

@@ -10,13 +10,16 @@ export class ResendEmailProvider implements EmailProvider {
   async send(input: SendEmailInput): Promise<SendEmailResult> {
     const config = this.getConfig();
     const resend = new Resend(config.apiKey);
-    const { data, error } = await resend.emails.send({
-      from: config.from,
-      to: input.to,
-      subject: input.subject,
-      react: input.react,
-      ...(input.replyTo ? { replyTo: input.replyTo } : {}),
-    });
+    const { data, error } = await resend.emails.send(
+      {
+        from: config.from,
+        to: input.to,
+        subject: input.subject,
+        react: input.react,
+        ...(input.replyTo ? { replyTo: input.replyTo } : {}),
+      },
+      input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : undefined,
+    );
 
     if (error || !data) {
       throw new ApplicationError({

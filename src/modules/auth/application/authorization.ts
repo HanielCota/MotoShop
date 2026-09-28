@@ -54,7 +54,7 @@ export async function requireAdminAccess() {
       .filter(Boolean),
   );
 
-  if (!adminEmails.has(session.user.email.toLowerCase())) {
+  if (!session.user.emailVerified || !adminEmails.has(session.user.email.toLowerCase())) {
     redirect("/forbidden" as Route);
   }
 

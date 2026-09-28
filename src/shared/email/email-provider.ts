@@ -5,6 +5,7 @@ export type SendEmailInput = {
   subject: string;
   react: ReactNode;
   replyTo?: string;
+  idempotencyKey?: string;
 };
 
 export type SendEmailResult = { id: string };
