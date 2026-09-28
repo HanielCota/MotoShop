@@ -253,6 +253,15 @@ model Verification {
   @@map("verifications")
 }
 
+model RateLimitCounter {
+  key       String   @id
+  count     Int
+  resetAt   DateTime
+
+  @@index([resetAt])
+  @@map("rate_limit_counters")
+}
+
 model Seller {
   id                     String                 @id @default(cuid())
   type                   SellerType
@@ -381,6 +390,7 @@ model Product {
   name                String
   slug                String                 @unique
   description         String
+  isDemo              Boolean                @default(false)
   status              ProductStatus          @default(DRAFT)
   rejectionReason     String?
   submittedAt         DateTime?
@@ -630,7 +640,7 @@ model ProductCompatibility {
 model Cart {
   id                   String     @id @default(cuid())
   status               CartStatus @default(ACTIVE)
-  guestAccessTokenHash String?    @unique
+  guestAccessTokenHash String?
   expiresAt            DateTime?
   userId               String?
   createdAt            DateTime   @default(now())
@@ -639,6 +649,7 @@ model Cart {
   items                CartItem[]
 
   @@index([userId, status])
+  @@index([guestAccessTokenHash, status])
   @@index([status, expiresAt])
   @@map("carts")
 }
@@ -973,6 +984,7 @@ model ProductReview {
   userId      String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  hiddenAt    DateTime?
   product     Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
   seller      Seller    @relation(fields: [sellerId], references: [id], onDelete: Restrict)
   order       Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
@@ -994,6 +1006,7 @@ model SellerReview {
   userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  hiddenAt  DateTime?
   seller    Seller   @relation(fields: [sellerId], references: [id], onDelete: Restrict)
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
   user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
@@ -1014,6 +1027,7 @@ model ProductQuestion {
   answeredByUserId String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  hiddenAt         DateTime?
   product          Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
   seller           Seller    @relation(fields: [sellerId], references: [id], onDelete: Restrict)
   askedBy          User      @relation("QuestionAsker", fields: [askedByUserId], references: [id], onDelete: Restrict)

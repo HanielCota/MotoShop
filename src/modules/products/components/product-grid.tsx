@@ -66,6 +66,7 @@ export function ProductGrid({
                   <Badge variant="outline">{getCategoryLabel(product.category)}</Badge>
                 </Link>
                 <div className="flex items-center gap-2">
+                  {product.isDemo ? <Badge variant="outline">Demonstração</Badge> : null}
                   {product.isVip ? <Badge variant="secondary">Patrocinado · VIP</Badge> : null}
                   {product.seller.store ? (
                     <Link
@@ -95,7 +96,11 @@ export function ProductGrid({
                   {offer.priceInCents !== null ? formatMoneyInCents(offer.priceInCents) : "Sob consulta"}
                 </p>
                 <p className="text-muted-foreground text-xs">
-                  {inStock ? "Em estoque · confira as variações" : "Indisponível"}
+                  {product.isDemo
+                    ? "Exemplo ilustrativo · não disponível para compra"
+                    : inStock
+                      ? "Em estoque · confira as variações"
+                      : "Indisponível"}
                 </p>
               </div>
               <Link className="text-sm font-medium underline underline-offset-4" href={`/products/${product.slug}`}>

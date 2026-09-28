@@ -267,10 +267,10 @@
   position: relative;
   min-width: 0;
 }
-.motorcycleForm button {
+.motorcycleForm button[type="submit"] {
   grid-column: 1 / -1;
 }
-.motorcycleForm label span {
+.motorcycleForm label > span {
   position: absolute;
   z-index: 1;
   top: 0.45rem;
@@ -282,7 +282,7 @@
   text-transform: uppercase;
   pointer-events: none;
 }
-.motorcycleForm select,
+.motorcycleForm [data-slot="select-trigger"],
 .searchForm input {
   width: 100%;
   min-width: 0;
@@ -293,21 +293,49 @@
   background: white;
   color: var(--marketing-ink);
 }
-.motorcycleForm select {
+.motorcycleForm [data-slot="select-trigger"] {
   padding: 1.3rem 0.65rem 0.15rem;
   font-size: 1rem;
   text-overflow: ellipsis;
 }
 .searchForm input {
   padding-inline: 1rem;
+  padding-right: 3.2rem;
 }
-.motorcycleForm select:focus,
+.searchInputWrap {
+  position: relative;
+  min-width: 0;
+}
+.searchForm input::-webkit-search-cancel-button {
+  display: none;
+}
+.searchForm .clearSearch {
+  position: absolute;
+  top: 50%;
+  right: 0.5rem;
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  transform: translateY(-50%);
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--marketing-muted);
+}
+.searchForm .clearSearch:hover,
+.searchForm .clearSearch:focus-visible {
+  background: rgb(20 20 20 / 8%);
+  color: var(--marketing-ink);
+}
+.motorcycleForm [data-slot="select-trigger"]:focus-visible,
 .searchForm input:focus {
   border-color: var(--marketing-accent);
   box-shadow: 0 0 0 3px rgb(240 90 26 / 16%);
 }
-.motorcycleForm button,
-.searchForm button {
+.motorcycleForm button[type="submit"],
+.searchForm button[type="submit"] {
   display: inline-flex;
   height: 56px;
   align-items: center;
@@ -326,7 +354,7 @@
   opacity: 0.5;
 }
 .motorcycleForm button svg,
-.searchForm button svg {
+.searchForm button[type="submit"] svg {
   width: 18px;
 }
 .motorcycleForm p,
@@ -399,6 +427,31 @@
   margin: -1rem 0 1.6rem;
   color: var(--marketing-muted);
   font-size: 0.8rem;
+}
+
+.emptyProducts {
+  display: flex;
+  min-height: 180px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  border: 1px solid var(--marketing-line);
+  border-radius: 18px;
+  padding: 2rem;
+  background: var(--marketing-white);
+  color: var(--marketing-muted);
+}
+
+.emptyProducts a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--marketing-accent-strong);
+  font-weight: 700;
+}
+
+.emptyProducts svg {
+  width: 17px;
 }
 
 .productGrid {
@@ -1054,6 +1107,10 @@
   .productGrid,
   .essentialsGrid {
     grid-template-columns: 1fr;
+  }
+  .emptyProducts {
+    align-items: flex-start;
+    flex-direction: column;
   }
   .categoryCard:first-child {
     grid-column: auto;

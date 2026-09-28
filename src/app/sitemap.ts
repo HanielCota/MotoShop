@@ -8,7 +8,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = env.BETTER_AUTH_URL.replace(/\/$/, "");
   const [products, categories, brands, stores, fitments] = await Promise.all([
     db.product.findMany({
-      where: { status: ProductStatus.APPROVED },
+      where: { status: ProductStatus.APPROVED, isDemo: false },
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
     }),

@@ -1,5 +1,7 @@
 "use client";
 
+import { DesignSelect } from "@/components/ui/design-select";
+
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -38,6 +40,19 @@ type FitmentOption = {
 type MarketingHomeProps = {
   fitments: FitmentOption[];
   categories: { id: string; name: string; slug: string; parentId: string | null }[];
+  featuredProducts: {
+    id: string;
+    name: string;
+    category: string;
+    sellerName: string;
+    price: string;
+    hasPriceRange: boolean;
+    href: `/products/${string}`;
+    image: string | null;
+    imageAlt: string;
+    sponsored: boolean;
+    isDemo: boolean;
+  }[];
   primaryFitmentId?: string | null;
 };
 
@@ -80,48 +95,10 @@ const essentials = [
   { title: "Pneus e câmaras", description: "Aderência para pista e trilha", icon: Bike, href: "/products?q=pneu" },
 ] as const;
 
-const mockProducts = [
-  {
-    name: "Capacete MX Carbon",
-    category: "Capacetes",
-    compatibility: "Equipamento universal",
-    price: "R$ 899,90",
-    installment: "10x de R$ 89,99",
-    href: "/categoria/equipment-helmets",
-    image: "/images/marketing/mock-helmet.svg",
-  },
-  {
-    name: "Bota Pro Trail",
-    category: "Botas",
-    compatibility: "Equipamento universal",
-    price: "R$ 1.249,90",
-    installment: "10x de R$ 124,99",
-    href: "/categoria/equipment-boots",
-    image: "/images/marketing/mock-boots.svg",
-  },
-  {
-    name: "Guidão Fatbar 28 mm",
-    category: "Controles",
-    compatibility: "Confira a aplicação",
-    price: "R$ 589,90",
-    installment: "10x de R$ 58,99",
-    href: "/products?q=guid%C3%A3o",
-    image: "/images/marketing/mock-handlebar.svg",
-  },
-  {
-    name: "Filtro de Ar Dual Foam",
-    category: "Manutenção",
-    compatibility: "Confira a aplicação",
-    price: "R$ 129,90",
-    installment: "2x de R$ 64,95",
-    href: "/products?q=filtro",
-    image: "/images/marketing/mock-filter.svg",
-  },
-] as const;
-
-export function MarketingHome({ fitments, categories, primaryFitmentId }: MarketingHomeProps) {
+export function MarketingHome({ fitments, categories, featuredProducts, primaryFitmentId }: MarketingHomeProps) {
   const router = useRouter();
   const [finderMode, setFinderMode] = useState<"motorcycle" | "search">("motorcycle");
+  const [searchQuery, setSearchQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const [fitmentId, setFitmentId] = useQueryState(
@@ -286,43 +263,46 @@ export function MarketingHome({ fitments, categories, primaryFitmentId }: Market
                 >
                   <label>
                     <span>Fabricante</span>
-                    <select
+                    <DesignSelect
                       aria-label="Fabricante"
+                      tone="marketing"
                       disabled={!selectedFitment}
                       value={manufacturer}
-                      onChange={(event) => handleManufacturerChange(event.target.value)}
+                      onValueChange={(value) => handleManufacturerChange(String(value))}
                     >
                       {manufacturers.map((name) => (
                         <option key={name}>{name}</option>
                       ))}
-                    </select>
+                    </DesignSelect>
                   </label>
                   <label>
                     <span>Modelo</span>
-                    <select
+                    <DesignSelect
                       aria-label="Modelo"
+                      tone="marketing"
                       disabled={!selectedFitment}
                       value={selectedModel}
-                      onChange={(event) => {
+                      onValueChange={(value) => {
                         void setFitmentId(
-                          manufacturerFitments.find((fitment) => fitment.model === event.target.value)?.id ?? null,
+                          manufacturerFitments.find((fitment) => fitment.model === value)?.id ?? null,
                         );
                       }}
                     >
                       {models.map((model) => (
                         <option key={model}>{model}</option>
                       ))}
-                    </select>
+                    </DesignSelect>
                   </label>
                   <label>
                     <span>Ano e versão</span>
-                    <select
+                    <DesignSelect
                       aria-label="Ano e versão"
+                      tone="marketing"
                       disabled={!selectedFitment}
                       name="moto"
                       value={selectedFitment?.id ?? ""}
-                      onChange={(event) => {
-                        void setFitmentId(event.target.value);
+                      onValueChange={(value) => {
+                        void setFitmentId(String(value));
                       }}
                     >
                       {modelFitments.map((fitment) => (
@@ -330,7 +310,7 @@ export function MarketingHome({ fitments, categories, primaryFitmentId }: Market
                           {[fitment.year, fitment.version, `${fitment.displacementCc} cc`].filter(Boolean).join(" · ")}
                         </option>
                       ))}
-                    </select>
+                    </DesignSelect>
                   </label>
                   <button type="submit" disabled={!selectedFitment}>
                     <Bike /> Ver peças
@@ -346,7 +326,26 @@ export function MarketingHome({ fitments, categories, primaryFitmentId }: Market
                   <label className={styles.visuallyHidden} htmlFor="home-search">
                     Buscar produto
                   </label>
-                  <input id="home-search" name="q" type="search" placeholder="Ex.: filtro de ar" />
+                  <div className={styles.searchInputWrap}>
+                    <input
+                      id="home-search"
+                      name="q"
+                      type="search"
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder="Ex.: filtro de ar"
+                    />
+                    {searchQuery ? (
+                      <button
+                        type="button"
+                        className={styles.clearSearch}
+                        onClick={() => setSearchQuery("")}
+                        aria-label="Limpar busca"
+                      >
+                        <X aria-hidden="true" />
+                      </button>
+                    ) : null}
+                  </div>
                   <button type="submit">
                     <Search /> Buscar
                   </button>
@@ -416,44 +415,61 @@ export function MarketingHome({ fitments, categories, primaryFitmentId }: Market
         </div>
       </section>
 
-      <section className={styles.productsSection} aria-labelledby="mock-products-title">
+      <section className={styles.productsSection} aria-labelledby="featured-products-title">
         <div className={styles.sectionHeading}>
           <div>
-            <p className={styles.sectionKicker}>Vitrine de demonstração</p>
-            <h2 id="mock-products-title">Produtos em destaque</h2>
+            <p className={styles.sectionKicker}>Seleção da Moto Shop</p>
+            <h2 id="featured-products-title">Produtos em destaque</h2>
           </div>
           <Link href="/products">
             Ver catálogo completo <ArrowRight />
           </Link>
         </div>
-        <p className={styles.mockNotice}>Produtos, preços e condições ilustrativos para visualização do marketplace.</p>
-        <div className={styles.productGrid}>
-          {mockProducts
-            .filter(({ href }) => categoryIsActive(href))
-            .map(({ name, category, compatibility, price, installment, href, image }) => (
-              <article className={styles.productCard} key={name}>
-                <Link className={styles.productVisual} href={href} aria-label={`Explorar categoria de ${name}`}>
-                  <span className={styles.mockBadge}>Demonstração</span>
-                  <Image src={image} alt="" width={600} height={460} />
-                </Link>
-                <div className={styles.productInfo}>
-                  <span className={styles.productCategory}>{category}</span>
-                  <h3>{name}</h3>
-                  <p className={styles.productCompatibility}>
-                    <CircleCheck aria-hidden="true" />
-                    {compatibility}
-                  </p>
-                  <div className={styles.productPrice}>
-                    <strong>{price}</strong>
-                    <small>{installment}</small>
-                  </div>
-                  <Link className={styles.productLink} href={href}>
-                    Ver categoria <ArrowRight aria-hidden="true" />
+        {featuredProducts.length === 0 ? (
+          <div className={styles.emptyProducts}>
+            <p>Estamos preparando a primeira seleção de produtos das lojas aprovadas.</p>
+            <Link href="/products">
+              Explorar o catálogo <ArrowRight aria-hidden="true" />
+            </Link>
+          </div>
+        ) : (
+          <div className={styles.productGrid}>
+            {featuredProducts.map(
+              ({ id, name, category, sellerName, price, hasPriceRange, href, image, imageAlt, sponsored, isDemo }) => (
+                <article className={styles.productCard} key={id}>
+                  <Link className={styles.productVisual} href={href} aria-label={`Ver ${name}`}>
+                    {isDemo ? (
+                      <span className={styles.mockBadge}>Demonstração</span>
+                    ) : sponsored ? (
+                      <span className={styles.mockBadge}>Patrocinado · VIP</span>
+                    ) : null}
+                    {image ? (
+                      <Image src={image} alt={imageAlt} width={600} height={460} unoptimized />
+                    ) : (
+                      <span>Imagem em breve</span>
+                    )}
                   </Link>
-                </div>
-              </article>
-            ))}
-        </div>
+                  <div className={styles.productInfo}>
+                    <span className={styles.productCategory}>{category}</span>
+                    <h3>{name}</h3>
+                    <p className={styles.productCompatibility}>{sellerName}</p>
+                    <div className={styles.productPrice}>
+                      <strong>{price}</strong>
+                      {isDemo ? (
+                        <small>Valor ilustrativo · compra indisponível</small>
+                      ) : hasPriceRange ? (
+                        <small>A partir de</small>
+                      ) : null}
+                    </div>
+                    <Link className={styles.productLink} href={href}>
+                      Ver produto <ArrowRight aria-hidden="true" />
+                    </Link>
+                  </div>
+                </article>
+              ),
+            )}
+          </div>
+        )}
       </section>
 
       <section className={styles.fitmentSection}>

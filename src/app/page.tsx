@@ -8,6 +8,7 @@ import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/moto
 import { listMarketingCategories } from "@/modules/marketing/queries/marketing-categories";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
+import { listFeaturedProducts } from "@/modules/marketing/queries/featured-products";
 
 export const metadata: Metadata = {
   title: "Moto Shop | O marketplace de quem vive motocross",
@@ -23,10 +24,11 @@ const marketingDisplay = Barlow_Condensed({
 
 export default async function HomePage() {
   await connection();
-  const [fitments, categories, session] = await Promise.all([
+  const [fitments, categories, session, featuredProducts] = await Promise.all([
     listActiveMotorcycleFitments(),
     listMarketingCategories(),
     getCurrentSession(),
+    listFeaturedProducts(),
   ]);
   const primaryMotorcycle = session ? await getPrimarySavedMotorcycle(session.user.id) : null;
 
@@ -35,6 +37,7 @@ export default async function HomePage() {
       <NuqsAdapter>
         <MarketingHome
           categories={categories}
+          featuredProducts={featuredProducts}
           primaryFitmentId={primaryMotorcycle?.motorcycleFitmentId ?? null}
           fitments={fitments.map((fitment) => ({
             id: fitment.id,

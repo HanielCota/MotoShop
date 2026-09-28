@@ -37,9 +37,16 @@ const categories = [
 function renderHome(searchParams = "", options: Partial<ComponentProps<typeof MarketingHome>> = {}) {
   return render(
     <NuqsTestingAdapter searchParams={searchParams} hasMemory>
-      <MarketingHome fitments={fitments} categories={categories} {...options} />
+      <MarketingHome fitments={fitments} categories={categories} featuredProducts={[]} {...options} />
     </NuqsTestingAdapter>,
   );
+}
+
+function choose(name: string, option: string) {
+  fireEvent.click(screen.getByRole("combobox", { name }));
+  const item = screen.getByRole("option", { name: option });
+  fireEvent.pointerDown(item, { pointerType: "mouse" });
+  fireEvent.click(item);
 }
 
 beforeEach(() => push.mockReset());
@@ -48,9 +55,9 @@ afterEach(cleanup);
 describe("marketing homepage", () => {
   it("restores every field and the summary from the URL", () => {
     renderHome("?moto=yamaha-2025");
-    expect(screen.getByRole("combobox", { name: "Fabricante" })).toHaveValue("Yamaha");
-    expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveValue("YZ250F");
-    expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveValue("yamaha-2025");
+    expect(screen.getByRole("combobox", { name: "Fabricante" })).toHaveTextContent("Yamaha");
+    expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveTextContent("YZ250F");
+    expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveTextContent("2025 · 250 cc");
     expect(screen.getByText("Yamaha YZ250F")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Peças compatíveis" })).toHaveAttribute(
       "href",
@@ -60,38 +67,41 @@ describe("marketing homepage", () => {
 
   it("starts with the saved primary motorcycle while an explicit URL selection takes priority", () => {
     const initial = renderHome("", { primaryFitmentId: "yamaha-2025" });
-    expect(screen.getByRole("combobox", { name: "Fabricante" })).toHaveValue("Yamaha");
+    expect(screen.getByRole("combobox", { name: "Fabricante" })).toHaveTextContent("Yamaha");
     expect(screen.getByRole("link", { name: "Peças compatíveis" })).toHaveAttribute(
       "href",
       "/products?moto=yamaha-2025",
     );
     initial.unmount();
     renderHome("?moto=honda-2024", { primaryFitmentId: "yamaha-2025" });
-    expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveValue("honda-2024");
+    expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveTextContent("2024 · R · 250 cc");
   });
 
   it("submits the selected motorcycle even immediately after a manufacturer change", async () => {
     renderHome();
-    fireEvent.change(screen.getByRole("combobox", { name: "Fabricante" }), { target: { value: "Yamaha" } });
+    choose("Fabricante", "Yamaha");
     fireEvent.click(screen.getByRole("button", { name: "Ver peças" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/products?moto=yamaha-2025"));
-    expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveValue("YZ250F");
+    expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveTextContent("YZ250F");
   });
 
   it("updates the model without retaining another model's fitment", () => {
     renderHome("?moto=yamaha-2025");
-    fireEvent.change(screen.getByRole("combobox", { name: "Modelo" }), { target: { value: "YZ450F" } });
-    expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveValue("yamaha-450");
+    choose("Modelo", "YZ450F");
+    expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveTextContent("450 cc");
     expect(screen.getByText("Yamaha YZ450F")).toBeInTheDocument();
   });
 
   it("distinguishes versions in the same year and preserves selection when switching search mode", () => {
     renderHome();
-    expect(screen.getByRole("option", { name: "2025 · Special · 250 cc" })).toHaveValue("honda-special");
-    fireEvent.change(screen.getByRole("combobox", { name: "Ano e versão" }), { target: { value: "honda-2024" } });
+    fireEvent.click(screen.getByRole("combobox", { name: "Ano e versão" }));
+    expect(screen.getByRole("option", { name: "2025 · Special · 250 cc" })).toBeInTheDocument();
+    const previousYear = screen.getByRole("option", { name: "2024 · R · 250 cc" });
+    fireEvent.pointerDown(previousYear, { pointerType: "mouse" });
+    fireEvent.click(previousYear);
     fireEvent.click(screen.getByRole("button", { name: "Buscar produto" }));
     fireEvent.click(screen.getByRole("button", { name: "Comprar por moto" }));
-    expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveValue("honda-2024");
+    expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveTextContent("2024 · R · 250 cc");
     expect(screen.getByRole("link", { name: "Peças compatíveis" })).toHaveAttribute(
       "href",
       "/products?moto=honda-2024",
@@ -146,18 +156,35 @@ describe("marketing homepage", () => {
     expect(screen.getByRole("link", { name: "Explorar todo o catálogo" })).toHaveAttribute("href", "/products");
   });
 
-  it("marks every preview product as illustrative and sends visitors to browsing, not checkout", () => {
+  it("shows a truthful empty state before approved products exist", () => {
     renderHome();
-    expect(screen.getAllByText("Demonstração")).toHaveLength(4);
-    expect(screen.getByText(/Produtos, preços e condições ilustrativos/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Explorar categoria de Capacete MX Carbon" })).toHaveAttribute(
+    expect(screen.getByText(/preparando a primeira seleção/)).toBeInTheDocument();
+    expect(screen.queryByText("Demonstração")).not.toBeInTheDocument();
+  });
+
+  it("links approved featured products to their details without invented installments", () => {
+    renderHome("", {
+      featuredProducts: [
+        {
+          id: "product-a",
+          name: "Capacete aprovado",
+          category: "Capacetes",
+          sellerName: "Loja A",
+          price: "R$ 899,90",
+          hasPriceRange: false,
+          href: "/products/capacete-aprovado",
+          image: null,
+          imageAlt: "Capacete aprovado",
+          sponsored: false,
+          isDemo: false,
+        },
+      ],
+    });
+    expect(screen.getByRole("link", { name: "Ver Capacete aprovado" })).toHaveAttribute(
       "href",
-      "/categoria/equipment-helmets",
+      "/products/capacete-aprovado",
     );
-    const previewSection = screen.getByRole("heading", { name: "Produtos em destaque" }).closest("section");
-    expect(previewSection).not.toBeNull();
-    expect(
-      within(previewSection as HTMLElement).queryByRole("button", { name: /comprar|adicionar ao carrinho/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText("Loja A")).toBeInTheDocument();
+    expect(screen.queryByText(/10x de/)).not.toBeInTheDocument();
   });
 });

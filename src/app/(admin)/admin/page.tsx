@@ -1,3 +1,7 @@
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
+import { DesignSelect } from "@/components/ui/design-select";
 import Link from "next/link";
 import Image from "next/image";
 import type { Route } from "next";
@@ -327,6 +331,9 @@ export default async function AdminHomePage({
   return (
     <div className="flex flex-col gap-6">
       <IntegrationReadiness />
+      <Link href="/admin/moderation" className="text-primary w-fit text-sm font-medium underline underline-offset-4">
+        Moderar perguntas e avaliações
+      </Link>
       <Card>
         <CardHeader>
           <CardTitle>Catálogo controlado pela Moto Shop</CardTitle>
@@ -447,8 +454,8 @@ export default async function AdminHomePage({
             >
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Buscar evento
-                <input
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                <Input
+                  className="h-9"
                   name="webhookQ"
                   defaultValue={params.webhookQ ?? ""}
                   placeholder="Tipo, ID ou erro"
@@ -456,8 +463,8 @@ export default async function AdminHomePage({
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Provider
-                <input
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                <Input
+                  className="h-9"
                   name="webhookProvider"
                   defaultValue={params.webhookProvider ?? ""}
                   placeholder="MERCADO_PAGO"
@@ -465,8 +472,9 @@ export default async function AdminHomePage({
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Status
-                <select
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                <DesignSelect
+                  aria-label="Status"
+                  className="h-9"
                   name="webhookStatus"
                   defaultValue={params.webhookStatus ?? "ALL"}
                 >
@@ -476,40 +484,31 @@ export default async function AdminHomePage({
                       {label}
                     </option>
                   ))}
-                </select>
+                </DesignSelect>
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 De
-                <input
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                  name="webhookFrom"
-                  type="date"
-                  defaultValue={params.webhookFrom ?? ""}
-                />
+                <Input className="h-9" name="webhookFrom" type="date" defaultValue={params.webhookFrom ?? ""} />
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Até
-                <input
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                  name="webhookTo"
-                  type="date"
-                  defaultValue={params.webhookTo ?? ""}
-                />
+                <Input className="h-9" name="webhookTo" type="date" defaultValue={params.webhookTo ?? ""} />
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Ordenação
-                <select
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                <DesignSelect
+                  aria-label="Ordenação"
+                  className="h-9"
                   name="webhookSort"
                   defaultValue={params.webhookSort}
                 >
                   <option value="newest">Mais recentes</option>
                   <option value="oldest">Mais antigos</option>
-                </select>
+                </DesignSelect>
               </label>
-              <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+              <Button type="submit" size="sm" className="rounded-md px-4">
                 Filtrar
-              </button>
+              </Button>
             </form>
             {webhookResult.events.length === 0 ? (
               <p className="text-muted-foreground text-sm">Nenhum webhook encontrado.</p>
@@ -541,31 +540,15 @@ export default async function AdminHomePage({
               </div>
             )}
             {webhookResult.pageCount > 1 ? (
-              <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Paginação de webhooks">
-                {webhookResult.page > 1 ? (
-                  <Link
-                    href={adminHref({ webhookPage: webhookResult.page - 1 })}
-                    className="rounded-md border px-3 py-2 text-sm"
-                  >
-                    Anterior
-                  </Link>
-                ) : (
-                  <span />
-                )}
-                <span className="text-muted-foreground text-xs">
-                  Página {webhookResult.page} de {webhookResult.pageCount} · {webhookResult.total}
-                </span>
-                {webhookResult.page < webhookResult.pageCount ? (
-                  <Link
-                    href={adminHref({ webhookPage: webhookResult.page + 1 })}
-                    className="rounded-md border px-3 py-2 text-sm"
-                  >
-                    Próxima
-                  </Link>
-                ) : (
-                  <span />
-                )}
-              </nav>
+              <Pagination
+                ariaLabel="Paginação de webhooks"
+                page={webhookResult.page}
+                pageCount={webhookResult.pageCount}
+                previousHref={adminHref({ webhookPage: webhookResult.page - 1 })}
+                nextHref={adminHref({ webhookPage: webhookResult.page + 1 })}
+                summary={<>{webhookResult.total}</>}
+                className="mt-4"
+              />
             ) : null}
           </CardContent>
         </Card>
@@ -581,8 +564,8 @@ export default async function AdminHomePage({
             >
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Buscar entrega
-                <input
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                <Input
+                  className="h-9"
                   name="notificationQ"
                   defaultValue={params.notificationQ ?? ""}
                   placeholder="E-mail, assunto ou evento"
@@ -590,8 +573,8 @@ export default async function AdminHomePage({
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Tipo
-                <input
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                <Input
+                  className="h-9"
                   name="notificationKind"
                   defaultValue={params.notificationKind ?? ""}
                   placeholder="ORDER_PAYMENT"
@@ -599,8 +582,9 @@ export default async function AdminHomePage({
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Status
-                <select
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                <DesignSelect
+                  aria-label="Status"
+                  className="h-9"
                   name="notificationStatus"
                   defaultValue={params.notificationStatus ?? "ALL"}
                 >
@@ -610,12 +594,12 @@ export default async function AdminHomePage({
                       {label}
                     </option>
                   ))}
-                </select>
+                </DesignSelect>
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 De
-                <input
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                <Input
+                  className="h-9"
                   name="notificationFrom"
                   type="date"
                   defaultValue={params.notificationFrom ?? ""}
@@ -623,27 +607,23 @@ export default async function AdminHomePage({
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Até
-                <input
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                  name="notificationTo"
-                  type="date"
-                  defaultValue={params.notificationTo ?? ""}
-                />
+                <Input className="h-9" name="notificationTo" type="date" defaultValue={params.notificationTo ?? ""} />
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Ordenação
-                <select
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                <DesignSelect
+                  aria-label="Ordenação"
+                  className="h-9"
                   name="notificationSort"
                   defaultValue={params.notificationSort}
                 >
                   <option value="newest">Mais recentes</option>
                   <option value="oldest">Mais antigos</option>
-                </select>
+                </DesignSelect>
               </label>
-              <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+              <Button type="submit" size="sm" className="rounded-md px-4">
                 Filtrar
-              </button>
+              </Button>
             </form>
             {notificationResult.deliveries.length === 0 ? (
               <p className="text-muted-foreground text-sm">Nenhuma entrega encontrada.</p>
@@ -666,31 +646,15 @@ export default async function AdminHomePage({
               </div>
             )}
             {notificationResult.pageCount > 1 ? (
-              <nav className="mt-4 flex items-center justify-between gap-3" aria-label="Paginação de notificações">
-                {notificationResult.page > 1 ? (
-                  <Link
-                    href={adminHref({ notificationPage: notificationResult.page - 1 })}
-                    className="rounded-md border px-3 py-2 text-sm"
-                  >
-                    Anterior
-                  </Link>
-                ) : (
-                  <span />
-                )}
-                <span className="text-muted-foreground text-xs">
-                  Página {notificationResult.page} de {notificationResult.pageCount} · {notificationResult.total}
-                </span>
-                {notificationResult.page < notificationResult.pageCount ? (
-                  <Link
-                    href={adminHref({ notificationPage: notificationResult.page + 1 })}
-                    className="rounded-md border px-3 py-2 text-sm"
-                  >
-                    Próxima
-                  </Link>
-                ) : (
-                  <span />
-                )}
-              </nav>
+              <Pagination
+                ariaLabel="Paginação de notificações"
+                page={notificationResult.page}
+                pageCount={notificationResult.pageCount}
+                previousHref={adminHref({ notificationPage: notificationResult.page - 1 })}
+                nextHref={adminHref({ notificationPage: notificationResult.page + 1 })}
+                summary={<>{notificationResult.total}</>}
+                className="mt-4"
+              />
             ) : null}
           </CardContent>
         </Card>
@@ -709,8 +673,8 @@ export default async function AdminHomePage({
           >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Buscar pedido
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <Input
+                className="h-9"
                 name="adminOrderQ"
                 defaultValue={params.adminOrderQ ?? ""}
                 placeholder="Número, cliente ou loja"
@@ -718,8 +682,9 @@ export default async function AdminHomePage({
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Status do pedido
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Status do pedido"
+                className="h-9"
                 name="adminOrderStatus"
                 defaultValue={params.adminOrderStatus}
               >
@@ -729,12 +694,13 @@ export default async function AdminHomePage({
                     {label}
                   </option>
                 ))}
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Loja
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Loja"
+                className="h-9"
                 name="adminOrderSellerId"
                 defaultValue={params.adminOrderSellerId ?? ""}
               >
@@ -744,12 +710,13 @@ export default async function AdminHomePage({
                     {seller.store?.name ?? "Sem loja"}
                   </option>
                 ))}
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Status do envio
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Status do envio"
+                className="h-9"
                 name="adminOrderShipmentStatus"
                 defaultValue={params.adminOrderShipmentStatus}
               >
@@ -759,40 +726,31 @@ export default async function AdminHomePage({
                     {label}
                   </option>
                 ))}
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenação
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Ordenação"
+                className="h-9"
                 name="adminOrderSort"
                 defaultValue={params.adminOrderSort}
               >
                 <option value="newest">Mais recentes</option>
                 <option value="oldest">Mais antigos</option>
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               De
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="adminOrderFrom"
-                type="date"
-                defaultValue={params.adminOrderFrom ?? ""}
-              />
+              <Input className="h-9" name="adminOrderFrom" type="date" defaultValue={params.adminOrderFrom ?? ""} />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Até
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="adminOrderTo"
-                type="date"
-                defaultValue={params.adminOrderTo ?? ""}
-              />
+              <Input className="h-9" name="adminOrderTo" type="date" defaultValue={params.adminOrderTo ?? ""} />
             </label>
-            <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+            <Button type="submit" size="sm" className="rounded-md px-4">
               Filtrar
-            </button>
+            </Button>
           </form>
           {adminOrderResult.orders.length === 0 ? (
             <p className="text-muted-foreground text-sm">Nenhum pedido encontrado.</p>
@@ -827,34 +785,15 @@ export default async function AdminHomePage({
             </div>
           )}
           {adminOrderResult.pageCount > 1 ? (
-            <nav
-              className="mt-5 flex items-center justify-between gap-3"
-              aria-label="Paginação de pedidos administrativos"
-            >
-              {adminOrderResult.page > 1 ? (
-                <Link
-                  href={adminHref({ adminOrderPage: adminOrderResult.page - 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Anterior
-                </Link>
-              ) : (
-                <span />
-              )}
-              <span className="text-muted-foreground text-sm">
-                Página {adminOrderResult.page} de {adminOrderResult.pageCount} · {adminOrderResult.total} pedido(s)
-              </span>
-              {adminOrderResult.page < adminOrderResult.pageCount ? (
-                <Link
-                  href={adminHref({ adminOrderPage: adminOrderResult.page + 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Próxima
-                </Link>
-              ) : (
-                <span />
-              )}
-            </nav>
+            <Pagination
+              ariaLabel="Paginação de pedidos administrativos"
+              page={adminOrderResult.page}
+              pageCount={adminOrderResult.pageCount}
+              previousHref={adminHref({ adminOrderPage: adminOrderResult.page - 1 })}
+              nextHref={adminHref({ adminOrderPage: adminOrderResult.page + 1 })}
+              summary={<>{adminOrderResult.total} pedido(s)</>}
+              className="mt-5"
+            />
           ) : null}
         </CardContent>
       </Card>
@@ -905,29 +844,26 @@ export default async function AdminHomePage({
           >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Buscar cupom
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="couponQ"
-                defaultValue={couponParams.couponQ ?? ""}
-                placeholder="Código"
-              />
+              <Input className="h-9" name="couponQ" defaultValue={couponParams.couponQ ?? ""} placeholder="Código" />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Status
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Status"
+                className="h-9"
                 name="couponActive"
                 defaultValue={couponParams.couponActive}
               >
                 <option value="ALL">Todos</option>
                 <option value="ACTIVE">Ativos</option>
                 <option value="INACTIVE">Inativos</option>
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Vigência
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Vigência"
+                className="h-9"
                 name="couponValidity"
                 defaultValue={couponParams.couponValidity}
               >
@@ -935,12 +871,13 @@ export default async function AdminHomePage({
                 <option value="CURRENT">Vigentes</option>
                 <option value="UPCOMING">Futuros</option>
                 <option value="EXPIRED">Expirados</option>
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenação
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Ordenação"
+                className="h-9"
                 name="couponSort"
                 defaultValue={couponParams.couponSort}
               >
@@ -948,11 +885,11 @@ export default async function AdminHomePage({
                 <option value="oldest">Mais antigos</option>
                 <option value="ends_soonest">Validade mais próxima</option>
                 <option value="code_asc">Código A–Z</option>
-              </select>
+              </DesignSelect>
             </label>
-            <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+            <Button type="submit" size="sm" className="rounded-md px-4">
               Filtrar
-            </button>
+            </Button>
           </form>
           <div className="divide-border divide-y">
             {marketplaceCoupons.map((coupon) => (
@@ -975,31 +912,14 @@ export default async function AdminHomePage({
             ))}
           </div>
           {couponResult.pageCount > 1 ? (
-            <nav className="flex items-center justify-between gap-3" aria-label="Paginação de cupons do marketplace">
-              {couponResult.page > 1 ? (
-                <Link
-                  href={adminHref({ couponPage: couponResult.page - 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Anterior
-                </Link>
-              ) : (
-                <span />
-              )}
-              <span className="text-muted-foreground text-sm">
-                Página {couponResult.page} de {couponResult.pageCount} · {couponResult.total} cupom(ns)
-              </span>
-              {couponResult.page < couponResult.pageCount ? (
-                <Link
-                  href={adminHref({ couponPage: couponResult.page + 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Próxima
-                </Link>
-              ) : (
-                <span />
-              )}
-            </nav>
+            <Pagination
+              ariaLabel="Paginação de cupons do marketplace"
+              page={couponResult.page}
+              pageCount={couponResult.pageCount}
+              previousHref={adminHref({ couponPage: couponResult.page - 1 })}
+              nextHref={adminHref({ couponPage: couponResult.page + 1 })}
+              summary={<>{couponResult.total} cupom(ns)</>}
+            />
           ) : null}
         </CardContent>
       </Card>
@@ -1015,8 +935,8 @@ export default async function AdminHomePage({
           >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Buscar seller
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <Input
+                className="h-9"
                 name="sellerQ"
                 defaultValue={params.sellerQ ?? ""}
                 placeholder="Loja, nome ou e-mail"
@@ -1024,8 +944,9 @@ export default async function AdminHomePage({
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Status do seller
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Status do seller"
+                className="h-9"
                 name="sellerStatus"
                 defaultValue={params.sellerStatus}
               >
@@ -1036,22 +957,18 @@ export default async function AdminHomePage({
                 <option value="SUSPENDED">Suspensos</option>
                 <option value="BLOCKED">Bloqueados</option>
                 <option value="REJECTED">Rejeitados</option>
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenação
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="sellerSort"
-                defaultValue={params.sellerSort}
-              >
+              <DesignSelect aria-label="Ordenação" className="h-9" name="sellerSort" defaultValue={params.sellerSort}>
                 <option value="newest">Mais recentes</option>
                 <option value="oldest">Mais antigos</option>
-              </select>
+              </DesignSelect>
             </label>
-            <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+            <Button type="submit" size="sm" className="rounded-md px-4">
               Filtrar
-            </button>
+            </Button>
           </form>
           {sellers.length === 0 ? (
             <p className="text-muted-foreground text-sm">Nenhuma solicitação encontrada.</p>
@@ -1076,27 +993,27 @@ export default async function AdminHomePage({
                   {seller.status === "PENDING" ? (
                     <div className="flex gap-2">
                       <form action={approveSellerAction.bind(null, seller.id)}>
-                        <button className="bg-primary text-primary-foreground h-9 rounded-md px-3 text-sm font-medium">
+                        <Button type="submit" size="sm" className="rounded-md">
                           Aprovar
-                        </button>
+                        </Button>
                       </form>
                       <form action={rejectSellerAction.bind(null, seller.id)}>
-                        <button className="border-border hover:bg-muted h-9 rounded-md border px-3 text-sm font-medium">
+                        <Button type="submit" variant="outline" size="sm" className="rounded-md">
                           Rejeitar
-                        </button>
+                        </Button>
                       </form>
                     </div>
                   ) : seller.status === "SUSPENDED" ? (
                     <form action={reactivateSellerAction.bind(null, seller.id)}>
-                      <button className="bg-primary text-primary-foreground h-9 rounded-md px-3 text-sm font-medium">
+                      <Button type="submit" size="sm" className="rounded-md">
                         Reativar
-                      </button>
+                      </Button>
                     </form>
                   ) : seller.status === "APPROVED" || seller.status === "ACTIVE" ? (
                     <form action={suspendSellerAction.bind(null, seller.id)}>
-                      <button className="border-border hover:bg-muted h-9 rounded-md border px-3 text-sm font-medium">
+                      <Button type="submit" variant="outline" size="sm" className="rounded-md">
                         Suspender
-                      </button>
+                      </Button>
                     </form>
                   ) : null}
                 </div>
@@ -1104,31 +1021,15 @@ export default async function AdminHomePage({
             </div>
           )}
           {sellerResult.pageCount > 1 ? (
-            <nav className="mt-5 flex items-center justify-between gap-3" aria-label="Paginação de sellers">
-              {sellerResult.page > 1 ? (
-                <Link
-                  href={adminHref({ sellerPage: sellerResult.page - 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Anterior
-                </Link>
-              ) : (
-                <span />
-              )}
-              <span className="text-muted-foreground text-sm">
-                Página {sellerResult.page} de {sellerResult.pageCount} · {sellerResult.total} seller(s)
-              </span>
-              {sellerResult.page < sellerResult.pageCount ? (
-                <Link
-                  href={adminHref({ sellerPage: sellerResult.page + 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Próxima
-                </Link>
-              ) : (
-                <span />
-              )}
-            </nav>
+            <Pagination
+              ariaLabel="Paginação de sellers"
+              page={sellerResult.page}
+              pageCount={sellerResult.pageCount}
+              previousHref={adminHref({ sellerPage: sellerResult.page - 1 })}
+              nextHref={adminHref({ sellerPage: sellerResult.page + 1 })}
+              summary={<>{sellerResult.total} seller(s)</>}
+              className="mt-5"
+            />
           ) : null}
         </CardContent>
       </Card>
@@ -1146,20 +1047,21 @@ export default async function AdminHomePage({
           >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Status do cancelamento
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Status do cancelamento"
+                className="h-9"
                 name="cancellationStatus"
                 defaultValue={params.cancellationStatus}
               >
                 <option value="ALL">Abertos</option>
                 <option value="REQUESTED">Solicitados</option>
                 <option value="APPROVED">Aprovados</option>
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Buscar
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <Input
+                className="h-9"
                 name="cancellationQ"
                 defaultValue={params.cancellationQ ?? ""}
                 placeholder="Pedido, item, SKU ou loja"
@@ -1167,8 +1069,9 @@ export default async function AdminHomePage({
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Seller
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Seller"
+                className="h-9"
                 name="cancellationSellerId"
                 defaultValue={params.cancellationSellerId ?? ""}
               >
@@ -1178,40 +1081,31 @@ export default async function AdminHomePage({
                     {seller.store?.name ?? "Sem loja"}
                   </option>
                 ))}
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               De
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="cancellationFrom"
-                type="date"
-                defaultValue={params.cancellationFrom ?? ""}
-              />
+              <Input className="h-9" name="cancellationFrom" type="date" defaultValue={params.cancellationFrom ?? ""} />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Até
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="cancellationTo"
-                type="date"
-                defaultValue={params.cancellationTo ?? ""}
-              />
+              <Input className="h-9" name="cancellationTo" type="date" defaultValue={params.cancellationTo ?? ""} />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenação
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Ordenação"
+                className="h-9"
                 name="cancellationSort"
                 defaultValue={params.cancellationSort}
               >
                 <option value="oldest">Mais antigos</option>
                 <option value="newest">Mais recentes</option>
-              </select>
+              </DesignSelect>
             </label>
-            <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+            <Button type="submit" size="sm" className="rounded-md px-4">
               Filtrar
-            </button>
+            </Button>
           </form>
           {cancellationRequests.length === 0 ? (
             <p className="text-muted-foreground text-sm">Nenhuma solicitação de cancelamento aguardando ação.</p>
@@ -1249,32 +1143,15 @@ export default async function AdminHomePage({
             </div>
           )}
           {cancellationResult.pageCount > 1 ? (
-            <nav className="mt-5 flex items-center justify-between gap-3" aria-label="Paginação de cancelamentos">
-              {cancellationResult.page > 1 ? (
-                <Link
-                  href={adminHref({ cancellationPage: cancellationResult.page - 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Anterior
-                </Link>
-              ) : (
-                <span />
-              )}
-              <span className="text-muted-foreground text-sm">
-                Página {cancellationResult.page} de {cancellationResult.pageCount} · {cancellationResult.total}{" "}
-                solicitação(ões)
-              </span>
-              {cancellationResult.page < cancellationResult.pageCount ? (
-                <Link
-                  href={adminHref({ cancellationPage: cancellationResult.page + 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Próxima
-                </Link>
-              ) : (
-                <span />
-              )}
-            </nav>
+            <Pagination
+              ariaLabel="Paginação de cancelamentos"
+              page={cancellationResult.page}
+              pageCount={cancellationResult.pageCount}
+              previousHref={adminHref({ cancellationPage: cancellationResult.page - 1 })}
+              nextHref={adminHref({ cancellationPage: cancellationResult.page + 1 })}
+              summary={<>{cancellationResult.total} solicitação(ões)</>}
+              className="mt-5"
+            />
           ) : null}
         </CardContent>
       </Card>
@@ -1290,20 +1167,21 @@ export default async function AdminHomePage({
           >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Status da disputa
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Status da disputa"
+                className="h-9"
                 name="disputeStatus"
                 defaultValue={params.disputeStatus}
               >
                 <option value="ALL">Abertas</option>
                 <option value="OPEN">Abertas novas</option>
                 <option value="UNDER_REVIEW">Em análise</option>
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Buscar
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <Input
+                className="h-9"
                 name="disputeQ"
                 defaultValue={params.disputeQ ?? ""}
                 placeholder="Pedido, item, SKU ou loja"
@@ -1311,8 +1189,9 @@ export default async function AdminHomePage({
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Seller
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Seller"
+                className="h-9"
                 name="disputeSellerId"
                 defaultValue={params.disputeSellerId ?? ""}
               >
@@ -1322,40 +1201,26 @@ export default async function AdminHomePage({
                     {seller.store?.name ?? "Sem loja"}
                   </option>
                 ))}
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               De
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="disputeFrom"
-                type="date"
-                defaultValue={params.disputeFrom ?? ""}
-              />
+              <Input className="h-9" name="disputeFrom" type="date" defaultValue={params.disputeFrom ?? ""} />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Até
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="disputeTo"
-                type="date"
-                defaultValue={params.disputeTo ?? ""}
-              />
+              <Input className="h-9" name="disputeTo" type="date" defaultValue={params.disputeTo ?? ""} />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenação
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="disputeSort"
-                defaultValue={params.disputeSort}
-              >
+              <DesignSelect aria-label="Ordenação" className="h-9" name="disputeSort" defaultValue={params.disputeSort}>
                 <option value="oldest">Mais antigos</option>
                 <option value="newest">Mais recentes</option>
-              </select>
+              </DesignSelect>
             </label>
-            <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+            <Button type="submit" size="sm" className="rounded-md px-4">
               Filtrar
-            </button>
+            </Button>
           </form>
           {disputes.length === 0 ? (
             <p className="text-muted-foreground text-sm">Nenhuma disputa aguardando ação.</p>
@@ -1384,31 +1249,15 @@ export default async function AdminHomePage({
             </div>
           )}
           {disputeResult.pageCount > 1 ? (
-            <nav className="mt-5 flex items-center justify-between gap-3" aria-label="Paginação de disputas">
-              {disputeResult.page > 1 ? (
-                <Link
-                  href={adminHref({ disputePage: disputeResult.page - 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Anterior
-                </Link>
-              ) : (
-                <span />
-              )}
-              <span className="text-muted-foreground text-sm">
-                Página {disputeResult.page} de {disputeResult.pageCount} · {disputeResult.total} disputa(s)
-              </span>
-              {disputeResult.page < disputeResult.pageCount ? (
-                <Link
-                  href={adminHref({ disputePage: disputeResult.page + 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Próxima
-                </Link>
-              ) : (
-                <span />
-              )}
-            </nav>
+            <Pagination
+              ariaLabel="Paginação de disputas"
+              page={disputeResult.page}
+              pageCount={disputeResult.pageCount}
+              previousHref={adminHref({ disputePage: disputeResult.page - 1 })}
+              nextHref={adminHref({ disputePage: disputeResult.page + 1 })}
+              summary={<>{disputeResult.total} disputa(s)</>}
+              className="mt-5"
+            />
           ) : null}
         </CardContent>
       </Card>
@@ -1426,8 +1275,9 @@ export default async function AdminHomePage({
           >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Status da devolução
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Status da devolução"
+                className="h-9"
                 name="returnStatus"
                 defaultValue={params.returnStatus}
               >
@@ -1436,12 +1286,12 @@ export default async function AdminHomePage({
                 <option value="UNDER_REVIEW">Em análise</option>
                 <option value="APPROVED">Aprovadas</option>
                 <option value="RETURNED">Recebidas</option>
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Buscar
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <Input
+                className="h-9"
                 name="returnQ"
                 defaultValue={params.returnQ ?? ""}
                 placeholder="Pedido, item, SKU, loja ou motivo"
@@ -1449,8 +1299,9 @@ export default async function AdminHomePage({
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Seller
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Seller"
+                className="h-9"
                 name="returnSellerId"
                 defaultValue={params.returnSellerId ?? ""}
               >
@@ -1460,40 +1311,26 @@ export default async function AdminHomePage({
                     {seller.store?.name ?? "Sem loja"}
                   </option>
                 ))}
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               De
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="returnFrom"
-                type="date"
-                defaultValue={params.returnFrom ?? ""}
-              />
+              <Input className="h-9" name="returnFrom" type="date" defaultValue={params.returnFrom ?? ""} />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Até
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="returnTo"
-                type="date"
-                defaultValue={params.returnTo ?? ""}
-              />
+              <Input className="h-9" name="returnTo" type="date" defaultValue={params.returnTo ?? ""} />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenação
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="returnSort"
-                defaultValue={params.returnSort}
-              >
+              <DesignSelect aria-label="Ordenação" className="h-9" name="returnSort" defaultValue={params.returnSort}>
                 <option value="oldest">Mais antigos</option>
                 <option value="newest">Mais recentes</option>
-              </select>
+              </DesignSelect>
             </label>
-            <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+            <Button type="submit" size="sm" className="rounded-md px-4">
               Filtrar
-            </button>
+            </Button>
           </form>
           {returnRequests.length === 0 ? (
             <p className="text-muted-foreground text-sm">Nenhuma devolução aguardando ação.</p>
@@ -1534,31 +1371,15 @@ export default async function AdminHomePage({
             </div>
           )}
           {returnResult.pageCount > 1 ? (
-            <nav className="mt-5 flex items-center justify-between gap-3" aria-label="Paginação de devoluções">
-              {returnResult.page > 1 ? (
-                <Link
-                  href={adminHref({ returnPage: returnResult.page - 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Anterior
-                </Link>
-              ) : (
-                <span />
-              )}
-              <span className="text-muted-foreground text-sm">
-                Página {returnResult.page} de {returnResult.pageCount} · {returnResult.total} solicitação(ões)
-              </span>
-              {returnResult.page < returnResult.pageCount ? (
-                <Link
-                  href={adminHref({ returnPage: returnResult.page + 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Próxima
-                </Link>
-              ) : (
-                <span />
-              )}
-            </nav>
+            <Pagination
+              ariaLabel="Paginação de devoluções"
+              page={returnResult.page}
+              pageCount={returnResult.pageCount}
+              previousHref={adminHref({ returnPage: returnResult.page - 1 })}
+              nextHref={adminHref({ returnPage: returnResult.page + 1 })}
+              summary={<>{returnResult.total} solicitação(ões)</>}
+              className="mt-5"
+            />
           ) : null}
         </CardContent>
       </Card>
@@ -1574,8 +1395,8 @@ export default async function AdminHomePage({
           >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Buscar produto
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <Input
+                className="h-9"
                 name="productReviewQ"
                 defaultValue={params.productReviewQ ?? ""}
                 placeholder="Nome, SKU ou loja"
@@ -1583,8 +1404,9 @@ export default async function AdminHomePage({
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Categoria
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Categoria"
+                className="h-9"
                 name="productReviewCategoryId"
                 defaultValue={params.productReviewCategoryId ?? ""}
               >
@@ -1595,12 +1417,13 @@ export default async function AdminHomePage({
                     {category.name}
                   </option>
                 ))}
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Marca
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Marca"
+                className="h-9"
                 name="productReviewBrandId"
                 defaultValue={params.productReviewBrandId ?? ""}
               >
@@ -1610,12 +1433,13 @@ export default async function AdminHomePage({
                     {brand.name}
                   </option>
                 ))}
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Seller
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Seller"
+                className="h-9"
                 name="productReviewSellerId"
                 defaultValue={params.productReviewSellerId ?? ""}
               >
@@ -1625,12 +1449,12 @@ export default async function AdminHomePage({
                     {seller.store?.name ?? "Sem loja"}
                   </option>
                 ))}
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               De
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <Input
+                className="h-9"
                 name="productReviewFrom"
                 type="date"
                 defaultValue={params.productReviewFrom ?? ""}
@@ -1638,39 +1462,36 @@ export default async function AdminHomePage({
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Até
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="productReviewTo"
-                type="date"
-                defaultValue={params.productReviewTo ?? ""}
-              />
+              <Input className="h-9" name="productReviewTo" type="date" defaultValue={params.productReviewTo ?? ""} />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Status da revisão
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Status da revisão"
+                className="h-9"
                 name="productReviewStatus"
                 defaultValue={params.productReviewStatus}
               >
                 <option value="ALL">Submetidos e rejeitados</option>
                 <option value="SUBMITTED">Aguardando aprovação</option>
                 <option value="REJECTED">Rejeitados</option>
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenação
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <DesignSelect
+                aria-label="Ordenação"
+                className="h-9"
                 name="productReviewSort"
                 defaultValue={params.productReviewSort}
               >
                 <option value="oldest">Mais antigas</option>
                 <option value="newest">Mais recentes</option>
-              </select>
+              </DesignSelect>
             </label>
-            <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+            <Button type="submit" size="sm" className="rounded-md px-4">
               Filtrar
-            </button>
+            </Button>
           </form>
           {products.length === 0 ? (
             <p className="text-muted-foreground text-sm">Nenhum produto aguardando revisão.</p>
@@ -1735,31 +1556,15 @@ export default async function AdminHomePage({
             </div>
           )}
           {productResult.pageCount > 1 ? (
-            <nav className="mt-5 flex items-center justify-between gap-3" aria-label="Paginação da fila de produtos">
-              {productResult.page > 1 ? (
-                <Link
-                  href={adminHref({ productReviewPage: productResult.page - 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Anterior
-                </Link>
-              ) : (
-                <span />
-              )}
-              <span className="text-muted-foreground text-sm">
-                Página {productResult.page} de {productResult.pageCount} · {productResult.total} produto(s)
-              </span>
-              {productResult.page < productResult.pageCount ? (
-                <Link
-                  href={adminHref({ productReviewPage: productResult.page + 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Próxima
-                </Link>
-              ) : (
-                <span />
-              )}
-            </nav>
+            <Pagination
+              ariaLabel="Paginação da fila de produtos"
+              page={productResult.page}
+              pageCount={productResult.pageCount}
+              previousHref={adminHref({ productReviewPage: productResult.page - 1 })}
+              nextHref={adminHref({ productReviewPage: productResult.page + 1 })}
+              summary={<>{productResult.total} produto(s)</>}
+              className="mt-5"
+            />
           ) : null}
         </CardContent>
       </Card>
@@ -1775,8 +1580,8 @@ export default async function AdminHomePage({
           >
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ação
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <Input
+                className="h-9"
                 name="auditAction"
                 defaultValue={params.auditAction ?? ""}
                 placeholder="ORDER_STATUS_CHANGED"
@@ -1784,8 +1589,8 @@ export default async function AdminHomePage({
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Entidade
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <Input
+                className="h-9"
                 name="auditEntityType"
                 defaultValue={params.auditEntityType ?? ""}
                 placeholder="Order ou SellerOrder"
@@ -1793,17 +1598,12 @@ export default async function AdminHomePage({
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               ID da entidade
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="auditQ"
-                defaultValue={params.auditQ ?? ""}
-                placeholder="ID interno"
-              />
+              <Input className="h-9" name="auditQ" defaultValue={params.auditQ ?? ""} placeholder="ID interno" />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ator
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+              <Input
+                className="h-9"
                 name="auditActorQ"
                 defaultValue={params.auditActorQ ?? ""}
                 placeholder="Nome ou e-mail"
@@ -1811,36 +1611,22 @@ export default async function AdminHomePage({
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               De
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="auditFrom"
-                type="date"
-                defaultValue={params.auditFrom ?? ""}
-              />
+              <Input className="h-9" name="auditFrom" type="date" defaultValue={params.auditFrom ?? ""} />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Até
-              <input
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="auditTo"
-                type="date"
-                defaultValue={params.auditTo ?? ""}
-              />
+              <Input className="h-9" name="auditTo" type="date" defaultValue={params.auditTo ?? ""} />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenação
-              <select
-                className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                name="auditSort"
-                defaultValue={params.auditSort}
-              >
+              <DesignSelect aria-label="Ordenação" className="h-9" name="auditSort" defaultValue={params.auditSort}>
                 <option value="newest">Mais recentes</option>
                 <option value="oldest">Mais antigos</option>
-              </select>
+              </DesignSelect>
             </label>
-            <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+            <Button type="submit" size="sm" className="rounded-md px-4">
               Filtrar
-            </button>
+            </Button>
           </form>
           {auditResult.logs.length === 0 ? (
             <p className="text-muted-foreground text-sm">Nenhum registro de auditoria encontrado.</p>
@@ -1869,31 +1655,15 @@ export default async function AdminHomePage({
             </div>
           )}
           {auditResult.pageCount > 1 ? (
-            <nav className="mt-5 flex items-center justify-between gap-3" aria-label="Paginação da auditoria">
-              {auditResult.page > 1 ? (
-                <Link
-                  href={adminHref({ auditPage: auditResult.page - 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Anterior
-                </Link>
-              ) : (
-                <span />
-              )}
-              <span className="text-muted-foreground text-sm">
-                Página {auditResult.page} de {auditResult.pageCount} · {auditResult.total} registro(s)
-              </span>
-              {auditResult.page < auditResult.pageCount ? (
-                <Link
-                  href={adminHref({ auditPage: auditResult.page + 1 })}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  Próxima
-                </Link>
-              ) : (
-                <span />
-              )}
-            </nav>
+            <Pagination
+              ariaLabel="Paginação da auditoria"
+              page={auditResult.page}
+              pageCount={auditResult.pageCount}
+              previousHref={adminHref({ auditPage: auditResult.page - 1 })}
+              nextHref={adminHref({ auditPage: auditResult.page + 1 })}
+              summary={<>{auditResult.total} registro(s)</>}
+              className="mt-5"
+            />
           ) : null}
         </CardContent>
       </Card>

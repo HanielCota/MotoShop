@@ -45,7 +45,7 @@ export async function findPublicProductPage(input: PublicProductFilter, now: Dat
     SELECT p.id, p."createdAt", MIN(o.price) AS price,
       (CASE WHEN ${query} = '' THEN 0 WHEN lower(trim(p.name)) = ${query} THEN 100 WHEN starts_with(lower(trim(p.name)), ${query}) THEN 50 WHEN strpos(lower(trim(p.name)), ${query}) > 0 THEN 20 ELSE 0 END
       + CASE WHEN bool_or(o.available) THEN 10 ELSE 0 END
-      + LEAST((SELECT count(*) FROM product_reviews r WHERE r."productId" = p.id), 5)
+      + LEAST((SELECT count(*) FROM product_reviews r WHERE r."productId" = p.id AND r."hiddenAt" IS NULL), 5)
       + CASE WHEN EXISTS (SELECT 1 FROM seller_subscriptions vip WHERE vip."sellerId" = p."sellerId" AND vip.status = 'ACTIVE' AND vip."startsAt" <= ${now} AND vip."endsAt" >= ${now}) THEN 5 ELSE 0 END) AS score
     FROM products p JOIN sellers s ON s.id = p."sellerId" JOIN stores st ON st.id = p."storeId"
       JOIN categories c ON c.id = p."categoryId" JOIN brands b ON b.id = p."brandId" JOIN offers o ON o."productId" = p.id
@@ -59,7 +59,7 @@ export async function findPublicProductPage(input: PublicProductFilter, now: Dat
     HAVING true
       ${input.availability === "IN_STOCK" ? Prisma.sql`AND bool_or(o.available)` : input.availability === "OUT_OF_STOCK" ? Prisma.sql`AND NOT bool_or(o.available)` : Prisma.empty}
       ${input.promotion === "ON_SALE" ? Prisma.sql`AND bool_or(o.sale)` : Prisma.empty}
-      ${min !== null || max !== null ? Prisma.sql`AND bool_or((${min}::integer IS NULL OR o.price >= ${min}) AND (${max}::integer IS NULL OR o.price <= ${max}))` : Prisma.empty}
+      ${min !== null || max !== null ? Prisma.sql`AND bool_or((${min}::bigint IS NULL OR o.price >= ${min}) AND (${max}::bigint IS NULL OR o.price <= ${max}))` : Prisma.empty}
   )`;
   const counts = await db.$queryRaw<Array<{ total: bigint }>>(Prisma.sql`${cte} SELECT count(*) AS total FROM matches`);
   const total = Number(counts[0]?.total ?? 0);

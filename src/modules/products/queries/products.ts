@@ -210,7 +210,7 @@ export async function listApprovedProducts(input: PublicProductFilter = {}) {
       brand: true,
       images: { orderBy: { sortOrder: "asc" }, take: 1 },
       variants: { where: { active: true }, include: { inventory: true } },
-      _count: { select: { productReviews: true } },
+      _count: { select: { productReviews: { where: { hiddenAt: null } } } },
     },
   });
   const positions = new Map(page.ids.map((id, index) => [id, index]));
@@ -267,6 +267,7 @@ export async function getApprovedProductBySlug(
             select: { id: true, endsAt: true },
           },
           sellerReviews: {
+            where: { hiddenAt: null },
             include: { user: { select: { name: true } } },
             orderBy: { createdAt: "desc" },
           },
@@ -280,13 +281,14 @@ export async function getApprovedProductBySlug(
         include: { motorcycleFitment: { include: { motorcycleModel: { include: { manufacturer: true } } } } },
       },
       productReviews: {
-        ...(reviewRating ? { where: { rating: reviewRating } } : {}),
+        where: { hiddenAt: null, ...(reviewRating ? { rating: reviewRating } : {}) },
         include: { user: { select: { name: true } } },
         orderBy: { createdAt: input.reviewSort === "oldest" ? "asc" : "desc" },
         skip: (requestedReviewPage - 1) * pageSize,
         take: pageSize,
       },
       questions: {
+        where: { hiddenAt: null },
         include: {
           askedBy: { select: { name: true } },
           answeredBy: { select: { name: true } },
@@ -295,7 +297,7 @@ export async function getApprovedProductBySlug(
         skip: (requestedQuestionPage - 1) * pageSize,
         take: pageSize,
       },
-      _count: { select: { productReviews: true, questions: true } },
+      _count: { select: { productReviews: { where: { hiddenAt: null } }, questions: { where: { hiddenAt: null } } } },
     },
   });
 
@@ -303,10 +305,12 @@ export async function getApprovedProductBySlug(
 
   const [reviewSummary, reviewCount] = await Promise.all([
     db.productReview.aggregate({
-      where: { productId: product.id, ...(reviewRating ? { rating: reviewRating } : {}) },
+      where: { productId: product.id, hiddenAt: null, ...(reviewRating ? { rating: reviewRating } : {}) },
       _avg: { rating: true },
     }),
-    db.productReview.count({ where: { productId: product.id, ...(reviewRating ? { rating: reviewRating } : {}) } }),
+    db.productReview.count({
+      where: { productId: product.id, hiddenAt: null, ...(reviewRating ? { rating: reviewRating } : {}) },
+    }),
   ]);
   const reviewPageCount = Math.max(Math.ceil(reviewCount / pageSize), 1);
   const questionPageCount = Math.max(Math.ceil(product._count.questions / pageSize), 1);
@@ -336,6 +340,7 @@ export async function getApprovedProductSeoBySlug(slug: string) {
       name: true,
       slug: true,
       description: true,
+      isDemo: true,
       updatedAt: true,
       category: { select: { name: true } },
       brand: { select: { name: true } },
@@ -349,7 +354,7 @@ export async function getApprovedProductSeoBySlug(slug: string) {
           promotionEndsAt: true,
         },
       },
-      productReviews: { select: { rating: true } },
+      productReviews: { where: { hiddenAt: null }, select: { rating: true } },
     },
   });
 }
