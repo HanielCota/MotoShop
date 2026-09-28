@@ -35,7 +35,8 @@ export async function reviewReturnRequestAction(
         where: { id: returnRequestId },
         include: { items: { include: { orderItem: true } } },
       });
-      if (!request) throw new ApplicationError({ code: "NOT_FOUND", message: "Solicitação de devolução não encontrada." });
+      if (!request)
+        throw new ApplicationError({ code: "NOT_FOUND", message: "Solicitação de devolução não encontrada." });
 
       const nextStatus = getNextStatus(request.status, parsed.data.decision);
       if (parsed.data.decision === "RECEIVE") {
@@ -85,9 +86,10 @@ export async function refundReturnRequestAction(returnRequestId: string): Promis
   try {
     const request = await db.returnRequest.findUnique({
       where: { id: returnRequestId },
-      include: { order: true },
+      include: { order: true, sellerOrder: { include: { items: true } } },
     });
-    if (!request) throw new ApplicationError({ code: "NOT_FOUND", message: "Solicitação de devolução não encontrada." });
+    if (!request)
+      throw new ApplicationError({ code: "NOT_FOUND", message: "Solicitação de devolução não encontrada." });
     if (request.status === "REFUNDED") return { success: "Esta devolução já foi reembolsada." };
     if (request.status !== "RETURNED") {
       throw new ApplicationError({
@@ -97,12 +99,20 @@ export async function refundReturnRequestAction(returnRequestId: string): Promis
       });
     }
 
-    await refundPayment({
-      orderId: request.orderId,
-      amountInCents: request.amountInCents,
-      idempotencyKey: `return-refund:${request.id}`,
-      reason: `Reembolso da devolução ${request.id}`,
-    });
+    const itemTotal = request.sellerOrder.items.reduce((sum, item) => sum + item.totalAmountInCents, 0);
+    if (itemTotal !== request.sellerOrder.itemsSubtotalInCents - request.sellerOrder.discountAmountInCents) {
+      throw new ApplicationError({
+        code: "CONFLICT",
+        message: "Os valores históricos deste pedido precisam de revisão antes do reembolso.",
+      });
+    }
+    if (request.amountInCents > 0)
+      await refundPayment({
+        orderId: request.orderId,
+        amountInCents: request.amountInCents,
+        idempotencyKey: `return-refund:${request.id}`,
+        reason: `Reembolso da devolução ${request.id}`,
+      });
     await db.$transaction(async (tx) => {
       const updated = await tx.returnRequest.updateMany({
         where: { id: request.id, status: "RETURNED" },
@@ -132,5 +142,9 @@ function getNextStatus(currentStatus: string, decision: "APPROVE" | "REJECT" | "
   if (decision === "APPROVE" && ["REQUESTED", "UNDER_REVIEW"].includes(currentStatus)) return "APPROVED" as const;
   if (decision === "REJECT" && ["REQUESTED", "UNDER_REVIEW"].includes(currentStatus)) return "REJECTED" as const;
   if (decision === "RECEIVE" && currentStatus === "APPROVED") return "RETURNED" as const;
-  throw new ApplicationError({ code: "CONFLICT", message: "Esta transição de devolução não é permitida.", statusCode: 409 });
+  throw new ApplicationError({
+    code: "CONFLICT",
+    message: "Esta transição de devolução não é permitida.",
+    statusCode: 409,
+  });
 }

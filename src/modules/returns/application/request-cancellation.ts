@@ -29,6 +29,11 @@ export async function requestCancellation(input: RequestCancellationInput) {
     include: { shipment: true, cancellationRequests: true },
   });
   if (!sellerOrder) throw new ApplicationError({ code: "NOT_FOUND", message: "Pedido da loja não encontrado." });
+  const existing = await db.cancellationRequest.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
+  if (existing) {
+    assertTarget(existing.sellerOrderId, sellerOrder.id);
+    return existing;
+  }
   if (!["PAID", "PROCESSING"].includes(sellerOrder.status)) {
     throw new ApplicationError({
       code: "CONFLICT",
@@ -44,16 +49,19 @@ export async function requestCancellation(input: RequestCancellationInput) {
     });
   }
 
-  const existing = await db.cancellationRequest.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
-  if (existing) return existing;
-
   const amountInCents = Math.max(
     0,
     sellerOrder.itemsSubtotalInCents - sellerOrder.discountAmountInCents + sellerOrder.customerShippingAmountInCents,
   );
   try {
     return await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "orders" WHERE id = ${sellerOrder.orderId} FOR UPDATE`;
       await tx.$queryRaw`SELECT id FROM "seller_orders" WHERE id = ${sellerOrder.id} FOR UPDATE`;
+      const replay = await tx.cancellationRequest.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
+      if (replay) {
+        assertTarget(replay.sellerOrderId, sellerOrder.id);
+        return replay;
+      }
       const locked = await tx.sellerOrder.findUnique({
         where: { id: sellerOrder.id },
         include: { shipment: true },
@@ -63,6 +71,21 @@ export async function requestCancellation(input: RequestCancellationInput) {
           code: "CONFLICT",
           message: "O status do pedido mudou durante a solicitação.",
           statusCode: 409,
+        });
+      }
+      if (locked.shipment && ["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(locked.shipment.status)) {
+        throw new ApplicationError({
+          code: "CONFLICT",
+          message: "O pedido já foi enviado. Solicite uma devolução após o recebimento.",
+        });
+      }
+      const returns = await tx.returnRequest.count({
+        where: { sellerOrderId: locked.id, status: { not: "REJECTED" } },
+      });
+      if (returns > 0) {
+        throw new ApplicationError({
+          code: "CONFLICT",
+          message: "Este pedido possui devoluções. Conclua o atendimento pela devolução.",
         });
       }
       const created = await tx.cancellationRequest.create({
@@ -85,8 +108,16 @@ export async function requestCancellation(input: RequestCancellationInput) {
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const concurrent = await db.cancellationRequest.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
-      if (concurrent) return concurrent;
+      if (concurrent) {
+        assertTarget(concurrent.sellerOrderId, sellerOrder.id);
+        return concurrent;
+      }
     }
     throw error;
   }
+}
+
+function assertTarget(actual: string, expected: string) {
+  if (actual !== expected)
+    throw new ApplicationError({ code: "CONFLICT", message: "Esta chave de idempotência pertence a outro pedido." });
 }

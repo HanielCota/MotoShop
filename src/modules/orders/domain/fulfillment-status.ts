@@ -4,7 +4,8 @@ export function getSellerOrderStatusFromShipment(
   currentStatus: SellerOrderStatus,
   shipmentStatus: ShipmentStatus,
 ): SellerOrderStatus {
-  if (currentStatus === "CANCELLED" || currentStatus === "CANCELLATION_REQUESTED") return currentStatus;
+  if (["CANCELLED", "CANCELLATION_REQUESTED", "DELIVERED", "PENDING_PAYMENT"].includes(currentStatus))
+    return currentStatus;
   if (shipmentStatus === "DELIVERED") return "DELIVERED";
   if (shipmentStatus === "SHIPPED" || shipmentStatus === "IN_TRANSIT") return "SHIPPED";
   if (shipmentStatus === "READY_TO_SHIP" && currentStatus === "PAID") return "PROCESSING";

@@ -1,3 +1,7 @@
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
+import { DesignSelect } from "@/components/ui/design-select";
 import Link from "next/link";
 import type { Route } from "next";
 
@@ -71,8 +75,10 @@ export default async function CustomerOrdersPage({
     if (params.paymentStatus !== "ALL") query.set("paymentStatus", params.paymentStatus);
     if (params.orderFrom) query.set("orderFrom", params.orderFrom);
     if (params.orderTo) query.set("orderTo", params.orderTo);
-    if (params.orderMinTotal !== null && params.orderMinTotal !== undefined) query.set("orderMinTotal", String(params.orderMinTotal));
-    if (params.orderMaxTotal !== null && params.orderMaxTotal !== undefined) query.set("orderMaxTotal", String(params.orderMaxTotal));
+    if (params.orderMinTotal !== null && params.orderMinTotal !== undefined)
+      query.set("orderMinTotal", String(params.orderMinTotal));
+    if (params.orderMaxTotal !== null && params.orderMaxTotal !== undefined)
+      query.set("orderMaxTotal", String(params.orderMaxTotal));
     if (params.orderSort !== "newest") query.set("orderSort", params.orderSort);
     if (page > 1) query.set("orderPage", String(page));
     const serialized = query.toString();
@@ -87,31 +93,37 @@ export default async function CustomerOrdersPage({
         <p className="text-muted-foreground mt-3">Acompanhe compras, lojas e envios em um só lugar.</p>
       </div>
 
-      <form className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2 lg:grid-cols-9 sm:items-end" method="get">
-        <label className="flex flex-col gap-2 text-sm font-medium">
+      <form
+        className="grid gap-3 rounded-xl border bg-white p-4 sm:grid-cols-2 sm:items-end lg:grid-cols-4"
+        method="get"
+      >
+        <label className="flex min-w-0 flex-col gap-2 text-sm font-medium sm:col-span-2 lg:col-span-2">
           Buscar pedido
-          <input
-            className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-            name="orderQ"
-            defaultValue={params.orderQ ?? ""}
-            placeholder="Número, produto ou SKU"
-          />
+          <Input name="orderQ" defaultValue={params.orderQ ?? ""} placeholder="Número, produto ou SKU" />
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
           Total mín. (centavos)
-          <input className="border-input bg-background h-10 rounded-md border px-3 text-sm" name="orderMinTotal" type="number" min="0" defaultValue={params.orderMinTotal ?? ""} placeholder="Ex.: 5000" />
+          <Input
+            name="orderMinTotal"
+            type="number"
+            min="0"
+            defaultValue={params.orderMinTotal ?? ""}
+            placeholder="Ex.: 5000"
+          />
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
           Total máx. (centavos)
-          <input className="border-input bg-background h-10 rounded-md border px-3 text-sm" name="orderMaxTotal" type="number" min="0" defaultValue={params.orderMaxTotal ?? ""} placeholder="Ex.: 100000" />
+          <Input
+            name="orderMaxTotal"
+            type="number"
+            min="0"
+            defaultValue={params.orderMaxTotal ?? ""}
+            placeholder="Ex.: 100000"
+          />
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
           Envio
-          <select
-            className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-            name="shipmentStatus"
-            defaultValue={params.shipmentStatus}
-          >
+          <DesignSelect aria-label="Envio" name="shipmentStatus" defaultValue={params.shipmentStatus}>
             <option value="ALL">Todos</option>
             <option value="PENDING">Aguardando envio</option>
             <option value="READY_TO_SHIP">Etiqueta pronta</option>
@@ -120,24 +132,15 @@ export default async function CustomerOrdersPage({
             <option value="DELIVERED">Entregue</option>
             <option value="EXCEPTION">Problema no envio</option>
             <option value="CANCELLED">Envio cancelado</option>
-          </select>
+          </DesignSelect>
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
           Buscar loja
-          <input
-            className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-            name="storeQ"
-            defaultValue={params.storeQ ?? ""}
-            placeholder="Nome da loja"
-          />
+          <Input name="storeQ" defaultValue={params.storeQ ?? ""} placeholder="Nome da loja" />
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
           Filtrar por status
-          <select
-            className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-            name="orderStatus"
-            defaultValue={params.orderStatus}
-          >
+          <DesignSelect aria-label="Filtrar por status" name="orderStatus" defaultValue={params.orderStatus}>
             <option value="ALL">Todos os pedidos</option>
             <option value="PENDING_PAYMENT">Aguardando pagamento</option>
             <option value="PAID">Pagos</option>
@@ -147,15 +150,11 @@ export default async function CustomerOrdersPage({
             <option value="DELIVERED">Entregues</option>
             <option value="PARTIALLY_CANCELLED">Parcialmente cancelados</option>
             <option value="CANCELLED">Cancelados</option>
-          </select>
+          </DesignSelect>
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
           Pagamento
-          <select
-            className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-            name="paymentStatus"
-            defaultValue={params.paymentStatus}
-          >
+          <DesignSelect aria-label="Pagamento" name="paymentStatus" defaultValue={params.paymentStatus}>
             <option value="ALL">Todos</option>
             <option value="PENDING">Pendente</option>
             <option value="PROCESSING">Processando</option>
@@ -165,40 +164,28 @@ export default async function CustomerOrdersPage({
             <option value="CANCELLED">Cancelado</option>
             <option value="PARTIALLY_REFUNDED">Parcialmente reembolsado</option>
             <option value="REFUNDED">Reembolsado</option>
-          </select>
+          </DesignSelect>
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
           De
-          <input
-            className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-            name="orderFrom"
-            type="date"
-            defaultValue={params.orderFrom ?? ""}
-          />
+          <Input name="orderFrom" type="date" defaultValue={params.orderFrom ?? ""} />
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
           Até
-          <input
-            className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-            name="orderTo"
-            type="date"
-            defaultValue={params.orderTo ?? ""}
-          />
+          <Input name="orderTo" type="date" defaultValue={params.orderTo ?? ""} />
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
           Ordenação
-          <select
-            className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-            name="orderSort"
-            defaultValue={params.orderSort}
-          >
+          <DesignSelect aria-label="Ordenação" name="orderSort" defaultValue={params.orderSort}>
             <option value="newest">Mais recentes</option>
             <option value="oldest">Mais antigos</option>
             <option value="total_high">Maior valor</option>
             <option value="total_low">Menor valor</option>
-          </select>
+          </DesignSelect>
         </label>
-        <button className="bg-primary text-primary-foreground h-10 rounded-md px-4 text-sm font-medium">Filtrar</button>
+        <Button type="submit" className="rounded-md px-4">
+          Filtrar
+        </Button>
       </form>
       {result.orders.length === 0 ? (
         <Card>
@@ -229,14 +216,14 @@ export default async function CustomerOrdersPage({
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <span className="font-semibold">{formatMoneyInCents(order.totalAmountInCents)}</span>
-                    {order.payments[0] ? (
-                      <Badge variant={order.payments[0].status === "FAILED" ? "destructive" : "secondary"}>
-                        {paymentStatusLabels[order.payments[0].status] ?? order.payments[0].status}
-                      </Badge>
-                    ) : null}
-                    <Link
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="font-semibold">{formatMoneyInCents(order.totalAmountInCents)}</span>
+                  {order.payments[0] ? (
+                    <Badge variant={order.payments[0].status === "FAILED" ? "destructive" : "secondary"}>
+                      {paymentStatusLabels[order.payments[0].status] ?? order.payments[0].status}
+                    </Badge>
+                  ) : null}
+                  <Link
                     className="text-primary text-sm font-medium underline underline-offset-4"
                     href={`/orders/${order.orderNumber}` as Route}
                   >
@@ -273,25 +260,14 @@ export default async function CustomerOrdersPage({
         </div>
       )}
       {result.pageCount > 1 ? (
-        <nav className="flex items-center justify-between gap-3" aria-label="Paginação de pedidos">
-          {result.page > 1 ? (
-            <Link href={pageHref(result.page - 1)} className="rounded-md border px-3 py-2 text-sm">
-              Anterior
-            </Link>
-          ) : (
-            <span />
-          )}
-          <span className="text-muted-foreground text-sm">
-            Página {result.page} de {result.pageCount} · {result.total} pedido(s)
-          </span>
-          {result.page < result.pageCount ? (
-            <Link href={pageHref(result.page + 1)} className="rounded-md border px-3 py-2 text-sm">
-              Próxima
-            </Link>
-          ) : (
-            <span />
-          )}
-        </nav>
+        <Pagination
+          ariaLabel="Paginação de pedidos"
+          page={result.page}
+          pageCount={result.pageCount}
+          previousHref={pageHref(result.page - 1)}
+          nextHref={pageHref(result.page + 1)}
+          summary={<>{result.total} {result.total === 1 ? "pedido" : "pedidos"}</>}
+        />
       ) : null}
     </main>
   );

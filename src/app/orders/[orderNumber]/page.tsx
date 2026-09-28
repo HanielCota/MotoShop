@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoneyInCents } from "@/lib/utils";
+import { InlineNotice } from "@/components/ui/inline-notice";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { hashGuestToken } from "@/modules/cart/infrastructure/cart-access";
 import { RequestDisputeForm } from "@/modules/disputes/components/request-dispute-form";
@@ -14,6 +15,7 @@ import { getCustomerOrder } from "@/modules/returns/queries/customer-orders";
 import { PaymentRefreshForm } from "@/modules/payments/components/payment-refresh-form";
 import { PixPaymentInstructions } from "@/modules/payments/components/pix-payment-instructions";
 import { getPixInstructions } from "@/modules/payments/domain/pix-instructions";
+import { ClaimGuestOrderForm } from "@/modules/orders/components/claim-guest-order-form";
 
 const orderStatusLabels: Record<string, string> = {
   PENDING_PAYMENT: "Aguardando pagamento",
@@ -65,7 +67,14 @@ const paymentStatusLabels: Record<string, string> = {
   REFUNDED: "Reembolsado",
 };
 
-const activeReturnStatuses = new Set(["REQUESTED", "UNDER_REVIEW", "APPROVED", "WAITING_RETURN", "RETURNED"]);
+const activeReturnStatuses = new Set([
+  "REQUESTED",
+  "UNDER_REVIEW",
+  "APPROVED",
+  "WAITING_RETURN",
+  "RETURNED",
+  "REFUNDED",
+]);
 const shipmentProgress = ["PENDING", "READY_TO_SHIP", "SHIPPED", "IN_TRANSIT", "DELIVERED"] as const;
 
 export default async function CustomerOrderPage({
@@ -84,7 +93,9 @@ export default async function CustomerOrderPage({
       : null;
   if (!identity) notFound();
 
-  const order = await getCustomerOrder(orderNumber, identity);
+  const order =
+    (await getCustomerOrder(orderNumber, identity)) ??
+    (accessToken && session ? await getCustomerOrder(orderNumber, { userId: session.user.id }) : null);
   if (!order) notFound();
 
   return (
@@ -97,6 +108,13 @@ export default async function CustomerOrderPage({
           {orderStatusLabels[order.status] ?? order.status}
         </p>
       </div>
+
+      {session &&
+      accessToken &&
+      !order.userId &&
+      session.user.email.toLowerCase() === order.customerEmail.toLowerCase() ? (
+        <ClaimGuestOrderForm orderNumber={order.orderNumber} accessToken={accessToken} />
+      ) : null}
 
       <Card>
         <CardHeader>
@@ -118,17 +136,17 @@ export default async function CustomerOrderPage({
               </div>
 
               {sellerOrder.cancellationRequests.at(-1) ? (
-                <div className="rounded-md border border-red-100 bg-red-50 p-3 text-sm text-red-900">
+                <InlineNotice tone="error" role="status">
                   Solicitação de cancelamento: {sellerOrder.cancellationRequests.at(-1)?.status}
-                </div>
+                </InlineNotice>
               ) : null}
 
               {sellerOrder.disputes.at(-1) ? (
-                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <InlineNotice tone="warning">
                   Disputa:{" "}
                   {disputeStatusLabels[sellerOrder.disputes.at(-1)?.status ?? ""] ??
                     sellerOrder.disputes.at(-1)?.status}
-                </div>
+                </InlineNotice>
               ) : null}
 
               {sellerOrder.shipment ? (

@@ -1,4 +1,7 @@
 "use client";
+import { Textarea } from "@/components/ui/textarea";
+
+import { DesignSelect } from "@/components/ui/design-select";
 
 import { useState, useTransition } from "react";
 
@@ -44,9 +47,10 @@ export function RequestDisputeForm({
   return (
     <form onSubmit={submit} className="mt-3 space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
       <p className="text-sm font-semibold text-slate-900">Abrir uma disputa</p>
-      <select
+      <DesignSelect
+        aria-label="Motivo da disputa"
         value={reason}
-        onChange={(event) => setReason(event.target.value as (typeof reasons)[number][0])}
+        onValueChange={(value) => setReason(String(value) as (typeof reasons)[number][0])}
         className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
       >
         {reasons.map(([value, label]) => (
@@ -54,8 +58,8 @@ export function RequestDisputeForm({
             {label}
           </option>
         ))}
-      </select>
-      <textarea
+      </DesignSelect>
+      <Textarea
         value={description}
         onChange={(event) => setDescription(event.target.value)}
         required

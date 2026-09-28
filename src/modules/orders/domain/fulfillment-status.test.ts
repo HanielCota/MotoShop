@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import { getOrderStatusFromSellerOrders, getSellerOrderStatusFromShipment } from "./fulfillment-status";
 
 describe("fulfillment status", () => {
+  it("does not regress delivery or advance an unpaid order on tracking events", () => {
+    expect(getSellerOrderStatusFromShipment("DELIVERED", "IN_TRANSIT")).toBe("DELIVERED");
+    expect(getSellerOrderStatusFromShipment("PENDING_PAYMENT", "DELIVERED")).toBe("PENDING_PAYMENT");
+  });
   it("moves a paid seller order to processing when the label is ready", () => {
     expect(getSellerOrderStatusFromShipment("PAID", "READY_TO_SHIP")).toBe("PROCESSING");
     expect(getSellerOrderStatusFromShipment("PROCESSING", "READY_TO_SHIP")).toBe("PROCESSING");

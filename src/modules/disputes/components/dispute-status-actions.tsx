@@ -1,4 +1,5 @@
 "use client";
+import { Textarea } from "@/components/ui/textarea";
 
 import { useState, useTransition } from "react";
 
@@ -33,7 +34,7 @@ export function DisputeStatusActions({ disputeId, status }: { disputeId: string;
       ) : null}
       {status === "UNDER_REVIEW" ? (
         <>
-          <textarea
+          <Textarea
             value={note}
             onChange={(event) => setNote(event.target.value)}
             required

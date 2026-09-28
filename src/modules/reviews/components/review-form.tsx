@@ -1,4 +1,7 @@
 "use client";
+import { Textarea } from "@/components/ui/textarea";
+
+import { DesignSelect } from "@/components/ui/design-select";
 
 import { useActionState } from "react";
 
@@ -22,7 +25,8 @@ export function ReviewForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-sm text-slate-700">
           Produto
-          <select
+          <DesignSelect
+            aria-label="Produto"
             name="productRating"
             required
             defaultValue="5"
@@ -33,12 +37,13 @@ export function ReviewForm({
                 {rating} estrela{rating === 1 ? "" : "s"}
               </option>
             ))}
-          </select>
+          </DesignSelect>
         </label>
         {!sellerAlreadyReviewed ? (
           <label className="text-sm text-slate-700">
             Seller
-            <select
+            <DesignSelect
+              aria-label="Seller"
               name="sellerRating"
               required
               defaultValue="5"
@@ -49,11 +54,11 @@ export function ReviewForm({
                   {rating} estrela{rating === 1 ? "" : "s"}
                 </option>
               ))}
-            </select>
+            </DesignSelect>
           </label>
         ) : null}
       </div>
-      <textarea
+      <Textarea
         name="comment"
         maxLength={1000}
         rows={3}

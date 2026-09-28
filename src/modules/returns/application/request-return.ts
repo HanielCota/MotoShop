@@ -4,7 +4,14 @@ import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
 import { ApplicationError } from "@/shared/errors/application-error";
 
-const ACTIVE_RETURN_STATUSES = ["REQUESTED", "UNDER_REVIEW", "APPROVED", "WAITING_RETURN", "RETURNED"] as const;
+const ACTIVE_RETURN_STATUSES = [
+  "REQUESTED",
+  "UNDER_REVIEW",
+  "APPROVED",
+  "WAITING_RETURN",
+  "RETURNED",
+  "REFUNDED",
+] as const;
 
 export type CustomerOrderIdentity = { userId: string } | { guestAccessTokenHash: string };
 
@@ -29,8 +36,9 @@ export type ReturnRequestResult = {
 export async function requestReturn(input: RequestReturnInput): Promise<ReturnRequestResult> {
   assertInput(input);
   const orderItem = await findAuthorizedOrderItem(input);
-  if (!orderItem) throw new ApplicationError({ code: "NOT_FOUND", message: "Item do pedido não encontrado.", statusCode: 404 });
-  if (["PENDING_PAYMENT", "CANCELLED"].includes(orderItem.sellerOrder.status)) {
+  if (!orderItem)
+    throw new ApplicationError({ code: "NOT_FOUND", message: "Item do pedido não encontrado.", statusCode: 404 });
+  if (["PENDING_PAYMENT", "CANCELLED", "CANCELLATION_REQUESTED"].includes(orderItem.sellerOrder.status)) {
     throw new ApplicationError({
       code: "CONFLICT",
       message: "Este item ainda não pode receber uma solicitação de devolução.",
@@ -49,12 +57,38 @@ export async function requestReturn(input: RequestReturnInput): Promise<ReturnRe
 
   try {
     return await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "orders" WHERE id = ${orderItem.sellerOrder.orderId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM "seller_orders" WHERE id = ${orderItem.sellerOrderId} FOR UPDATE`;
       await tx.$queryRaw`SELECT id FROM "order_items" WHERE id = ${orderItem.id} FOR UPDATE`;
+      const replay = await tx.returnRequest.findUnique({
+        where: { idempotencyKey: input.idempotencyKey },
+        include: { items: true, order: true },
+      });
+      if (replay) {
+        assertSameRequestTarget(replay, orderItem.sellerOrder.orderId, input.orderItemId);
+        return toResult(replay, input.orderItemId);
+      }
       const lockedItem = await tx.orderItem.findUnique({
         where: { id: orderItem.id },
         include: { sellerOrder: { include: { order: true } }, returnItems: { include: { returnRequest: true } } },
       });
       if (!lockedItem) throw new ApplicationError({ code: "NOT_FOUND", message: "Item do pedido não encontrado." });
+      if (["PENDING_PAYMENT", "CANCELLED", "CANCELLATION_REQUESTED"].includes(lockedItem.sellerOrder.status)) {
+        throw new ApplicationError({ code: "CONFLICT", message: "O status do pedido mudou durante a solicitação." });
+      }
+      const itemTotals = await tx.orderItem.aggregate({
+        where: { sellerOrderId: lockedItem.sellerOrderId },
+        _sum: { totalAmountInCents: true },
+      });
+      if (
+        itemTotals._sum.totalAmountInCents !==
+        lockedItem.sellerOrder.itemsSubtotalInCents - lockedItem.sellerOrder.discountAmountInCents
+      ) {
+        throw new ApplicationError({
+          code: "CONFLICT",
+          message: "Os valores deste pedido precisam de revisão pela Moto Shop antes da devolução.",
+        });
+      }
 
       const activeReturnItems = lockedItem.returnItems.filter((item) =>
         ACTIVE_RETURN_STATUSES.includes(item.returnRequest.status as (typeof ACTIVE_RETURN_STATUSES)[number]),
@@ -136,7 +170,7 @@ async function findAuthorizedOrderItem(input: RequestReturnInput) {
       sellerOrder: {
         order: {
           orderNumber: input.orderNumber,
-          ...( "userId" in input.identity
+          ...("userId" in input.identity
             ? { userId: input.identity.userId }
             : { guestAccessTokenHash: input.identity.guestAccessTokenHash }),
         },
@@ -156,15 +190,21 @@ function assertInput(input: RequestReturnInput): void {
 }
 
 function toResult(
-  request: { id: string; status: string; order: { orderNumber: string }; items: Array<{ orderItemId: string; quantity: number }> },
+  request: {
+    id: string;
+    status: string;
+    order: { orderNumber: string };
+    items: Array<{ orderItemId: string; quantity: number }>;
+  },
   orderItemId: string,
 ): ReturnRequestResult {
   const item = request.items.find((candidate) => candidate.orderItemId === orderItemId);
+  if (!item) throw new ApplicationError({ code: "CONFLICT", message: "A devolução não contém o item solicitado." });
   return {
     id: request.id,
     orderNumber: request.order.orderNumber,
     orderItemId,
-    quantity: item?.quantity ?? 0,
+    quantity: item.quantity,
     status: request.status,
   };
 }

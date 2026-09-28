@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/lib/database";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
 import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 const reviewSchema = z.object({
   orderItemId: z.cuid(),
@@ -31,6 +32,7 @@ export async function createReviewAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira sua avaliação." };
 
   try {
+    await assertRateLimit({ key: `review:${session.user.id}`, windowSeconds: 60, max: 5 });
     const orderItem = await db.orderItem.findFirst({
       where: {
         id: parsed.data.orderItemId,

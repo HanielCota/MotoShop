@@ -77,10 +77,12 @@ export async function reviewCancellationRequestAction(
 
     if (request.status === "REQUESTED") {
       await db.$transaction(async (tx) => {
-        await tx.cancellationRequest.update({
-          where: { id: request.id },
+        const approved = await tx.cancellationRequest.updateMany({
+          where: { id: request.id, status: "REQUESTED" },
           data: { status: "APPROVED", ...(parsed.data.note !== undefined ? { adminNote: parsed.data.note } : {}) },
         });
+        if (approved.count !== 1)
+          throw new ApplicationError({ code: "CONFLICT", message: "Esta solicitação já foi decidida." });
         await tx.auditLog.create({
           data: {
             action: "CANCELLATION_APPROVED",
@@ -103,11 +105,13 @@ export async function reviewCancellationRequestAction(
     }
 
     await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "orders" WHERE id = ${request.orderId} FOR UPDATE`;
       await tx.$queryRaw`SELECT id FROM "cancellation_requests" WHERE id = ${request.id} FOR UPDATE`;
       const current = await tx.cancellationRequest.findUnique({
         where: { id: request.id },
         include: { sellerOrder: { include: { items: true } } },
       });
+      if (current?.status === "REFUNDED") return;
       if (!current || current.status !== "APPROVED") {
         throw new ApplicationError({ code: "CONFLICT", message: "O cancelamento já foi finalizado.", statusCode: 409 });
       }

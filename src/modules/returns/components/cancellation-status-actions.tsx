@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/ui/button";
 
 import { useState, useTransition } from "react";
 
@@ -26,22 +27,12 @@ export function CancellationStatusActions({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => review("APPROVE")}
-          disabled={pending}
-          className="bg-primary text-primary-foreground h-8 rounded-md px-3 text-xs font-medium disabled:opacity-50"
-        >
+        <Button size="compact" type="button" onClick={() => review("APPROVE")} disabled={pending}>
           {pending ? "Processando..." : status === "APPROVED" ? "Continuar processamento" : "Aprovar e reembolsar"}
-        </button>
-        <button
-          type="button"
-          onClick={() => review("REJECT")}
-          disabled={pending}
-          className="border-border hover:bg-muted h-8 rounded-md border px-3 text-xs font-medium disabled:opacity-50"
-        >
+        </Button>
+        <Button variant="outline" size="compact" type="button" onClick={() => review("REJECT")} disabled={pending}>
           Rejeitar
-        </button>
+        </Button>
       </div>
       {message ? (
         <p className="text-muted-foreground text-xs" role="status">
