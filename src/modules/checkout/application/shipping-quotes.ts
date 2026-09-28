@@ -4,6 +4,7 @@ import { env } from "@/config/env";
 import { db } from "@/lib/database";
 import { logger } from "@/lib/logger";
 import { quoteOwnShipping } from "@/modules/shipping/domain/own-shipping";
+import { getPackageMeasurements } from "@/modules/shipping/domain/package-measurements";
 import { melhorEnvioProvider } from "@/lib/shipping/melhor-envio-provider";
 import { ApplicationError } from "@/shared/errors/application-error";
 import type { ShippingQuote } from "@/shared/shipping/shipping-provider";
@@ -38,34 +39,33 @@ export async function quoteShippingForCart(
       const fromPostalCode = store?.originPostalCode ?? env.MELHOR_ENVIO_ORIGIN_POSTAL_CODE;
       const methods = await db.sellerShippingMethod.findMany({ where: { sellerId, active: true } });
       const ownQuotes = quoteOwnShipping(methods, postalCode);
+      const measuredProducts = items.map((item) => {
+        const measurements = getPackageMeasurements(item.variant, item.variant.product);
+        return measurements
+          ? {
+              id: item.variant.sku,
+              ...measurements,
+              insuranceValueInCents: getCurrentPriceInCents(item.variant) * item.quantity,
+              quantity: item.quantity,
+            }
+          : null;
+      });
+      const products = measuredProducts.filter((product) => product !== null);
+      const completeMeasurements = products.length === items.length;
+      if (env.MELHOR_ENVIO_TOKEN && fromPostalCode && !completeMeasurements && ownQuotes.length === 0) {
+        throw new ApplicationError({
+          code: "CONFIGURATION_ERROR",
+          message: "Uma loja precisa completar o peso e as medidas dos produtos antes de oferecer frete integrado.",
+        });
+      }
 
       const providerQuotes =
-        env.MELHOR_ENVIO_TOKEN && fromPostalCode
+        env.MELHOR_ENVIO_TOKEN && fromPostalCode && completeMeasurements
           ? await melhorEnvioProvider
               .quote({
                 fromPostalCode,
                 toPostalCode: postalCode,
-                products: items.map((item) => ({
-                  id: item.variant.sku,
-                  widthInCm: Math.max(
-                    1,
-                    (item.variant.widthInMillimeters ?? item.variant.product.widthInMillimeters ?? 100) / 10,
-                  ),
-                  heightInCm: Math.max(
-                    1,
-                    (item.variant.heightInMillimeters ?? item.variant.product.heightInMillimeters ?? 100) / 10,
-                  ),
-                  lengthInCm: Math.max(
-                    1,
-                    (item.variant.lengthInMillimeters ?? item.variant.product.lengthInMillimeters ?? 100) / 10,
-                  ),
-                  weightInKg: Math.max(
-                    0.1,
-                    (item.variant.weightInGrams ?? item.variant.product.weightInGrams ?? 500) / 1000,
-                  ),
-                  insuranceValueInCents: getCurrentPriceInCents(item.variant) * item.quantity,
-                  quantity: item.quantity,
-                })),
+                products,
               })
               .catch((error: unknown) => {
                 if (ownQuotes.length === 0) throw error;

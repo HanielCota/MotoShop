@@ -41,13 +41,19 @@ export function allocateDiscountAcrossSubtotals(
     throw new ApplicationError({ code: "INVALID_MONEY", message: "Discount exceeds subtotal." });
   if (total === 0) return subtotalsInCents.map(() => 0);
 
-  let allocated = 0;
-  return subtotalsInCents.map((subtotal, index) => {
-    const amount =
-      index === subtotalsInCents.length - 1
-        ? discountInCents - allocated
-        : Number((BigInt(discountInCents) * BigInt(subtotal)) / BigInt(total));
-    allocated += amount;
-    return amount;
+  const shares = subtotalsInCents.map((subtotal, index) => {
+    const numerator = BigInt(discountInCents) * BigInt(subtotal);
+    return { index, amount: Number(numerator / BigInt(total)), remainder: numerator % BigInt(total) };
   });
+  let remaining = discountInCents - shares.reduce((sum, share) => sum + share.amount, 0);
+  // Largest remainders preserve the total without assigning more than a line's subtotal.
+  const ranked = [...shares].sort((a, b) =>
+    a.remainder === b.remainder ? a.index - b.index : a.remainder > b.remainder ? -1 : 1,
+  );
+  for (const share of ranked) {
+    if (remaining === 0) break;
+    share.amount += 1;
+    remaining -= 1;
+  }
+  return shares.map((share) => share.amount);
 }

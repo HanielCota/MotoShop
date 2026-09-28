@@ -1,4 +1,5 @@
 "use client";
+import { Input } from "@/components/ui/input";
 
 import { useState, useTransition } from "react";
 
@@ -25,7 +26,7 @@ export function CartItemControls({ cartItemId, quantity }: { cartItemId: string;
       <label className="sr-only" htmlFor={`quantity-${cartItemId}`}>
         Quantidade
       </label>
-      <input
+      <Input
         id={`quantity-${cartItemId}`}
         className="border-input bg-background h-8 w-16 rounded-md border px-2 text-center text-sm"
         type="number"

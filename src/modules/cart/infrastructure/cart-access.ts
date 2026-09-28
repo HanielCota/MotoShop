@@ -42,14 +42,19 @@ export function cartOwnerWhere(identity: CartIdentity) {
 
 export async function findOrCreateActiveCart(identity: CartIdentity) {
   const owner = cartOwnerWhere(identity);
-  const existing = await db.cart.findFirst({ where: { ...owner, status: "ACTIVE" } });
-  if (existing) return existing;
+  return db.$transaction(async (tx) => {
+    const lockKey =
+      "userId" in identity ? `cart:user:${identity.userId}` : `cart:guest:${identity.guestAccessTokenHash}`;
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+    const existing = await tx.cart.findFirst({ where: { ...owner, status: "ACTIVE" } });
+    if (existing) return existing;
 
-  return db.cart.create({
-    data: {
-      status: "ACTIVE",
-      ...owner,
-      ...("guestAccessTokenHash" in identity ? { expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) } : {}),
-    },
+    return tx.cart.create({
+      data: {
+        status: "ACTIVE",
+        ...owner,
+        ...("guestAccessTokenHash" in identity ? { expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) } : {}),
+      },
+    });
   });
 }

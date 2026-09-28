@@ -38,6 +38,22 @@ describe("calculateCouponDiscount", () => {
 
 describe("allocateDiscountAcrossSubtotals", () => {
   it("allocates the entire discount without losing remainder cents", () => {
-    expect(allocateDiscountAcrossSubtotals([10_000, 5_000], 1_000)).toEqual([666, 334]);
+    expect(allocateDiscountAcrossSubtotals([10_000, 5_000], 1_000)).toEqual([667, 333]);
+  });
+  it("never allocates more than an item subtotal, including a zero last item", () => {
+    expect(allocateDiscountAcrossSubtotals([100, 100, 1], 200)).toEqual([100, 99, 1]);
+    expect(allocateDiscountAcrossSubtotals([1, 1, 1, 1, 0], 3)).toEqual([1, 1, 1, 0, 0]);
+  });
+  it("preserves the sum and per-item limits across boundary combinations", () => {
+    for (let a = 0; a <= 10; a++)
+      for (let b = 0; b <= 10; b++) {
+        for (let discount = 0; discount <= a + b; discount++) {
+          const result = allocateDiscountAcrossSubtotals([a, b], discount);
+          expect(result.reduce((sum, value) => sum + value, 0)).toBe(discount);
+          expect(result[0]).toBeLessThanOrEqual(a);
+          expect(result[1]).toBeLessThanOrEqual(b);
+          expect(result.every((value) => Number.isSafeInteger(value) && value >= 0)).toBe(true);
+        }
+      }
   });
 });

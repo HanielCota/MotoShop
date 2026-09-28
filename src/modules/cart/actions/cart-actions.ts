@@ -30,6 +30,7 @@ export async function addToCartAction(variantId: string, quantity: number): Prom
         active: true,
         product: {
           status: ProductStatus.APPROVED,
+          isDemo: false,
           seller: { status: { in: ["APPROVED", "ACTIVE"] } },
           category: { active: true },
           brand: { active: true },
@@ -40,20 +41,28 @@ export async function addToCartAction(variantId: string, quantity: number): Prom
     if (!variant) throw new ApplicationError({ code: "NOT_FOUND", message: "Esta variante não está disponível." });
 
     const cart = await findOrCreateActiveCart(identity);
-    const item = await db.cartItem.findUnique({ where: { cartId_variantId: { cartId: cart.id, variantId } } });
-    const nextQuantity = (item?.quantity ?? 0) + parsed.data.quantity;
-    if ((variant.inventory?.availableQuantity ?? 0) < nextQuantity) {
-      throw new ApplicationError({
-        code: "OUT_OF_STOCK",
-        message: "A quantidade solicitada não está disponível.",
-        statusCode: 409,
-      });
-    }
+    await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "carts" WHERE id = ${cart.id} FOR UPDATE`;
+      const active = await tx.cart.findFirst({ where: { id: cart.id, ...cartOwnerWhere(identity), status: "ACTIVE" } });
+      if (!active)
+        throw new ApplicationError({ code: "CONFLICT", message: "O carrinho já foi finalizado. Atualize a página." });
+      const item = await tx.cartItem.findUnique({ where: { cartId_variantId: { cartId: cart.id, variantId } } });
+      const nextQuantity = (item?.quantity ?? 0) + parsed.data.quantity;
+      if (nextQuantity > 99)
+        throw new ApplicationError({ code: "VALIDATION_ERROR", message: "O limite por item é de 99 unidades." });
+      if ((variant.inventory?.availableQuantity ?? 0) < nextQuantity) {
+        throw new ApplicationError({
+          code: "OUT_OF_STOCK",
+          message: "A quantidade solicitada não está disponível.",
+          statusCode: 409,
+        });
+      }
 
-    await db.cartItem.upsert({
-      where: { cartId_variantId: { cartId: cart.id, variantId } },
-      create: { cartId: cart.id, variantId, quantity: parsed.data.quantity },
-      update: { quantity: nextQuantity },
+      await tx.cartItem.upsert({
+        where: { cartId_variantId: { cartId: cart.id, variantId } },
+        create: { cartId: cart.id, variantId, quantity: parsed.data.quantity },
+        update: { quantity: nextQuantity },
+      });
     });
 
     revalidatePath("/cart");
@@ -73,24 +82,32 @@ export async function updateCartItemAction(cartItemId: string, quantity: number)
   try {
     const identity = await getCartIdentity();
     if (!identity) throw new ApplicationError({ code: "NOT_FOUND", message: "Carrinho não encontrado." });
-    const item = await db.cartItem.findFirst({
-      where: { id: cartItemId, cart: { ...cartOwnerWhere(identity), status: "ACTIVE" } },
-      include: { variant: { include: { inventory: true } } },
-    });
-    if (!item) throw new ApplicationError({ code: "NOT_FOUND", message: "Item não encontrado no carrinho." });
+    await db.$transaction(async (tx) => {
+      const target = await tx.cartItem.findFirst({
+        where: { id: cartItemId, cart: { ...cartOwnerWhere(identity), status: "ACTIVE" } },
+        select: { cartId: true },
+      });
+      if (!target) throw new ApplicationError({ code: "NOT_FOUND", message: "Item não encontrado no carrinho." });
+      await tx.$queryRaw`SELECT id FROM "carts" WHERE id = ${target.cartId} FOR UPDATE`;
+      const item = await tx.cartItem.findFirst({
+        where: { id: cartItemId, cart: { ...cartOwnerWhere(identity), status: "ACTIVE" } },
+        include: { variant: { include: { inventory: true } } },
+      });
+      if (!item) throw new ApplicationError({ code: "NOT_FOUND", message: "Item não encontrado no carrinho." });
 
-    if (parsed.data.quantity === 0) {
-      await db.cartItem.delete({ where: { id: item.id } });
-    } else {
-      if ((item.variant.inventory?.availableQuantity ?? 0) < parsed.data.quantity) {
-        throw new ApplicationError({
-          code: "OUT_OF_STOCK",
-          message: "A quantidade solicitada não está disponível.",
-          statusCode: 409,
-        });
+      if (parsed.data.quantity === 0) {
+        await tx.cartItem.delete({ where: { id: item.id } });
+      } else {
+        if ((item.variant.inventory?.availableQuantity ?? 0) < parsed.data.quantity) {
+          throw new ApplicationError({
+            code: "OUT_OF_STOCK",
+            message: "A quantidade solicitada não está disponível.",
+            statusCode: 409,
+          });
+        }
+        await tx.cartItem.update({ where: { id: item.id }, data: { quantity: parsed.data.quantity } });
       }
-      await db.cartItem.update({ where: { id: item.id }, data: { quantity: parsed.data.quantity } });
-    }
+    });
     revalidatePath("/cart");
     revalidatePath("/checkout");
     return { success: "Carrinho atualizado." };

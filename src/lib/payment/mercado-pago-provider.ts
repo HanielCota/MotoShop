@@ -163,7 +163,10 @@ function mapPaymentResponse(payload: Record<string, unknown>): CreatePaymentResu
     });
   }
 
-  const status = mapStatus(payload.status);
+  const status =
+    payload.status === "approved" && payload.status_detail === "partially_refunded"
+      ? "PARTIALLY_REFUNDED"
+      : mapStatus(payload.status);
   const now = new Date();
   return {
     externalId,
@@ -189,6 +192,8 @@ function mapStatus(status: unknown): PaymentProviderStatus {
       return "CANCELLED";
     case "rejected":
       return "FAILED";
+    case "refunded":
+      return "REFUNDED";
     default:
       return "PROCESSING";
   }

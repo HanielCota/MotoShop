@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ShoppingBag } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,13 +25,16 @@ export default async function CartPage() {
       </div>
 
       {items.length === 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Seu carrinho está vazio</CardTitle>
-            <CardDescription>Encontre peças, equipamentos e acessórios para sua próxima sessão.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link className={buttonVariants()} href="/products">
+        <Card className="border-[#e1dcd3] bg-white">
+          <CardContent className="flex min-h-72 flex-col items-center justify-center px-6 py-12 text-center">
+            <span className="mb-5 flex size-16 items-center justify-center rounded-2xl bg-[#fff0e8] text-[#c54817]">
+              <ShoppingBag className="size-8" aria-hidden="true" />
+            </span>
+            <h2 className="text-2xl font-semibold tracking-tight">Seu carrinho está vazio</h2>
+            <p className="text-muted-foreground mt-2 max-w-md text-sm leading-6">
+              Encontre peças, equipamentos e acessórios para sua próxima sessão.
+            </p>
+            <Link className={buttonVariants({ className: "mt-6 rounded-lg px-5" })} href="/products">
               Explorar produtos
             </Link>
           </CardContent>

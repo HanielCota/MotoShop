@@ -1,4 +1,7 @@
 "use client";
+import { Input } from "@/components/ui/input";
+
+import { DesignSelect } from "@/components/ui/design-select";
 
 import Script from "next/script";
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
@@ -165,7 +168,7 @@ export function SecureCardFields({ publicKey, ref }: { publicKey: string; ref: R
       </p>
       <label className="grid gap-1 text-sm">
         Nome no cartão
-        <input
+        <Input
           className={fieldClass}
           value={name}
           onChange={(event) => setName(event.target.value)}
@@ -176,7 +179,7 @@ export function SecureCardFields({ publicKey, ref }: { publicKey: string; ref: R
       </label>
       <label className="grid gap-1 text-sm">
         CPF do titular
-        <input
+        <Input
           className={fieldClass}
           value={document}
           onChange={(event) => setDocument(event.target.value)}
@@ -198,13 +201,18 @@ export function SecureCardFields({ publicKey, ref }: { publicKey: string; ref: R
       {issuers.length > 1 ? (
         <label className="grid gap-1 text-sm">
           Banco emissor
-          <select className={fieldClass} value={issuer} onChange={(event) => setIssuer(event.target.value)}>
+          <DesignSelect
+            aria-label="Banco emissor"
+            className={fieldClass}
+            value={issuer}
+            onValueChange={(value) => setIssuer(String(value))}
+          >
             {issuers.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.name}
               </option>
             ))}
-          </select>
+          </DesignSelect>
         </label>
       ) : null}
       {!ready && !error ? (

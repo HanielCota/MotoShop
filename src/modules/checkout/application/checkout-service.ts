@@ -1,4 +1,5 @@
 import "server-only";
+import { applyOrderItemDiscounts } from "../domain/order-item-discounts";
 
 import { createHmac, randomUUID } from "node:crypto";
 import { env } from "@/config/env";
@@ -150,6 +151,8 @@ async function findActiveCart(identity: CartIdentity) {
   });
   if (!cart || cart.items.length === 0)
     throw new ApplicationError({ code: "NOT_FOUND", message: "Seu carrinho está vazio." });
+  if (cart.items.some((item) => item.variant.product.isDemo))
+    throw new ApplicationError({ code: "CONFLICT", message: "Itens de demonstração não podem ser comprados." });
   return cart;
 }
 
@@ -316,6 +319,23 @@ async function reserveCartAndCreateOrder(input: {
         code: "CONFLICT",
         message: "Este carrinho já está sendo finalizado. Consulte seus pedidos antes de tentar novamente.",
       });
+    const currentItems = await tx.cartItem.findMany({
+      where: { cartId: input.cart.id },
+      select: { variantId: true, quantity: true },
+    });
+    if (
+      currentItems.length !== input.cart.items.length ||
+      currentItems.some(
+        (item) =>
+          !input.cart.items.some(
+            (snapshot) => snapshot.variantId === item.variantId && snapshot.quantity === item.quantity,
+          ),
+      )
+    )
+      throw new ApplicationError({
+        code: "CONFLICT",
+        message: "O carrinho mudou. Revise os itens e calcule o frete novamente.",
+      });
     for (const item of input.cart.items) {
       const fresh = await tx.productVariant.findFirst({
         where: {
@@ -323,6 +343,7 @@ async function reserveCartAndCreateOrder(input: {
           active: true,
           product: {
             status: "APPROVED",
+            isDemo: false,
             seller: { status: { in: ["APPROVED", "ACTIVE"] } },
             category: { active: true },
             brand: { active: true },
@@ -401,7 +422,9 @@ async function reserveCartAndCreateOrder(input: {
                 : {}),
             },
           },
-          items: { create: charge.items.map((item) => createOrderItem(item)) },
+          items: {
+            create: applyOrderItemDiscounts(charge.items.map(createOrderItem), charge.totals.discountAmountInCents),
+          },
         },
       });
       if (!sellerOrder.id)

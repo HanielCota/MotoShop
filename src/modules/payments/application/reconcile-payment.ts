@@ -9,6 +9,7 @@ import {
 } from "@/modules/inventory/application/settle-order-inventory";
 import type { GetPaymentResult } from "@/shared/payment/payment-provider";
 import { ApplicationError } from "@/shared/errors/application-error";
+import { assertPaymentMatches } from "../domain/payment-match";
 
 export async function reconcileMercadoPagoPayment(input: {
   externalId: string;
@@ -47,6 +48,7 @@ export async function reconcileMercadoPagoPayment(input: {
       include: { order: { include: { sellerOrders: { include: { items: true } } } }, transactions: true },
     });
     const isApproved = input.result.status === "APPROVED";
+    assertPaymentMatches(freshPayment, input.result);
     if (
       input.result.externalId !== input.externalId ||
       (freshPayment.externalId && freshPayment.externalId !== input.externalId) ||

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getCartIdentity } from "@/modules/cart/infrastructure/cart-access";
 import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 import { executeCheckout, type CheckoutResult } from "../application/checkout-service";
 import { checkoutSchema } from "../schemas/checkout";
@@ -39,6 +40,11 @@ export async function createCheckoutAction(
   try {
     const identity = await getCartIdentity();
     if (!identity) throw new ApplicationError({ code: "NOT_FOUND", message: "Seu carrinho expirou." });
+    await assertRateLimit({
+      key: `checkout:${"userId" in identity ? `user:${identity.userId}` : `guest:${identity.guestAccessTokenHash}`}`,
+      windowSeconds: 60,
+      max: 10,
+    });
     const session = await getCurrentSession();
     const result: CheckoutResult = await executeCheckout({ data: parsed.data, identity, session });
     revalidatePath("/cart");

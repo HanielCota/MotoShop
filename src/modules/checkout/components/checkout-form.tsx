@@ -1,4 +1,9 @@
 "use client";
+import { Input } from "@/components/ui/input";
+
+import { DesignRadio, DesignRadioGroup } from "@/components/ui/design-radio";
+
+import { DesignSelect } from "@/components/ui/design-select";
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useRef, useState, useTransition } from "react";
@@ -13,8 +18,6 @@ import { createCheckoutAction, type CheckoutActionState } from "../actions/check
 import { quoteShippingAction } from "../actions/shipping-actions";
 import type { SellerShippingQuotes } from "../application/shipping-quotes";
 
-const inputClassName =
-  "border-input bg-background focus:ring-ring/40 h-10 w-full rounded-md border px-3 text-sm outline-none focus:ring-3";
 
 type CheckoutFormState = {
   customerName: string;
@@ -71,10 +74,12 @@ export function CheckoutForm({
   const checkoutKey = useRef<string | null>(null);
   const card = useRef<SecureCardHandle>(null);
   const submitting = useRef(false);
+  const quoteVersion = useRef(0);
   const [paymentType, setPaymentType] = useState<"pix" | "card">("pix");
 
   function updateField(field: keyof CheckoutFormState, value: string) {
     if (field === "postalCode") {
+      quoteVersion.current += 1;
       setQuotes([]);
       setSelections({});
     }
@@ -83,6 +88,7 @@ export function CheckoutForm({
   }
 
   function selectSavedAddress(addressId: string) {
+    quoteVersion.current += 1;
     setQuotes([]);
     setSelections({});
     setSelectedAddressId(addressId);
@@ -93,19 +99,28 @@ export function CheckoutForm({
   function handleQuote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(undefined);
+    const version = ++quoteVersion.current;
     startQuote(async () => {
-      const result = await quoteShippingAction(form.postalCode);
-      if (result.error) {
-        setMessage(result.error);
+      try {
+        const result = await quoteShippingAction(form.postalCode);
+        if (version !== quoteVersion.current) return;
+        if (result.error) {
+          setMessage(result.error);
+          setQuotes([]);
+          return;
+        }
+        setQuotes(result.quotes ?? []);
+        setSelections(
+          Object.fromEntries(
+            (result.quotes ?? []).map((seller) => [seller.sellerId, seller.quotes[0]?.serviceCode ?? ""]),
+          ),
+        );
+      } catch {
+        if (version !== quoteVersion.current) return;
+        setMessage("Não foi possível calcular o frete. Verifique sua conexão e tente novamente.");
         setQuotes([]);
-        return;
+        setSelections({});
       }
-      setQuotes(result.quotes ?? []);
-      setSelections(
-        Object.fromEntries(
-          (result.quotes ?? []).map((seller) => [seller.sellerId, seller.quotes[0]?.serviceCode ?? ""]),
-        ),
-      );
     });
   }
 
@@ -195,10 +210,10 @@ export function CheckoutForm({
             {savedAddresses.length > 0 ? (
               <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
                 Usar endereço salvo
-                <select
-                  className={inputClassName}
+                <DesignSelect
+                  aria-label="Usar endereço salvo"
                   value={selectedAddressId}
-                  onChange={(event) => selectSavedAddress(event.target.value)}
+                  onValueChange={(value) => selectSavedAddress(String(value))}
                 >
                   <option value="">Preencher um novo endereço</option>
                   {savedAddresses.map((address) => (
@@ -206,7 +221,7 @@ export function CheckoutForm({
                       {address.label} · {address.street}, {address.number} · {address.city}/{address.state}
                     </option>
                   ))}
-                </select>
+                </DesignSelect>
               </label>
             ) : null}
             <div className="flex items-end gap-2 sm:col-span-2">
@@ -238,27 +253,30 @@ export function CheckoutForm({
               {quotes.map((seller) => (
                 <fieldset key={seller.sellerId} className="space-y-2">
                   <legend className="font-medium">{seller.storeName}</legend>
-                  {seller.quotes.map((quote) => (
-                    <label
-                      key={quote.serviceCode}
-                      className="has-checked:border-primary flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3 text-sm"
-                    >
-                      <span className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name={`shipping-${seller.sellerId}`}
-                          checked={selections[seller.sellerId] === quote.serviceCode}
-                          onChange={() =>
-                            setSelections((current) => ({ ...current, [seller.sellerId]: quote.serviceCode }))
-                          }
-                        />
-                        <span>
-                          {quote.carrier} · {quote.service}
+                  <DesignRadioGroup
+                    label={`Frete de ${seller.storeName}`}
+                    name={`shipping-${seller.sellerId}`}
+                    value={selections[seller.sellerId] ?? ""}
+                    onValueChange={(serviceCode) =>
+                      setSelections((current) => ({ ...current, [seller.sellerId]: serviceCode }))
+                    }
+                    className="space-y-2"
+                  >
+                    {seller.quotes.map((quote) => (
+                      <label
+                        key={quote.serviceCode}
+                        className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3 text-sm ${selections[seller.sellerId] === quote.serviceCode ? "border-primary" : ""}`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <DesignRadio value={quote.serviceCode} />
+                          <span>
+                            {quote.carrier} · {quote.service}
+                          </span>
                         </span>
-                      </span>
-                      <span className="font-medium">{formatMoneyInCents(quote.priceInCents)}</span>
-                    </label>
-                  ))}
+                        <span className="font-medium">{formatMoneyInCents(quote.priceInCents)}</span>
+                      </label>
+                    ))}
+                  </DesignRadioGroup>
                 </fieldset>
               ))}
             </div>
@@ -270,25 +288,23 @@ export function CheckoutForm({
         <h2 className="font-semibold">Pagamento</h2>
         <fieldset className="mt-3 space-y-2" disabled={isSubmitting}>
           <legend className="sr-only">Forma de pagamento</legend>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="paymentType"
-              checked={paymentType === "pix"}
-              onChange={() => setPaymentType("pix")}
-            />
-            Pix
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="paymentType"
-              checked={paymentType === "card"}
-              disabled={!cardPublicKey}
-              onChange={() => setPaymentType("card")}
-            />
-            Cartão de crédito · 1 parcela
-          </label>
+          <DesignRadioGroup
+            label="Forma de pagamento"
+            name="paymentType"
+            value={paymentType}
+            onValueChange={(nextValue) => setPaymentType(nextValue === "card" ? "card" : "pix")}
+            disabled={isSubmitting}
+            className="space-y-2"
+          >
+            <label className="flex items-center gap-2 text-sm">
+              <DesignRadio value="pix" />
+              Pix
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <DesignRadio value="card" disabled={!cardPublicKey} />
+              Cartão de crédito · 1 parcela
+            </label>
+          </DesignRadioGroup>
           {!cardPublicKey ? (
             <p className="text-muted-foreground text-xs">Cartão ainda indisponível. Você pode continuar com Pix.</p>
           ) : null}
@@ -296,12 +312,11 @@ export function CheckoutForm({
         {paymentType === "card" && cardPublicKey ? <SecureCardFields publicKey={cardPublicKey} ref={card} /> : null}
         <label className="mt-4 flex flex-col gap-2 text-sm font-medium">
           Cupom de desconto
-          <input
+          <Input
             name="couponCode"
             value={form.couponCode}
             onChange={(event) => updateField("couponCode", event.target.value.toUpperCase())}
             placeholder="Ex.: TRILHA10"
-            className={inputClassName}
           />
         </label>
         <div className="bg-muted/40 mt-5 space-y-2 rounded-lg p-3 text-sm">
@@ -370,8 +385,7 @@ function Field({
   return (
     <label className="flex flex-col gap-2 text-sm font-medium">
       {label}
-      <input
-        className={inputClassName}
+      <Input
         name={name}
         type={type}
         value={value}

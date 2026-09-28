@@ -137,6 +137,20 @@ afterAll(async () => {
 });
 
 describe("checkout with real development database and simulated payments", () => {
+  it("blocks demo catalog items before invoking the payment provider", async () => {
+    const variant = await testDb.productVariant.findUniqueOrThrow({ where: { id: variants[0]! } });
+    await testDb.product.update({ where: { id: variant.productId }, data: { isDemo: true } });
+    try {
+      const payment = provider();
+      await expect(executeCheckout(await cartInput(), payment)).rejects.toThrow(
+        /demonstração não podem ser comprados/i,
+      );
+      expect(payment.createPayment).not.toHaveBeenCalled();
+    } finally {
+      await testDb.product.update({ where: { id: variant.productId }, data: { isDemo: false } });
+    }
+  });
+
   it("uses active promotions and packaging, preserving order snapshots after commission changes", async () => {
     const variant = await testDb.productVariant.findUniqueOrThrow({ where: { id: variants[0]! } });
     const sellerId = fixtures.sellerIds[0]!;
@@ -353,7 +367,16 @@ describe("checkout with real development database and simulated payments", () =>
     const payment = await testDb.payment.findFirstOrThrow({ where: { orderId: order.id } });
     await reconcileMercadoPagoPayment({
       externalId: payment.externalId!,
-      result: { externalId: payment.externalId!, status: "APPROVED", providerMetadata: {} },
+      result: {
+        externalId: payment.externalId!,
+        status: "APPROVED",
+        providerMetadata: {
+          external_reference: order.orderNumber,
+          transaction_amount: payment.amountInCents / 100,
+          currency_id: "BRL",
+          payment_method_id: "pix",
+        },
+      },
     });
     expect((await testDb.sellerOrder.findUniqueOrThrow({ where: { id: first.id } })).status).toBe("DELIVERED");
   });
@@ -404,12 +427,21 @@ describe("checkout with real development database and simulated payments", () =>
     expect(externalId).toBeTruthy();
     expect(order.status).toBe("PENDING_PAYMENT");
 
-    const approved = { externalId: externalId!, status: "APPROVED" as const, providerMetadata: {} };
+    const approved = {
+      externalId: externalId!,
+      status: "APPROVED" as const,
+      providerMetadata: {
+        external_reference: order.orderNumber,
+        transaction_amount: order.totalAmountInCents / 100,
+        currency_id: "BRL",
+        payment_method_id: "pix",
+      },
+    };
     await reconcileMercadoPagoPayment({ externalId: externalId!, result: approved });
     await reconcileMercadoPagoPayment({ externalId: externalId!, result: approved });
     await reconcileMercadoPagoPayment({
       externalId: externalId!,
-      result: { externalId: externalId!, status: "FAILED", providerMetadata: {} },
+      result: { ...approved, status: "FAILED" },
     });
 
     expect((await testDb.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe("PAID");
