@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/ui/button";
 
 import { useActionState } from "react";
 
@@ -62,22 +63,22 @@ export function ShipmentActions({ sellerOrderId, canPurchase, hasShipment, hasTr
       <div className="flex flex-wrap gap-2">
         {canPurchase ? (
           <form action={purchaseAction}>
-            <button
-              className="border-border hover:bg-muted h-7 rounded-md border px-2.5 text-xs font-medium disabled:opacity-50"
+            <Button
+              type="submit"
+              variant="outline"
+              size="xs"
+              className="rounded-md px-2.5 text-xs"
               disabled={hasShipment || purchasePending}
             >
               {purchasePending ? "Comprando..." : hasShipment ? "Frete comprado" : "Comprar frete"}
-            </button>
+            </Button>
           </form>
         ) : null}
         {hasShipment && !hasTrackingCode ? (
           <form action={generateAction}>
-            <button
-              className="bg-primary text-primary-foreground hover:bg-primary/80 h-7 rounded-md px-2.5 text-xs font-medium disabled:opacity-50"
-              disabled={generatePending}
-            >
+            <Button type="submit" size="xs" className="rounded-md px-2.5 text-xs" disabled={generatePending}>
               {generatePending ? "Gerando..." : "Gerar etiqueta"}
-            </button>
+            </Button>
           </form>
         ) : null}
         {hasShipment ? (

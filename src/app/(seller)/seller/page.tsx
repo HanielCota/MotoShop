@@ -1,3 +1,6 @@
+import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
+import { DesignSelect } from "@/components/ui/design-select";
 import Link from "next/link";
 import type { Route } from "next";
 
@@ -330,29 +333,26 @@ export default async function SellerHomePage({
             >
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Buscar cupom
-                <input
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                  name="couponQ"
-                  defaultValue={couponParams.couponQ ?? ""}
-                  placeholder="Código"
-                />
+                <Input className="h-9" name="couponQ" defaultValue={couponParams.couponQ ?? ""} placeholder="Código" />
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Status
-                <select
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                <DesignSelect
+                  aria-label="Status"
+                  className="h-9"
                   name="couponActive"
                   defaultValue={couponParams.couponActive}
                 >
                   <option value="ALL">Todos</option>
                   <option value="ACTIVE">Ativos</option>
                   <option value="INACTIVE">Inativos</option>
-                </select>
+                </DesignSelect>
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Vigência
-                <select
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                <DesignSelect
+                  aria-label="Vigência"
+                  className="h-9"
                   name="couponValidity"
                   defaultValue={couponParams.couponValidity}
                 >
@@ -360,12 +360,13 @@ export default async function SellerHomePage({
                   <option value="CURRENT">Vigentes</option>
                   <option value="UPCOMING">Futuros</option>
                   <option value="EXPIRED">Expirados</option>
-                </select>
+                </DesignSelect>
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium">
                 Ordenação
-                <select
-                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                <DesignSelect
+                  aria-label="Ordenação"
+                  className="h-9"
                   name="couponSort"
                   defaultValue={couponParams.couponSort}
                 >
@@ -373,11 +374,11 @@ export default async function SellerHomePage({
                   <option value="oldest">Mais antigos</option>
                   <option value="ends_soonest">Validade mais próxima</option>
                   <option value="code_asc">Código A–Z</option>
-                </select>
+                </DesignSelect>
               </label>
-              <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+              <Button type="submit" size="sm" className="rounded-md px-4">
                 Filtrar
-              </button>
+              </Button>
             </form>
             <div className="divide-border divide-y">
               {coupons.map((coupon) => (
@@ -400,25 +401,13 @@ export default async function SellerHomePage({
               ))}
             </div>
             {couponResult.pageCount > 1 ? (
-              <nav className="flex items-center justify-between gap-3" aria-label="Paginação de cupons do seller">
-                {couponResult.page > 1 ? (
-                  <Link href={couponPageHref(couponResult.page - 1)} className="rounded-md border px-3 py-2 text-sm">
-                    Anterior
-                  </Link>
-                ) : (
-                  <span />
-                )}
-                <span className="text-muted-foreground text-sm">
-                  Página {couponResult.page} de {couponResult.pageCount}
-                </span>
-                {couponResult.page < couponResult.pageCount ? (
-                  <Link href={couponPageHref(couponResult.page + 1)} className="rounded-md border px-3 py-2 text-sm">
-                    Próxima
-                  </Link>
-                ) : (
-                  <span />
-                )}
-              </nav>
+              <Pagination
+                ariaLabel="Paginação de cupons do seller"
+                page={couponResult.page}
+                pageCount={couponResult.pageCount}
+                previousHref={couponPageHref(couponResult.page - 1)}
+                nextHref={couponPageHref(couponResult.page + 1)}
+              />
             ) : null}
           </CardContent>
         </Card>
@@ -434,7 +423,7 @@ export default async function SellerHomePage({
               <div>
                 <p className="text-muted-foreground text-xs">Vendas</p>
                 <p className="mt-1 text-lg font-semibold">{formatMoneyInCents(financialSummary.grossSalesInCents)}</p>
-                <p className="text-muted-foreground text-xs">{financialSummary.orderCount} pedido(s)</p>
+                <p className="text-muted-foreground text-xs">{financialSummary.orderCount} {financialSummary.orderCount === 1 ? "pedido" : "pedidos"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Comissão da Moto Shop</p>
@@ -507,8 +496,8 @@ export default async function SellerHomePage({
               <form className="mb-4 flex flex-wrap items-end gap-3 rounded-lg border p-3" method="get">
                 <label className="flex min-w-56 flex-col gap-1 text-sm font-medium">
                   Buscar produto ou SKU
-                  <input
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  <Input
+                    className="h-9"
                     name="q"
                     defaultValue={inventoryParams.q ?? ""}
                     placeholder="Nome, variante ou SKU"
@@ -516,8 +505,9 @@ export default async function SellerHomePage({
                 </label>
                 <label className="flex min-w-56 flex-col gap-1 text-sm font-medium">
                   Tipo de movimentação
-                  <select
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  <DesignSelect
+                    aria-label="Tipo de movimentação"
+                    className="h-9"
                     name="movementType"
                     defaultValue={inventoryParams.movementType}
                   >
@@ -527,40 +517,26 @@ export default async function SellerHomePage({
                         {label}
                       </option>
                     ))}
-                  </select>
+                  </DesignSelect>
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   De
-                  <input
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                    name="from"
-                    type="date"
-                    defaultValue={inventoryParams.from ?? ""}
-                  />
+                  <Input className="h-9" name="from" type="date" defaultValue={inventoryParams.from ?? ""} />
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   Até
-                  <input
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                    name="to"
-                    type="date"
-                    defaultValue={inventoryParams.to ?? ""}
-                  />
+                  <Input className="h-9" name="to" type="date" defaultValue={inventoryParams.to ?? ""} />
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   Ordenação
-                  <select
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                    name="sort"
-                    defaultValue={inventoryParams.sort}
-                  >
+                  <DesignSelect aria-label="Ordenação" className="h-9" name="sort" defaultValue={inventoryParams.sort}>
                     <option value="newest">Mais recentes</option>
                     <option value="oldest">Mais antigos</option>
-                  </select>
+                  </DesignSelect>
                 </label>
-                <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+                <Button type="submit" size="sm" className="rounded-md px-4">
                   Filtrar
-                </button>
+                </Button>
               </form>
               {inventoryMovements.length === 0 ? (
                 <p className="text-muted-foreground text-sm">Ainda não há movimentações de estoque.</p>
@@ -601,14 +577,14 @@ export default async function SellerHomePage({
           <Card>
             <CardHeader>
               <CardTitle>Produtos</CardTitle>
-              <CardDescription>{productResult.total} produto(s) cadastrado(s).</CardDescription>
+              <CardDescription>{productResult.total} {productResult.total === 1 ? "produto cadastrado" : "produtos cadastrados"}.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-7" method="get">
+              <form className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-4" method="get">
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   Buscar produto
-                  <input
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  <Input
+                    className="h-9"
                     name="productQ"
                     defaultValue={productParams.productQ ?? ""}
                     placeholder="Nome, slug ou SKU"
@@ -616,8 +592,9 @@ export default async function SellerHomePage({
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   Categoria
-                  <select
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  <DesignSelect
+                    aria-label="Categoria"
+                    className="h-9"
                     name="productCategory"
                     defaultValue={productParams.productCategory ?? ""}
                   >
@@ -628,12 +605,13 @@ export default async function SellerHomePage({
                         {category.name}
                       </option>
                     ))}
-                  </select>
+                  </DesignSelect>
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   Marca
-                  <select
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  <DesignSelect
+                    aria-label="Marca"
+                    className="h-9"
                     name="productBrand"
                     defaultValue={productParams.productBrand ?? ""}
                   >
@@ -643,12 +621,12 @@ export default async function SellerHomePage({
                         {brand.name}
                       </option>
                     ))}
-                  </select>
+                  </DesignSelect>
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   Preço mín. (centavos)
-                  <input
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  <Input
+                    className="h-9"
                     name="productMinPrice"
                     type="number"
                     min="0"
@@ -658,8 +636,8 @@ export default async function SellerHomePage({
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   Preço máx. (centavos)
-                  <input
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  <Input
+                    className="h-9"
                     name="productMaxPrice"
                     type="number"
                     min="0"
@@ -669,8 +647,9 @@ export default async function SellerHomePage({
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   Status
-                  <select
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  <DesignSelect
+                    aria-label="Status"
+                    className="h-9"
                     name="productStatus"
                     defaultValue={productParams.productStatus}
                   >
@@ -680,12 +659,13 @@ export default async function SellerHomePage({
                     <option value="APPROVED">Aprovados</option>
                     <option value="REJECTED">Rejeitados</option>
                     <option value="ARCHIVED">Arquivados</option>
-                  </select>
+                  </DesignSelect>
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   Estoque
-                  <select
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  <DesignSelect
+                    aria-label="Estoque"
+                    className="h-9"
                     name="productStock"
                     defaultValue={productParams.productStock}
                   >
@@ -693,23 +673,25 @@ export default async function SellerHomePage({
                     <option value="IN">Em estoque</option>
                     <option value="LOW">Baixo (1–5)</option>
                     <option value="OUT">Esgotado</option>
-                  </select>
+                  </DesignSelect>
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   Promoção
-                  <select
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  <DesignSelect
+                    aria-label="Promoção"
+                    className="h-9"
                     name="productPromotion"
                     defaultValue={productParams.productPromotion}
                   >
                     <option value="ALL">Todas</option>
                     <option value="ON_SALE">Em promoção</option>
-                  </select>
+                  </DesignSelect>
                 </label>
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   Ordenação
-                  <select
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  <DesignSelect
+                    aria-label="Ordenação"
+                    className="h-9"
                     name="productSort"
                     defaultValue={productParams.productSort}
                   >
@@ -717,11 +699,11 @@ export default async function SellerHomePage({
                     <option value="updated_oldest">Atualizados há mais tempo</option>
                     <option value="name_asc">Nome A–Z</option>
                     <option value="name_desc">Nome Z–A</option>
-                  </select>
+                  </DesignSelect>
                 </label>
-                <button className="bg-primary text-primary-foreground h-9 self-end rounded-md px-4 text-sm font-medium">
+                <Button type="submit" size="sm" className="self-end rounded-md px-4">
                   Filtrar
-                </button>
+                </Button>
               </form>
               {products.length === 0 ? (
                 <p className="text-muted-foreground text-sm">
@@ -806,34 +788,14 @@ export default async function SellerHomePage({
                 </div>
               )}
               {productResult.pageCount > 1 ? (
-                <nav
-                  className="mt-5 flex items-center justify-between gap-3"
-                  aria-label="Paginação de produtos do seller"
-                >
-                  {productResult.page > 1 ? (
-                    <Link
-                      href={productPageHref(productResult.page - 1)}
-                      className="rounded-md border px-3 py-2 text-sm"
-                    >
-                      Anterior
-                    </Link>
-                  ) : (
-                    <span />
-                  )}
-                  <span className="text-muted-foreground text-sm">
-                    Página {productResult.page} de {productResult.pageCount}
-                  </span>
-                  {productResult.page < productResult.pageCount ? (
-                    <Link
-                      href={productPageHref(productResult.page + 1)}
-                      className="rounded-md border px-3 py-2 text-sm"
-                    >
-                      Próxima
-                    </Link>
-                  ) : (
-                    <span />
-                  )}
-                </nav>
+                <Pagination
+                  ariaLabel="Paginação de produtos do seller"
+                  page={productResult.page}
+                  pageCount={productResult.pageCount}
+                  previousHref={productPageHref(productResult.page - 1)}
+                  nextHref={productPageHref(productResult.page + 1)}
+                  className="mt-5"
+                />
               ) : null}
             </CardContent>
           </Card>

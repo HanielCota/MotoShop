@@ -1,4 +1,7 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 import { useActionState } from "react";
 
@@ -13,8 +16,6 @@ type StoreProfileFormProps = {
 };
 
 const initialState: StoreProfileActionState = {};
-const inputClassName =
-  "border-input bg-background focus:ring-ring/40 h-10 w-full rounded-md border px-3 text-sm outline-none focus:ring-3";
 
 export function StoreProfileForm({ store }: StoreProfileFormProps) {
   const [state, action, pending] = useActionState(updateStoreProfileAction, initialState);
@@ -23,12 +24,11 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
     <form action={action} className="grid gap-4">
       <label className="flex flex-col gap-2 text-sm font-medium">
         Nome público
-        <input className={inputClassName} name="name" defaultValue={store.name} required maxLength={120} />
+        <Input name="name" defaultValue={store.name} required maxLength={120} />
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium">
         Identificador da loja
-        <input
-          className={inputClassName}
+        <Input
           name="slug"
           defaultValue={store.slug}
           pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
@@ -42,7 +42,7 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium">
         Descrição pública
-        <textarea
+        <Textarea
           className="border-input bg-background focus:ring-ring/40 min-h-24 w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-3"
           name="description"
           defaultValue={store.description ?? ""}
@@ -60,12 +60,9 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
           {state.success}
         </p>
       ) : null}
-      <button
-        className="bg-primary text-primary-foreground hover:bg-primary/80 h-10 rounded-md px-4 text-sm font-medium disabled:opacity-50"
-        disabled={pending}
-      >
+      <Button type="submit" className="rounded-md px-4" disabled={pending}>
         {pending ? "Salvando..." : "Salvar perfil público"}
-      </button>
+      </Button>
     </form>
   );
 }

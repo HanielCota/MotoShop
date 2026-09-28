@@ -1,3 +1,7 @@
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
+import { DesignSelect } from "@/components/ui/design-select";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -48,14 +52,23 @@ export default async function PublicStorePage({
   });
   const rating = store.reviewSummary.average;
   const storeSlug = store.slug;
+  const storeInitials = store.name
+    .split(/[\s·]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word.charAt(0))
+    .join("")
+    .toUpperCase();
 
   function storePageHref(productPage: number): Route {
     const query = new URLSearchParams();
     if (storeParams.storeReviewPage > 1) query.set("storeReviewPage", String(storeParams.storeReviewPage));
     if (storeParams.storeReviewSort !== "newest") query.set("storeReviewSort", storeParams.storeReviewSort);
     if (storeParams.storeProductQ) query.set("storeProductQ", storeParams.storeProductQ);
-    if (storeParams.storeProductAvailability !== "ALL") query.set("storeProductAvailability", storeParams.storeProductAvailability);
-    if (storeParams.storeProductPromotion !== "ALL") query.set("storeProductPromotion", storeParams.storeProductPromotion);
+    if (storeParams.storeProductAvailability !== "ALL")
+      query.set("storeProductAvailability", storeParams.storeProductAvailability);
+    if (storeParams.storeProductPromotion !== "ALL")
+      query.set("storeProductPromotion", storeParams.storeProductPromotion);
     if (storeParams.storeProductSort !== "relevance") query.set("storeProductSort", storeParams.storeProductSort);
     if (productPage > 1) query.set("storeProductPage", String(productPage));
     const serialized = query.toString();
@@ -63,48 +76,79 @@ export default async function PublicStorePage({
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6">
-      {store.bannerUrl ? (
-        <div className="relative aspect-[3/1] w-full overflow-hidden rounded-2xl border">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
+      <section
+        className="relative isolate overflow-hidden rounded-[1.75rem] bg-[#191918] text-white shadow-[0_24px_70px_-50px_rgba(0,0,0,0.8)]"
+        aria-labelledby="store-name"
+      >
+        {store.bannerUrl ? (
           <Image
             src={store.bannerUrl}
-            alt={`Banner da loja ${store.name}`}
+            alt=""
             fill
             priority
             unoptimized
-            className="object-cover"
+            className="-z-20 object-cover opacity-45"
             sizes="(max-width: 768px) 100vw, 1152px"
           />
-        </div>
-      ) : null}
-      <div>
-        <div className="flex items-center gap-4">
-          {store.logoUrl ? (
-            <Image
-              src={store.logoUrl}
-              alt={`Logo da loja ${store.name}`}
-              width={80}
-              height={80}
-              unoptimized
-              className="size-16 rounded-xl border object-cover sm:size-20"
-            />
-          ) : null}
-          <div>
-            <Badge variant="secondary">Loja na Moto Shop</Badge>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-5xl">{store.name}</h1>
+        ) : null}
+        <div
+          className="absolute -top-28 -right-16 -z-10 size-72 rounded-full border-[42px] border-[#ed5a17]/20 sm:size-96"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute inset-0 -z-10 bg-gradient-to-r from-[#191918] via-[#191918]/90 to-[#381e14]/60"
+          aria-hidden="true"
+        />
+        <div className="relative flex min-h-[340px] flex-col justify-between gap-10 p-6 sm:min-h-[390px] sm:p-10">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <span className="text-xs font-bold tracking-[0.2em] text-[#ff8b53] uppercase">
+              Vitrine de loja · Moto Shop
+            </span>
+            {store.seller.subscriptions.length > 0 ? (
+              <Badge className="border border-[#ff8b53]/60 bg-[#ff6b28] text-white">Seller VIP</Badge>
+            ) : null}
+          </div>
+          <div className="max-w-3xl">
+            <div className="mb-5 flex size-16 items-center justify-center overflow-hidden rounded-2xl border border-white/20 bg-white/10 text-xl font-black tracking-tight sm:size-20 sm:text-2xl">
+              {store.logoUrl ? (
+                <Image
+                  src={store.logoUrl}
+                  alt={`Logo da loja ${store.name}`}
+                  width={80}
+                  height={80}
+                  unoptimized
+                  className="size-full object-cover"
+                />
+              ) : (
+                <span aria-hidden="true">{storeInitials}</span>
+              )}
+            </div>
+            <h1 id="store-name" className="text-4xl leading-[1.05] font-black tracking-tight sm:text-6xl">
+              {store.name}
+            </h1>
+            <p className="mt-5 max-w-2xl text-sm leading-6 text-white/75 sm:text-base">
+              {store.description ?? "Catálogo aprovado desta loja dentro do marketplace de motocross."}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-white/20 pt-4 text-sm text-white/80">
+            <span>
+              <strong className="mr-1 text-lg text-white">{result.total}</strong> produto{result.total === 1 ? "" : "s"}{" "}
+              exibidos
+            </span>
+            {rating ? (
+              <span aria-label={`Nota média ${rating.toFixed(1)} de 5, em ${store.reviewSummary.count} avaliações`}>
+                <span aria-hidden="true" className="text-[#ff8b53]">
+                  ★
+                </span>{" "}
+                {rating.toFixed(1)}/5 · {store.reviewSummary.count} avaliações
+              </span>
+            ) : (
+              <span>Ainda sem avaliações</span>
+            )}
           </div>
         </div>
-        <p className="text-muted-foreground mt-3 max-w-2xl">
-          {store.description ?? "Catálogo aprovado desta loja dentro do marketplace de motocross."}
-        </p>
-        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-          {rating ? <span className="font-medium">★ {rating.toFixed(1)}/5</span> : null}
-          <span className="text-muted-foreground">
-            {store.reviewSummary.count} avaliação(ões) · {result.total} produto(s)
-          </span>
-          {store.seller.subscriptions.length > 0 ? <Badge>Seller VIP</Badge> : null}
-        </div>
-      </div>
+      </section>
 
       {store.reviewSummary.count > 0 ? (
         <Card>
@@ -116,19 +160,35 @@ export default async function PublicStorePage({
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <form className="flex flex-wrap items-end gap-3 sm:col-span-2 lg:col-span-3" method="get">
-              {storeParams.storeProductSort !== "relevance" ? <input type="hidden" name="storeProductSort" value={storeParams.storeProductSort} /> : null}
-              {storeParams.storeProductQ ? <input type="hidden" name="storeProductQ" value={storeParams.storeProductQ} /> : null}
-              {storeParams.storeProductAvailability !== "ALL" ? <input type="hidden" name="storeProductAvailability" value={storeParams.storeProductAvailability} /> : null}
-              {storeParams.storeProductPromotion !== "ALL" ? <input type="hidden" name="storeProductPromotion" value={storeParams.storeProductPromotion} /> : null}
-              {storeParams.storeProductPage > 1 ? <input type="hidden" name="storeProductPage" value={storeParams.storeProductPage} /> : null}
+              {storeParams.storeProductSort !== "relevance" ? (
+                <input type="hidden" name="storeProductSort" value={storeParams.storeProductSort} />
+              ) : null}
+              {storeParams.storeProductQ ? (
+                <input type="hidden" name="storeProductQ" value={storeParams.storeProductQ} />
+              ) : null}
+              {storeParams.storeProductAvailability !== "ALL" ? (
+                <input type="hidden" name="storeProductAvailability" value={storeParams.storeProductAvailability} />
+              ) : null}
+              {storeParams.storeProductPromotion !== "ALL" ? (
+                <input type="hidden" name="storeProductPromotion" value={storeParams.storeProductPromotion} />
+              ) : null}
+              {storeParams.storeProductPage > 1 ? (
+                <input type="hidden" name="storeProductPage" value={storeParams.storeProductPage} />
+              ) : null}
               <label className="flex flex-col gap-2 text-sm font-medium">
                 Ordenar avaliações
-                <select className="border-input bg-background h-10 rounded-md border px-3 text-sm" name="storeReviewSort" defaultValue={storeParams.storeReviewSort}>
+                <DesignSelect
+                  aria-label="Ordenar avaliações"
+                  name="storeReviewSort"
+                  defaultValue={storeParams.storeReviewSort}
+                >
                   <option value="newest">Mais recentes</option>
                   <option value="oldest">Mais antigas</option>
-                </select>
+                </DesignSelect>
               </label>
-              <button className="bg-primary text-primary-foreground h-10 rounded-md px-4 text-sm font-medium">Aplicar</button>
+              <Button type="submit" className="rounded-md px-4">
+                Aplicar
+              </Button>
             </form>
             {store.seller.sellerReviews.map((review) => (
               <article key={review.id} className="rounded-lg border p-4">
@@ -147,48 +207,61 @@ export default async function PublicStorePage({
               </article>
             ))}
             {store.reviewPageCount > 1 ? (
-              <nav className="flex items-center justify-between gap-3 sm:col-span-2 lg:col-span-3" aria-label="Paginação das avaliações da loja">
-                {store.reviewPage > 1 ? (
-                  <Link
-                    href={`/loja/${store.slug}?${new URLSearchParams({
-                      storeReviewPage: String(store.reviewPage - 1),
-                      ...(storeParams.storeReviewSort !== "newest" ? { storeReviewSort: storeParams.storeReviewSort } : {}),
-                      ...(storeParams.storeProductQ ? { storeProductQ: storeParams.storeProductQ } : {}),
-                      ...(storeParams.storeProductAvailability !== "ALL" ? { storeProductAvailability: storeParams.storeProductAvailability } : {}),
-                      ...(storeParams.storeProductPromotion !== "ALL" ? { storeProductPromotion: storeParams.storeProductPromotion } : {}),
-                      ...(storeParams.storeProductSort !== "relevance" ? { storeProductSort: storeParams.storeProductSort } : {}),
-                      ...(storeParams.storeProductPage > 1 ? { storeProductPage: String(storeParams.storeProductPage) } : {}),
-                    }).toString()}` as Route}
-                    className="rounded-md border px-3 py-2 text-sm"
-                  >
-                    Anterior
-                  </Link>
-                ) : <span />}
-                <span className="text-muted-foreground text-xs">Página {store.reviewPage} de {store.reviewPageCount}</span>
-                {store.reviewPage < store.reviewPageCount ? (
-                  <Link
-                    href={`/loja/${store.slug}?${new URLSearchParams({
-                      storeReviewPage: String(store.reviewPage + 1),
-                      ...(storeParams.storeReviewSort !== "newest" ? { storeReviewSort: storeParams.storeReviewSort } : {}),
-                      ...(storeParams.storeProductQ ? { storeProductQ: storeParams.storeProductQ } : {}),
-                      ...(storeParams.storeProductAvailability !== "ALL" ? { storeProductAvailability: storeParams.storeProductAvailability } : {}),
-                      ...(storeParams.storeProductPromotion !== "ALL" ? { storeProductPromotion: storeParams.storeProductPromotion } : {}),
-                      ...(storeParams.storeProductSort !== "relevance" ? { storeProductSort: storeParams.storeProductSort } : {}),
-                      ...(storeParams.storeProductPage > 1 ? { storeProductPage: String(storeParams.storeProductPage) } : {}),
-                    }).toString()}` as Route}
-                    className="rounded-md border px-3 py-2 text-sm"
-                  >
-                    Próxima
-                  </Link>
-                ) : <span />}
-              </nav>
+              <Pagination
+                ariaLabel="Paginação das avaliações da loja"
+                page={store.reviewPage}
+                pageCount={store.reviewPageCount}
+                previousHref={
+                  `/loja/${store.slug}?${new URLSearchParams({
+                    storeReviewPage: String(store.reviewPage - 1),
+                    ...(storeParams.storeReviewSort !== "newest"
+                      ? { storeReviewSort: storeParams.storeReviewSort }
+                      : {}),
+                    ...(storeParams.storeProductQ ? { storeProductQ: storeParams.storeProductQ } : {}),
+                    ...(storeParams.storeProductAvailability !== "ALL"
+                      ? { storeProductAvailability: storeParams.storeProductAvailability }
+                      : {}),
+                    ...(storeParams.storeProductPromotion !== "ALL"
+                      ? { storeProductPromotion: storeParams.storeProductPromotion }
+                      : {}),
+                    ...(storeParams.storeProductSort !== "relevance"
+                      ? { storeProductSort: storeParams.storeProductSort }
+                      : {}),
+                    ...(storeParams.storeProductPage > 1
+                      ? { storeProductPage: String(storeParams.storeProductPage) }
+                      : {}),
+                  }).toString()}` as Route
+                }
+                nextHref={
+                  `/loja/${store.slug}?${new URLSearchParams({
+                    storeReviewPage: String(store.reviewPage + 1),
+                    ...(storeParams.storeReviewSort !== "newest"
+                      ? { storeReviewSort: storeParams.storeReviewSort }
+                      : {}),
+                    ...(storeParams.storeProductQ ? { storeProductQ: storeParams.storeProductQ } : {}),
+                    ...(storeParams.storeProductAvailability !== "ALL"
+                      ? { storeProductAvailability: storeParams.storeProductAvailability }
+                      : {}),
+                    ...(storeParams.storeProductPromotion !== "ALL"
+                      ? { storeProductPromotion: storeParams.storeProductPromotion }
+                      : {}),
+                    ...(storeParams.storeProductSort !== "relevance"
+                      ? { storeProductSort: storeParams.storeProductSort }
+                      : {}),
+                    ...(storeParams.storeProductPage > 1
+                      ? { storeProductPage: String(storeParams.storeProductPage) }
+                      : {}),
+                  }).toString()}` as Route
+                }
+                className="sm:col-span-2 lg:col-span-3"
+              />
             ) : null}
           </CardContent>
         </Card>
       ) : null}
 
       {result.total === 0 ? (
-        <Card>
+        <Card className="border-[#e1dcd3] bg-white">
           <CardContent className="py-10 text-center">
             <p className="text-muted-foreground">Esta loja ainda não possui produtos publicados.</p>
             <Link href="/products" className="text-primary mt-3 inline-block underline underline-offset-4">
@@ -198,54 +271,82 @@ export default async function PublicStorePage({
         </Card>
       ) : (
         <div className="space-y-6">
-          <form className="flex flex-wrap items-end gap-3 rounded-xl border p-4" method="get">
-            {storeParams.storeReviewPage > 1 ? <input type="hidden" name="storeReviewPage" value={storeParams.storeReviewPage} /> : null}
-            {storeParams.storeReviewSort !== "newest" ? <input type="hidden" name="storeReviewSort" value={storeParams.storeReviewSort} /> : null}
-            <label className="flex min-w-64 flex-col gap-2 text-sm font-medium">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold tracking-[0.18em] text-[#ae3e10] uppercase">Seleção da loja</p>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#1b1a18] sm:text-3xl">Produtos da vitrine</h2>
+            </div>
+            <p className="text-muted-foreground text-sm">
+              {result.total} resultado{result.total === 1 ? "" : "s"}
+            </p>
+          </div>
+          <form
+            className="grid gap-3 rounded-2xl border border-[#e1dcd3] bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr_auto] lg:items-end"
+            method="get"
+          >
+            {storeParams.storeReviewPage > 1 ? (
+              <input type="hidden" name="storeReviewPage" value={storeParams.storeReviewPage} />
+            ) : null}
+            {storeParams.storeReviewSort !== "newest" ? (
+              <input type="hidden" name="storeReviewSort" value={storeParams.storeReviewSort} />
+            ) : null}
+            <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
               Buscar produto
-              <input className="border-input bg-background h-10 rounded-md border px-3 text-sm" name="storeProductQ" defaultValue={storeParams.storeProductQ ?? ""} placeholder="Nome, marca, categoria ou SKU" />
+              <Input
+                name="storeProductQ"
+                defaultValue={storeParams.storeProductQ ?? ""}
+                placeholder="Nome, marca, categoria ou SKU"
+              />
             </label>
-            <label className="flex min-w-48 flex-col gap-2 text-sm font-medium">
+            <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
               Disponibilidade
-              <select className="border-input bg-background h-10 rounded-md border px-3 text-sm" name="storeProductAvailability" defaultValue={storeParams.storeProductAvailability}>
+              <DesignSelect
+                aria-label="Disponibilidade"
+                name="storeProductAvailability"
+                defaultValue={storeParams.storeProductAvailability}
+              >
                 <option value="ALL">Todos</option>
                 <option value="IN_STOCK">Em estoque</option>
                 <option value="OUT_OF_STOCK">Indisponíveis</option>
-              </select>
+              </DesignSelect>
             </label>
-            <label className="flex min-w-48 flex-col gap-2 text-sm font-medium">
+            <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
               Promoção
-              <select className="border-input bg-background h-10 rounded-md border px-3 text-sm" name="storeProductPromotion" defaultValue={storeParams.storeProductPromotion}>
+              <DesignSelect
+                aria-label="Promoção"
+                name="storeProductPromotion"
+                defaultValue={storeParams.storeProductPromotion}
+              >
                 <option value="ALL">Todas</option>
                 <option value="ON_SALE">Em promoção</option>
-              </select>
+              </DesignSelect>
             </label>
-            <label className="flex min-w-56 flex-col gap-2 text-sm font-medium">
+            <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
               Ordenar produtos
-              <select className="border-input bg-background h-10 rounded-md border px-3 text-sm" name="storeProductSort" defaultValue={storeParams.storeProductSort}>
+              <DesignSelect
+                aria-label="Ordenar produtos"
+                name="storeProductSort"
+                defaultValue={storeParams.storeProductSort}
+              >
                 <option value="relevance">Relevância</option>
                 <option value="newest">Mais recentes</option>
                 <option value="price_asc">Menor preço</option>
                 <option value="price_desc">Maior preço</option>
-              </select>
+              </DesignSelect>
             </label>
-            <button className="bg-primary text-primary-foreground h-10 rounded-md px-4 text-sm font-medium">Aplicar</button>
+            <Button type="submit" className="w-full rounded-md px-4 sm:w-auto lg:mb-0">
+              Aplicar
+            </Button>
           </form>
           <ProductGrid products={result.products} />
           {result.pageCount > 1 ? (
-            <nav className="flex items-center justify-between gap-3" aria-label="Paginação dos produtos da loja">
-              {result.page > 1 ? (
-                <Link href={storePageHref(result.page - 1)} className="rounded-md border px-3 py-2 text-sm">
-                  Anterior
-                </Link>
-              ) : <span />}
-              <span className="text-muted-foreground text-xs">Página {result.page} de {result.pageCount}</span>
-              {result.page < result.pageCount ? (
-                <Link href={storePageHref(result.page + 1)} className="rounded-md border px-3 py-2 text-sm">
-                  Próxima
-                </Link>
-              ) : <span />}
-            </nav>
+            <Pagination
+              ariaLabel="Paginação dos produtos da loja"
+              page={result.page}
+              pageCount={result.pageCount}
+              previousHref={storePageHref(result.page - 1)}
+              nextHref={storePageHref(result.page + 1)}
+            />
           ) : null}
         </div>
       )}

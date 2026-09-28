@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/database";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
 
 const subscriptionSchema = z.object({
   sellerId: z.string().min(1),
@@ -30,10 +30,12 @@ export async function activateVipSubscriptionAction(
   try {
     const now = new Date();
     await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "sellers" WHERE id = ${parsed.data.sellerId} FOR UPDATE`;
       const seller = await tx.seller.findFirst({
         where: { id: parsed.data.sellerId, status: { in: ["APPROVED", "ACTIVE"] } },
       });
-      if (!seller) throw new Error("Seller não encontrado ou ainda não aprovado.");
+      if (!seller)
+        throw new ApplicationError({ code: "CONFLICT", message: "Seller não encontrado ou ainda não aprovado." });
 
       const activeSubscription = await tx.sellerSubscription.findFirst({
         where: {

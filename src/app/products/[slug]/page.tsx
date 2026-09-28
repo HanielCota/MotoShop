@@ -1,3 +1,5 @@
+import { Pagination } from "@/components/ui/pagination";
+import { DesignSelect } from "@/components/ui/design-select";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -6,7 +8,8 @@ import type { Metadata } from "next";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { InlineNotice } from "@/components/ui/inline-notice";
 import { formatMoneyInCents } from "@/lib/utils";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { AddToCartButton } from "@/modules/cart/components/add-to-cart-button";
@@ -35,6 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: product.name,
     description: product.description.slice(0, 160),
+    ...(product.isDemo ? { robots: { index: false, follow: false } } : {}),
     alternates: { canonical: `/products/${product.slug}` },
     openGraph: {
       type: "website",
@@ -73,6 +77,12 @@ export default async function ProductPage({
   const sellerRating = averageRating(product.seller.sellerReviews);
   const prices = product.variants.map((variant) => getCurrentPriceInCents(variant));
   const hasStock = product.variants.some((variant) => (variant.inventory?.availableQuantity ?? 0) > 0);
+  const lowestPriceInCents = prices.length > 0 ? Math.min(...prices) : null;
+  const hasPriceRange = new Set(prices).size > 1;
+  const galleryImages = product.images.flatMap((image) => {
+    const url = getPublicStorageUrl(image.storageKey);
+    return url ? [{ id: image.id, url, alt: image.altText ?? product.name }] : [];
+  });
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -102,147 +112,233 @@ export default async function ProductPage({
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-10 sm:px-6">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
-      />
-      <Link className="text-muted-foreground text-sm underline underline-offset-4" href="/products">
-        ← Voltar para produtos
-      </Link>
-      <div className="grid gap-6 lg:grid-cols-[1.35fr_0.65fr]">
-        <Card>
-          <CardHeader>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">{getCategoryLabel(product.category)}</Badge>
-              <Badge variant="secondary">{product.brand.name}</Badge>
-              {product.seller.subscriptions.length > 0 ? <Badge>Patrocinado · VIP</Badge> : null}
-            </div>
-            <CardTitle className="text-3xl">
-              <h1>{product.name}</h1>
-            </CardTitle>
-            <CardDescription>
-              Vendido por{" "}
-              {product.seller.store ? (
-                <Link className="hover:underline" href={`/loja/${product.seller.store.slug}` as Route}>
-                  {product.seller.store.name}
-                </Link>
-              ) : null}
-              {productRating ? ` · Produto ${productRating.toFixed(1)}/5 (${product.productReviewCount})` : ""}
-              {sellerRating ? ` · Loja ${sellerRating.toFixed(1)}/5` : ""}
-            </CardDescription>
-            <div className="pt-2">
-              {session ? (
-                <FavoriteButton productId={product.id} initialIsFavorite={isFavorite} />
-              ) : (
-                <Link
-                  className={buttonVariants({ variant: "outline" })}
-                  href={`/login?next=${encodeURIComponent(`/products/${product.slug}`)}` as Route}
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
+      {!product.isDemo ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+        />
+      ) : null}
+      <nav
+        aria-label="Navegação estrutural"
+        className="text-muted-foreground flex min-w-0 items-center gap-2 text-xs sm:text-sm"
+      >
+        <Link href="/products" className="hover:text-foreground shrink-0 hover:underline">
+          Catálogo
+        </Link>
+        <span aria-hidden="true">/</span>
+        <Link
+          href={`/categoria/${product.category.slug}` as Route}
+          className="hover:text-foreground shrink-0 hover:underline"
+        >
+          {getCategoryLabel(product.category)}
+        </Link>
+        <span aria-hidden="true">/</span>
+        <span className="text-foreground truncate" aria-current="page">
+          {product.name}
+        </span>
+      </nav>
+
+      <div className="grid min-w-0 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-start lg:gap-8">
+        <div className="min-w-0">
+          <div className="relative aspect-[6/5] overflow-hidden rounded-[1.5rem] border border-[#e1dcd3] bg-[#eae7e0] sm:aspect-square">
+            {galleryImages[0] ? (
+              <Image
+                src={galleryImages[0].url}
+                alt={galleryImages[0].alt}
+                fill
+                priority
+                unoptimized
+                sizes="(max-width: 767px) 100vw, 50vw"
+                className="object-contain"
+              />
+            ) : (
+              <div className="text-muted-foreground flex h-full items-center justify-center px-6 text-center text-sm">
+                Imagem do produto em preparação
+              </div>
+            )}
+            {product.isDemo ? (
+              <span className="absolute top-4 left-4 rounded-full bg-[#1b1a18] px-3 py-1.5 text-[10px] font-bold tracking-[0.12em] text-white uppercase shadow-sm">
+                Demonstração
+              </span>
+            ) : null}
+          </div>
+          {galleryImages.length > 1 ? (
+            <div className="mt-3 grid grid-cols-4 gap-3" aria-label="Outras imagens do produto">
+              {galleryImages.slice(1).map((image) => (
+                <div
+                  key={image.id}
+                  className="relative aspect-square overflow-hidden rounded-xl border border-[#e1dcd3] bg-[#eae7e0]"
                 >
-                  Entre para favoritar
-                </Link>
-              )}
+                  <Image src={image.url} alt={image.alt} fill unoptimized sizes="120px" className="object-contain" />
+                </div>
+              ))}
             </div>
-          </CardHeader>
-          <CardContent>
-            {product.images.length > 0 ? (
-              <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {product.images.map((image) => {
-                  const imageUrl = getPublicStorageUrl(image.storageKey);
-                  return imageUrl ? (
-                    <Image
-                      key={image.id}
-                      src={imageUrl}
-                      alt={image.altText ?? product.name}
-                      width={640}
-                      height={640}
-                      unoptimized
-                      className="aspect-square w-full rounded-lg border object-cover"
-                    />
-                  ) : null;
-                })}
+          ) : null}
+        </div>
+
+        <section
+          className="min-w-0 rounded-[1.5rem] border border-[#e1dcd3] bg-white p-5 shadow-[0_16px_50px_-36px_rgba(0,0,0,0.4)] sm:p-7"
+          aria-labelledby="product-title"
+        >
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="outline">{getCategoryLabel(product.category)}</Badge>
+            <Badge variant="secondary">{product.brand.name}</Badge>
+            {product.seller.subscriptions.length > 0 ? <Badge>Patrocinado · VIP</Badge> : null}
+          </div>
+          <h1
+            id="product-title"
+            className="mt-5 text-3xl leading-tight font-bold tracking-tight text-[#1b1a18] sm:text-4xl"
+          >
+            {product.name}
+          </h1>
+          <p className="text-muted-foreground mt-3 text-sm">
+            Vendido por{" "}
+            {product.seller.store ? (
+              <Link
+                className="font-semibold text-[#ad3b0d] underline-offset-4 hover:underline"
+                href={`/loja/${product.seller.store.slug}` as Route}
+              >
+                {product.seller.store.name}
+              </Link>
+            ) : (
+              <span>loja parceira</span>
+            )}
+          </p>
+          {productRating || sellerRating ? (
+            <p className="text-muted-foreground mt-2 text-xs">
+              {productRating ? `Produto ${productRating.toFixed(1)}/5 (${product.productReviewCount})` : ""}
+              {productRating && sellerRating ? " · " : ""}
+              {sellerRating ? `Loja ${sellerRating.toFixed(1)}/5` : ""}
+            </p>
+          ) : null}
+
+          <div className="mt-6 border-t border-[#ece8e1] pt-5">
+            {lowestPriceInCents !== null ? (
+              <div>
+                {hasPriceRange ? <p className="text-muted-foreground text-xs">A partir de</p> : null}
+                <p className="text-3xl font-bold tracking-tight text-[#1b1a18] sm:text-4xl">
+                  {formatMoneyInCents(lowestPriceInCents)}
+                </p>
+                {product.isDemo ? <p className="mt-1 text-xs font-medium text-[#a33b10]">Valor ilustrativo</p> : null}
               </div>
             ) : null}
-            <p className="leading-7">{product.description}</p>
-            <div className="mt-6">
-              <h2 className="font-semibold">Compatibilidade</h2>
-              {primaryMotorcycle ? (
-                <div className="mt-3 rounded-lg border border-[#f4c8ad] bg-[#fff4eb] p-3 text-sm">
-                  <p className="font-semibold">
-                    {matchesPrimaryMotorcycle
-                      ? "Compatibilidade cadastrada para sua moto principal"
-                      : "Compatibilidade com sua moto principal não confirmada"}
-                  </p>
-                  <p className="mt-1 text-slate-700">
-                    {primaryMotorcycle.motorcycleFitment.motorcycleModel.manufacturer.name}{" "}
-                    {primaryMotorcycle.motorcycleFitment.motorcycleModel.name} ·{" "}
-                    {primaryMotorcycle.motorcycleFitment.year}
-                    {primaryMotorcycle.motorcycleFitment.version
-                      ? ` · ${primaryMotorcycle.motorcycleFitment.version}`
-                      : ""}
-                    .{" "}
-                    {matchesPrimaryMotorcycle
-                      ? "Confira também a versão e as informações do fabricante."
-                      : "Confira as configurações listadas abaixo antes de comprar."}
-                  </p>
-                  <Link
-                    href="/account/motorcycles"
-                    className="mt-2 inline-block font-medium text-[#a63a0b] underline underline-offset-4"
-                  >
-                    Trocar moto principal
-                  </Link>
-                </div>
-              ) : (
-                <Link
-                  href="/account/motorcycles"
-                  className="mt-2 inline-block text-sm font-medium text-[#a63a0b] underline underline-offset-4"
-                >
-                  Salve sua moto para conferir a compatibilidade aqui
-                </Link>
-              )}
-              {product.compatibilities.length === 0 ? (
-                <p className="text-muted-foreground mt-2 text-sm">Compatibilidade ainda não informada.</p>
-              ) : (
-                <ul className="text-muted-foreground mt-2 flex flex-wrap gap-2 text-sm">
-                  {product.compatibilities.map((compatibility) => (
-                    <li key={compatibility.id} className="rounded-full border px-3 py-1">
-                      <Link
-                        className="hover:underline"
-                        href={`/products?moto=${encodeURIComponent(compatibility.motorcycleFitmentId)}` as Route}
-                      >
-                        {compatibility.motorcycleFitment.motorcycleModel.manufacturer.name}{" "}
-                        {compatibility.motorcycleFitment.motorcycleModel.name} ·{" "}
-                        {compatibility.motorcycleFitment.version || "padrão"} ·{" "}
-                        {compatibility.motorcycleFitment.displacementCc} cc · {compatibility.motorcycleFitment.year}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
+            {product.isDemo ? (
+              <InlineNotice tone="warning" className="mt-5">
+                Produto de apresentação. Imagens, valores e estoque são ilustrativos; a compra está desativada.
+              </InlineNotice>
+            ) : null}
+          </div>
+
+          <div className="mt-6 space-y-3">
+            <div className="flex items-end justify-between gap-3">
+              <h2 className="text-sm font-semibold text-[#1b1a18]">Escolha sua opção</h2>
+              <span className="text-muted-foreground text-xs">
+                {product.variants.length} {product.variants.length === 1 ? "opção" : "opções"}
+              </span>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Opções</CardTitle>
-            <CardDescription>Escolha uma variante disponível.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3">
             {product.variants.map((variant) => {
               const stock = variant.inventory?.availableQuantity ?? 0;
               return (
-                <div key={variant.id} className="rounded-lg border p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-medium">{variant.title}</span>
-                    <span className="font-semibold">{formatMoneyInCents(getCurrentPriceInCents(variant))}</span>
+                <div key={variant.id} className="rounded-xl border border-[#e4dfd5] bg-[#faf9f6] p-3.5">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                    <span className="text-sm font-semibold">{variant.title}</span>
+                    <span className="text-sm font-bold">{formatMoneyInCents(getCurrentPriceInCents(variant))}</span>
                   </div>
                   <p className="text-muted-foreground mt-1 text-xs">
-                    SKU {variant.sku} · {stock > 0 ? `${stock} em estoque` : "Indisponível"}
+                    {product.isDemo
+                      ? `SKU ${variant.sku} · exemplo ilustrativo`
+                      : `SKU ${variant.sku} · ${stock > 0 ? `${stock} em estoque` : "Indisponível"}`}
                   </p>
-                  <AddToCartButton variantId={variant.id} disabled={stock < 1} />
+                  {!product.isDemo ? <AddToCartButton variantId={variant.id} disabled={stock < 1} /> : null}
                 </div>
               );
             })}
+          </div>
+          <div className="mt-5 border-t border-[#ece8e1] pt-5">
+            {session ? (
+              <FavoriteButton productId={product.id} initialIsFavorite={isFavorite} />
+            ) : (
+              <Link
+                className={buttonVariants({ variant: "outline" })}
+                href={`/login?next=${encodeURIComponent(`/products/${product.slug}`)}` as Route}
+              >
+                Entre para favoritar
+              </Link>
+            )}
+          </div>
+        </section>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <Card className="border-[#e1dcd3] bg-white">
+          <CardHeader>
+            <CardTitle>Sobre este produto</CardTitle>
+            <CardDescription>Detalhes fornecidos pela loja.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="leading-7 whitespace-pre-line">{product.description}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-[#e1dcd3] bg-white">
+          <CardHeader>
+            <CardTitle>Compatibilidade com motos</CardTitle>
+            <CardDescription>Confira a configuração antes de escolher uma peça.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {primaryMotorcycle ? (
+              <div className="rounded-lg border border-[#f4c8ad] bg-[#fff4eb] p-3 text-sm">
+                <p className="font-semibold">
+                  {matchesPrimaryMotorcycle
+                    ? "Compatibilidade cadastrada para sua moto principal"
+                    : "Compatibilidade com sua moto principal não confirmada"}
+                </p>
+                <p className="mt-1 text-slate-700">
+                  {primaryMotorcycle.motorcycleFitment.motorcycleModel.manufacturer.name}{" "}
+                  {primaryMotorcycle.motorcycleFitment.motorcycleModel.name} ·{" "}
+                  {primaryMotorcycle.motorcycleFitment.year}
+                  {primaryMotorcycle.motorcycleFitment.version
+                    ? ` · ${primaryMotorcycle.motorcycleFitment.version}`
+                    : ""}
+                  .{" "}
+                  {matchesPrimaryMotorcycle
+                    ? "Confira também a versão e as informações do fabricante."
+                    : "Confira as configurações listadas abaixo antes de comprar."}
+                </p>
+                <Link
+                  href="/account/motorcycles"
+                  className="mt-2 inline-block font-medium text-[#a63a0b] underline underline-offset-4"
+                >
+                  Trocar moto principal
+                </Link>
+              </div>
+            ) : (
+              <Link
+                href="/account/motorcycles"
+                className="inline-block text-sm font-medium text-[#a63a0b] underline underline-offset-4"
+              >
+                Salve sua moto para conferir a compatibilidade aqui
+              </Link>
+            )}
+            {product.compatibilities.length === 0 ? (
+              <p className="text-muted-foreground mt-3 text-sm">Compatibilidade ainda não informada.</p>
+            ) : (
+              <ul className="text-muted-foreground mt-4 flex flex-wrap gap-2 text-sm">
+                {product.compatibilities.map((compatibility) => (
+                  <li key={compatibility.id} className="rounded-full border px-3 py-1">
+                    <Link
+                      className="hover:underline"
+                      href={`/products?moto=${encodeURIComponent(compatibility.motorcycleFitmentId)}` as Route}
+                    >
+                      {compatibility.motorcycleFitment.motorcycleModel.manufacturer.name}{" "}
+                      {compatibility.motorcycleFitment.motorcycleModel.name} ·{" "}
+                      {compatibility.motorcycleFitment.version || "padrão"} ·{" "}
+                      {compatibility.motorcycleFitment.displacementCc} cc · {compatibility.motorcycleFitment.year}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -262,8 +358,9 @@ export default async function ProductPage({
               <form className="flex flex-wrap items-end gap-3 rounded-md border p-3" method="get">
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   Filtrar por nota
-                  <select
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  <DesignSelect
+                    aria-label="Filtrar por nota"
+                    className="h-9"
                     name="reviewRating"
                     defaultValue={interactionParams.reviewRating ?? ""}
                   >
@@ -273,7 +370,7 @@ export default async function ProductPage({
                         {rating} estrela{rating === 1 ? "" : "s"}
                       </option>
                     ))}
-                  </select>
+                  </DesignSelect>
                 </label>
                 {interactionParams.questionSort !== "newest" ? (
                   <input type="hidden" name="questionSort" value={interactionParams.questionSort} />
@@ -283,18 +380,19 @@ export default async function ProductPage({
                 ) : null}
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   Ordenar avaliações
-                  <select
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  <DesignSelect
+                    aria-label="Ordenar avaliações"
+                    className="h-9"
                     name="reviewSort"
                     defaultValue={interactionParams.reviewSort}
                   >
                     <option value="newest">Mais recentes</option>
                     <option value="oldest">Mais antigas</option>
-                  </select>
+                  </DesignSelect>
                 </label>
-                <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+                <Button type="submit" size="sm" className="rounded-md px-4">
                   Filtrar
-                </button>
+                </Button>
               </form>
             ) : null}
             {product.productReviews.length === 0 ? (
@@ -305,9 +403,11 @@ export default async function ProductPage({
               product.productReviews.map((review) => (
                 <article key={review.id} className="border-border border-b pb-4 last:border-b-0 last:pb-0">
                   <div className="flex items-center justify-between gap-3">
-                    <strong>
-                      {"★".repeat(review.rating)}
-                      {"☆".repeat(5 - review.rating)}
+                    <strong aria-label={`${review.rating} de 5 estrelas`}>
+                      <span aria-hidden="true">
+                        {"★".repeat(review.rating)}
+                        {"☆".repeat(5 - review.rating)}
+                      </span>
                     </strong>
                     <span className="text-muted-foreground text-xs">{review.user.name ?? "Cliente"}</span>
                   </div>
@@ -316,31 +416,14 @@ export default async function ProductPage({
               ))
             )}
             {product.reviewPageCount > 1 ? (
-              <nav className="flex items-center justify-between gap-3 pt-2" aria-label="Paginação de avaliações">
-                {product.reviewPage > 1 ? (
-                  <Link
-                    href={interactionHref(slug, interactionParams, product.reviewPage - 1, undefined)}
-                    className="rounded-md border px-3 py-2 text-sm"
-                  >
-                    Anterior
-                  </Link>
-                ) : (
-                  <span />
-                )}
-                <span className="text-muted-foreground text-xs">
-                  Página {product.reviewPage} de {product.reviewPageCount}
-                </span>
-                {product.reviewPage < product.reviewPageCount ? (
-                  <Link
-                    href={interactionHref(slug, interactionParams, product.reviewPage + 1, undefined)}
-                    className="rounded-md border px-3 py-2 text-sm"
-                  >
-                    Próxima
-                  </Link>
-                ) : (
-                  <span />
-                )}
-              </nav>
+              <Pagination
+                ariaLabel="Paginação de avaliações"
+                page={product.reviewPage}
+                pageCount={product.reviewPageCount}
+                previousHref={interactionHref(slug, interactionParams, product.reviewPage - 1, undefined)}
+                nextHref={interactionHref(slug, interactionParams, product.reviewPage + 1, undefined)}
+                className="pt-2"
+              />
             ) : null}
           </CardContent>
         </Card>
@@ -364,18 +447,19 @@ export default async function ProductPage({
                 ) : null}
                 <label className="flex flex-col gap-1 text-sm font-medium">
                   Ordenar perguntas
-                  <select
-                    className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  <DesignSelect
+                    aria-label="Ordenar perguntas"
+                    className="h-9"
                     name="questionSort"
                     defaultValue={interactionParams.questionSort}
                   >
                     <option value="newest">Mais recentes</option>
                     <option value="oldest">Mais antigas</option>
-                  </select>
+                  </DesignSelect>
                 </label>
-                <button className="bg-primary text-primary-foreground h-9 rounded-md px-4 text-sm font-medium">
+                <Button type="submit" size="sm" className="rounded-md px-4">
                   Aplicar
-                </button>
+                </Button>
               </form>
             ) : null}
             {product.questions.length === 0 ? (
@@ -399,31 +483,14 @@ export default async function ProductPage({
               ))
             )}
             {product.questionPageCount > 1 ? (
-              <nav className="flex items-center justify-between gap-3 pt-2" aria-label="Paginação de perguntas">
-                {product.questionPage > 1 ? (
-                  <Link
-                    href={interactionHref(slug, interactionParams, undefined, product.questionPage - 1)}
-                    className="rounded-md border px-3 py-2 text-sm"
-                  >
-                    Anterior
-                  </Link>
-                ) : (
-                  <span />
-                )}
-                <span className="text-muted-foreground text-xs">
-                  Página {product.questionPage} de {product.questionPageCount}
-                </span>
-                {product.questionPage < product.questionPageCount ? (
-                  <Link
-                    href={interactionHref(slug, interactionParams, undefined, product.questionPage + 1)}
-                    className="rounded-md border px-3 py-2 text-sm"
-                  >
-                    Próxima
-                  </Link>
-                ) : (
-                  <span />
-                )}
-              </nav>
+              <Pagination
+                ariaLabel="Paginação de perguntas"
+                page={product.questionPage}
+                pageCount={product.questionPageCount}
+                previousHref={interactionHref(slug, interactionParams, undefined, product.questionPage - 1)}
+                nextHref={interactionHref(slug, interactionParams, undefined, product.questionPage + 1)}
+                className="pt-2"
+              />
             ) : null}
             {session ? (
               <AskQuestionForm productId={product.id} />

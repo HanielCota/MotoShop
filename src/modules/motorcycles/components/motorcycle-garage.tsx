@@ -1,4 +1,9 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
+import { DesignCheckbox } from "@/components/ui/design-checkbox";
+
+import { DesignSelect } from "@/components/ui/design-select";
 
 import Link from "next/link";
 import { Bike, CheckCircle2, Plus, Star } from "lucide-react";
@@ -22,7 +27,7 @@ type SavedMotorcycle = {
 };
 
 const initialState: SavedMotorcycleActionState = {};
-const inputClassName = "border-input bg-background h-11 w-full min-w-0 rounded-md border px-3 text-sm";
+const inputClassName = "h-11";
 
 function ActionMessage({ state }: { state: SavedMotorcycleActionState }) {
   if (!state.error && !state.success) return null;
@@ -112,7 +117,8 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
         <form action={editAction} className="mt-5 grid gap-3 border-t pt-5 sm:grid-cols-[1fr_auto] sm:items-end">
           <label className="min-w-0 space-y-2 text-sm font-medium">
             Nova configuração
-            <select
+            <DesignSelect
+              aria-label="Nova configuração"
               className={inputClassName}
               name="motorcycleFitmentId"
               defaultValue={saved.available ? saved.motorcycleFitmentId : ""}
@@ -124,15 +130,11 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
                   {fitment.label}
                 </option>
               ))}
-            </select>
+            </DesignSelect>
           </label>
-          <button
-            type="submit"
-            disabled={editPending}
-            className="bg-primary text-primary-foreground min-h-11 rounded-md px-5 text-sm font-semibold disabled:opacity-60"
-          >
+          <Button size="lg" type="submit" disabled={editPending} className="min-h-11 rounded-md px-5 font-semibold">
             {editPending ? "Salvando..." : "Salvar alteração"}
-          </button>
+          </Button>
           <ActionMessage state={editState} />
         </form>
       ) : null}
@@ -180,27 +182,34 @@ export function MotorcycleGarage({
         <form action={formAction} className="mt-5 space-y-4">
           <label className="block space-y-2 text-sm font-medium">
             Fabricante, modelo, versão e ano
-            <select className={inputClassName} name="motorcycleFitmentId" defaultValue="" required>
+            <DesignSelect
+              aria-label="Fabricante, modelo, versão e ano"
+              className={inputClassName}
+              name="motorcycleFitmentId"
+              defaultValue=""
+              required
+            >
               <option value="">Selecione sua moto</option>
               {fitments.map((fitment) => (
                 <option key={fitment.id} value={fitment.id}>
                   {fitment.label}
                 </option>
               ))}
-            </select>
+            </DesignSelect>
           </label>
           <label className="flex items-start gap-2 text-sm">
-            <input className="mt-1" type="checkbox" name="makePrimary" />
+            <DesignCheckbox className="mt-1" name="makePrimary" />
             Definir como minha moto principal
           </label>
-          <button
+          <Button
+            size="lg"
             type="submit"
             disabled={pending || fitments.length === 0}
-            className="bg-primary text-primary-foreground flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold disabled:opacity-60"
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-4 font-semibold"
           >
             <CheckCircle2 aria-hidden="true" className="size-4" />
             {pending ? "Salvando..." : "Salvar moto"}
-          </button>
+          </Button>
           {fitments.length === 0 ? (
             <p className="text-muted-foreground text-sm">A base de motos ainda não tem configurações disponíveis.</p>
           ) : null}

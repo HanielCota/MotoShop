@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/ui/button";
 
 import { useActionState } from "react";
 
@@ -24,21 +25,23 @@ export function CustomerAddressActions({ addressId, isDefault }: { addressId: st
     <div className="flex flex-wrap items-center gap-2">
       {!isDefault ? (
         <form action={defaultAction}>
-          <button type="submit" disabled={defaultPending} className="rounded-md border px-3 py-2 text-xs font-medium">
+          <Button type="submit" variant="outline" size="sm" disabled={defaultPending} className="rounded-md text-xs">
             {defaultPending ? "Atualizando..." : "Usar como padrão"}
-          </button>
+          </Button>
         </form>
       ) : (
         <span className="text-xs font-medium text-emerald-700">Padrão</span>
       )}
       <form action={deleteAction}>
-        <button
+        <Button
           type="submit"
+          variant="destructive"
+          size="sm"
           disabled={deletePending}
-          className="text-destructive rounded-md border px-3 py-2 text-xs font-medium"
+          className="border-destructive/30 rounded-md border text-xs"
         >
           {deletePending ? "Removendo..." : "Remover"}
-        </button>
+        </Button>
       </form>
       {defaultState.error ? <p className="text-destructive text-xs">{defaultState.error}</p> : null}
       {deleteState.error ? <p className="text-destructive text-xs">{deleteState.error}</p> : null}

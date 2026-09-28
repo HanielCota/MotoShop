@@ -6,7 +6,7 @@ import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 export async function getPublicCategoryBySlug(slug: string) {
   return db.category.findFirst({
     where: { slug, active: true },
-    select: { id: true, name: true, slug: true, parent: { select: { name: true } } },
+    select: { id: true, name: true, slug: true, parent: { select: { name: true, slug: true } } },
   });
 }
 
@@ -44,10 +44,14 @@ export async function getPublicStoreBySlug(
   const pageSize = 6;
   const requestedPage = Math.max(input.reviewPage ?? 1, 1);
   const [reviewSummary, reviewCount, reviews] = await Promise.all([
-    db.sellerReview.aggregate({ where: { sellerId: store.sellerId }, _avg: { rating: true }, _count: { _all: true } }),
-    db.sellerReview.count({ where: { sellerId: store.sellerId } }),
+    db.sellerReview.aggregate({
+      where: { sellerId: store.sellerId, hiddenAt: null },
+      _avg: { rating: true },
+      _count: { _all: true },
+    }),
+    db.sellerReview.count({ where: { sellerId: store.sellerId, hiddenAt: null } }),
     db.sellerReview.findMany({
-      where: { sellerId: store.sellerId },
+      where: { sellerId: store.sellerId, hiddenAt: null },
       select: {
         id: true,
         rating: true,

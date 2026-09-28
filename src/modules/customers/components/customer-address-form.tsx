@@ -1,11 +1,14 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+import { DesignCheckbox } from "@/components/ui/design-checkbox";
 
 import { useActionState } from "react";
 
 import { createCustomerAddressAction, type CustomerAddressActionState } from "../actions/customer-address-actions";
 
 const initialState: CustomerAddressActionState = {};
-const inputClassName = "border-input bg-background h-10 rounded-md border px-3 text-sm";
 
 export function CustomerAddressForm() {
   const [state, formAction, pending] = useActionState(createCustomerAddressAction, initialState);
@@ -23,17 +26,13 @@ export function CustomerAddressForm() {
       <Field label="Cidade" name="city" required />
       <Field label="UF" name="state" maxLength={2} required />
       <label className="flex items-center gap-2 text-sm sm:col-span-2">
-        <input type="checkbox" name="isDefault" />
+        <DesignCheckbox name="isDefault" />
         Usar como endereço padrão
       </label>
       <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-        <button
-          type="submit"
-          disabled={pending}
-          className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending} className="rounded-md px-4 font-semibold">
           {pending ? "Salvando..." : "Salvar endereço"}
-        </button>
+        </Button>
         {state.error ? <p className="text-destructive text-sm">{state.error}</p> : null}
         {state.success ? <p className="text-sm text-emerald-700">{state.success}</p> : null}
       </div>
@@ -59,8 +58,7 @@ function Field({
   return (
     <label className="flex flex-col gap-2 text-sm font-medium">
       {label}
-      <input
-        className={inputClassName}
+      <Input
         name={name}
         placeholder={placeholder}
         inputMode={inputMode}

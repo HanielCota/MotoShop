@@ -1,4 +1,5 @@
 "use client";
+import { Textarea } from "@/components/ui/textarea";
 
 import { useActionState } from "react";
 
@@ -17,7 +18,7 @@ export function AnswerQuestionForm({
 
   return (
     <form action={formAction} className="mt-3 space-y-2">
-      <textarea
+      <Textarea
         name="answer"
         required
         minLength={2}

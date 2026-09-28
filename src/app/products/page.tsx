@@ -1,5 +1,10 @@
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
+import { DesignSelect } from "@/components/ui/design-select";
 import Link from "next/link";
 import type { Route } from "next";
+import { ChevronDown } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/motorcycles";
@@ -94,24 +99,15 @@ export default async function ProductsPage({
       )}
       <form
         key={JSON.stringify(params)}
-        className="grid min-w-0 gap-3 rounded-xl border p-4 md:grid-cols-2 [&_input]:min-w-0 [&_label]:min-w-0 [&_select]:w-full [&_select]:min-w-0"
+        className="grid min-w-0 gap-3 rounded-xl border p-4 md:grid-cols-2 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:min-w-0 [&_input]:min-w-0 [&_label]:min-w-0"
       >
         <label className="flex flex-col gap-2 text-sm font-medium">
           Buscar
-          <input
-            className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-            name="q"
-            defaultValue={params.q ?? ""}
-            placeholder="Produto, SKU, marca ou loja..."
-          />
+          <Input name="q" defaultValue={params.q ?? ""} placeholder="Produto, SKU, marca ou loja..." />
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
           Minha Moto
-          <select
-            className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-            name="moto"
-            defaultValue={params.moto ?? ""}
-          >
+          <DesignSelect aria-label="Minha Moto" name="moto" defaultValue={params.moto ?? ""}>
             <option value="">Todas as motos</option>
             {fitments.map((fitment) => (
               <option key={fitment.id} value={fitment.id}>
@@ -119,11 +115,11 @@ export default async function ProductsPage({
                 {fitment.displacementCc} cc · {fitment.year}
               </option>
             ))}
-          </select>
+          </DesignSelect>
         </label>
-        <button className="bg-primary text-primary-foreground hover:bg-primary/80 h-11 rounded-md px-4 text-sm font-medium md:w-fit">
+        <Button type="submit" size="lg" className="rounded-md px-4 md:w-fit">
           Aplicar busca
-        </button>
+        </Button>
         <details
           className="min-w-0 md:col-span-2"
           open={Boolean(
@@ -137,15 +133,14 @@ export default async function ProductsPage({
             params.sort !== "relevance",
           )}
         >
-          <summary className="cursor-pointer py-3 text-sm font-medium">Mais filtros e ordenação</summary>
+          <summary className="focus-visible:ring-ring/40 flex cursor-pointer list-none items-center justify-between gap-2 rounded-md py-3 text-sm font-medium focus-visible:ring-3 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+            Mais filtros e ordenação
+            <ChevronDown aria-hidden="true" className="size-4 transition-transform" />
+          </summary>
           <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <label className="flex flex-col gap-2 text-sm font-medium">
               Categoria
-              <select
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="category"
-                defaultValue={params.category ?? ""}
-              >
+              <DesignSelect aria-label="Categoria" name="category" defaultValue={params.category ?? ""}>
                 <option value="">Todas as categorias</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
@@ -153,62 +148,46 @@ export default async function ProductsPage({
                     {getCategoryLabel(category)}
                   </option>
                 ))}
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Marca
-              <select
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="brand"
-                defaultValue={params.brand ?? ""}
-              >
+              <DesignSelect aria-label="Marca" name="brand" defaultValue={params.brand ?? ""}>
                 <option value="">Todas as marcas</option>
                 {brands.map((brand) => (
                   <option key={brand.id} value={brand.id}>
                     {brand.name}
                   </option>
                 ))}
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Loja
-              <select
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="seller"
-                defaultValue={params.seller ?? ""}
-              >
+              <DesignSelect aria-label="Loja" name="seller" defaultValue={params.seller ?? ""}>
                 <option value="">Todas as lojas</option>
                 {sellers.map((seller) => (
                   <option key={seller.id} value={seller.id}>
                     {seller.store?.name ?? "Sem loja"}
                   </option>
                 ))}
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Ordenar
-              <select
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="sort"
-                defaultValue={params.sort}
-              >
+              <DesignSelect aria-label="Ordenar" name="sort" defaultValue={params.sort}>
                 <option value="relevance">Mais relevantes</option>
                 <option value="newest">Mais recentes</option>
                 <option value="price_asc">Menor preço</option>
                 <option value="price_desc">Maior preço</option>
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Disponibilidade
-              <select
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="availability"
-                defaultValue={params.availability}
-              >
+              <DesignSelect aria-label="Disponibilidade" name="availability" defaultValue={params.availability}>
                 <option value="ALL">Todos</option>
                 <option value="IN_STOCK">Em estoque</option>
                 <option value="OUT_OF_STOCK">Esgotados</option>
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Preço mínimo (R$)
@@ -220,24 +199,20 @@ export default async function ProductsPage({
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Oferta
-              <select
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="promotion"
-                defaultValue={params.promotion}
-              >
+              <DesignSelect aria-label="Oferta" name="promotion" defaultValue={params.promotion}>
                 <option value="ALL">Todos os preços</option>
                 <option value="ON_SALE">Em oferta</option>
-              </select>
+              </DesignSelect>
             </label>
           </div>
-          <button className="bg-primary text-primary-foreground hover:bg-primary/80 mt-4 h-10 rounded-md px-4 text-sm font-medium">
+          <Button type="submit" className="mt-4 rounded-md px-4">
             Aplicar filtros
-          </button>
+          </Button>
         </details>
       </form>
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">{result.total} produto(s)</h2>
+          <h2 className="text-xl font-semibold">{result.total} {result.total === 1 ? "produto" : "produtos"}</h2>
           {params.moto ||
           params.category ||
           params.brand ||
@@ -269,25 +244,14 @@ export default async function ProductsPage({
           }
         />
         {result.pageCount > 1 ? (
-          <nav className="mt-6 flex items-center justify-between gap-3" aria-label="Paginação de produtos">
-            {result.page > 1 ? (
-              <Link href={pageHref(result.page - 1)} className="rounded-md border px-3 py-2 text-sm">
-                Anterior
-              </Link>
-            ) : (
-              <span />
-            )}
-            <span className="text-muted-foreground text-sm">
-              Página {result.page} de {result.pageCount}
-            </span>
-            {result.page < result.pageCount ? (
-              <Link href={pageHref(result.page + 1)} className="rounded-md border px-3 py-2 text-sm">
-                Próxima
-              </Link>
-            ) : (
-              <span />
-            )}
-          </nav>
+          <Pagination
+            ariaLabel="Paginação de produtos"
+            page={result.page}
+            pageCount={result.pageCount}
+            previousHref={pageHref(result.page - 1)}
+            nextHref={pageHref(result.page + 1)}
+            className="mt-6"
+          />
         ) : null}
       </section>
     </main>

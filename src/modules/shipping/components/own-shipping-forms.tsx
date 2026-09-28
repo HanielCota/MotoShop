@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useActionState } from "react";
 import {
   createOwnShippingMethodAction,
@@ -8,8 +10,7 @@ import {
 } from "../actions/own-shipping-actions";
 
 const initial: OwnShippingState = {};
-const inputClass = "h-11 w-full min-w-0 rounded-md border bg-background px-3";
-const buttonClass = "min-h-11 rounded-md bg-primary px-4 py-2 text-primary-foreground disabled:opacity-50";
+const inputClass = "h-11";
 function Feedback({ state }: { state: OwnShippingState }) {
   return (
     <>
@@ -28,11 +29,11 @@ export function OwnShippingMethodForm() {
     <form action={action} className="grid gap-4 sm:grid-cols-2">
       <label className="grid gap-2 sm:col-span-2">
         Nome da entrega
-        <input className={inputClass} name="name" required minLength={3} maxLength={80} placeholder="Entrega local" />
+        <Input className={inputClass} name="name" required minLength={3} maxLength={80} placeholder="Entrega local" />
       </label>
       <label className="grid gap-2">
         CEP inicial
-        <input
+        <Input
           className={inputClass}
           name="postalCodeStart"
           inputMode="numeric"
@@ -43,7 +44,7 @@ export function OwnShippingMethodForm() {
       </label>
       <label className="grid gap-2">
         CEP final
-        <input
+        <Input
           className={inputClass}
           name="postalCodeEnd"
           inputMode="numeric"
@@ -54,7 +55,7 @@ export function OwnShippingMethodForm() {
       </label>
       <label className="grid gap-2">
         Preço por pedido da loja (R$)
-        <input
+        <Input
           className={inputClass}
           name="price"
           inputMode="decimal"
@@ -65,14 +66,14 @@ export function OwnShippingMethodForm() {
       </label>
       <label className="grid gap-2">
         Prazo em dias úteis
-        <input className={inputClass} name="estimatedDeliveryDays" type="number" min={1} max={365} required />
+        <Input className={inputClass} name="estimatedDeliveryDays" type="number" min={1} max={365} required />
       </label>
       <div className="sm:col-span-2">
         <Feedback state={state} />
       </div>
-      <button className={buttonClass} disabled={pending}>
+      <Button type="submit" size="lg" className="rounded-md px-4" disabled={pending}>
         {pending ? "Salvando…" : "Criar modalidade"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -82,9 +83,9 @@ export function OwnShippingToggle({ id, active }: { id: string; active: boolean 
     <form action={action} className="grid gap-2">
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="active" value={String(!active)} />
-      <button className={buttonClass} disabled={pending}>
+      <Button type="submit" size="lg" className="rounded-md px-4" disabled={pending}>
         {pending ? "Salvando…" : active ? "Desativar" : "Ativar"}
-      </button>
+      </Button>
       <Feedback state={state} />
     </form>
   );
@@ -107,15 +108,15 @@ export function OwnShipmentActions({
       {canShip && (
         <label className="grid gap-2">
           Código de rastreio (opcional)
-          <input className={inputClass} name="trackingCode" maxLength={100} />
+          <Input className={inputClass} name="trackingCode" maxLength={100} />
         </label>
       )}
       <p className="text-muted-foreground text-sm">
         {canShip ? "Confirme somente após despachar o pedido." : "Confirme somente após a entrega ao destinatário."}
       </p>
-      <button className={buttonClass} disabled={pending}>
+      <Button type="submit" size="lg" className="rounded-md px-4" disabled={pending}>
         {pending ? "Atualizando…" : canShip ? "Confirmar envio próprio" : "Confirmar entrega"}
-      </button>
+      </Button>
       <Feedback state={state} />
     </form>
   );

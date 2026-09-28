@@ -1,4 +1,5 @@
 import { measurementFields, type Measurements } from "../domain/product-commercial-fields";
+import { Input } from "@/components/ui/input";
 
 export function MeasurementFields({ values = {}, variant = false }: { values?: Measurements; variant?: boolean }) {
   return (
@@ -15,7 +16,7 @@ export function MeasurementFields({ values = {}, variant = false }: { values?: M
       {measurementFields.map(({ name, label }) => (
         <label key={name} className="flex min-w-0 flex-col gap-2 text-xs font-medium">
           {label}
-          <input
+          <Input
             name={variant ? `variant_${name}` : name}
             type="number"
             min="1"

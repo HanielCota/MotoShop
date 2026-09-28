@@ -4,13 +4,18 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/database";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
+import { ApplicationError } from "@/shared/errors/application-error";
 
 export async function approveSellerAction(sellerId: string): Promise<void> {
   const session = await requireAdminAccess();
   const seller = await db.seller.findFirst({ where: { id: sellerId, status: "PENDING" } });
-  if (!seller) return;
+  if (!seller)
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "A loja não está disponível para esta decisão. Atualize a página.",
+    });
   await db.$transaction([
-    db.seller.update({ where: { id: seller.id }, data: { status: "ACTIVE" } }),
+    db.seller.update({ where: { id: seller.id, status: seller.status }, data: { status: "ACTIVE" } }),
     db.auditLog.create({
       data: {
         action: "SELLER_APPROVED",
@@ -28,9 +33,13 @@ export async function approveSellerAction(sellerId: string): Promise<void> {
 export async function rejectSellerAction(sellerId: string): Promise<void> {
   const session = await requireAdminAccess();
   const seller = await db.seller.findFirst({ where: { id: sellerId, status: "PENDING" } });
-  if (!seller) return;
+  if (!seller)
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "A loja não está disponível para esta decisão. Atualize a página.",
+    });
   await db.$transaction([
-    db.seller.update({ where: { id: seller.id }, data: { status: "REJECTED" } }),
+    db.seller.update({ where: { id: seller.id, status: seller.status }, data: { status: "REJECTED" } }),
     db.auditLog.create({
       data: {
         action: "SELLER_REJECTED",
@@ -48,9 +57,13 @@ export async function rejectSellerAction(sellerId: string): Promise<void> {
 export async function suspendSellerAction(sellerId: string): Promise<void> {
   const session = await requireAdminAccess();
   const seller = await db.seller.findFirst({ where: { id: sellerId, status: { in: ["APPROVED", "ACTIVE"] } } });
-  if (!seller) return;
+  if (!seller)
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "A loja não está disponível para esta decisão. Atualize a página.",
+    });
   await db.$transaction([
-    db.seller.update({ where: { id: seller.id }, data: { status: "SUSPENDED" } }),
+    db.seller.update({ where: { id: seller.id, status: seller.status }, data: { status: "SUSPENDED" } }),
     db.auditLog.create({
       data: {
         action: "SELLER_SUSPENDED",
@@ -68,9 +81,13 @@ export async function suspendSellerAction(sellerId: string): Promise<void> {
 export async function reactivateSellerAction(sellerId: string): Promise<void> {
   const session = await requireAdminAccess();
   const seller = await db.seller.findFirst({ where: { id: sellerId, status: "SUSPENDED" } });
-  if (!seller) return;
+  if (!seller)
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "A loja não está disponível para esta decisão. Atualize a página.",
+    });
   await db.$transaction([
-    db.seller.update({ where: { id: seller.id }, data: { status: "ACTIVE" } }),
+    db.seller.update({ where: { id: seller.id, status: seller.status }, data: { status: "ACTIVE" } }),
     db.auditLog.create({
       data: {
         action: "SELLER_REACTIVATED",

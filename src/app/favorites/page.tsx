@@ -1,3 +1,7 @@
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
+import { DesignSelect } from "@/components/ui/design-select";
 import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
@@ -47,29 +51,30 @@ export default async function FavoritesPage({
       <form className="grid gap-3 rounded-xl border p-4 sm:grid-cols-[1fr_180px_180px_auto] sm:items-end" method="get">
         <label className="flex flex-col gap-2 text-sm font-medium">
           Buscar favorito
-          <input
-            className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-            name="favoriteQ"
-            defaultValue={params.favoriteQ ?? ""}
-            placeholder="Produto, marca ou loja"
-          />
+          <Input name="favoriteQ" defaultValue={params.favoriteQ ?? ""} placeholder="Produto, marca ou loja" />
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
           Disponibilidade
-          <select className="border-input bg-background h-10 rounded-md border px-3 text-sm" name="favoriteAvailability" defaultValue={params.favoriteAvailability}>
+          <DesignSelect
+            aria-label="Disponibilidade"
+            name="favoriteAvailability"
+            defaultValue={params.favoriteAvailability}
+          >
             <option value="ALL">Todos</option>
             <option value="IN_STOCK">Em estoque</option>
             <option value="OUT_OF_STOCK">Indisponíveis</option>
-          </select>
+          </DesignSelect>
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
           Ordenação
-          <select className="border-input bg-background h-10 rounded-md border px-3 text-sm" name="favoriteSort" defaultValue={params.favoriteSort}>
+          <DesignSelect aria-label="Ordenação" name="favoriteSort" defaultValue={params.favoriteSort}>
             <option value="newest">Mais recentes</option>
             <option value="oldest">Mais antigos</option>
-          </select>
+          </DesignSelect>
         </label>
-        <button className="bg-primary text-primary-foreground h-10 rounded-md px-4 text-sm font-medium">Filtrar</button>
+        <Button type="submit" className="rounded-md px-4">
+          Filtrar
+        </Button>
       </form>
 
       {result.favorites.length === 0 ? (
@@ -102,7 +107,10 @@ export default async function FavoritesPage({
                 ) : null}
                 <CardHeader>
                   <div className="flex items-center justify-between gap-2">
-                    <Badge variant="outline">{product.category.name}</Badge>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Badge variant="outline">{product.category.name}</Badge>
+                      {product.isDemo ? <Badge variant="secondary">Demonstração</Badge> : null}
+                    </div>
                     <span className="text-muted-foreground text-xs">{product.seller.store?.name}</span>
                   </div>
                   <CardTitle>
@@ -118,7 +126,11 @@ export default async function FavoritesPage({
                       {variant ? formatMoneyInCents(getCurrentPriceInCents(variant)) : "Sob consulta"}
                     </p>
                     <p className="text-muted-foreground text-xs">
-                      {inStock ? `${variant?.inventory?.availableQuantity} em estoque` : "Indisponível"}
+                      {product.isDemo
+                        ? "Exemplo ilustrativo · não disponível para compra"
+                        : inStock
+                          ? `${variant?.inventory?.availableQuantity} em estoque`
+                          : "Indisponível"}
                     </p>
                   </div>
                   <FavoriteButton productId={product.id} initialIsFavorite />
@@ -129,11 +141,14 @@ export default async function FavoritesPage({
         </div>
       )}
       {result.pageCount > 1 ? (
-        <nav className="flex items-center justify-between gap-3" aria-label="Paginação de favoritos">
-          {result.page > 1 ? <Link href={pageHref(result.page - 1)} className="rounded-md border px-3 py-2 text-sm">Anterior</Link> : <span />}
-          <span className="text-muted-foreground text-sm">Página {result.page} de {result.pageCount} · {result.total} favorito(s)</span>
-          {result.page < result.pageCount ? <Link href={pageHref(result.page + 1)} className="rounded-md border px-3 py-2 text-sm">Próxima</Link> : <span />}
-        </nav>
+        <Pagination
+          ariaLabel="Paginação de favoritos"
+          page={result.page}
+          pageCount={result.pageCount}
+          previousHref={pageHref(result.page - 1)}
+          nextHref={pageHref(result.page + 1)}
+          summary={<>{result.total} favorito(s)</>}
+        />
       ) : null}
     </main>
   );

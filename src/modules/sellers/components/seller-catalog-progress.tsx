@@ -35,10 +35,10 @@ export function SellerCatalogProgress({ progress }: { progress: Progress }) {
           ))}
         </ol>
         {progress.approved > 0 ? (
-          <p className="text-muted-foreground text-sm">Sua loja já tem {progress.approved} produto(s) publicado(s).</p>
+          <p className="text-muted-foreground text-sm">Sua loja já tem {progress.approved} {progress.approved === 1 ? "produto publicado" : "produtos publicados"}.</p>
         ) : progress.submitted > 0 ? (
           <p className="text-muted-foreground text-sm">
-            {progress.submitted} produto(s) aguardando análise da Moto Shop. Você pode acompanhar o status abaixo.
+            {progress.submitted} {progress.submitted === 1 ? "produto" : "produtos"} aguardando análise da Moto Shop. Você pode acompanhar o status abaixo.
           </p>
         ) : progress.editable > 0 ? (
           <p className="text-muted-foreground text-sm">

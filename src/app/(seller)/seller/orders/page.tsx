@@ -1,4 +1,7 @@
-import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
+import { DesignSelect } from "@/components/ui/design-select";
 import type { Route } from "next";
 
 import { Badge } from "@/components/ui/badge";
@@ -67,81 +70,54 @@ export default async function SellerOrdersPage({
       <Card>
         <CardHeader>
           <CardTitle>Pedidos da loja</CardTitle>
-          <CardDescription>{result.total} pedido(s) encontrados.</CardDescription>
+          <CardDescription>{result.total} {result.total === 1 ? "pedido encontrado" : "pedidos encontrados"}.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="mb-5 grid gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-6" method="get">
             <label className="flex flex-col gap-2 text-sm font-medium">
               Buscar pedido
-              <input
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="q"
-                defaultValue={params.q ?? ""}
-                placeholder="Número, cliente ou e-mail"
-              />
+              <Input name="q" defaultValue={params.q ?? ""} placeholder="Número, cliente ou e-mail" />
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Status
-              <select
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="status"
-                defaultValue={params.status}
-              >
+              <DesignSelect aria-label="Status" name="status" defaultValue={params.status}>
                 <option value="ALL">Todos</option>
                 {Object.entries(statusLabels).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
                 ))}
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Status do envio
-              <select
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="shipmentStatus"
-                defaultValue={params.shipmentStatus}
-              >
+              <DesignSelect aria-label="Status do envio" name="shipmentStatus" defaultValue={params.shipmentStatus}>
                 <option value="ALL">Todos</option>
                 {Object.entries(shipmentStatusLabels).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
                 ))}
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Ordenação
-              <select
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="sort"
-                defaultValue={params.sort}
-              >
+              <DesignSelect aria-label="Ordenação" name="sort" defaultValue={params.sort}>
                 <option value="newest">Mais recentes</option>
                 <option value="oldest">Mais antigos</option>
-              </select>
+              </DesignSelect>
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
               De
-              <input
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="from"
-                type="date"
-                defaultValue={params.from ?? ""}
-              />
+              <Input name="from" type="date" defaultValue={params.from ?? ""} />
             </label>
             <label className="flex flex-col gap-2 text-sm font-medium">
               Até
-              <input
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="to"
-                type="date"
-                defaultValue={params.to ?? ""}
-              />
+              <Input name="to" type="date" defaultValue={params.to ?? ""} />
             </label>
-            <button className="bg-primary text-primary-foreground h-10 rounded-md px-4 text-sm font-medium">
+            <Button type="submit" className="rounded-md px-4">
               Filtrar
-            </button>
+            </Button>
           </form>
 
           {result.orders.length === 0 ? (
@@ -240,25 +216,14 @@ export default async function SellerOrdersPage({
           )}
 
           {result.pageCount > 1 ? (
-            <nav className="mt-6 flex items-center justify-between gap-3" aria-label="Paginação de pedidos do seller">
-              {result.page > 1 ? (
-                <Link href={pageHref(result.page - 1)} className="rounded-md border px-3 py-2 text-sm">
-                  Anterior
-                </Link>
-              ) : (
-                <span />
-              )}
-              <span className="text-muted-foreground text-sm">
-                Página {result.page} de {result.pageCount}
-              </span>
-              {result.page < result.pageCount ? (
-                <Link href={pageHref(result.page + 1)} className="rounded-md border px-3 py-2 text-sm">
-                  Próxima
-                </Link>
-              ) : (
-                <span />
-              )}
-            </nav>
+            <Pagination
+              ariaLabel="Paginação de pedidos do seller"
+              page={result.page}
+              pageCount={result.pageCount}
+              previousHref={pageHref(result.page - 1)}
+              nextHref={pageHref(result.page + 1)}
+              className="mt-6"
+            />
           ) : null}
         </CardContent>
       </Card>

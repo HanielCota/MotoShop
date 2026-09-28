@@ -1,4 +1,6 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
 import { CustomerAddressActions } from "@/modules/customers/components/customer-address-actions";
@@ -26,14 +28,15 @@ export default async function CustomerAddressesPage({
       <form className="flex flex-wrap items-end gap-3 rounded-xl border p-4" method="get">
         <label className="flex min-w-64 flex-col gap-2 text-sm font-medium">
           Buscar endereço
-          <input
-            className="border-input bg-background h-10 rounded-md border px-3 text-sm"
+          <Input
             name="addressQ"
             defaultValue={params.addressQ ?? ""}
             placeholder="Rótulo, destinatário, cidade ou CEP"
           />
         </label>
-        <button className="bg-primary text-primary-foreground h-10 rounded-md px-4 text-sm font-medium">Buscar</button>
+        <Button type="submit" className="rounded-md px-4">
+          Buscar
+        </Button>
       </form>
 
       {addresses.length > 0 ? (

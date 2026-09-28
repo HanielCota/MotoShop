@@ -178,6 +178,7 @@ export async function updateSellerProduct(
             active: true,
           },
         });
+        await tx.$queryRaw`SELECT id FROM "inventories" WHERE "variantId" = ${variant.id} AND "sellerId" = ${actor.sellerId} FOR UPDATE`;
         const inventory = await tx.inventory.findFirst({
           where: { variantId: variant.id, sellerId: actor.sellerId },
         });

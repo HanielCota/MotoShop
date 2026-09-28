@@ -10,11 +10,7 @@ function parseQuestionDate(value: string | null | undefined, endOfDay = false) {
   const month = Number(parts[1]);
   const day = Number(parts[2]);
   const date = new Date(Date.UTC(year, month - 1, day));
-  if (
-    date.getUTCFullYear() !== year ||
-    date.getUTCMonth() !== month - 1 ||
-    date.getUTCDate() !== day
-  ) return undefined;
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
   if (endOfDay) date.setUTCDate(date.getUTCDate() + 1);
   return date;
 }
@@ -37,6 +33,7 @@ export async function listSellerQuestions(
   const to = parseQuestionDate(input.to, true);
   const where = {
     sellerId,
+    hiddenAt: null,
     ...(from || to ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) } } : {}),
     ...(input.filter === "UNANSWERED" ? { answeredAt: null } : {}),
     ...(input.filter === "ANSWERED" ? { answeredAt: { not: null } } : {}),

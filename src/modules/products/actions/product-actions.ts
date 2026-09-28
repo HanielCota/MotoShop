@@ -154,6 +154,7 @@ export async function adjustInventoryAction(variantId: string, quantityChange: n
     return { error: "Informe um ajuste inteiro diferente de zero." };
   try {
     await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "inventories" WHERE "variantId" = ${variantId} AND "sellerId" = ${context.seller.id} FOR UPDATE`;
       const inventory = await tx.inventory.findFirst({ where: { variantId, sellerId: context.seller.id } });
       if (!inventory)
         throw new ApplicationError({ code: "NOT_FOUND", message: "Estoque não encontrado.", statusCode: 404 });

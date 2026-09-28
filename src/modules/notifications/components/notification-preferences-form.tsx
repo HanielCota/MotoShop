@@ -1,4 +1,7 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
+import { DesignCheckbox } from "@/components/ui/design-checkbox";
 
 import { useActionState } from "react";
 
@@ -15,12 +18,7 @@ export function NotificationPreferencesForm({ emailOrderUpdatesEnabled }: { emai
   return (
     <form action={action} className="space-y-4">
       <label className="flex items-start gap-3 text-sm">
-        <input
-          type="checkbox"
-          name="emailOrderUpdatesEnabled"
-          defaultChecked={emailOrderUpdatesEnabled}
-          className="mt-1 size-4 rounded border"
-        />
+        <DesignCheckbox name="emailOrderUpdatesEnabled" defaultChecked={emailOrderUpdatesEnabled} className="mt-1" />
         <span>
           <span className="font-medium">Atualizações dos meus pedidos</span>
           <span className="text-muted-foreground mt-1 block">
@@ -38,12 +36,9 @@ export function NotificationPreferencesForm({ emailOrderUpdatesEnabled }: { emai
           {state.success}
         </p>
       ) : null}
-      <button
-        className="bg-primary text-primary-foreground hover:bg-primary/80 h-10 rounded-md px-4 text-sm font-medium disabled:opacity-50"
-        disabled={pending}
-      >
+      <Button type="submit" className="rounded-md px-4" disabled={pending}>
         {pending ? "Salvando..." : "Salvar preferências"}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 import { useState, useTransition } from "react";
 
@@ -17,14 +19,9 @@ export function ProductStatusActions({ productId }: { productId: string }) {
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-      <button
-        type="button"
-        onClick={approve}
-        disabled={pending}
-        className="bg-primary text-primary-foreground hover:bg-primary/80 h-9 rounded-md px-3 text-sm font-medium disabled:opacity-50"
-      >
+      <Button size="sm" type="button" onClick={approve} disabled={pending} className="rounded-md">
         {pending ? "Salvando..." : "Aprovar"}
-      </button>
+      </Button>
       <form
         action={async (formData) => {
           const result = await rejectProductAction(productId, formData);
@@ -32,18 +29,15 @@ export function ProductStatusActions({ productId }: { productId: string }) {
         }}
         className="flex flex-1 gap-2"
       >
-        <input
+        <Input
           name="reason"
           placeholder="Motivo da rejeição"
           required
           className="border-input bg-background h-9 min-w-0 flex-1 rounded-md border px-3 text-sm"
         />
-        <button
-          disabled={pending}
-          className="border-border hover:bg-muted h-9 rounded-md border px-3 text-sm font-medium disabled:opacity-50"
-        >
+        <Button type="submit" variant="outline" size="sm" disabled={pending} className="rounded-md">
           Rejeitar
-        </button>
+        </Button>
       </form>
       {message ? (
         <span className="text-muted-foreground text-xs" role="status">

@@ -49,10 +49,10 @@ export async function createCustomerAddressAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira o endereço." };
 
   try {
-    const addressCount = await db.customerAddress.count({ where: { userId: session.user.id } });
-    const shouldBeDefault = parsed.data.isDefault || addressCount === 0;
-
     await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${session.user.id} FOR UPDATE`;
+      const addressCount = await tx.customerAddress.count({ where: { userId: session.user.id } });
+      const shouldBeDefault = parsed.data.isDefault || addressCount === 0;
       if (shouldBeDefault) {
         await tx.customerAddress.updateMany({ where: { userId: session.user.id }, data: { isDefault: false } });
       }
@@ -78,12 +78,13 @@ export async function setDefaultCustomerAddressAction(addressId: string): Promis
   if (!z.cuid().safeParse(addressId).success) return { error: "Endereço inválido." };
 
   try {
-    const address = await db.customerAddress.findFirst({ where: { id: addressId, userId: session.user.id } });
-    if (!address) throw new ApplicationError({ code: "NOT_FOUND", message: "Endereço não encontrado." });
-    await db.$transaction([
-      db.customerAddress.updateMany({ where: { userId: session.user.id }, data: { isDefault: false } }),
-      db.customerAddress.update({ where: { id: address.id }, data: { isDefault: true } }),
-    ]);
+    await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${session.user.id} FOR UPDATE`;
+      const address = await tx.customerAddress.findFirst({ where: { id: addressId, userId: session.user.id } });
+      if (!address) throw new ApplicationError({ code: "NOT_FOUND", message: "Endereço não encontrado." });
+      await tx.customerAddress.updateMany({ where: { userId: session.user.id }, data: { isDefault: false } });
+      await tx.customerAddress.update({ where: { id: address.id }, data: { isDefault: true } });
+    });
     revalidatePath("/account/addresses");
     revalidatePath("/checkout");
     return { success: "Endereço padrão atualizado." };
@@ -97,10 +98,10 @@ export async function deleteCustomerAddressAction(addressId: string): Promise<Cu
   if (!z.cuid().safeParse(addressId).success) return { error: "Endereço inválido." };
 
   try {
-    const address = await db.customerAddress.findFirst({ where: { id: addressId, userId: session.user.id } });
-    if (!address) throw new ApplicationError({ code: "NOT_FOUND", message: "Endereço não encontrado." });
-
     await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${session.user.id} FOR UPDATE`;
+      const address = await tx.customerAddress.findFirst({ where: { id: addressId, userId: session.user.id } });
+      if (!address) throw new ApplicationError({ code: "NOT_FOUND", message: "Endereço não encontrado." });
       await tx.customerAddress.delete({ where: { id: address.id } });
       if (address.isDefault) {
         const nextAddress = await tx.customerAddress.findFirst({

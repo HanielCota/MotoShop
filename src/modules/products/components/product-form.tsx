@@ -1,4 +1,9 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+
+import { DesignSelect } from "@/components/ui/design-select";
 
 import { startTransition, useActionState, useState } from "react";
 
@@ -11,8 +16,6 @@ type Option = { id: string; name: string };
 type FitmentOption = { id: string; label: string };
 
 const initialState: ProductActionState = {};
-const inputClassName =
-  "border-input bg-background focus:ring-ring/40 h-10 w-full rounded-md border px-3 text-sm outline-none focus:ring-3";
 
 export function ProductForm({
   categories,
@@ -37,14 +40,14 @@ export function ProductForm({
     >
       <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
         Nome
-        <input className={inputClassName} name="name" required />
+        <Input name="name" required />
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium">
-        Slug <input className={inputClassName} name="slug" placeholder="capacete-fox-v1" required />
+        Slug <Input name="slug" placeholder="capacete-fox-v1" required />
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
         Descrição
-        <textarea
+        <Textarea
           className="border-input bg-background focus:ring-ring/40 min-h-28 rounded-md border px-3 py-2 text-sm outline-none focus:ring-3"
           name="description"
           required
@@ -52,36 +55,36 @@ export function ProductForm({
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium">
         Categoria
-        <select className={inputClassName} name="categoryId" required>
+        <DesignSelect aria-label="Categoria" name="categoryId" required>
           <option value="">Selecione</option>
           {categories.map((option) => (
             <option key={option.id} value={option.id}>
               {option.name}
             </option>
           ))}
-        </select>
+        </DesignSelect>
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium">
         Marca
-        <select className={inputClassName} name="brandId" required>
+        <DesignSelect aria-label="Marca" name="brandId" required>
           <option value="">Selecione</option>
           {brands.map((option) => (
             <option key={option.id} value={option.id}>
               {option.name}
             </option>
           ))}
-        </select>
+        </DesignSelect>
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
         Compatibilidade com motos
-        <select className={inputClassName + " min-h-32 py-2"} name="motorcycleFitmentIds" multiple>
+        <DesignSelect aria-label="Compatibilidade com motos" name="motorcycleFitmentIds" multiple>
           {fitments.map((fitment) => (
             <option key={fitment.id} value={fitment.id}>
               {fitment.label}
             </option>
           ))}
-        </select>
-        <span className="text-muted-foreground text-xs">Use Ctrl/Cmd para selecionar mais de uma moto.</span>
+        </DesignSelect>
+        <span className="text-muted-foreground text-xs">Selecione uma ou mais motos; não é preciso usar Ctrl/Cmd.</span>
       </label>
       <MeasurementFields />
       <VariantsEditor initialVariants={[{ key: "new-variant", title: "", sku: "", priceInCents: "", stock: "" }]} />
@@ -95,12 +98,9 @@ export function ProductForm({
           {state.success}
         </p>
       ) : null}
-      <button
-        className="bg-primary text-primary-foreground hover:bg-primary/80 h-10 rounded-md px-4 text-sm font-medium disabled:opacity-50 sm:col-span-2"
-        disabled={pending}
-      >
+      <Button type="submit" className="rounded-md px-4 sm:col-span-2" disabled={pending}>
         {pending ? "Salvando..." : "Criar rascunho"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -138,9 +138,9 @@ export function VariantsEditor({ initialVariants }: { initialVariants: VariantDr
           <legend className="text-sm font-medium">Variações</legend>
           <p className="text-muted-foreground mt-1 text-xs">Cada variação possui SKU, preço e estoque próprios.</p>
         </div>
-        <button type="button" onClick={addVariant} className="rounded-md border px-3 py-2 text-xs font-medium">
+        <Button type="button" variant="outline" size="sm" onClick={addVariant} className="rounded-md text-xs">
           Adicionar variação
-        </button>
+        </Button>
       </div>
       <div className="space-y-3">
         {variants.map((variant, index) => (
@@ -148,22 +148,15 @@ export function VariantsEditor({ initialVariants }: { initialVariants: VariantDr
             <input type="hidden" name="variantId" value={variant.id ?? ""} readOnly />
             <label className="flex flex-col gap-2 text-xs font-medium">
               Variação {index + 1}
-              <input
-                className={inputClassName}
-                name="variantTitle"
-                defaultValue={variant.title}
-                placeholder="Tamanho M / Preto"
-                required
-              />
+              <Input name="variantTitle" defaultValue={variant.title} placeholder="Tamanho M / Preto" required />
             </label>
             <label className="flex flex-col gap-2 text-xs font-medium">
               SKU
-              <input className={inputClassName} name="sku" defaultValue={variant.sku} required />
+              <Input name="sku" defaultValue={variant.sku} required />
             </label>
             <label className="flex flex-col gap-2 text-xs font-medium">
               Preço (R$)
-              <input
-                className={inputClassName}
+              <Input
                 name="price"
                 type="text"
                 inputMode="decimal"
@@ -178,21 +171,13 @@ export function VariantsEditor({ initialVariants }: { initialVariants: VariantDr
             </label>
             <label className="flex flex-col gap-2 text-xs font-medium">
               Estoque
-              <input
-                className={inputClassName}
-                name="stock"
-                type="number"
-                min="0"
-                defaultValue={variant.stock}
-                required
-              />
+              <Input name="stock" type="number" min="0" defaultValue={variant.stock} required />
             </label>
             <fieldset className="grid min-w-0 gap-3 rounded-lg border p-3 sm:col-span-4 sm:grid-cols-3">
               <legend className="px-1 text-sm font-medium">Promoção da variação {index + 1}</legend>
               <label className="flex min-w-0 flex-col gap-2 text-xs font-medium">
                 Preço promocional (R$)
-                <input
-                  className={inputClassName}
+                <Input
                   name="promotionalPrice"
                   inputMode="decimal"
                   placeholder="Opcional"
@@ -205,21 +190,11 @@ export function VariantsEditor({ initialVariants }: { initialVariants: VariantDr
               </label>
               <label className="flex min-w-0 flex-col gap-2 text-xs font-medium">
                 Início da promoção
-                <input
-                  className={inputClassName + " min-w-0"}
-                  name="promotionStartsAt"
-                  type="datetime-local"
-                  defaultValue={variant.promotionStartsAt ?? ""}
-                />
+                <Input name="promotionStartsAt" type="datetime-local" defaultValue={variant.promotionStartsAt ?? ""} />
               </label>
               <label className="flex min-w-0 flex-col gap-2 text-xs font-medium">
                 Término da promoção
-                <input
-                  className={inputClassName + " min-w-0"}
-                  name="promotionEndsAt"
-                  type="datetime-local"
-                  defaultValue={variant.promotionEndsAt ?? ""}
-                />
+                <Input name="promotionEndsAt" type="datetime-local" defaultValue={variant.promotionEndsAt ?? ""} />
               </label>
               <p className="text-muted-foreground text-xs sm:col-span-3">
                 Horários em UTC−03:00 (Brasília). Sem início: imediata. Sem término: sem prazo. Para remover, limpe o

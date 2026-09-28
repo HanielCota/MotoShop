@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 import { FormEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -28,7 +30,7 @@ export function InventoryAdjustForm({ variantId }: { variantId: string }) {
       <label className="sr-only" htmlFor={`inventory-${variantId}`}>
         Ajuste de estoque
       </label>
-      <input
+      <Input
         id={`inventory-${variantId}`}
         className="border-input bg-background h-8 w-28 rounded-md border px-2 text-xs"
         type="number"
@@ -38,12 +40,9 @@ export function InventoryAdjustForm({ variantId }: { variantId: string }) {
         placeholder="+/- quantidade"
         required
       />
-      <button
-        className="border-border hover:bg-muted h-8 rounded-md border px-2 text-xs font-medium disabled:opacity-50"
-        disabled={pending}
-      >
+      <Button type="submit" variant="outline" size="compact" className="px-2" disabled={pending}>
         {pending ? "..." : "Ajustar"}
-      </button>
+      </Button>
       {message ? (
         <span className="text-muted-foreground text-xs" role="status">
           {message}

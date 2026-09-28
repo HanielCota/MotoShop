@@ -40,11 +40,12 @@ export class MelhorEnvioProvider implements ShippingProvider {
     return payload
       .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
       .filter((item) => !item.error)
+      .filter((item) => typeof item.id === "number" || (typeof item.id === "string" && item.id.length > 0))
       .map((item) => {
         const estimatedDeliveryDays = toOptionalInteger(item.custom_delivery_time ?? item.delivery_time);
         return {
           provider: "MELHOR_ENVIO",
-          serviceCode: String(item.id ?? item.service ?? "unknown"),
+          serviceCode: String(item.id),
           carrier: readNestedString(item, ["company", "name"]) ?? "Transportadora",
           service: String(item.name ?? item.service ?? "Serviço"),
           priceInCents: toCents(item.custom_price ?? item.price),
@@ -74,8 +75,7 @@ export class MelhorEnvioProvider implements ShippingProvider {
         products: input.products.map((product) => ({
           name: product.name ?? product.id,
           quantity: product.quantity,
-          unitary_value:
-            (product.unitaryValueInCents ?? product.insuranceValueInCents / product.quantity) / 100,
+          unitary_value: (product.unitaryValueInCents ?? product.insuranceValueInCents / product.quantity) / 100,
         })),
         volumes: input.volumes.map((volume) => ({
           height: volume.heightInCm,
@@ -187,11 +187,14 @@ function toRecord(value: unknown): Record<string, unknown> {
 }
 
 function toCents(value: unknown): number {
+  if (typeof value !== "number" && (typeof value !== "string" || value.trim() === "")) return -1;
   const amount = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(amount) ? Math.round(amount * 100) : -1;
+  const cents = Math.round(amount * 100);
+  return Number.isFinite(amount) && amount >= 0 && Number.isSafeInteger(cents) && cents <= 2_147_483_647 ? cents : -1;
 }
 
 function toOptionalInteger(value: unknown): number | undefined {
+  if (typeof value !== "number" && (typeof value !== "string" || value.trim() === "")) return undefined;
   const numberValue = Number(value);
   return Number.isInteger(numberValue) && numberValue >= 0 ? numberValue : undefined;
 }

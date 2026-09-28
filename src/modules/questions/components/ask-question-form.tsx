@@ -1,4 +1,5 @@
 "use client";
+import { Textarea } from "@/components/ui/textarea";
 
 import { useActionState } from "react";
 
@@ -14,7 +15,7 @@ export function AskQuestionForm({ productId }: { productId: string }) {
       <label className="block text-sm font-medium text-slate-900" htmlFor="question">
         Faça uma pergunta sobre este produto
       </label>
-      <textarea
+      <Textarea
         id="question"
         name="question"
         required

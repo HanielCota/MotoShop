@@ -1,3 +1,6 @@
+import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/ui/pagination";
+import { DesignSelect } from "@/components/ui/design-select";
 import Link from "next/link";
 import type { Route } from "next";
 
@@ -53,7 +56,7 @@ export default async function SellerQuestionsPage({
       >
         <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
           Buscar pergunta
-          <input
+          <Input
             name="questionQ"
             defaultValue={params.questionQ ?? ""}
             placeholder="Pergunta, produto ou e-mail"
@@ -62,7 +65,8 @@ export default async function SellerQuestionsPage({
         </label>
         <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
           Exibir
-          <select
+          <DesignSelect
+            aria-label="Exibir"
             name="questionFilter"
             defaultValue={params.questionFilter}
             className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
@@ -70,22 +74,37 @@ export default async function SellerQuestionsPage({
             <option value="ALL">Todas as perguntas</option>
             <option value="UNANSWERED">Sem resposta</option>
             <option value="ANSWERED">Respondidas</option>
-          </select>
+          </DesignSelect>
         </label>
         <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
           De
-          <input name="questionFrom" type="date" defaultValue={params.questionFrom ?? ""} className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm" />
+          <Input
+            name="questionFrom"
+            type="date"
+            defaultValue={params.questionFrom ?? ""}
+            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+          />
         </label>
         <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
           Até
-          <input name="questionTo" type="date" defaultValue={params.questionTo ?? ""} className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm" />
+          <Input
+            name="questionTo"
+            type="date"
+            defaultValue={params.questionTo ?? ""}
+            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+          />
         </label>
         <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
           Ordenação
-          <select name="questionSort" defaultValue={params.questionSort} className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm">
+          <DesignSelect
+            aria-label="Ordenação"
+            name="questionSort"
+            defaultValue={params.questionSort}
+            className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm"
+          >
             <option value="newest">Mais recentes</option>
             <option value="oldest">Mais antigas</option>
-          </select>
+          </DesignSelect>
         </label>
         <button className="h-10 rounded-md bg-orange-600 px-4 text-sm font-semibold text-white">Filtrar</button>
       </form>
@@ -116,25 +135,14 @@ export default async function SellerQuestionsPage({
         </div>
       )}
       {result.pageCount > 1 ? (
-        <nav className="flex items-center justify-between gap-3" aria-label="Paginação de perguntas">
-          {result.page > 1 ? (
-            <Link href={pageHref(result.page - 1)} className="rounded-md border border-slate-300 px-3 py-2 text-sm">
-              Anterior
-            </Link>
-          ) : (
-            <span />
-          )}
-          <span className="text-sm text-slate-500">
-            Página {result.page} de {result.pageCount} · {result.total} pergunta(s)
-          </span>
-          {result.page < result.pageCount ? (
-            <Link href={pageHref(result.page + 1)} className="rounded-md border border-slate-300 px-3 py-2 text-sm">
-              Próxima
-            </Link>
-          ) : (
-            <span />
-          )}
-        </nav>
+        <Pagination
+          ariaLabel="Paginação de perguntas"
+          page={result.page}
+          pageCount={result.pageCount}
+          previousHref={pageHref(result.page - 1)}
+          nextHref={pageHref(result.page + 1)}
+          summary={<>{result.total} pergunta(s)</>}
+        />
       ) : null}
     </main>
   );

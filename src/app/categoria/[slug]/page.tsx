@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import { PublicCatalogLanding } from "@/modules/catalog/components/public-catalog-landing";
+import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { getPublicCategoryBySlug } from "@/modules/catalog/queries/public-catalog";
 import { loadPublicCatalogSearchParams } from "@/modules/catalog/search-params";
 import { listApprovedProducts } from "@/modules/products/queries/products";
@@ -10,9 +11,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const category = await getPublicCategoryBySlug(slug);
   if (!category) return { title: "Categoria não encontrada" };
+  const categoryLabel = getCategoryLabel(category);
   return {
-    title: category.name,
-    description: `Produtos de ${category.name} para motocross na Moto Shop.`,
+    title: categoryLabel,
+    description: `Produtos de ${categoryLabel} para motocross na Moto Shop.`,
     alternates: { canonical: `/categoria/${category.slug}` },
   };
 }
@@ -24,12 +26,13 @@ export default async function CategoryPage({ params, searchParams }: { params: P
   if (!category) notFound();
 
   const result = await listApprovedProducts({ categoryId: category.id, sort: catalogParams.sort, availability: catalogParams.availability, promotion: catalogParams.promotion, page: catalogParams.page, pageSize: 12 });
-  const parentLabel = category.parent ? `${category.parent.name} / ` : "";
+  const categoryLabel = getCategoryLabel(category);
+  const parentLabel = category.parent ? `${getCategoryLabel(category.parent)} / ` : "";
 
   return (
     <PublicCatalogLanding
-      title={`${parentLabel}${category.name}`}
-      description={`Produtos de ${category.name} aprovados pela Moto Shop, com estoque e lojas verificadas.`}
+      title={`${parentLabel}${categoryLabel}`}
+      description={`Produtos de ${categoryLabel} aprovados pela Moto Shop, com estoque e lojas verificadas.`}
       result={result}
       allProductsHref={`/products?category=${category.id}`}
       baseHref={`/categoria/${category.slug}`}

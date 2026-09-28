@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/database";
 import { requireAuthenticatedUser, requireSellerAccess } from "@/modules/auth/application/authorization";
 import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 const questionSchema = z.object({ question: z.string().trim().min(5, "Escreva uma pergunta maior.").max(500) });
 const answerSchema = z.object({ answer: z.string().trim().min(2, "Escreva uma resposta.").max(1000) });
@@ -22,6 +23,7 @@ export async function askProductQuestionAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira sua pergunta." };
 
   try {
+    await assertRateLimit({ key: `question:${session.user.id}`, windowSeconds: 60, max: 5 });
     const product = await db.product.findFirst({
       where: { id: productId, status: "APPROVED" },
       select: { id: true, slug: true, sellerId: true },
@@ -54,7 +56,7 @@ export async function answerProductQuestionAction(
 
   try {
     const question = await db.productQuestion.findFirst({
-      where: { id: questionId, sellerId: context.seller.id },
+      where: { id: questionId, sellerId: context.seller.id, hiddenAt: null },
       include: { product: { select: { slug: true } } },
     });
     if (!question) throw new ApplicationError({ code: "NOT_FOUND", message: "Pergunta não encontrada." });
