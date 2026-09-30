@@ -6,10 +6,8 @@ import { db } from "@/lib/database";
 import { logger } from "@/lib/logger";
 import { inngest } from "@/lib/inngest/client";
 import { melhorEnvioProvider } from "@/lib/shipping/melhor-envio-provider";
-import {
-  getOrderStatusFromSellerOrders,
-  getSellerOrderStatusFromShipment,
-} from "@/modules/orders/domain/fulfillment-status";
+import { getSellerOrderStatusFromShipment } from "@/modules/orders/domain/fulfillment-status";
+import { syncOrderStatusFromSellerOrders } from "@/modules/orders/application/sync-order-status";
 import type { ShippingAddress, ShippingProduct, ShippingVolume } from "@/shared/shipping/shipping-provider";
 import { ApplicationError } from "@/shared/errors/application-error";
 
@@ -152,9 +150,13 @@ export async function syncFulfillmentStatuses(
   shipmentStatus: ShipmentStatus,
   actorUserId: string,
 ) {
+  const reference = await tx.sellerOrder.findUnique({ where: { id: sellerOrderId }, select: { orderId: true } });
+  if (!reference) throw new ApplicationError({ code: "NOT_FOUND", message: "Pedido do seller não encontrado." });
+  await tx.$queryRaw`SELECT id FROM "orders" WHERE id = ${reference.orderId} FOR UPDATE`;
+
   const sellerOrder = await tx.sellerOrder.findUnique({
     where: { id: sellerOrderId },
-    select: { id: true, orderId: true, status: true, order: { select: { status: true } } },
+    select: { id: true, orderId: true, status: true },
   });
   if (!sellerOrder) throw new ApplicationError({ code: "NOT_FOUND", message: "Pedido do seller não encontrado." });
 
@@ -172,23 +174,7 @@ export async function syncFulfillmentStatuses(
     });
   }
 
-  const sellerOrders = await tx.sellerOrder.findMany({
-    where: { orderId: sellerOrder.orderId },
-    select: { status: true },
-  });
-  const nextOrderStatus = getOrderStatusFromSellerOrders(sellerOrders.map((order) => order.status));
-  if (nextOrderStatus !== sellerOrder.order.status) {
-    await tx.order.update({ where: { id: sellerOrder.orderId }, data: { status: nextOrderStatus } });
-    await tx.auditLog.create({
-      data: {
-        action: "ORDER_STATUS_CHANGED",
-        entityType: "ORDER",
-        entityId: sellerOrder.orderId,
-        actorUserId,
-        metadata: { previousStatus: sellerOrder.order.status, nextStatus: nextOrderStatus, source: "FULFILLMENT" },
-      },
-    });
-  }
+  await syncOrderStatusFromSellerOrders(tx, sellerOrder.orderId, "FULFILLMENT", actorUserId);
 }
 
 async function getSellerOrderForFulfillment(sellerOrderId: string) {

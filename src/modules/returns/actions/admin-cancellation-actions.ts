@@ -8,6 +8,7 @@ import { db } from "@/lib/database";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { cancelCommittedInventory } from "@/modules/inventory/application/settle-order-inventory";
 import { refundPayment } from "@/modules/payments/application/refund-payment";
+import { syncOrderStatusFromSellerOrders } from "@/modules/orders/application/sync-order-status";
 import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
 
 const reviewSchema = z.object({
@@ -41,6 +42,7 @@ export async function reviewCancellationRequestAction(
     if (parsed.data.decision === "REJECT") {
       await rejectCancellation(
         request.id,
+        request.orderId,
         request.sellerOrderId,
         request.previousSellerOrderStatus,
         parsed.data.note,
@@ -124,16 +126,7 @@ export async function reviewCancellationRequestAction(
       await tx.sellerOrder.update({ where: { id: current.sellerOrderId }, data: { status: "CANCELLED" } });
       await tx.cancellationRequest.update({ where: { id: current.id }, data: { status: "REFUNDED" } });
 
-      const sellerOrders = await tx.sellerOrder.findMany({
-        where: { orderId: current.orderId },
-        select: { status: true },
-      });
-      const nextOrderStatus = sellerOrders.every((sellerOrder) => sellerOrder.status === "CANCELLED")
-        ? "CANCELLED"
-        : sellerOrders.some((sellerOrder) => sellerOrder.status === "CANCELLED")
-          ? "PARTIALLY_CANCELLED"
-          : undefined;
-      if (nextOrderStatus) await tx.order.update({ where: { id: current.orderId }, data: { status: nextOrderStatus } });
+      await syncOrderStatusFromSellerOrders(tx, current.orderId, "CANCELLATION", session.user.id);
       await tx.auditLog.create({
         data: {
           action: "CANCELLATION_REFUNDED",
@@ -153,6 +146,7 @@ export async function reviewCancellationRequestAction(
 
 async function rejectCancellation(
   id: string,
+  orderId: string,
   sellerOrderId: string,
   previousStatus:
     "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLATION_REQUESTED" | "CANCELLED",
@@ -160,6 +154,7 @@ async function rejectCancellation(
   actorUserId: string,
 ) {
   await db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "orders" WHERE id = ${orderId} FOR UPDATE`;
     await tx.$queryRaw`SELECT id FROM "cancellation_requests" WHERE id = ${id} FOR UPDATE`;
     const updated = await tx.cancellationRequest.updateMany({
       where: { id, status: "REQUESTED" },
@@ -167,10 +162,18 @@ async function rejectCancellation(
     });
     if (updated.count !== 1)
       throw new ApplicationError({ code: "CONFLICT", message: "Esta solicitação já foi decidida.", statusCode: 409 });
-    await tx.sellerOrder.updateMany({
+    const restored = await tx.sellerOrder.updateMany({
       where: { id: sellerOrderId, status: "CANCELLATION_REQUESTED" },
       data: { status: previousStatus === "CANCELLATION_REQUESTED" ? "PROCESSING" : previousStatus },
     });
+    if (restored.count !== 1) {
+      throw new ApplicationError({
+        code: "CONFLICT",
+        message: "O status do pedido mudou e a solicitação não pôde ser rejeitada.",
+        statusCode: 409,
+      });
+    }
+    await syncOrderStatusFromSellerOrders(tx, orderId, "CANCELLATION", actorUserId);
     await tx.auditLog.create({
       data: {
         action: "CANCELLATION_REJECTED",

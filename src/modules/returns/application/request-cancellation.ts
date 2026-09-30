@@ -2,6 +2,7 @@ import "server-only";
 
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
+import { syncOrderStatusFromSellerOrders } from "@/modules/orders/application/sync-order-status";
 import { ApplicationError } from "@/shared/errors/application-error";
 
 export type CustomerCancellationIdentity = { userId: string } | { guestAccessTokenHash: string };
@@ -103,6 +104,12 @@ export async function requestCancellation(input: RequestCancellationInput) {
         },
       });
       await tx.sellerOrder.update({ where: { id: locked.id }, data: { status: "CANCELLATION_REQUESTED" } });
+      await syncOrderStatusFromSellerOrders(
+        tx,
+        locked.orderId,
+        "CANCELLATION",
+        "userId" in input.identity ? input.identity.userId : undefined,
+      );
       return created;
     });
   } catch (error) {
