@@ -31,25 +31,69 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
     throw new ApplicationError({ code: "CONFIGURATION_ERROR", message: "O serviço de frete não foi salvo no pedido." });
   }
   if (sellerOrder.shipment.externalShipmentId) return sellerOrder.shipment;
+  if (sellerOrder.shipment.purchaseState) {
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message:
+        sellerOrder.shipment.purchaseState === "IN_PROGRESS"
+          ? "A compra da etiqueta já foi iniciada. Aguarde ou solicite a conferência antes de tentar novamente."
+          : "O resultado da compra da etiqueta é incerto. Confira os envios no Melhor Envio antes de tentar novamente.",
+      statusCode: 409,
+    });
+  }
 
   const shipmentData = buildShipmentData(sellerOrder);
-  const result = await melhorEnvioProvider.createShipment({
-    sellerOrderId: input.sellerOrderId,
-    serviceCode: sellerOrder.shipment.serviceCode,
-    ...shipmentData,
-    ...(input.tags ? { tags: input.tags } : { tags: [{ tag: sellerOrder.order.orderNumber }] }),
-    quote: {
-      provider: sellerOrder.shipment.provider,
-      serviceCode: sellerOrder.shipment.serviceCode,
-      carrier: sellerOrder.shipment.carrier,
-      service: sellerOrder.shipment.service,
-      priceInCents: sellerOrder.shipment.priceInCents,
-      ...(sellerOrder.shipment.estimatedDeliveryDays !== null
-        ? { estimatedDeliveryDays: sellerOrder.shipment.estimatedDeliveryDays }
-        : {}),
-      raw: {},
-    },
+  const claim = await db.shipment.updateMany({
+    where: { id: sellerOrder.shipment.id, externalShipmentId: null, purchaseState: null },
+    data: { purchaseState: "IN_PROGRESS", purchaseError: null },
   });
+  if (claim.count !== 1) {
+    const current = await db.shipment.findUnique({ where: { id: sellerOrder.shipment.id } });
+    if (current?.externalShipmentId) return current;
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "A compra da etiqueta já está em andamento ou precisa de conferência manual.",
+      statusCode: 409,
+    });
+  }
+
+  let result: Awaited<ReturnType<typeof melhorEnvioProvider.createShipment>>;
+  try {
+    result = await melhorEnvioProvider.createShipment({
+      sellerOrderId: input.sellerOrderId,
+      serviceCode: sellerOrder.shipment.serviceCode,
+      ...shipmentData,
+      ...(input.tags ? { tags: input.tags } : { tags: [{ tag: sellerOrder.order.orderNumber }] }),
+      quote: {
+        provider: sellerOrder.shipment.provider,
+        serviceCode: sellerOrder.shipment.serviceCode,
+        carrier: sellerOrder.shipment.carrier,
+        service: sellerOrder.shipment.service,
+        priceInCents: sellerOrder.shipment.priceInCents,
+        ...(sellerOrder.shipment.estimatedDeliveryDays !== null
+          ? { estimatedDeliveryDays: sellerOrder.shipment.estimatedDeliveryDays }
+          : {}),
+        raw: {},
+      },
+    });
+  } catch (error) {
+    await db.shipment.updateMany({
+      where: { id: sellerOrder.shipment.id, purchaseState: "IN_PROGRESS", externalShipmentId: null },
+      data: {
+        purchaseState: "OUTCOME_UNKNOWN",
+        purchaseError: "O provedor não confirmou o resultado; confira antes de uma nova tentativa.",
+      },
+    });
+    logger.error(
+      {
+        event: "shipment.purchase_outcome_unknown",
+        sellerOrderId: input.sellerOrderId,
+        errorName: error instanceof Error ? error.name : "UnknownError",
+      },
+      "Shipment purchase outcome is unknown; automatic retry is blocked",
+    );
+    throw error;
+  }
 
   const shipment = await db.$transaction(async (tx) => {
     const shipment = await tx.shipment.update({
@@ -57,6 +101,8 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
       data: {
         externalShipmentId: result.externalShipmentId,
         status: "READY_TO_SHIP",
+        purchaseState: null,
+        purchaseError: null,
         providerMetadata: result.providerMetadata as Prisma.InputJsonValue,
       },
     });

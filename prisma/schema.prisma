@@ -109,6 +109,11 @@ enum ShipmentStatus {
   CANCELLED
 }
 
+enum ShipmentPurchaseState {
+  IN_PROGRESS
+  OUTCOME_UNKNOWN
+}
+
 enum ReturnStatus {
   REQUESTED
   UNDER_REVIEW
@@ -849,6 +854,8 @@ model Shipment {
   trackingCode          String?
   trackingUrl           String?
   status                ShipmentStatus @default(PENDING)
+  purchaseState         ShipmentPurchaseState?
+  purchaseError         String?
   shippedAt             DateTime?
   deliveredAt           DateTime?
   sellerOrderId         String         @unique
