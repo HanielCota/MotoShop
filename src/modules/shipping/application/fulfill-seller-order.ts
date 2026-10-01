@@ -6,7 +6,11 @@ import { db } from "@/lib/database";
 import { logger } from "@/lib/logger";
 import { inngest } from "@/lib/inngest/client";
 import { melhorEnvioProvider } from "@/lib/shipping/melhor-envio-provider";
-import { getSellerOrderStatusFromShipment } from "@/modules/orders/domain/fulfillment-status";
+import {
+  getSellerOrderStatusFromShipment,
+  mapProviderShipmentStatus,
+  resolveShipmentStatus,
+} from "@/modules/orders/domain/fulfillment-status";
 import { syncOrderStatusFromSellerOrders } from "@/modules/orders/application/sync-order-status";
 import type { ShippingAddress, ShippingProduct, ShippingVolume } from "@/shared/shipping/shipping-provider";
 import { ApplicationError } from "@/shared/errors/application-error";
@@ -139,8 +143,21 @@ export async function refreshSellerOrderTracking(sellerOrderId: string, actorUse
     throw new ApplicationError({ code: "CONFLICT", message: "A etiqueta ainda não foi comprada." });
 
   const result = await melhorEnvioProvider.track(shipment.externalShipmentId);
-  const status = mapShipmentStatus(result.status);
+  const reportedStatus = mapProviderShipmentStatus(result.status);
+  if (!reportedStatus) {
+    logger.warn(
+      { event: "shipment.tracking_unknown_status", sellerOrderId, providerStatus: result.status },
+      "Unknown shipping provider status; keeping the current shipment status",
+    );
+  }
   const updatedShipment = await db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "shipments" WHERE id = ${shipment.id} FOR UPDATE`;
+    const currentShipment = await tx.shipment.findUnique({
+      where: { id: shipment.id },
+      select: { status: true, shippedAt: true, deliveredAt: true },
+    });
+    if (!currentShipment) throw new ApplicationError({ code: "NOT_FOUND", message: "Envio do seller não encontrado." });
+    const status = resolveShipmentStatus(currentShipment.status, reportedStatus);
     const updatedShipment = await tx.shipment.update({
       where: { id: shipment.id },
       data: {
@@ -148,8 +165,8 @@ export async function refreshSellerOrderTracking(sellerOrderId: string, actorUse
         ...(result.trackingCode ? { trackingCode: result.trackingCode } : {}),
         ...(result.trackingUrl ? { trackingUrl: result.trackingUrl } : {}),
         providerMetadata: result.providerMetadata as Prisma.InputJsonValue,
-        ...(status === "SHIPPED" ? { shippedAt: new Date() } : {}),
-        ...(status === "DELIVERED" ? { deliveredAt: new Date() } : {}),
+        ...(status === "SHIPPED" || status === "IN_TRANSIT" ? { shippedAt: currentShipment.shippedAt ?? new Date() } : {}),
+        ...(status === "DELIVERED" ? { deliveredAt: currentShipment.deliveredAt ?? new Date() } : {}),
       },
     });
     await syncFulfillmentStatuses(tx, sellerOrderId, status, actorUserId);
@@ -377,16 +394,4 @@ function getItemDimensions(item: {
     widthInCm: item.widthInMillimetersSnapshot / 10,
     lengthInCm: item.lengthInMillimetersSnapshot / 10,
   };
-}
-
-function mapShipmentStatus(
-  status: string,
-): "PENDING" | "READY_TO_SHIP" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "EXCEPTION" | "CANCELLED" {
-  const normalizedStatus = status.toLowerCase();
-  if (normalizedStatus.includes("delivered") || normalizedStatus.includes("entregue")) return "DELIVERED";
-  if (normalizedStatus.includes("transit") || normalizedStatus.includes("trânsito")) return "IN_TRANSIT";
-  if (normalizedStatus.includes("posted") || normalizedStatus.includes("postado")) return "SHIPPED";
-  if (normalizedStatus.includes("cancel")) return "CANCELLED";
-  if (normalizedStatus.includes("exception") || normalizedStatus.includes("problema")) return "EXCEPTION";
-  return "READY_TO_SHIP";
 }

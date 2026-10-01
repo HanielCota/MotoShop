@@ -12,6 +12,40 @@ export function getSellerOrderStatusFromShipment(
   return currentStatus;
 }
 
+const shipmentStatusProgress: Record<ShipmentStatus, number> = {
+  PENDING: 0,
+  READY_TO_SHIP: 1,
+  SHIPPED: 2,
+  EXCEPTION: 2.5,
+  IN_TRANSIT: 3,
+  DELIVERED: 4,
+  CANCELLED: 5,
+};
+
+export function resolveShipmentStatus(current: ShipmentStatus, reported: ShipmentStatus | null): ShipmentStatus {
+  if (reported === null) return current;
+  if (current === "CANCELLED" || current === "DELIVERED") return current;
+  if (reported === "CANCELLED" || reported === "DELIVERED") return reported;
+  return shipmentStatusProgress[reported] >= shipmentStatusProgress[current] ? reported : current;
+}
+
+export function mapProviderShipmentStatus(value: string): ShipmentStatus | null {
+  const status = value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+
+  if (status.includes("delivered") || status.includes("entregue")) return "DELIVERED";
+  if (status.includes("transit") || status.includes("transito")) return "IN_TRANSIT";
+  if (status.includes("posted") || status.includes("postado")) return "SHIPPED";
+  if (status.includes("cancel")) return "CANCELLED";
+  if (status.includes("exception") || status.includes("problema")) return "EXCEPTION";
+  if (status.includes("ready_to_ship") || status.includes("pronto para envio")) return "READY_TO_SHIP";
+  if (status.includes("pending") || status.includes("pendente")) return "PENDING";
+  return null;
+}
+
 export function getOrderStatusFromSellerOrders(statuses: SellerOrderStatus[]): OrderStatus {
   if (statuses.length === 0) return "PENDING_PAYMENT";
 

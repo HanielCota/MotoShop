@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { getOrderStatusFromSellerOrders, getSellerOrderStatusFromShipment } from "./fulfillment-status";
+import {
+  getOrderStatusFromSellerOrders,
+  getSellerOrderStatusFromShipment,
+  mapProviderShipmentStatus,
+  resolveShipmentStatus,
+} from "./fulfillment-status";
 
 describe("fulfillment status", () => {
   it("does not regress delivery or advance an unpaid order on tracking events", () => {
@@ -24,5 +29,26 @@ describe("fulfillment status", () => {
     expect(getOrderStatusFromSellerOrders(["SHIPPED", "DELIVERED"])).toBe("SHIPPED");
     expect(getOrderStatusFromSellerOrders(["DELIVERED", "DELIVERED"])).toBe("DELIVERED");
     expect(getOrderStatusFromSellerOrders(["CANCELLED", "DELIVERED"])).toBe("PARTIALLY_CANCELLED");
+  });
+});
+
+describe("provider shipment status reconciliation", () => {
+  it.each([
+    ["status conhecido", "IN_TRANSIT", "IN_TRANSIT"],
+    ["status desconhecido", "novo_estado", null],
+    ["status traduzido", "entregue ao destinatario", "DELIVERED"],
+    ["status acentuado", "em trânsito", "IN_TRANSIT"],
+  ] as const)("mapeia %s sem inventar um estado", (_label, value, expected) => {
+    expect(mapProviderShipmentStatus(value)).toBe(expected);
+  });
+
+  it.each([
+    ["SHIPPED", "READY_TO_SHIP", "SHIPPED"],
+    ["DELIVERED", "IN_TRANSIT", "DELIVERED"],
+    ["READY_TO_SHIP", "IN_TRANSIT", "IN_TRANSIT"],
+    ["PENDING", null, "PENDING"],
+    ["CANCELLED", "DELIVERED", "CANCELLED"],
+  ] as const)("não regride de %s para %s", (current, reported, expected) => {
+    expect(resolveShipmentStatus(current, reported)).toBe(expected);
   });
 });
