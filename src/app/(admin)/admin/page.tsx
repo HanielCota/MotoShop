@@ -334,6 +334,12 @@ export default async function AdminHomePage({
       <Link href="/admin/moderation" className="text-primary w-fit text-sm font-medium underline underline-offset-4">
         Moderar perguntas e avaliações
       </Link>
+      <Link
+        href={"/admin/shipping-recovery" as Route}
+        className="text-primary w-fit text-sm font-medium underline underline-offset-4"
+      >
+        Conferir compras de etiquetas pendentes
+      </Link>
       <Card>
         <CardHeader>
           <CardTitle>Catálogo controlado pela Moto Shop</CardTitle>

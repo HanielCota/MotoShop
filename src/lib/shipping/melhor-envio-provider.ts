@@ -88,8 +88,8 @@ export class MelhorEnvioProvider implements ShippingProvider {
           receipt: false,
           own_hand: false,
           reverse: false,
+          ...(input.tags ? { tags: input.tags } : {}),
         },
-        ...(input.tags ? { tags: input.tags } : {}),
       },
     });
     const externalShipmentId = readExternalId(cartPayload);
@@ -118,6 +118,26 @@ export class MelhorEnvioProvider implements ShippingProvider {
       body: { orders: [externalShipmentId] },
     });
     return { externalShipmentId, providerMetadata: toRecord(payload) };
+  }
+
+  async getShipmentDetails(externalShipmentId: string): Promise<Record<string, unknown>> {
+    this.assertConfigured();
+    if (!externalShipmentId.trim()) {
+      throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Informe o identificador do envio." });
+    }
+    const payload = await this.request(`/api/v2/me/orders/${encodeURIComponent(externalShipmentId)}`, {
+      method: "GET",
+    });
+    const details = toRecord(payload);
+    const returnedId = details.id ?? details.order_id;
+    if (String(returnedId ?? "") !== externalShipmentId) {
+      throw new ApplicationError({
+        code: "CONFLICT",
+        message: "O Melhor Envio não confirmou esse identificador de etiqueta.",
+        statusCode: 409,
+      });
+    }
+    return details;
   }
 
   async track(externalShipmentId: string): Promise<TrackingResult> {
