@@ -15,14 +15,15 @@ import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { AddToCartButton } from "@/modules/cart/components/add-to-cart-button";
 import { FavoriteButton } from "@/modules/favorites/components/favorite-button";
 import { isProductFavorited } from "@/modules/favorites/queries/favorites";
-import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
+import { getCurrentPriceInCents, hasActivePromotion } from "@/modules/products/domain/pricing";
 import { AskQuestionForm } from "@/modules/questions/components/ask-question-form";
 import { getApprovedProductBySlug, getApprovedProductSeoBySlug } from "@/modules/products/queries/products";
 import { loadProductInteractionSearchParams } from "@/modules/products/interaction-search-params";
-import { env } from "@/config/env";
+import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
+import { ProductShippingQuote } from "@/modules/checkout/components/product-shipping-quote";
 
 function averageRating(reviews: { rating: number }[]) {
   if (reviews.length === 0) return null;
@@ -98,7 +99,7 @@ export default async function ProductPage({
       highPrice: prices.length > 0 ? Math.max(...prices) / 100 : undefined,
       offerCount: product.variants.length,
       availability: `https://schema.org/${hasStock ? "InStock" : "OutOfStock"}`,
-      url: `${env.BETTER_AUTH_URL.replace(/\/$/, "")}/products/${product.slug}`,
+      url: `${getApplicationBaseUrl()}/products/${product.slug}`,
     },
     ...(productRating
       ? {
@@ -184,6 +185,11 @@ export default async function ProductPage({
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline">{getCategoryLabel(product.category)}</Badge>
             <Badge variant="secondary">{product.brand.name}</Badge>
+            {product.variants.some(
+              (variant) => hasActivePromotion(variant) && variant.promotionalPriceInCents! < variant.priceInCents,
+            ) ? (
+              <Badge className="bg-moto-brand text-moto-brand-foreground border-0">Oferta</Badge>
+            ) : null}
             {product.seller.subscriptions.length > 0 ? <Badge>Patrocinado · VIP</Badge> : null}
           </div>
           <h1
@@ -210,6 +216,11 @@ export default async function ProductPage({
               {productRating ? `Produto ${productRating.toFixed(1)}/5 (${product.productReviewCount})` : ""}
               {productRating && sellerRating ? " · " : ""}
               {sellerRating ? `Loja ${sellerRating.toFixed(1)}/5` : ""}
+            </p>
+          ) : null}
+          {!product.isDemo && product.unitsSold > 0 ? (
+            <p className="text-muted-foreground mt-2 text-xs">
+              {product.unitsSold} {product.unitsSold === 1 ? "unidade vendida" : "unidades vendidas"}
             </p>
           ) : null}
 
@@ -245,16 +256,34 @@ export default async function ProductPage({
                     <span className="text-sm font-semibold">{variant.title}</span>
                     <span className="text-sm font-bold">{formatMoneyInCents(getCurrentPriceInCents(variant))}</span>
                   </div>
+                  {hasActivePromotion(variant) && variant.promotionalPriceInCents! < variant.priceInCents ? (
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      <span className="mr-2 line-through">{formatMoneyInCents(variant.priceInCents)}</span>
+                      <span className="text-moto-brand-strong font-semibold">Preço promocional</span>
+                    </p>
+                  ) : null}
                   <p className="text-muted-foreground mt-1 text-xs">
                     {product.isDemo
                       ? `SKU ${variant.sku} · exemplo ilustrativo`
                       : `SKU ${variant.sku} · ${stock > 0 ? `${stock} em estoque` : "Indisponível"}`}
                   </p>
+                  {!product.isDemo && stock > 0 && stock <= 5 ? (
+                    <p className="mt-1 text-xs font-semibold text-amber-800">Restam {stock} unidades desta opção</p>
+                  ) : null}
                   {!product.isDemo ? <AddToCartButton variantId={variant.id} disabled={stock < 1} /> : null}
                 </div>
               );
             })}
           </div>
+          {!product.isDemo ? (
+            <ProductShippingQuote
+              options={product.variants.map((variant) => ({
+                id: variant.id,
+                title: variant.title,
+                available: (variant.inventory?.availableQuantity ?? 0) > 0,
+              }))}
+            />
+          ) : null}
           <div className="mt-5 border-t border-[#ece8e1] pt-5">
             {session ? (
               <FavoriteButton productId={product.id} initialIsFavorite={isFavorite} />
@@ -343,7 +372,7 @@ export default async function ProductPage({
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <Card>
           <CardHeader>
             <CardTitle>Avaliações do produto</CardTitle>
@@ -357,7 +386,7 @@ export default async function ProductPage({
             {product.productReviewCount > 0 ? (
               <form className="flex flex-wrap items-end gap-3 rounded-md border p-3" method="get">
                 <label className="flex flex-col gap-1 text-sm font-medium">
-                  Filtrar por nota
+                  Nota mínima
                   <DesignSelect
                     aria-label="Filtrar por nota"
                     className="h-9"
@@ -367,7 +396,7 @@ export default async function ProductPage({
                     <option value="">Todas as notas</option>
                     {[5, 4, 3, 2, 1].map((rating) => (
                       <option key={rating} value={rating}>
-                        {rating} estrela{rating === 1 ? "" : "s"}
+                        {rating} estrela{rating === 1 ? "" : "s"} ou mais
                       </option>
                     ))}
                   </DesignSelect>
@@ -403,15 +432,62 @@ export default async function ProductPage({
               product.productReviews.map((review) => (
                 <article key={review.id} className="border-border border-b pb-4 last:border-b-0 last:pb-0">
                   <div className="flex items-center justify-between gap-3">
-                    <strong aria-label={`${review.rating} de 5 estrelas`}>
-                      <span aria-hidden="true">
-                        {"★".repeat(review.rating)}
-                        {"☆".repeat(5 - review.rating)}
+                    <strong aria-label={`${(review.ratingTenths / 10).toFixed(1).replace(".", ",")} de 5 estrelas`}>
+                      <span
+                        aria-hidden="true"
+                        className="relative inline-block leading-none whitespace-nowrap text-slate-300"
+                      >
+                        ★★★★★
+                        <span
+                          className="absolute inset-y-0 left-0 overflow-hidden whitespace-nowrap text-amber-500"
+                          style={{ width: `${review.ratingTenths * 2}%` }}
+                        >
+                          ★★★★★
+                        </span>
+                      </span>
+                      <span className="ml-2 text-xs font-normal text-slate-600">
+                        {(review.ratingTenths / 10).toFixed(1).replace(".", ",")}/5
                       </span>
                     </strong>
                     <span className="text-muted-foreground text-xs">{review.user.name ?? "Cliente"}</span>
                   </div>
                   {review.comment ? <p className="mt-2 text-sm text-slate-700">{review.comment}</p> : null}
+                  {review.media.length ? (
+                    <div className="mt-3 flex flex-wrap gap-2" aria-label="Fotos e vídeos da avaliação">
+                      {review.media.map((media) => {
+                        const url = getPublicStorageUrl(media.storageKey);
+                        if (!url) return null;
+                        return media.mediaType === "video" ? (
+                          <video
+                            key={media.id}
+                            controls
+                            preload="metadata"
+                            className="max-h-56 max-w-full rounded-lg border bg-black"
+                          >
+                            <source src={url} type={media.contentType} />
+                            Seu navegador não consegue reproduzir este vídeo.
+                          </video>
+                        ) : (
+                          <a
+                            key={media.id}
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="relative size-24 overflow-hidden rounded-lg border bg-slate-100"
+                          >
+                            <Image
+                              src={url}
+                              alt="Foto anexada à avaliação"
+                              fill
+                              unoptimized
+                              sizes="96px"
+                              className="object-cover"
+                            />
+                          </a>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                 </article>
               ))
             )}

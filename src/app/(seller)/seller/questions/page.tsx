@@ -41,11 +41,11 @@ export default async function SellerQuestionsPage({
     <main className="mx-auto max-w-5xl space-y-6 px-4 py-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold tracking-[0.2em] text-orange-600 uppercase">Central do lojista</p>
+          <p className="text-sm font-semibold tracking-[0.2em] text-moto-brand uppercase">Central do lojista</p>
           <h1 className="mt-2 text-3xl font-black text-slate-950">Perguntas dos clientes</h1>
           <p className="mt-2 text-slate-600">Responda dúvidas publicamente para ajudar outros pilotos.</p>
         </div>
-        <Link href="/seller" className="text-sm font-semibold text-orange-700 hover:text-orange-800">
+        <Link href="/seller" className="text-sm font-semibold text-moto-brand-strong hover:text-[#7d2c08]">
           Voltar ao painel
         </Link>
       </div>
@@ -106,7 +106,7 @@ export default async function SellerQuestionsPage({
             <option value="oldest">Mais antigas</option>
           </DesignSelect>
         </label>
-        <button className="h-10 rounded-md bg-orange-600 px-4 text-sm font-semibold text-white">Filtrar</button>
+        <button className="h-10 rounded-md bg-moto-brand px-4 text-sm font-semibold text-moto-brand-foreground">Filtrar</button>
       </form>
 
       {result.questions.length === 0 ? (
@@ -120,7 +120,7 @@ export default async function SellerQuestionsPage({
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                 <Link
                   href={`/products/${question.product.slug}`}
-                  className="font-semibold text-orange-700 hover:underline"
+                  className="font-semibold text-moto-brand-strong hover:underline"
                 >
                   {question.product.name}
                 </Link>

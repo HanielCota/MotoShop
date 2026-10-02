@@ -7,11 +7,17 @@ import { MarketingHome } from "./marketing-home";
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("@/modules/cart/actions/cart-actions", () => ({
+  clearCartAction: vi.fn(),
+  getCartPreviewAction: vi.fn(async () => ({ items: [], itemCount: 0, subtotalInCents: 0 })),
+  updateCartItemAction: vi.fn(),
+}));
 vi.mock("next/link", () => ({ default: (props: ComponentProps<"a">) => <a {...props} /> }));
 vi.mock("next/image", () => ({
   // Image optimization is covered by Next.js; these tests exercise the page UI.
-  // eslint-disable-next-line @next/next/no-img-element
-  default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
+  default: ({ src, alt, loading }: { src: string; alt: string; loading?: "eager" | "lazy" }) => (
+    <div role="img" aria-label={alt} data-src={src} data-loading={loading} />
+  ),
 }));
 
 const fitments = [
@@ -53,26 +59,20 @@ beforeEach(() => push.mockReset());
 afterEach(cleanup);
 
 describe("marketing homepage", () => {
-  it("restores every field and the summary from the URL", () => {
+  it("restores motorcycle fitment fields from the URL", async () => {
     renderHome("?moto=yamaha-2025");
     expect(screen.getByRole("combobox", { name: "Fabricante" })).toHaveTextContent("Yamaha");
     expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveTextContent("YZ250F");
     expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveTextContent("2025 · 250 cc");
-    expect(screen.getByText("Yamaha YZ250F")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Peças compatíveis" })).toHaveAttribute(
-      "href",
-      "/products?moto=yamaha-2025",
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Ver peças" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/products?moto=yamaha-2025"));
   });
 
   it("starts with the saved primary motorcycle while an explicit URL selection takes priority", () => {
-    const initial = renderHome("", { primaryFitmentId: "yamaha-2025" });
+    renderHome("", { primaryFitmentId: "yamaha-2025" });
     expect(screen.getByRole("combobox", { name: "Fabricante" })).toHaveTextContent("Yamaha");
-    expect(screen.getByRole("link", { name: "Peças compatíveis" })).toHaveAttribute(
-      "href",
-      "/products?moto=yamaha-2025",
-    );
-    initial.unmount();
+    expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveTextContent("YZ250F");
+    cleanup();
     renderHome("?moto=honda-2024", { primaryFitmentId: "yamaha-2025" });
     expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveTextContent("2024 · R · 250 cc");
   });
@@ -89,10 +89,10 @@ describe("marketing homepage", () => {
     renderHome("?moto=yamaha-2025");
     choose("Modelo", "YZ450F");
     expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveTextContent("450 cc");
-    expect(screen.getByText("Yamaha YZ450F")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveTextContent("YZ450F");
   });
 
-  it("distinguishes versions in the same year and preserves selection when switching search mode", () => {
+  it("distinguishes versions in the same year and preserves selection when switching search mode", async () => {
     renderHome();
     fireEvent.click(screen.getByRole("combobox", { name: "Ano e versão" }));
     expect(screen.getByRole("option", { name: "2025 · Special · 250 cc" })).toBeInTheDocument();
@@ -102,10 +102,8 @@ describe("marketing homepage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Buscar produto" }));
     fireEvent.click(screen.getByRole("button", { name: "Comprar por moto" }));
     expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveTextContent("2024 · R · 250 cc");
-    expect(screen.getByRole("link", { name: "Peças compatíveis" })).toHaveAttribute(
-      "href",
-      "/products?moto=honda-2024",
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Ver peças" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/products?moto=honda-2024"));
   });
 
   it("does not submit an unknown fitment from the URL", async () => {
@@ -135,9 +133,17 @@ describe("marketing homepage", () => {
     expect(trigger).toHaveFocus();
     fireEvent.click(trigger);
     fireEvent.click(
-      within(screen.getByRole("navigation", { name: "Navegação mobile" })).getByRole("link", { name: "Minha Moto" }),
+      within(screen.getByRole("navigation", { name: "Navegação mobile" })).getByRole("link", {
+        name: "Compatibilidade",
+      }),
     );
     expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("does not render a separate saved-motorcycles promotional section", () => {
+    renderHome();
+    expect(screen.queryByText("Minha Moto")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Gerenciar motos salvas" })).not.toBeInTheDocument();
   });
 
   it("links directly to active equipment subcategories", () => {
@@ -153,7 +159,9 @@ describe("marketing homepage", () => {
     expect(screen.queryByText("Entrega ou retirada")).not.toBeInTheDocument();
     expect(screen.queryByText(/sem esconder equipamentos universais/)).not.toBeInTheDocument();
     expect(screen.queryByText("Ver opções")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Explorar todo o catálogo" })).toHaveAttribute("href", "/products");
+    expect(
+      screen.getAllByRole("link", { name: "Comprar" }).every((link) => link.getAttribute("href") === "/products"),
+    ).toBe(true);
   });
 
   it("shows a truthful empty state before approved products exist", () => {
@@ -186,5 +194,28 @@ describe("marketing homepage", () => {
     );
     expect(screen.getByText("Loja A")).toBeInTheDocument();
     expect(screen.queryByText(/10x de/)).not.toBeInTheDocument();
+  });
+
+  it("prioritizes only the first featured product image", () => {
+    const makeProduct = (id: string, name: string) => ({
+      id,
+      name,
+      category: "Capacetes",
+      sellerName: "Loja de teste",
+      price: "R$ 899,90",
+      hasPriceRange: false,
+      href: `/products/${id}` as const,
+      image: `/${id}.webp`,
+      imageAlt: name,
+      sponsored: false,
+      isDemo: false,
+    });
+
+    renderHome("", {
+      featuredProducts: [makeProduct("capacete-a", "Primeiro capacete"), makeProduct("capacete-b", "Segundo capacete")],
+    });
+
+    expect(screen.getByRole("img", { name: "Primeiro capacete" })).toHaveAttribute("data-loading", "eager");
+    expect(screen.getByRole("img", { name: "Segundo capacete" })).toHaveAttribute("data-loading", "lazy");
   });
 });

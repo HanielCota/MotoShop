@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Barlow_Condensed } from "next/font/google";
 import { connection } from "next/server";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
@@ -11,16 +10,10 @@ import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-m
 import { listFeaturedProducts } from "@/modules/marketing/queries/featured-products";
 
 export const metadata: Metadata = {
-  title: "Moto Shop | O marketplace de quem vive motocross",
+  title: "O Marketplace de quem vive o OFF-ROAD!",
   description:
-    "Encontre peças, equipamentos e acessórios para motocross em lojas especializadas, com busca por compatibilidade com a sua moto.",
+    "O Moto Shop Brasil é uma plataforma e-commerce no formato de marketplace voltada para o setor de motopeças, acessórios e equipamentos, com destaque para o segmento off-road. A plataforma atua como ponte tecnológica entre clientes finais e lojistas parceiros.",
 };
-
-const marketingDisplay = Barlow_Condensed({
-  subsets: ["latin"],
-  weight: ["600", "700"],
-  variable: "--font-marketing-display",
-});
 
 export default async function HomePage() {
   await connection();
@@ -33,7 +26,7 @@ export default async function HomePage() {
   const primaryMotorcycle = session ? await getPrimarySavedMotorcycle(session.user.id) : null;
 
   return (
-    <div className={marketingDisplay.variable}>
+    <div>
       <NuqsAdapter>
         <MarketingHome
           categories={categories}

@@ -4,12 +4,12 @@ import { authEmailConfigured } from "@/modules/auth/infrastructure/auth";
 
 export default function ForgotPasswordPage() {
   return (
-    <AuthPageShell title="Recuperar acesso" description="Enviaremos um link para o e-mail cadastrado na Moto Shop.">
+    <AuthPageShell title="Recuperar acesso" description="Enviaremos um link para o e-mail cadastrado no Moto Shop.">
       {authEmailConfigured ? (
         <PasswordRecoveryForm />
       ) : (
         <p className="text-muted-foreground text-sm">
-          A recuperação por e-mail estará disponível quando o envio de mensagens da Moto Shop for ativado.
+          A recuperação por e-mail estará disponível quando o envio de mensagens do Moto Shop for ativado.
         </p>
       )}
     </AuthPageShell>

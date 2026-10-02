@@ -38,6 +38,15 @@ it("shows a localized inline validation error without submitting an empty login"
   expect(await screen.findByRole("alert")).toHaveTextContent("Informe um e-mail válido.");
   expect(mocks.signIn).not.toHaveBeenCalled();
 });
+it("clears the login password when changing modes but keeps the email", () => {
+  render(<AuthForm emailEnabled verificationRequired={false} />);
+  fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "buyer@example.test" } });
+  fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "test-password" } });
+  fireEvent.click(screen.getByRole("button", { name: "Ainda não tenho conta" }));
+
+  expect(screen.getByLabelText("E-mail")).toHaveValue("buyer@example.test");
+  expect(screen.getByLabelText("Senha")).toHaveValue("");
+});
 it("recovers the password recovery form after network rejection", async () => {
   render(<PasswordRecoveryForm />);
   fireEvent.change(screen.getByLabelText("E-mail da conta"), { target: { value: "buyer@example.test" } });

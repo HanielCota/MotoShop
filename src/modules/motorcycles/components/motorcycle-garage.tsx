@@ -69,7 +69,7 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
             ) : null}
           </div>
           <p className="text-muted-foreground mt-1 text-sm">
-            {saved.available ? "Configuração cadastrada pela Moto Shop" : "Configuração indisponível para novas buscas"}
+            {saved.available ? "Configuração cadastrada pelo Moto Shop" : "Configuração indisponível para novas buscas"}
           </p>
         </div>
       </div>
@@ -118,6 +118,7 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
           <label className="min-w-0 space-y-2 text-sm font-medium">
             Nova configuração
             <DesignSelect
+              key={`${saved.id}-${saved.available}-${saved.motorcycleFitmentId}`}
               aria-label="Nova configuração"
               className={inputClassName}
               name="motorcycleFitmentId"

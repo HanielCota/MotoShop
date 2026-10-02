@@ -71,7 +71,7 @@ export default async function ProductsPage({
         <Badge variant="secondary">Catálogo</Badge>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-5xl">Produtos para sua próxima sessão</h1>
         <p className="text-muted-foreground mt-3 max-w-2xl">
-          Encontre peças, equipamentos e acessórios aprovados pela Moto Shop.
+          Encontre peças, equipamentos e acessórios aprovados pelo Moto Shop.
         </p>
       </div>
       {primaryMotorcycle && primaryLabel ? (
@@ -97,18 +97,20 @@ export default async function ProductsPage({
           Salvar minha moto para encontrar peças compatíveis
         </Link>
       )}
+      <div className="grid min-w-0 gap-6 md:grid-cols-[250px_minmax(0,1fr)] md:items-start md:gap-8">
       <form
         key={JSON.stringify(params)}
-        className="grid min-w-0 gap-3 rounded-xl border p-4 md:grid-cols-2 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:min-w-0 [&_input]:min-w-0 [&_label]:min-w-0"
+        className="grid min-w-0 content-start gap-3 rounded-xl border border-[#e1dcd3] bg-white p-4 md:sticky md:top-24 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:min-w-0 [&_input]:min-w-0 [&_label]:min-w-0"
       >
+        <h2 className="text-lg font-semibold">Filtrar produtos</h2>
         <label className="flex flex-col gap-2 text-sm font-medium">
           Buscar
           <Input name="q" defaultValue={params.q ?? ""} placeholder="Produto, SKU, marca ou loja..." />
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
-          Minha Moto
+          Compatibilidade com moto
           <DesignSelect aria-label="Minha Moto" name="moto" defaultValue={params.moto ?? ""}>
-            <option value="">Todas as motos</option>
+          <option value="">Todas as motos</option>
             {fitments.map((fitment) => (
               <option key={fitment.id} value={fitment.id}>
                 {fitment.motorcycleModel.manufacturer.name} {fitment.motorcycleModel.name} {fitment.version} ·{" "}
@@ -117,11 +119,11 @@ export default async function ProductsPage({
             ))}
           </DesignSelect>
         </label>
-        <Button type="submit" size="lg" className="rounded-md px-4 md:w-fit">
+        <Button type="submit" size="lg" className="rounded-md px-4">
           Aplicar busca
         </Button>
         <details
-          className="min-w-0 md:col-span-2"
+          className="min-w-0"
           open={Boolean(
             params.category ||
             params.brand ||
@@ -134,10 +136,10 @@ export default async function ProductsPage({
           )}
         >
           <summary className="focus-visible:ring-ring/40 flex cursor-pointer list-none items-center justify-between gap-2 rounded-md py-3 text-sm font-medium focus-visible:ring-3 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
-            Mais filtros e ordenação
+            Categoria, preço e outros filtros
             <ChevronDown aria-hidden="true" className="size-4 transition-transform" />
           </summary>
-          <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid min-w-0 gap-3">
             <label className="flex flex-col gap-2 text-sm font-medium">
               Categoria
               <DesignSelect aria-label="Categoria" name="category" defaultValue={params.category ?? ""}>
@@ -212,7 +214,14 @@ export default async function ProductsPage({
       </form>
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">{result.total} {result.total === 1 ? "produto" : "produtos"}</h2>
+          <div>
+            <h2 className="text-xl font-semibold">
+              {result.total} {result.total === 1 ? "produto" : "produtos"}
+            </h2>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Página {result.page} de {result.pageCount}
+            </p>
+          </div>
           {params.moto ||
           params.category ||
           params.brand ||
@@ -254,6 +263,7 @@ export default async function ProductsPage({
           />
         ) : null}
       </section>
+      </div>
     </main>
   );
 }

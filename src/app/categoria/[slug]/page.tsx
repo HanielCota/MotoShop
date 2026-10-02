@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const categoryLabel = getCategoryLabel(category);
   return {
     title: categoryLabel,
-    description: `Produtos de ${categoryLabel} para motocross na Moto Shop.`,
+    description: `Produtos de ${categoryLabel} para motocross no Moto Shop.`,
     alternates: { canonical: `/categoria/${category.slug}` },
   };
 }
@@ -32,7 +32,7 @@ export default async function CategoryPage({ params, searchParams }: { params: P
   return (
     <PublicCatalogLanding
       title={`${parentLabel}${categoryLabel}`}
-      description={`Produtos de ${categoryLabel} aprovados pela Moto Shop, com estoque e lojas verificadas.`}
+      description={`Produtos de ${categoryLabel} aprovados pelo Moto Shop, com estoque e lojas verificadas.`}
       result={result}
       allProductsHref={`/products?category=${category.id}`}
       baseHref={`/categoria/${category.slug}`}

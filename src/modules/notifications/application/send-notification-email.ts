@@ -52,7 +52,9 @@ async function claimNotificationDelivery(input: {
   const staleBefore = new Date(Date.now() - staleProcessingWindowInMilliseconds);
 
   return db.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`notification:${input.eventKey}`}, 0))`;
+    // The advisory-lock function returns PostgreSQL `void`; select a scalar so
+    // Prisma can deserialize the result while keeping the transaction lock.
+    await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${`notification:${input.eventKey}`}, 0))`;
     const current = await tx.notificationDelivery.findUnique({ where: { eventKey: input.eventKey } });
     if (current?.status === "SENT") return null;
     if (current?.status === "PROCESSING" && current.updatedAt > staleBefore) return null;

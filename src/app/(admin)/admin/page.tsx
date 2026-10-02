@@ -22,6 +22,7 @@ import {
   toggleMotorcycleModelAction,
 } from "@/modules/catalog/actions/admin-catalog-actions";
 import { getAdminCatalogData } from "@/modules/catalog/queries/admin-catalog";
+import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { listAuditLogsForAdmin } from "@/modules/admin/queries/audit-logs";
 import { listSellerOrdersForAdmin } from "@/modules/admin/queries/orders";
 import { retryWebhookEventAction } from "@/modules/admin/actions/webhook-actions";
@@ -318,7 +319,9 @@ export default async function AdminHomePage({
 
   const categoryOptions = catalog.categories.map((category) => ({
     id: category.id,
-    label: category.parent ? `${category.parent.name} / ${category.name}` : category.name,
+    label: category.parent
+      ? `${getCategoryLabel(category.parent)} / ${getCategoryLabel(category)}`
+      : getCategoryLabel(category),
   }));
   const manufacturerOptions = catalog.manufacturers.map((manufacturer) => ({
     id: manufacturer.id,
@@ -342,7 +345,7 @@ export default async function AdminHomePage({
       </Link>
       <Card>
         <CardHeader>
-          <CardTitle>Catálogo controlado pela Moto Shop</CardTitle>
+            <CardTitle>Catálogo controlado pelo Moto Shop</CardTitle>
           <CardDescription>
             Sellers usam estas categorias, marcas e motos aprovadas. Desativar preserva o histórico e impede novos usos.
           </CardDescription>
@@ -356,8 +359,8 @@ export default async function AdminHomePage({
                 {catalog.categories.map((category) => (
                   <div key={category.id} className="flex items-center justify-between gap-2 py-2 text-sm">
                     <span>
-                      {category.parent ? `${category.parent.name} / ` : ""}
-                      {category.name} <span className="text-muted-foreground">({category._count.products})</span>
+                      {category.parent ? `${getCategoryLabel(category.parent)} / ` : ""}
+                      {getCategoryLabel(category)} <span className="text-muted-foreground">({category._count.products})</span>
                     </span>
                     <form action={toggleCategoryAction.bind(null, category.id)}>
                       <button className="text-xs underline">{category.active ? "Desativar" : "Ativar"}</button>
@@ -455,7 +458,7 @@ export default async function AdminHomePage({
           </CardHeader>
           <CardContent>
             <form
-              className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_180px_160px_150px_150px_auto] sm:items-end"
+              className="mb-4 grid min-w-0 gap-3 rounded-lg border p-3 sm:grid-cols-2 sm:items-end"
               method="get"
             >
               <label className="flex flex-col gap-1 text-sm font-medium">
@@ -561,11 +564,11 @@ export default async function AdminHomePage({
         <Card>
           <CardHeader>
             <CardTitle>Entregas de notificações</CardTitle>
-            <CardDescription>Acompanhe e-mails transacionais enviados pela Moto Shop.</CardDescription>
+            <CardDescription>Acompanhe e-mails transacionais enviados pelo Moto Shop.</CardDescription>
           </CardHeader>
           <CardContent>
             <form
-              className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_180px_160px_150px_150px_auto] sm:items-end"
+              className="mb-4 grid min-w-0 gap-3 rounded-lg border p-3 sm:grid-cols-2 sm:items-end"
               method="get"
             >
               <label className="flex flex-col gap-1 text-sm font-medium">
@@ -674,7 +677,7 @@ export default async function AdminHomePage({
         </CardHeader>
         <CardContent>
           <form
-            className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-7 lg:items-end"
+            className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end"
             method="get"
           >
             <label className="flex flex-col gap-1 text-sm font-medium">
@@ -839,7 +842,7 @@ export default async function AdminHomePage({
         <CardHeader>
           <CardTitle>Cupons do marketplace</CardTitle>
           <CardDescription>
-            Crie descontos globais financiados pela Moto Shop. Valores são centavos e percentuais usam basis points.
+            Crie descontos globais financiados pelo Moto Shop. Valores são centavos e percentuais usam basis points.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1419,8 +1422,8 @@ export default async function AdminHomePage({
                 <option value="">Todas</option>
                 {catalog.categories.map((category) => (
                   <option key={category.id} value={category.id}>
-                    {category.parent ? `${category.parent.name} / ` : ""}
-                    {category.name}
+                    {category.parent ? `${getCategoryLabel(category.parent)} / ` : ""}
+                    {getCategoryLabel(category)}
                   </option>
                 ))}
               </DesignSelect>
@@ -1526,7 +1529,7 @@ export default async function AdminHomePage({
                         <Badge variant="outline">{product.status}</Badge>
                       </div>
                       <p className="text-muted-foreground text-sm">
-                        {product.seller.store?.name} · {product.brand.name} · {product.category.name}
+                        {product.seller.store?.name} · {product.brand.name} · {getCategoryLabel(product.category)}
                       </p>
                       <p className="text-muted-foreground mt-1 text-sm">{product.description}</p>
                       <div className="mt-3 flex flex-wrap gap-2">

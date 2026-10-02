@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 
 import { DesignCheckbox } from "@/components/ui/design-checkbox";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import {
   updateNotificationPreferencesAction,
@@ -13,12 +13,25 @@ import {
 const initialState: NotificationPreferenceActionState = {};
 
 export function NotificationPreferencesForm({ emailOrderUpdatesEnabled }: { emailOrderUpdatesEnabled: boolean }) {
-  const [state, action, pending] = useActionState(updateNotificationPreferencesAction, initialState);
+  const [enabled, setEnabled] = useState(emailOrderUpdatesEnabled);
+  const [state, action, pending] = useActionState(
+    async (previousState: NotificationPreferenceActionState, formData: FormData) => {
+      const result = await updateNotificationPreferencesAction(previousState, formData);
+      if (result.success) setEnabled(formData.get("emailOrderUpdatesEnabled") === "on");
+      return result;
+    },
+    initialState,
+  );
 
   return (
     <form action={action} className="space-y-4">
       <label className="flex items-start gap-3 text-sm">
-        <DesignCheckbox name="emailOrderUpdatesEnabled" defaultChecked={emailOrderUpdatesEnabled} className="mt-1" />
+        <DesignCheckbox
+          name="emailOrderUpdatesEnabled"
+          checked={enabled}
+          onCheckedChange={setEnabled}
+          className="mt-1"
+        />
         <span>
           <span className="font-medium">Atualizações dos meus pedidos</span>
           <span className="text-muted-foreground mt-1 block">

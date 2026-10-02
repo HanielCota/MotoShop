@@ -63,7 +63,7 @@ export default async function CartPage() {
                           </p>
                           <p className="mt-1 text-sm">{formatMoneyInCents(unitPriceInCents)} por unidade</p>
                         </div>
-                        <CartItemControls cartItemId={item.id} quantity={item.quantity} />
+                        <CartItemControls key={item.id + ":" + item.quantity} cartItemId={item.id} quantity={item.quantity} />
                       </div>
                     );
                   })}

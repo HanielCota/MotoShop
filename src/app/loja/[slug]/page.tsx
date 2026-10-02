@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!store) return { title: "Loja não encontrada" };
   return {
     title: store.name,
-    description: store.description ?? `Produtos da loja ${store.name} no marketplace da Moto Shop.`,
+    description: store.description ?? `Produtos da loja ${store.name} no marketplace do Moto Shop.`,
     alternates: { canonical: `/loja/${store.slug}` },
   };
 }
@@ -59,6 +59,12 @@ export default async function PublicStorePage({
     .map((word) => word.charAt(0))
     .join("")
     .toUpperCase();
+  const socialLinks = [
+    { label: "Instagram", href: store.instagramUrl },
+    { label: "YouTube", href: store.youtubeUrl },
+    { label: "WhatsApp", href: store.whatsappUrl },
+    { label: "Facebook", href: store.facebookUrl },
+  ].filter((social) => social.href);
 
   function storePageHref(productPage: number): Route {
     const query = new URLSearchParams();
@@ -93,7 +99,7 @@ export default async function PublicStorePage({
           />
         ) : null}
         <div
-          className="absolute -top-28 -right-16 -z-10 size-72 rounded-full border-[42px] border-[#ed5a17]/20 sm:size-96"
+          className="border-moto-brand/20 absolute -top-28 -right-16 -z-10 size-72 rounded-full border-[42px] sm:size-96"
           aria-hidden="true"
         />
         <div
@@ -102,11 +108,11 @@ export default async function PublicStorePage({
         />
         <div className="relative flex min-h-[340px] flex-col justify-between gap-10 p-6 sm:min-h-[390px] sm:p-10">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <span className="text-xs font-bold tracking-[0.2em] text-[#ff8b53] uppercase">
-              Vitrine de loja · Moto Shop
+            <span className="text-moto-brand text-xs font-bold tracking-[0.2em] uppercase">
+              Vitrine de loja · O Moto Shop
             </span>
             {store.seller.subscriptions.length > 0 ? (
-              <Badge className="border border-[#ff8b53]/60 bg-[#ff6b28] text-white">Seller VIP</Badge>
+              <Badge className="border-moto-brand/60 bg-moto-brand text-moto-brand-foreground border">Seller VIP</Badge>
             ) : null}
           </div>
           <div className="max-w-3xl">
@@ -128,17 +134,33 @@ export default async function PublicStorePage({
               {store.name}
             </h1>
             <p className="mt-5 max-w-2xl text-sm leading-6 text-white/75 sm:text-base">
-              {store.description ?? "Catálogo aprovado desta loja dentro do marketplace de motocross."}
+              {store.description ?? "Produtos desta loja parceira no marketplace de motopeças e equipamentos off-road."}
             </p>
+            {socialLinks.length > 0 ? (
+              <nav className="mt-5 flex flex-wrap gap-2" aria-label={`Redes sociais da loja ${store.name}`}>
+                {socialLinks.map(({ label, href }) => (
+                  <a
+                    key={label}
+                    href={href ?? undefined}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${label} da loja ${store.name} (abre em nova aba)`}
+                    className="hover:border-moto-brand hover:text-moto-brand focus-visible:outline-moto-brand inline-flex min-h-10 items-center justify-center rounded-full border border-white/25 px-4 text-sm font-medium text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                  >
+                    {label}
+                  </a>
+                ))}
+              </nav>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-white/20 pt-4 text-sm text-white/80">
             <span>
               <strong className="mr-1 text-lg text-white">{result.total}</strong> produto{result.total === 1 ? "" : "s"}{" "}
-              exibidos
+              {result.total === 1 ? "exibido" : "exibidos"}
             </span>
             {rating ? (
               <span aria-label={`Nota média ${rating.toFixed(1)} de 5, em ${store.reviewSummary.count} avaliações`}>
-                <span aria-hidden="true" className="text-[#ff8b53]">
+                <span aria-hidden="true" className="text-moto-brand">
                   ★
                 </span>{" "}
                 {rating.toFixed(1)}/5 · {store.reviewSummary.count} avaliações
@@ -155,7 +177,7 @@ export default async function PublicStorePage({
           <CardHeader>
             <CardTitle>Avaliações da loja</CardTitle>
             <CardDescription>
-              Comentários de clientes que compraram na Moto Shop · nota média {rating?.toFixed(1)}/5
+              Comentários de clientes que compraram no Moto Shop · nota média {rating?.toFixed(1)}/5
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

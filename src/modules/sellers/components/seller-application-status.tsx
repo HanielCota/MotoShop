@@ -8,23 +8,23 @@ const copy: Record<
 > = {
   PENDING: {
     label: "Em análise",
-    description: "Cadastro recebido e aguardando análise da Moto Shop.",
+    description: "Cadastro recebido e aguardando análise pelo Moto Shop.",
     guidance: "Quando a loja for aprovada, você poderá cadastrar produtos e controlar o estoque por variação.",
   },
   REJECTED: {
     label: "Não aprovado",
     description: "O cadastro da loja não foi aprovado.",
-    guidance: "Entre em contato com a equipe da Moto Shop para entender os próximos passos.",
+    guidance: "Entre em contato com a equipe do Moto Shop para entender os próximos passos.",
   },
   SUSPENDED: {
     label: "Suspensa",
     description: "A operação desta loja está temporariamente suspensa.",
-    guidance: "Entre em contato com a equipe da Moto Shop para esclarecer a situação.",
+    guidance: "Entre em contato com a equipe do Moto Shop para esclarecer a situação.",
   },
   BLOCKED: {
     label: "Bloqueada",
     description: "O acesso operacional desta loja está bloqueado.",
-    guidance: "Entre em contato com a equipe da Moto Shop para esclarecer a situação.",
+    guidance: "Entre em contato com a equipe do Moto Shop para esclarecer a situação.",
   },
 };
 

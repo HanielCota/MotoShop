@@ -4,6 +4,7 @@ import { DesignSelect } from "@/components/ui/design-select";
 
 import Image from "next/image";
 import Link from "next/link";
+import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
 import { useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import {
@@ -19,7 +20,6 @@ import {
   Search,
   Shield,
   ShieldCheck,
-  ShoppingBag,
   UserRound,
   Wrench,
   X,
@@ -27,6 +27,7 @@ import {
 import { type FormEvent, useRef, useState } from "react";
 
 import styles from "./marketing-home.module.css";
+import { CartPreview } from "@/modules/cart/components/cart-preview";
 
 type FitmentOption = {
   id: string;
@@ -154,21 +155,11 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
         }}
       >
         <div className={styles.navShell}>
-          <Link className={styles.brand} href="/" aria-label="Moto Shop, página inicial">
-            <Image
-              className={styles.brandLogo}
-              src="/Banner2-Sem-Fundo.png"
-              alt="Moto Shop"
-              width={6000}
-              height={1000}
-              priority
-            />
-          </Link>
+          <MotoShopBrand />
 
           <nav className={styles.desktopNav} aria-label="Navegação principal">
             <Link href="/products">Comprar</Link>
-            <Link href="#minha-moto">Minha Moto</Link>
-            <Link href="/account/motorcycles">Minhas motos</Link>
+            <Link href="#minha-moto">Compatibilidade</Link>
             <Link href="#categorias">Categorias</Link>
             <Link href="/seller">Para lojistas</Link>
           </nav>
@@ -180,9 +171,7 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
             <Link className={styles.iconLink} href="/login" aria-label="Entrar na minha conta">
               <UserRound />
             </Link>
-            <Link className={styles.iconLink} href="/cart" aria-label="Abrir carrinho">
-              <ShoppingBag />
-            </Link>
+            <CartPreview />
             <button
               ref={menuButton}
               className={styles.menuButton}
@@ -204,8 +193,7 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
           onClick={() => setMenuOpen(false)}
         >
           <Link href="/products">Comprar</Link>
-          <Link href="#minha-moto">Minha Moto</Link>
-          <Link href="/account/motorcycles">Minhas motos</Link>
+          <Link href="#minha-moto">Compatibilidade</Link>
           <Link href="#categorias">Categorias</Link>
           <Link href="/seller">Para lojistas</Link>
         </nav>
@@ -214,21 +202,22 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
       <section className={styles.hero}>
         <Image
           className={styles.heroImage}
-          src="/images/marketing/motoshop-hero.webp"
-          alt="Piloto de motocross contornando uma curva em pista de terra"
+          src="/2016_JS7_MEC_PR_JK14.jpg"
+          alt="Piloto de motocross saltando com a moto em uma pista off-road"
           fill
-          priority
+          preload
           sizes="100vw"
         />
         <div className={styles.heroShade} />
         <div className={styles.heroContent}>
-          <p className={styles.kicker}>Tudo para a sua próxima volta</p>
+          <p className={styles.kicker}>Motopeças · Acessórios · Equipamentos</p>
           <h1>
-            A peça certa.
-            <br />A trilha continua.
+            O Marketplace de quem vive o
+            <br />
+            OFF-ROAD!
           </h1>
           <p className={styles.heroDescription}>
-            Peças, equipamentos e acessórios de lojas especializadas, com compatibilidade clara para a sua moto.
+            Encontre produtos de lojistas parceiros e confira a compatibilidade com a sua moto antes de comprar.
           </p>
 
           <div className={styles.finder} id="minha-moto">
@@ -283,9 +272,7 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
                       disabled={!selectedFitment}
                       value={selectedModel}
                       onValueChange={(value) => {
-                        void setFitmentId(
-                          manufacturerFitments.find((fitment) => fitment.model === value)?.id ?? null,
-                        );
+                        void setFitmentId(manufacturerFitments.find((fitment) => fitment.model === value)?.id ?? null);
                       }}
                     >
                       {models.map((model) => (
@@ -359,7 +346,7 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
 
       <section className={styles.trustSection} aria-label="Benefícios da plataforma">
         <div className={styles.trustGrid}>
-          <TrustItem icon={BadgeCheck} title="Lojas verificadas" text="Vendedores aprovados pela Moto Shop" />
+          <TrustItem icon={BadgeCheck} title="Lojas verificadas" text="Lojistas aprovados pelo Moto Shop" />
           <TrustItem icon={ShieldCheck} title="Pedido acompanhado" text="Consulte seu pedido na plataforma" />
           <TrustItem icon={PackageCheck} title="Compatibilidade clara" text="Saiba se a peça serve antes de comprar" />
           <TrustItem icon={MapPin} title="Frete por loja" text="Consulte opções e prazos no checkout" />
@@ -418,7 +405,7 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
       <section className={styles.productsSection} aria-labelledby="featured-products-title">
         <div className={styles.sectionHeading}>
           <div>
-            <p className={styles.sectionKicker}>Seleção da Moto Shop</p>
+            <p className={styles.sectionKicker}>Seleção do Moto Shop</p>
             <h2 id="featured-products-title">Produtos em destaque</h2>
           </div>
           <Link href="/products">
@@ -435,7 +422,10 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
         ) : (
           <div className={styles.productGrid}>
             {featuredProducts.map(
-              ({ id, name, category, sellerName, price, hasPriceRange, href, image, imageAlt, sponsored, isDemo }) => (
+              (
+                { id, name, category, sellerName, price, hasPriceRange, href, image, imageAlt, sponsored, isDemo },
+                index,
+              ) => (
                 <article className={styles.productCard} key={id}>
                   <Link className={styles.productVisual} href={href} aria-label={`Ver ${name}`}>
                     {isDemo ? (
@@ -444,7 +434,14 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
                       <span className={styles.mockBadge}>Patrocinado · VIP</span>
                     ) : null}
                     {image ? (
-                      <Image src={image} alt={imageAlt} width={600} height={460} unoptimized />
+                      <Image
+                        src={image}
+                        alt={imageAlt}
+                        width={600}
+                        height={460}
+                        loading={index === 0 ? "eager" : "lazy"}
+                        unoptimized
+                      />
                     ) : (
                       <span>Imagem em breve</span>
                     )}
@@ -470,62 +467,6 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
             )}
           </div>
         )}
-      </section>
-
-      <section className={styles.fitmentSection}>
-        <div className={styles.fitmentContent}>
-          <div className={styles.fitmentCopy}>
-            <p className={styles.sectionKicker}>Minha Moto</p>
-            <h2>
-              Menos dúvida.
-              <br />
-              Mais tempo rodando.
-            </h2>
-            <p>
-              Selecione sua moto para encontrar produtos com compatibilidade cadastrada. Para explorar equipamentos e
-              outros itens sem esse filtro, acesse o catálogo completo.
-            </p>
-            <Link href="#minha-moto">
-              Selecionar minha moto <ArrowRight />
-            </Link>
-            <Link href="/account/motorcycles">
-              Gerenciar minhas motos <ArrowRight />
-            </Link>
-          </div>
-          <div className={styles.fitmentCard}>
-            <div className={styles.selectedBike}>
-              <span>
-                <Bike />
-              </span>
-              <div>
-                <strong>{selectedFitment ? `${manufacturer} ${selectedModel}` : "Selecione sua moto"}</strong>
-                <small>
-                  {selectedFitment
-                    ? [selectedFitment.year, selectedFitment.version, `${selectedFitment.displacementCc} cc`]
-                        .filter(Boolean)
-                        .join(" · ")
-                    : "Explore o catálogo enquanto a seleção está indisponível"}
-                </small>
-              </div>
-            </div>
-            {selectedFitment && (
-              <Link className={styles.fitmentRow} href={`/products?moto=${encodeURIComponent(selectedFitment.id)}`}>
-                <span>
-                  <CircleCheck aria-hidden="true" />
-                  Peças compatíveis
-                </span>
-                <ArrowRight aria-hidden="true" />
-              </Link>
-            )}
-            <Link className={styles.fitmentRow} href="/products">
-              <span>
-                <Search aria-hidden="true" />
-                Explorar todo o catálogo
-              </span>
-              <ArrowRight aria-hidden="true" />
-            </Link>
-          </div>
-        </div>
       </section>
 
       <section className={styles.essentialsSection}>
@@ -570,7 +511,7 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
           </div>
           <div className={styles.sellerActions}>
             <Link className={styles.primaryCta} href="/seller">
-              Quero vender na Moto Shop
+              Quero vender no Moto Shop
             </Link>
             <Link className={styles.secondaryCta} href="/login">
               Já tenho uma conta
@@ -580,24 +521,43 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
       </section>
 
       <footer className={styles.footer}>
-        <div>
-          <Link className={styles.brand} href="/" aria-label="Moto Shop, página inicial">
-            <Image
-              className={styles.brandLogo}
-              src="/Banner2-Sem-Fundo.png"
-              alt="Moto Shop"
-              width={6000}
-              height={1000}
-            />
-          </Link>
-          <p>Marketplace especializado em motocross.</p>
+        <div className={styles.footerAbout}>
+          <MotoShopBrand variant="footer" />
+          <p className={styles.footerDescription}>
+            O Moto Shop Brasil é um marketplace de motopeças, acessórios e equipamentos, com foco especial no off-road.
+          </p>
+          <p className={styles.footerDescription}>
+            Aproximamos quem vive o motocross de lojas parceiras em uma plataforma de compra e venda especializada.
+          </p>
         </div>
-        <nav aria-label="Rodapé">
+        <nav aria-label="Links do rodapé">
+          <div>
+            <strong>Institucional</strong>
+            <Link href="/">Início</Link>
+            <Link href="/#categorias">Categorias</Link>
+            <Link href="/#minha-moto">Encontre peças para sua moto</Link>
+          </div>
+          <div>
+            <strong>Compras</strong>
+            <Link href="/favorites">Favoritos</Link>
+            <Link href="/cart">Carrinho</Link>
+            <Link href="/orders">Meus pedidos</Link>
+          </div>
+          <div>
+            <strong>Para lojistas</strong>
+            <Link href="/seller">Central do lojista</Link>
+            <Link href="/login">Acessar minha conta</Link>
+          </div>
+        </nav>
+        <nav className={styles.footerQuickLinks} aria-label="Acessos rápidos">
           <Link href="/products">Comprar</Link>
           <Link href="/seller">Vender</Link>
           <Link href="/orders">Pedidos</Link>
           <Link href="/login">Entrar</Link>
         </nav>
+        <p className={styles.footerLegal}>
+          © 2026 O Moto Shop Brasil. Plataforma de intermediação entre clientes e lojistas parceiros.
+        </p>
       </footer>
     </main>
   );

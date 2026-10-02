@@ -8,6 +8,7 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
+import { getAuthErrorMessage } from "../domain/auth-error-message";
 
 export function AuthForm({
   emailEnabled,
@@ -52,11 +53,7 @@ export function AuthForm({
           : await authClient.signUp.email({ name, email, password, callbackURL: "/login?verified=1" });
 
       if (result.error) {
-        setError(
-          result.error.code === "EMAIL_NOT_VERIFIED"
-            ? "Confirme seu e-mail antes de entrar. Você pode solicitar outro link abaixo."
-            : (result.error.message ?? "Não foi possível concluir a autenticação."),
-        );
+        setError(getAuthErrorMessage(result.error.code));
         return;
       }
 
@@ -81,13 +78,13 @@ export function AuthForm({
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
       <div className="mb-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-[#1b1a18] sm:text-[28px]">
+        <h1 className="text-3xl font-bold tracking-tight text-[#1b1a18] uppercase sm:text-4xl">
           {mode === "sign-in" ? "Acesse sua conta" : "Crie sua conta"}
         </h1>
         <p className="mt-2 text-sm leading-6 text-[#626365]">
           {mode === "sign-in"
             ? "Entre para acompanhar seus pedidos e cuidar da sua loja."
-            : "Uma conta para comprar e vender na Moto Shop."}
+            : "Uma conta para comprar e vender no Moto Shop."}
         </p>
       </div>
       {mode === "sign-up" ? (
@@ -147,11 +144,7 @@ export function AuthForm({
           {error}
         </p>
       ) : null}
-      <Button
-        type="submit"
-        className="h-12 rounded-lg bg-[#242527] px-4 font-semibold text-white hover:bg-[#353638]"
-        disabled={pending}
-      >
+      <Button type="submit" className="h-12 rounded-sm px-4 font-bold tracking-wide uppercase" disabled={pending}>
         {pending ? "Aguarde..." : mode === "sign-in" ? "Entrar" : "Criar conta"}
       </Button>
       {emailEnabled && mode === "sign-in" ? (
@@ -183,13 +176,14 @@ export function AuthForm({
         </div>
       ) : null}
       <div className="mt-1 border-t border-[#e1e3e5] pt-5 text-center text-sm text-[#626365]">
-        {mode === "sign-in" ? "Novo por aqui?" : "Já faz parte da Moto Shop?"}{" "}
+        {mode === "sign-in" ? "Novo por aqui?" : "Já faz parte do Moto Shop?"}{" "}
         <button
           type="button"
           className="font-semibold text-[#222326] underline underline-offset-4 hover:text-[#bd4618] disabled:opacity-50"
           disabled={pending}
           onClick={() => {
             setMode(mode === "sign-in" ? "sign-up" : "sign-in");
+            setPassword("");
             setError(undefined);
             setNotice(undefined);
           }}

@@ -17,24 +17,35 @@ test("cliente salva, edita e usa sua moto principal", async ({ page }, testInfo)
     await expect(page).toHaveURL(/\/account\/motorcycles$/);
     await expect(page.getByText("Sua garagem está vazia")).toBeVisible();
 
+    const fitments = await testDb.motorcycleFitment.findMany({
+      where: { motorcycleModel: { active: true, manufacturer: { active: true } } },
+      include: { motorcycleModel: { include: { manufacturer: true } } },
+      orderBy: [
+        { motorcycleModel: { manufacturer: { name: "asc" } } },
+        { motorcycleModel: { name: "asc" } },
+        { year: "desc" },
+      ],
+      take: 3,
+    });
+    expect(fitments).toHaveLength(3);
+    const fitmentLabel = (fitment: (typeof fitments)[number]) =>
+      `${fitment.motorcycleModel.manufacturer.name} ${fitment.motorcycleModel.name} · ${fitment.version || "padrão"} · ${fitment.displacementCc} cc · ${fitment.year}`;
     const add = page.getByRole("region", { name: "Adicionar moto" });
     const selector = add.getByRole("combobox", { name: "Fabricante, modelo, versão e ano" });
-    const options = selector.locator("option");
-    const firstId = await options.nth(1).getAttribute("value");
-    const secondId = await options.nth(2).getAttribute("value");
-    const thirdId = await options.nth(3).getAttribute("value");
-    expect(firstId && secondId && thirdId).toBeTruthy();
-    await selector.selectOption(firstId!);
+    await selector.click();
+    await page.getByRole("option", { name: fitmentLabel(fitments[0]!), exact: true }).click();
     await add.getByRole("button", { name: "Salvar moto" }).click();
     await expect(page.getByRole("region", { name: "Motos salvas" }).locator("article")).toHaveCount(1);
     await expect(page.getByText("Principal", { exact: true })).toBeVisible();
 
-    await selector.selectOption(secondId!);
+    await selector.click();
+    await page.getByRole("option", { name: fitmentLabel(fitments[1]!), exact: true }).click();
     await add.getByRole("button", { name: "Salvar moto" }).click();
     const cards = page.getByRole("region", { name: "Motos salvas" }).locator("article");
     await expect(cards).toHaveCount(2);
     await cards.nth(0).getByRole("button", { name: "Editar" }).click();
-    await cards.nth(0).getByRole("combobox", { name: "Nova configuração" }).selectOption(thirdId!);
+    await cards.nth(0).getByRole("combobox", { name: "Nova configuração" }).click();
+    await page.getByRole("option", { name: fitmentLabel(fitments[2]!), exact: true }).click();
     await cards.nth(0).getByRole("button", { name: "Salvar alteração" }).click();
     await expect(cards.nth(0).getByRole("status")).toContainText("Configuração atualizada");
     await cards.nth(1).getByRole("button", { name: "Definir como principal" }).click();
@@ -44,17 +55,18 @@ test("cliente salva, edita e usa sua moto principal", async ({ page }, testInfo)
           (await testDb.savedMotorcycle.findFirst({ where: { user: { email }, isPrimary: true } }))
             ?.motorcycleFitmentId,
       )
-      .toBe(secondId);
+      .toBe(fitments[1]!.id);
 
     await page.goto("/");
-    await expect(page.getByRole("link", { name: "Peças compatíveis" })).toHaveAttribute(
-      "href",
-      `/products?moto=${secondId}`,
+    await expect(page.getByRole("combobox", { name: "Fabricante" })).toContainText(
+      fitments[1]!.motorcycleModel.manufacturer.name,
     );
+    await page.getByRole("button", { name: "Ver peças" }).click();
+    await expect(page).toHaveURL(new RegExp(`/products\\?moto=${fitments[1]!.id}$`));
     await page.goto("/products");
     await expect(page.getByRole("link", { name: "Ver peças para minha moto" })).toHaveAttribute(
       "href",
-      `/products?moto=${secondId}`,
+      `/products?moto=${fitments[1]!.id}`,
     );
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
     await page.goto("/account/motorcycles");
@@ -71,7 +83,7 @@ test("cliente salva, edita e usa sua moto principal", async ({ page }, testInfo)
           (await testDb.savedMotorcycle.findFirst({ where: { user: { email }, isPrimary: true } }))
             ?.motorcycleFitmentId,
       )
-      .toBe(thirdId);
+      .toBe(fitments[2]!.id);
   } finally {
     const user = await testDb.user.findUnique({ where: { email }, select: { id: true } });
     if (user) await testDb.user.delete({ where: { id: user.id } });

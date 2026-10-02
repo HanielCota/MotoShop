@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { formatMoneyInCents } from "@/lib/utils";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { getProductOffer } from "@/modules/products/domain/product-offer";
+import { hasActivePromotion } from "@/modules/products/domain/pricing";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 import type { listApprovedProducts } from "@/modules/products/queries/products";
 
@@ -34,6 +35,9 @@ export function ProductGrid({
       {products.map((product) => {
         const offer = getProductOffer(product.variants);
         const inStock = offer.availableQuantity > 0;
+        const onSale = product.variants.some(
+          (variant) => hasActivePromotion(variant) && variant.promotionalPriceInCents! < variant.priceInCents,
+        );
         const imageUrl = product.images[0] ? getPublicStorageUrl(product.images[0].storageKey) : null;
         return (
           <Card key={product.id}>
@@ -67,6 +71,7 @@ export function ProductGrid({
                 </Link>
                 <div className="flex items-center gap-2">
                   {product.isDemo ? <Badge variant="outline">Demonstração</Badge> : null}
+                  {onSale ? <Badge className="border-0 bg-moto-brand text-moto-brand-foreground">Oferta</Badge> : null}
                   {product.isVip ? <Badge variant="secondary">Patrocinado · VIP</Badge> : null}
                   {product.seller.store ? (
                     <Link

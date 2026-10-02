@@ -22,7 +22,7 @@ describe("SellerCatalogProgress", () => {
   it("shows the moderation wait without claiming publication", () => {
     render(<SellerCatalogProgress progress={{ editable: 0, submitted: 1, approved: 0 }} />);
 
-    expect(screen.getByText(/aguardando análise da Moto Shop/i)).toBeInTheDocument();
+    expect(screen.getByText(/aguardando análise pelo Moto Shop/i)).toBeInTheDocument();
     expect(screen.queryByText(/produto\(s\) publicado/i)).not.toBeInTheDocument();
   });
 });

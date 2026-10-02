@@ -12,6 +12,7 @@ import { formatMoneyInCents } from "@/lib/utils";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
 import { FavoriteButton } from "@/modules/favorites/components/favorite-button";
 import { listFavoriteProducts } from "@/modules/favorites/queries/favorites";
+import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { loadFavoriteSearchParams } from "@/modules/favorites/search-params";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
@@ -108,7 +109,7 @@ export default async function FavoritesPage({
                 <CardHeader>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex flex-wrap gap-1.5">
-                      <Badge variant="outline">{product.category.name}</Badge>
+                      <Badge variant="outline">{getCategoryLabel(product.category)}</Badge>
                       {product.isDemo ? <Badge variant="secondary">Demonstração</Badge> : null}
                     </div>
                     <span className="text-muted-foreground text-xs">{product.seller.store?.name}</span>

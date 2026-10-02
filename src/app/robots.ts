@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
 
-import { env } from "@/config/env";
+import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = env.BETTER_AUTH_URL.replace(/\/$/, "");
+  const baseUrl = getApplicationBaseUrl();
 
   return {
     rules: {

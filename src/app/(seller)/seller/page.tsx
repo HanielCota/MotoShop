@@ -28,6 +28,7 @@ import { StoreBrandingManager } from "@/modules/sellers/components/store-brandin
 import { StoreProfileForm } from "@/modules/sellers/components/store-profile-form";
 import { getUserSellerMemberships } from "@/modules/sellers/queries/sellers";
 import { getSellerFinancialSummary, listSellerLowStockVariants } from "@/modules/sellers/queries/seller-dashboard";
+import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { getSellerCatalogProgress } from "@/modules/sellers/queries/seller-catalog-progress";
 import { listSellerInventoryMovements } from "@/modules/sellers/queries/inventory-movements";
 import { loadInventorySearchParams } from "@/modules/sellers/inventory-search-params";
@@ -71,7 +72,7 @@ export default async function SellerHomePage({
         <CardHeader>
           <CardTitle>Cadastre sua loja</CardTitle>
           <CardDescription>
-            Crie o perfil da sua loja para começar o processo de aprovação da Moto Shop.
+            Crie o perfil da sua loja para começar o processo de aprovação pelo Moto Shop.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -231,13 +232,21 @@ export default async function SellerHomePage({
               <CardHeader>
                 <CardTitle>Perfil público da loja</CardTitle>
                 <CardDescription>
-                  Nome, endereço público e apresentação exibidos na vitrine da Moto Shop. Dados de origem ficam em uma
+                  Nome, endereço público e apresentação exibidos na vitrine do Moto Shop. Dados de origem ficam em uma
                   seção separada e não são publicados.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <StoreProfileForm
-                  store={{ name: seller.store.name, slug: seller.store.slug, description: seller.store.description }}
+                  store={{
+                    name: seller.store.name,
+                    slug: seller.store.slug,
+                    description: seller.store.description,
+                    instagramUrl: seller.store.instagramUrl,
+                    youtubeUrl: seller.store.youtubeUrl,
+                    whatsappUrl: seller.store.whatsappUrl,
+                    facebookUrl: seller.store.facebookUrl,
+                  }}
                 />
               </CardContent>
             </Card>
@@ -314,7 +323,7 @@ export default async function SellerHomePage({
             </div>
           ) : (
             <p className="text-muted-foreground text-sm">
-              Sua loja ainda não possui VIP ativo. Fale com a Moto Shop para solicitar a ativação.
+              Sua loja ainda não possui VIP ativo. Fale com o Moto Shop para solicitar a ativação.
             </p>
           )}
         </CardContent>
@@ -423,10 +432,12 @@ export default async function SellerHomePage({
               <div>
                 <p className="text-muted-foreground text-xs">Vendas</p>
                 <p className="mt-1 text-lg font-semibold">{formatMoneyInCents(financialSummary.grossSalesInCents)}</p>
-                <p className="text-muted-foreground text-xs">{financialSummary.orderCount} {financialSummary.orderCount === 1 ? "pedido" : "pedidos"}</p>
+                <p className="text-muted-foreground text-xs">
+                  {financialSummary.orderCount} {financialSummary.orderCount === 1 ? "pedido" : "pedidos"}
+                </p>
               </div>
               <div>
-                <p className="text-muted-foreground text-xs">Comissão da Moto Shop</p>
+                <p className="text-muted-foreground text-xs">Comissão do Moto Shop</p>
                 <p className="mt-1 text-lg font-semibold">{formatMoneyInCents(financialSummary.commissionInCents)}</p>
               </div>
               <div>
@@ -577,7 +588,9 @@ export default async function SellerHomePage({
           <Card>
             <CardHeader>
               <CardTitle>Produtos</CardTitle>
-              <CardDescription>{productResult.total} {productResult.total === 1 ? "produto cadastrado" : "produtos cadastrados"}.</CardDescription>
+              <CardDescription>
+                {productResult.total} {productResult.total === 1 ? "produto cadastrado" : "produtos cadastrados"}.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <form className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-4" method="get">
@@ -601,8 +614,8 @@ export default async function SellerHomePage({
                     <option value="">Todas</option>
                     {categories.map((category) => (
                       <option key={category.id} value={category.id}>
-                        {category.parent ? `${category.parent.name} / ` : ""}
-                        {category.name}
+                        {category.parent ? `${getCategoryLabel(category.parent)} / ` : ""}
+                        {getCategoryLabel(category)}
                       </option>
                     ))}
                   </DesignSelect>
@@ -723,7 +736,8 @@ export default async function SellerHomePage({
                             <Badge variant="outline">{statusLabel(product.status)}</Badge>
                           </div>
                           <p className="text-muted-foreground mt-1 text-sm">
-                            {product.brand.name} · {product.category.name} · {product.variants.length} variação(ões)
+                            {product.brand.name} · {getCategoryLabel(product.category)} · {product.variants.length}{" "}
+                            variação(ões)
                           </p>
                           {product.variants.length > 0 ? (
                             <div className="mt-2 space-y-2">

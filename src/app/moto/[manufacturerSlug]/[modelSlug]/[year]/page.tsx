@@ -19,7 +19,7 @@ export async function generateMetadata({
   const title = `${motorcycle.manufacturer.name} ${motorcycle.name} ${year}`;
   return {
     title,
-    description: `Peças e equipamentos compatíveis com ${title} na Moto Shop.`,
+    description: `Peças e equipamentos compatíveis com ${title} no Moto Shop.`,
     alternates: { canonical: `/moto/${manufacturerSlug}/${modelSlug}/${year}` },
   };
 }

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
-import { env } from "@/config/env";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,7 +51,7 @@ export default async function CheckoutPage() {
       <CheckoutForm
         savedAddresses={savedAddresses}
         cartSummary={cartSummary}
-        {...(env.MERCADO_PAGO_PUBLIC_KEY ? { cardPublicKey: env.MERCADO_PAGO_PUBLIC_KEY } : {})}
+        paymentAvailable={false}
       />
     </main>
   );

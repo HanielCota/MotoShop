@@ -8,12 +8,13 @@ import { DesignSelect } from "@/components/ui/design-select";
 import { startTransition, useActionState } from "react";
 
 import { updateProductAction, type ProductActionState } from "@/modules/products/actions/product-actions";
+import { getCategoryLabel } from "@/modules/catalog/category-labels";
 
 import { VariantsEditor, type VariantDraft } from "./product-form";
 import { type Measurements } from "../domain/product-commercial-fields";
 import { MeasurementFields } from "./measurement-fields";
 
-type Option = { id: string; name: string };
+type Option = { id: string; name: string; slug: string };
 type FitmentOption = { id: string; label: string };
 type ProductValues = Measurements & {
   id: string;
@@ -79,7 +80,7 @@ export function ProductEditForm({
         >
           {categories.map((option) => (
             <option key={option.id} value={option.id}>
-              {option.name}
+              {getCategoryLabel(option)}
             </option>
           ))}
         </DesignSelect>

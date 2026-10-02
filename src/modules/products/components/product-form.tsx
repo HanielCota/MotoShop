@@ -9,10 +9,11 @@ import { startTransition, useActionState, useState } from "react";
 
 import { createProductAction, type ProductActionState } from "@/modules/products/actions/product-actions";
 import { formatPriceInputFromCents } from "@/modules/products/domain/price-input";
+import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { type Measurements } from "../domain/product-commercial-fields";
 import { MeasurementFields } from "./measurement-fields";
 
-type Option = { id: string; name: string };
+type Option = { id: string; name: string; slug: string };
 type FitmentOption = { id: string; label: string };
 
 const initialState: ProductActionState = {};
@@ -59,7 +60,7 @@ export function ProductForm({
           <option value="">Selecione</option>
           {categories.map((option) => (
             <option key={option.id} value={option.id}>
-              {option.name}
+              {getCategoryLabel(option)}
             </option>
           ))}
         </DesignSelect>

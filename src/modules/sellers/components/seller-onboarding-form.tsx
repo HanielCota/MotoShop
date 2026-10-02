@@ -33,10 +33,14 @@ export function SellerOnboardingForm() {
         <Input
           name="originPostalCode"
           inputMode="numeric"
-          pattern="\d{8}"
-          placeholder="01001000"
+          pattern="\d{5}-?\d{3}"
+          placeholder="01001-000"
+          aria-describedby="origin-postal-code-help"
           required
         />
+        <span id="origin-postal-code-help" className="text-muted-foreground text-xs font-normal">
+          Informe os 8 números, com ou sem hífen.
+        </span>
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
         Tipo de seller

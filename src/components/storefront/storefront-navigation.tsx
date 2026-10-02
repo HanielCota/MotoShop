@@ -1,10 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, ShoppingBag, UserRound, X } from "lucide-react";
+import { Menu, UserRound, X } from "lucide-react";
 import { useRef, useState } from "react";
+import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
+import { authClient } from "@/modules/auth/infrastructure/auth-client";
+import { CartPreview } from "@/modules/cart/components/cart-preview";
 
 export function StorefrontNavigation() {
   const pathname = usePathname();
@@ -25,16 +27,11 @@ export function StorefrontNavigation() {
       }}
     >
       <div className="mx-auto flex min-h-[68px] w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
-        <Link href="/" className="flex min-h-11 shrink-0 items-center" aria-label="Moto Shop, página inicial">
-          <Image
-            src="/Banner2-Sem-Fundo.png"
-            alt="Moto Shop"
-            width={6000}
-            height={1000}
-            priority
-            className="h-auto w-[142px] object-contain sm:w-[174px]"
-          />
-        </Link>
+        <MotoShopBrand />
+
+        <span className="hidden max-w-52 border-l border-white/20 pl-4 text-[0.62rem] leading-4 font-semibold tracking-[0.12em] text-white/65 uppercase xl:block">
+          O Marketplace de quem vive o <span className="text-moto-brand">OFF-ROAD!</span>
+        </span>
 
         <nav
           className="ml-6 hidden items-center gap-7 text-sm font-medium text-white/75 md:flex"
@@ -43,15 +40,9 @@ export function StorefrontNavigation() {
           <Link
             href="/products"
             aria-current={catalogActive ? "page" : undefined}
-            className="inline-flex min-h-11 items-center transition-colors hover:text-white aria-[current=page]:text-[#ff7b3d]"
+            className="aria-[current=page]:text-moto-brand inline-flex min-h-11 items-center transition-colors hover:text-white"
           >
             Catálogo
-          </Link>
-          <Link
-            href="/account/motorcycles"
-            className="inline-flex min-h-11 items-center transition-colors hover:text-white"
-          >
-            Minhas motos
           </Link>
           <Link href="/seller" className="inline-flex min-h-11 items-center transition-colors hover:text-white">
             Para lojistas
@@ -59,20 +50,8 @@ export function StorefrontNavigation() {
         </nav>
 
         <div className="ml-auto flex items-center gap-1">
-          <Link
-            href="/login"
-            aria-label="Entrar na minha conta"
-            className="inline-flex size-11 items-center justify-center rounded-md text-white/85 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <UserRound aria-hidden="true" className="size-5" />
-          </Link>
-          <Link
-            href="/cart"
-            aria-label="Abrir carrinho"
-            className="inline-flex size-11 items-center justify-center rounded-md text-white/85 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <ShoppingBag aria-hidden="true" className="size-5" />
-          </Link>
+          <AccountLink />
+          <CartPreview />
           <button
             ref={menuButton}
             type="button"
@@ -101,13 +80,6 @@ export function StorefrontNavigation() {
           Catálogo
         </Link>
         <Link
-          href="/account/motorcycles"
-          onClick={() => setMenuOpen(false)}
-          className="flex min-h-11 items-center border-b border-white/10 text-sm font-medium"
-        >
-          Minhas motos
-        </Link>
-        <Link
           href="/seller"
           onClick={() => setMenuOpen(false)}
           className="flex min-h-11 items-center text-sm font-medium"
@@ -116,5 +88,19 @@ export function StorefrontNavigation() {
         </Link>
       </nav>
     </header>
+  );
+}
+
+function AccountLink() {
+  const { data: session } = authClient.useSession();
+
+  return (
+    <Link
+      href={session?.user ? "/orders" : "/login"}
+      aria-label={session?.user ? "Minha conta e pedidos" : "Entrar na minha conta"}
+      className="inline-flex size-11 items-center justify-center rounded-md text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+    >
+      <UserRound aria-hidden="true" className="size-5" />
+    </Link>
   );
 }

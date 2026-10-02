@@ -50,7 +50,7 @@ export function FulfillmentStatusEmail({
           <a href={trackingUrl}>Acompanhar entrega</a>
         </p>
       ) : null}
-      <p>Você também pode acompanhar todos os detalhes acessando o pedido na Moto Shop.</p>
+      <p>Você também pode acompanhar todos os detalhes acessando o pedido no Moto Shop.</p>
     </div>
   );
 }
