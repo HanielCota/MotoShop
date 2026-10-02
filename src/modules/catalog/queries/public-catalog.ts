@@ -27,6 +27,10 @@ export async function getPublicStoreBySlug(
       description: true,
       logoStorageKey: true,
       bannerStorageKey: true,
+      instagramUrl: true,
+      youtubeUrl: true,
+      whatsappUrl: true,
+      facebookUrl: true,
       sellerId: true,
       updatedAt: true,
       seller: {
