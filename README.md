@@ -1,4 +1,4 @@
-# MotoShop
+# O Moto Shop
 
 Fundação técnica do marketplace multi-seller de motocross, construída como monólito modular em Next.js fullstack.
 
@@ -38,7 +38,7 @@ O fluxo inicial implementado é:
 2. Solicitar o cadastro de uma loja em `/seller`.
 3. Um administrador, listado em `ADMIN_EMAILS`, aprovar a loja em `/admin`.
 4. O seller aprovado criar um produto com variante e estoque inicial.
-5. Enviar o produto para aprovação do MotoShop.
+5. Enviar o produto para aprovação do Moto Shop.
 6. Aprovar o produto no Admin e publicá-lo no storefront em `/products`.
 
 Preços cadastrados pelo seller são informados em centavos para manter a regra financeira do projeto. A compatibilidade com motos usa o filtro `Minha Moto` quando houver fitments cadastrados.
@@ -49,7 +49,7 @@ O Admin mantém categorias, marcas, fabricantes, modelos e fitments de motos em 
 
 ## Fase 4: imagens de produto
 
-Sellers adicionam até oito imagens JPG, PNG ou WebP de até 5 MB na edição de produtos em rascunho ou rejeitados. O navegador envia o arquivo diretamente ao Cloudflare R2 usando URL assinada; depois o MotoShop persiste o `ProductImage` apenas se o produto pertencer ao seller autenticado. Configure `R2_PUBLIC_URL` para exibir as imagens no storefront.
+Sellers adicionam até oito imagens JPG, PNG ou WebP de até 5 MB na edição de produtos em rascunho ou rejeitados. O navegador envia o arquivo diretamente ao ImageKit com autenticação temporária gerada pelo servidor; depois o Moto Shop valida o asset e persiste o `ProductImage` apenas se o produto pertencer ao seller autenticado. Configure `IMAGEKIT_PUBLIC_KEY`, `IMAGEKIT_PRIVATE_KEY` e `IMAGEKIT_URL_ENDPOINT` para habilitar uploads e exibir imagens no storefront. O projeto não usa Cloudflare R2.
 
 ## Fase 5: equipe e permissões do seller
 
@@ -73,7 +73,7 @@ Clientes autenticados acompanham seus pedidos em `/orders`, com o status global,
 
 ## Fase 10: múltiplas variantes
 
-Sellers podem cadastrar e editar várias variantes no mesmo produto, cada uma com título, SKU, preço e estoque próprios. Variantes removidas de rascunhos ou produtos rejeitados são desativadas em vez de apagadas, preservando o histórico de estoque e mantendo a publicação dependente da aprovação do MotoShop.
+Sellers podem cadastrar e editar várias variantes no mesmo produto, cada uma com título, SKU, preço e estoque próprios. Variantes removidas de rascunhos ou produtos rejeitados são desativadas em vez de apagadas, preservando o histórico de estoque e mantendo a publicação dependente da aprovação do Moto Shop.
 
 ## Fase 11: páginas públicas de catálogo
 
@@ -93,7 +93,7 @@ Owners e admins do seller podem atualizar em `/seller` o nome público, o slug e
 
 ## Fase 15: identidade visual da loja
 
-Owners e admins podem enviar logo e banner da loja diretamente para o R2 em `/seller`. A aplicação valida tipo e tamanho, associa cada asset somente ao seller autenticado e exibe as imagens na vitrine pública quando `R2_PUBLIC_URL` estiver configurado.
+Owners e admins podem enviar logo e banner da loja diretamente para o ImageKit em `/seller`. A aplicação valida tipo e tamanho, associa cada asset somente ao seller autenticado e exibe as imagens na vitrine pública quando `IMAGEKIT_URL_ENDPOINT` estiver configurado.
 
 ## Fase 16: imagens no catálogo público
 
@@ -161,7 +161,7 @@ O Admin pode consultar registros de auditoria por ação ou entidade, com ator, 
 
 ## Fase 32: resumo financeiro do seller
 
-O painel do seller exibe vendas confirmadas, comissão do MotoShop e valor líquido acumulado a partir dos snapshots financeiros dos pedidos.
+O painel do seller exibe vendas confirmadas, comissão do Moto Shop e valor líquido acumulado a partir dos snapshots financeiros dos pedidos.
 
 ## Fase 33: monitoramento de estoque baixo
 
@@ -631,7 +631,7 @@ O cliente pode abrir uma disputa por `SellerOrder` a partir do pedido, inclusive
 
 ## Cupons e promoções
 
-O Admin pode criar cupons globais e sellers aprovados podem criar cupons próprios. O checkout aceita um cupom por pedido, recalcula o desconto server-side, aplica limites global e por cliente e registra a redenção. Cupons globais são financiados pelo MotoShop; cupons de seller reduzem o saldo daquele seller. Promoções de variante respeitam data inicial e final em todas as telas e no checkout.
+O Admin pode criar cupons globais e sellers aprovados podem criar cupons próprios. O checkout aceita um cupom por pedido, recalcula o desconto server-side, aplica limites global e por cliente e registra a redenção. Cupons globais são financiados pelo Moto Shop; cupons de seller reduzem o saldo daquele seller. Promoções de variante respeitam data inicial e final em todas as telas e no checkout.
 
 ## Plano VIP e exposição patrocinada
 

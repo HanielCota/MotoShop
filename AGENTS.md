@@ -1,6 +1,6 @@
-# AGENTS.md — MotoShop
+# AGENTS.md — O Moto Shop
 
-> Este arquivo é a fonte principal de contexto técnico e de produto do MotoShop.
+> Este arquivo é a fonte principal de contexto técnico e de produto do Moto Shop.
 > Antes de criar, alterar, refatorar ou remover qualquer funcionalidade, leia este documento por completo.
 > Em caso de conflito entre uma sugestão técnica genérica e este documento, este documento tem prioridade, salvo instrução explícita do responsável pelo projeto.
 
@@ -8,11 +8,11 @@
 
 # 1. Visão do produto
 
-**MotoShop** é um marketplace vertical focado exclusivamente no ecossistema de motocross.
+**O Moto Shop** é um marketplace vertical focado exclusivamente no ecossistema de motocross.
 
 O produto nasce como **marketplace multi-lojista**, não como e-commerce de loja única.
 
-O MotoShop terá três experiências principais:
+O Moto Shop terá três experiências principais:
 
 1. **Marketplace / Storefront**
    - Navegação pública.
@@ -41,7 +41,7 @@ O MotoShop terá três experiências principais:
    - Perfil da loja.
    - Gestão de usuários e permissões.
 
-3. **Admin MotoShop**
+3. **Admin do Moto Shop**
    - Aprovação de lojistas.
    - Aprovação de produtos.
    - Gestão de categorias.
@@ -79,7 +79,7 @@ Não otimizar antecipadamente para milhões de usuários.
 
 # 3. Stack oficial
 
-A stack principal do MotoShop é:
+A stack principal do Moto Shop é:
 
 ## Aplicação
 
@@ -127,7 +127,7 @@ Nunca usar Redis como fonte da verdade para:
 
 Usar autenticação centralizada e sessões seguras.
 
-A autorização de negócio deve continuar pertencendo ao MotoShop.
+A autorização de negócio deve continuar pertencendo ao Moto Shop.
 
 Não espalhar verificações como:
 
@@ -146,7 +146,7 @@ Centralizar permissões.
 - **Tailwind CSS**
 - **shadcn/ui**
 - **Lucide**
-- componentes próprios do MotoShop
+- componentes próprios do Moto Shop
 
 Não adicionar outra biblioteca visual pesada sem necessidade.
 
@@ -306,7 +306,7 @@ Gateway inicial:
 
 - **Mercado Pago**
 
-O checkout deve permanecer dentro do MotoShop.
+O checkout deve permanecer dentro do Moto Shop.
 
 Nunca redirecionar o cliente para uma experiência externa do Mercado Pago se houver alternativa compatível com o requisito de Checkout Transparente.
 
@@ -411,7 +411,7 @@ Prioridade alta para testes de:
 
 # 4. Arquitetura obrigatória
 
-O MotoShop é um **monólito modular**.
+O Moto Shop é um **monólito modular**.
 
 Organizar código por domínio, não apenas por tipo técnico.
 
@@ -511,7 +511,7 @@ Regra de negócio fica na camada de aplicação/domínio.
 
 # 6. Domínio multi-lojista
 
-O MotoShop nasce com múltiplos sellers.
+O Moto Shop nasce com múltiplos sellers.
 
 Um carrinho pode conter produtos de vários lojistas.
 
@@ -577,7 +577,7 @@ Não assumir que todo o Order muda de estado junto.
 
 # 8. Estoque
 
-O seller controla o estoque através do MotoShop.
+O seller controla o estoque através do Moto Shop.
 
 O sistema deve atualizar automaticamente o estoque após vendas e ajustes.
 
@@ -632,7 +632,7 @@ Produtos podem ter:
 - estoque;
 - compatibilidade com motos.
 
-Produtos novos precisam de **aprovação do MotoShop inicialmente**.
+Produtos novos precisam de **aprovação do Moto Shop inicialmente**.
 
 Fluxo sugerido:
 
@@ -654,7 +654,7 @@ Não implementar isso agora sem necessidade.
 
 # 10. Categorias e marcas
 
-Categorias e marcas são controladas pelo MotoShop.
+Categorias e marcas são controladas pelo Moto Shop.
 
 Sellers não criam categorias livremente.
 
@@ -700,7 +700,7 @@ ProductCompatibility
 MotorcycleFitment
 ```
 
-A base de motos é controlada pelo MotoShop.
+A base de motos é controlada pelo Moto Shop.
 
 Sellers podem sugerir novos modelos, mas não criar livremente.
 
@@ -796,7 +796,7 @@ Cálculos financeiros devem ter testes.
 
 # 15. Comissão
 
-O MotoShop monetiza através de comissão sobre vendas.
+O Moto Shop monetiza através de comissão sobre vendas.
 
 Existe uma comissão global padrão.
 
@@ -861,7 +861,7 @@ Conteúdo patrocinado deve ser identificável como patrocinado quando aplicável
 
 Gateway inicial: Mercado Pago.
 
-O cliente permanece dentro do MotoShop.
+O cliente permanece dentro do Moto Shop.
 
 O sistema precisa estar preparado para split de marketplace.
 
@@ -972,7 +972,7 @@ Existem dois tipos principais:
 
 ## Marketplace coupon
 
-Criado pelo MotoShop.
+Criado pelo Moto Shop.
 
 ## Seller coupon
 
@@ -996,7 +996,7 @@ Nunca perder a informação de quem subsidiou o desconto.
 Pode ser financiado por:
 
 - seller;
-- MotoShop;
+- O Moto Shop;
 - ambos.
 
 Registrar valores separados.
@@ -1029,7 +1029,7 @@ Promoção deve ser validada server-side.
 
 # 24. Devoluções
 
-Cliente pode solicitar devolução dentro do MotoShop.
+Cliente pode solicitar devolução dentro do Moto Shop.
 
 Devolução pode ser por item.
 
@@ -1070,7 +1070,7 @@ Se já enviado, normalmente tratar como devolução.
 
 # 26. Disputas
 
-MotoShop faz mediação entre cliente e seller.
+O Moto Shop faz mediação entre cliente e seller.
 
 Admin deve ter dados suficientes para analisar:
 
@@ -1161,7 +1161,7 @@ Seller pode ser:
 - CPF;
 - CNPJ.
 
-Cadastro precisa de aprovação do MotoShop.
+Cadastro precisa de aprovação do Moto Shop.
 
 Status sugeridos:
 
@@ -1774,7 +1774,7 @@ Verificar:
 - exige tenant isolation?
 - precisa funcionar para guest?
 
-Essas perguntas evitam grande parte dos bugs arquiteturais do MotoShop.
+Essas perguntas evitam grande parte dos bugs arquiteturais do Moto Shop.
 
 ---
 
@@ -1810,7 +1810,7 @@ Não criar features extras por iniciativa própria.
 
 # 62. Preservar simplicidade
 
-MotoShop deve ser sofisticado no domínio, não na infraestrutura.
+O Moto Shop deve ser sofisticado no domínio, não na infraestrutura.
 
 Preferir:
 
@@ -1883,7 +1883,7 @@ Antes de considerar uma tarefa concluída:
 Se houver pouco tempo para ler este arquivo, nunca esquecer:
 
 ```text
-MotoShop = marketplace multi-seller de motocross.
+O Moto Shop = marketplace multi-seller de motocross.
 
 Stack:
 Next.js + TypeScript
@@ -1913,7 +1913,7 @@ Regras:
 - Dinheiro sempre em centavos.
 - Comissão configurável.
 - Produto novo exige aprovação inicialmente.
-- Categories/brands/motorcycles são controlados pelo MotoShop.
+- Categories/brands/motorcycles são controlados pelo Moto Shop.
 - Pagamentos e webhooks precisam ser idempotentes.
 - Next.js pode ser fullstack.
 - Jobs complexos ficam no Inngest.
@@ -1987,7 +1987,7 @@ Decisões adicionais do MVP:
 - Uso de cupom deve ser consultado por agregação/count do banco, sem serializar resgates completos para as páginas operacionais.
 - O detalhe do pedido pode expor ao próprio cliente o histórico dos pagamentos e transações vinculados ao `Order`, sem revelar metadados sensíveis do provider.
 - Reconsulta manual de pagamento aceita somente pedidos autorizados por sessão ou token guest seguro, limita-se a pagamentos pendentes e reutiliza o reconciliador idempotente.
-- Cartão de crédito usa Secure Fields do MercadoPago.js (iframes) e token descartável; PAN, validade e CVV nunca passam pelo servidor da Moto Shop. A primeira versão aceita crédito em uma parcela, definida no servidor. A Public Key pertence à mesma aplicação/ambiente do Access Token; somente a Public Key chega ao navegador. A URL opcional `MERCADO_PAGO_NOTIFICATION_URL` é enviada por cobrança e exige assinatura secreta configurada, sem sobrescrever configurações globais de outras integrações. Cartões e webhook real permanecem sujeitos à homologação.
+- Cartão de crédito usa Secure Fields do MercadoPago.js (iframes) e token descartável; PAN, validade e CVV nunca passam pelo servidor do Moto Shop. A primeira versão aceita crédito em uma parcela, definida no servidor. A Public Key pertence à mesma aplicação/ambiente do Access Token; somente a Public Key chega ao navegador. A URL opcional `MERCADO_PAGO_NOTIFICATION_URL` é enviada por cobrança e exige assinatura secreta configurada, sem sobrescrever configurações globais de outras integrações. Cartões e webhook real permanecem sujeitos à homologação.
 - Recuperação de pagamento sem ID externo consulta por referência do pedido e exige resultado único, com validação de ID, referência, valor, moeda e método. Nunca cria nova cobrança. Busca vazia, timeout ou ambiguidade preservam reservas. O Inngest agenda recuperação paginada a cada dez minutos para pendências com mais de dois minutos; depende do serviço ativo. Expiração local de QR/idade do pedido não autoriza liberar estoque: é necessária recusa/cancelamento confirmado pelo provider.
 - Filas administrativas devem combinar busca textual, status e paginação no `where` do banco, limitando o payload serializado.
 - A busca de seller deve considerar loja e membros, mas nunca remover o filtro de status ou a proteção administrativa.
@@ -2016,7 +2016,7 @@ Decisões adicionais do MVP:
 - A faixa de preço do storefront deve considerar o preço vigente de variantes ativas e usar centavos, sem confiar em cálculo do cliente.
 - Cupons futuros são identificados por `startsAt > now`; a vigência final continua sendo validada no checkout.
 - O histórico do cliente pode filtrar por status de `Shipment`, sempre combinado com `userId` e sem expor pedidos de terceiros.
-- O catálogo do seller pode filtrar por categoria, mantendo `sellerId` no `where` e opções de categorias controladas pelo MotoShop.
+- O catálogo do seller pode filtrar por categoria, mantendo `sellerId` no `where` e opções de categorias controladas pelo Moto Shop.
 - O storefront deve listar apenas sellers aprovados ou ativos ao oferecer filtro público de loja.
 - Monitoramento de webhook pode filtrar `provider` no banco sem serializar o payload bruto.
 - Entregas de notificação podem filtrar `kind` no banco, preservando status, paginação e dados operacionais mínimos.
@@ -2092,7 +2092,7 @@ Decisões adicionais do MVP:
 - Vínculo posterior de pedido guest exige token de acesso não previsível, sessão autenticada e mesmo e-mail do pedido; a atualização é condicional e revoga o token no mesmo passo para impedir dupla vinculação.
 - Rate limiting de autenticação e mutations sensíveis usa contador atômico no PostgreSQL como solução de MVP enquanto Upstash não está configurado; chaves persistidas são hashes e nunca contêm token ou e-mail em claro. Monitorar crescimento da tabela e migrar o armazenamento para Upstash se o volume justificar.
 - Perguntas e avaliações públicas podem ser ocultadas/restauradas pelo Admin sem exclusão física. Consultas públicas ignoram itens ocultos, e cada alteração gera AuditLog. O histórico pessoal do pedido permanece acessível ao próprio cliente.
-- A marca pública é **Moto Shop**. Em textos de interface, SEO, e-mails e mensagens para pessoas, usar o artigo feminino: **a Moto Shop**, **da Moto Shop**, **na Moto Shop**, **pela Moto Shop**. Não usar "o MotoShop". Identificadores técnicos internos e nomes de arquivos não precisam ser renomeados.
+- A marca pública é **O Moto Shop**. Em textos de interface, SEO, e-mails e mensagens para pessoas, usar o artigo masculino e manter as duas palavras separadas. Identificadores técnicos internos, nomes de arquivos e chaves de integração não precisam ser renomeados.
 
 ---
 

@@ -17,6 +17,7 @@
 /.next/
 /.next-e2e/
 /.next-garage-check/
+/.next-audit-build/
 /out/
 
 # production

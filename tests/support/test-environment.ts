@@ -11,10 +11,11 @@ export function requireTestDatabaseUrl(environment: Readonly<Record<string, stri
     if (
       target.hostname === application.hostname &&
       target.port === application.port &&
-      target.pathname === application.pathname
+      target.pathname === application.pathname &&
+      environment.ALLOW_SHARED_TEST_DATABASE !== "true"
     ) {
       throw new Error(
-        "Refusing tests against the application database. Configure an isolated test database or branch.",
+        "Refusing tests against the application database. Configure an isolated database or branch, or explicitly set ALLOW_SHARED_TEST_DATABASE=true for a disposable test database.",
       );
     }
   }

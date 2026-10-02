@@ -14,6 +14,7 @@ export async function cleanupFixtures(input: {
   emails: string[];
   cartIds?: string[];
   couponIds?: string[];
+  webhookEventIds?: string[];
 }) {
   if (input.emails.some((email) => !email.endsWith("@example.test")))
     throw new Error("Refusing to clean non-test accounts");
@@ -21,11 +22,15 @@ export async function cleanupFixtures(input: {
   const orderIds = orders.map((order) => order.id);
   await testDb.$transaction(
     async (tx) => {
+      await tx.webhookEvent.deleteMany({ where: { id: { in: input.webhookEventIds ?? [] } } });
       await tx.auditLog.deleteMany({
         where: { OR: [{ actorUserId: { in: input.userIds } }, { entityId: { in: orderIds } }] },
       });
       await tx.paymentTransaction.deleteMany({ where: { payment: { orderId: { in: orderIds } } } });
       await tx.payment.deleteMany({ where: { orderId: { in: orderIds } } });
+      await tx.returnRequest.deleteMany({ where: { orderId: { in: orderIds } } });
+      await tx.cancellationRequest.deleteMany({ where: { orderId: { in: orderIds } } });
+      await tx.dispute.deleteMany({ where: { orderId: { in: orderIds } } });
       await tx.couponRedemption.deleteMany({ where: { orderId: { in: orderIds } } });
       await tx.shipment.deleteMany({ where: { sellerOrder: { orderId: { in: orderIds } } } });
       await tx.orderItem.deleteMany({ where: { sellerOrder: { orderId: { in: orderIds } } } });
