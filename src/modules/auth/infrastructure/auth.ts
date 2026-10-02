@@ -3,6 +3,7 @@ import "server-only";
 import { prismaAdapter } from "@better-auth/prisma-adapter";
 import { betterAuth } from "better-auth/minimal";
 
+import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { env } from "@/config/env";
 import { db } from "@/lib/database";
 import { sendAuthEmail } from "@/modules/auth/application/send-auth-email";
@@ -12,8 +13,8 @@ export const authEmailConfigured = Boolean(env.RESEND_API_KEY && env.EMAIL_FROM)
 export const authEmailVerificationRequired = authEmailConfigured && env.AUTH_REQUIRE_EMAIL_VERIFICATION === true;
 
 export const auth = betterAuth({
-  appName: "Moto Shop",
-  baseURL: env.BETTER_AUTH_URL,
+  appName: "O Moto Shop",
+  baseURL: getApplicationBaseUrl(),
   secret: env.BETTER_AUTH_SECRET,
   emailAndPassword: {
     enabled: true,

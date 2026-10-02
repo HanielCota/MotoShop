@@ -2,14 +2,14 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 
-import { env } from "@/config/env";
+import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { sendNotificationEmail } from "@/modules/notifications/application/send-notification-email";
 
 type AuthEmailKind = "verify" | "reset";
 
 export async function sendAuthEmail(input: { kind: AuthEmailKind; to: string; url: string; token: string }) {
   const target = new URL(input.url);
-  if (target.origin !== new URL(env.BETTER_AUTH_URL).origin) {
+  if (target.origin !== getApplicationBaseUrl()) {
     throw new Error("Invalid authentication email destination.");
   }
 
@@ -22,13 +22,13 @@ export async function sendAuthEmail(input: { kind: AuthEmailKind; to: string; ur
     eventKey: `auth.${input.kind}:${verificationKey}`,
     kind: isVerification ? "AUTH_EMAIL_VERIFICATION" : "AUTH_PASSWORD_RESET",
     to: input.to,
-    subject: isVerification ? "Confirme seu e-mail na Moto Shop" : "Redefina sua senha na Moto Shop",
+    subject: isVerification ? "Confirme seu e-mail no Moto Shop" : "Redefina sua senha no Moto Shop",
     react: (
       <div style={{ color: "#172033", fontFamily: "Arial, sans-serif", lineHeight: 1.5 }}>
         <h1>{isVerification ? "Confirme seu e-mail" : "Redefina sua senha"}</h1>
         <p>
           {isVerification
-            ? "Use o link abaixo para confirmar seu endereço de e-mail na Moto Shop."
+            ? "Use o link abaixo para confirmar seu endereço de e-mail no Moto Shop."
             : "Recebemos uma solicitação para redefinir sua senha. Se não foi você, ignore esta mensagem."}
         </p>
         <p>

@@ -86,7 +86,7 @@ export async function requestReturn(input: RequestReturnInput): Promise<ReturnRe
       ) {
         throw new ApplicationError({
           code: "CONFLICT",
-          message: "Os valores deste pedido precisam de revisão pela Moto Shop antes da devolução.",
+          message: "Os valores deste pedido precisam de revisão pelo Moto Shop antes da devolução.",
         });
       }
 

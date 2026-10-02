@@ -48,7 +48,7 @@ export async function listModerationQueue(kind: ModerationKind, requestedPage: n
       db.productReview.findMany({
         select: {
           id: true,
-          rating: true,
+          ratingTenths: true,
           comment: true,
           hiddenAt: true,
           createdAt: true,
@@ -66,7 +66,7 @@ export async function listModerationQueue(kind: ModerationKind, requestedPage: n
       pageCount: Math.max(1, Math.ceil(total / pageSize)),
       items: records.map((item) => ({
         id: item.id,
-        text: item.comment || `Avaliação de ${item.rating} estrela(s)`,
+        text: item.comment || `Avaliação de ${(item.ratingTenths / 10).toFixed(1)} estrela(s)`,
         detail: null,
         hidden: Boolean(item.hiddenAt),
         createdAt: item.createdAt,

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { env } from "@/config/env";
 import { ApplicationError } from "@/shared/errors/application-error";
+import { PaymentProviderError } from "@/shared/payment/payment-provider-error";
 import type {
   CreatePaymentInput,
   CreatePaymentResult,
@@ -16,13 +17,24 @@ const DEFAULT_API_URL = "https://api.mercadopago.com";
 
 export class MercadoPagoProvider implements PaymentProvider {
   supportsSellerCount(sellerCount: number): boolean {
-    // This adapter does not allocate funds to N recipients yet. An env flag alone
-    // cannot safely enable a marketplace settlement contract.
-    return sellerCount === 1;
+    // The marketplace has no seller-linked Mercado Pago OAuth connection yet.
+    // A platform token plus application_fee is not a safe substitute for it.
+    if (!Number.isSafeInteger(sellerCount) || sellerCount < 1) return false;
+    return false;
   }
 
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
-    this.assertConfigured(input.sellerCount);
+    this.assertConfigured();
+    if (!this.supportsSellerCount(input.sellerCount)) {
+      throw new ApplicationError({
+        code: "CONFIGURATION_ERROR",
+        message:
+          input.sellerCount > 1
+            ? "O checkout com vários lojistas ainda depende da habilitação do split 1:N no Mercado Pago."
+            : "O lojista ainda não conectou uma conta Mercado Pago ao marketplace. Nenhuma cobrança foi criada.",
+        statusCode: 503,
+      });
+    }
     if (env.MERCADO_PAGO_NOTIFICATION_URL && !env.MERCADO_PAGO_WEBHOOK_SECRET) {
       throw new ApplicationError({
         code: "CONFIGURATION_ERROR",
@@ -65,12 +77,12 @@ export class MercadoPagoProvider implements PaymentProvider {
   }
 
   async getPayment(externalId: string): Promise<GetPaymentResult> {
-    this.assertConfigured(1);
+    this.assertConfigured();
     return mapPaymentResponse(await this.request(`/v1/payments/${encodeURIComponent(externalId)}`, { method: "GET" }));
   }
 
   async findPaymentByOrderNumber(orderNumber: string): Promise<GetPaymentResult | null> {
-    this.assertConfigured(1);
+    this.assertConfigured();
     const query = new URLSearchParams({
       external_reference: orderNumber,
       sort: "date_created",
@@ -88,7 +100,7 @@ export class MercadoPagoProvider implements PaymentProvider {
     if (response.paging.total !== 1 || response.results.length !== 1) {
       throw new ApplicationError({
         code: "CONFLICT",
-        message: "Mais de uma cobrança encontrada. O pagamento precisa de revisão pela Moto Shop.",
+        message: "Mais de uma cobrança encontrada. O pagamento precisa de revisão pelo Moto Shop.",
       });
     }
     // Search is discovery only; retrieve the authoritative current payment state.
@@ -96,7 +108,7 @@ export class MercadoPagoProvider implements PaymentProvider {
   }
 
   async refund(input: RefundPaymentInput): Promise<CreatePaymentResult> {
-    this.assertConfigured(1);
+    this.assertConfigured();
     const response = await this.request(`/v1/payments/${encodeURIComponent(input.externalId)}/refunds`, {
       method: "POST",
       headers: { "X-Idempotency-Key": input.idempotencyKey },
@@ -106,19 +118,11 @@ export class MercadoPagoProvider implements PaymentProvider {
     return mapPaymentResponse(response);
   }
 
-  private assertConfigured(sellerCount: number): void {
+  private assertConfigured(): void {
     if (!env.MERCADO_PAGO_ACCESS_TOKEN) {
       throw new ApplicationError({
         code: "CONFIGURATION_ERROR",
-        message: "Mercado Pago ainda não está configurado no ambiente da Moto Shop.",
-        statusCode: 503,
-      });
-    }
-
-    if (!this.supportsSellerCount(sellerCount)) {
-      throw new ApplicationError({
-        code: "CONFIGURATION_ERROR",
-        message: "O checkout com múltiplos sellers depende da habilitação do split 1:N no Mercado Pago.",
+        message: "Mercado Pago ainda não está configurado no ambiente do Moto Shop.",
         statusCode: 503,
       });
     }
@@ -142,11 +146,13 @@ export class MercadoPagoProvider implements PaymentProvider {
     const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
 
     if (!response.ok) {
-      throw new ApplicationError({
-        code: "CONFLICT",
-        message: "O Mercado Pago recusou a operação de pagamento.",
-        statusCode: response.status >= 500 ? 502 : 409,
-        cause: payload,
+      const providerError = typeof payload.error === "string" ? payload.error : undefined;
+      const providerCode = providerError && /^[a-z\d_.-]{1,80}$/i.test(providerError) ? providerError : undefined;
+      const definitiveRejection = [400, 401, 403, 422].includes(response.status);
+      throw new PaymentProviderError("O Mercado Pago recusou a operação de pagamento.", {
+        httpStatus: response.status,
+        outcome: definitiveRejection ? "DEFINITIVE_REJECTION" : "UNKNOWN",
+        ...(providerCode ? { providerCode } : {}),
       });
     }
 
@@ -171,11 +177,46 @@ function mapPaymentResponse(payload: Record<string, unknown>): CreatePaymentResu
   return {
     externalId,
     status,
-    providerMetadata: payload,
+    providerMetadata: toSafePaymentMetadata(payload),
     ...(status === "AUTHORIZED" ? { authorizedAt: now } : {}),
     ...(status === "APPROVED" ? { paidAt: now } : {}),
     ...(status === "FAILED" || status === "CANCELLED" ? { failedAt: now } : {}),
   };
+}
+
+function toSafePaymentMetadata(payload: Record<string, unknown>): Record<string, unknown> {
+  const metadata: Record<string, unknown> = {};
+  for (const key of ["external_reference", "currency_id", "payment_method_id", "status", "status_detail"]) {
+    const value = payload[key];
+    if (typeof value === "string") metadata[key] = value;
+  }
+  const transactionAmount = payload.transaction_amount;
+  if (typeof transactionAmount === "number" && Number.isFinite(transactionAmount)) {
+    metadata.transaction_amount = transactionAmount;
+  }
+
+  const pointOfInteraction = asRecord(payload.point_of_interaction);
+  const transactionData = asRecord(pointOfInteraction?.transaction_data);
+  if (transactionData) {
+    const safeTransactionData: Record<string, string> = {};
+    const qrCode = transactionData.qr_code;
+    const qrImage = transactionData.qr_code_base64;
+    if (typeof qrCode === "string" && qrCode.length <= 8_192) safeTransactionData.qr_code = qrCode;
+    if (typeof qrImage === "string" && qrImage.length <= 1_000_000) {
+      safeTransactionData.qr_code_base64 = qrImage;
+    }
+    if (Object.keys(safeTransactionData).length > 0) {
+      metadata.point_of_interaction = { transaction_data: safeTransactionData };
+    }
+  }
+
+  return metadata;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 function mapStatus(status: unknown): PaymentProviderStatus {

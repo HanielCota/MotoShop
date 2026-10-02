@@ -1,6 +1,7 @@
 export type CreateUploadUrlInput = {
   key: string;
   contentType: string;
+  maxSizeInBytes: number;
   expiresInSeconds?: number;
 };
 

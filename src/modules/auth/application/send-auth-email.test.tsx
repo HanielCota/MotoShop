@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 const sendNotificationEmail = vi.hoisted(() => vi.fn().mockResolvedValue({ status: "SENT" }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/config/env", () => ({ env: { BETTER_AUTH_URL: "https://motoshopbrasil.com.br" } }));
+vi.mock("@/config/get-application-base-url", () => ({ getApplicationBaseUrl: () => "https://motoshopbrasil.com.br" }));
 vi.mock("@/modules/notifications/application/send-notification-email", () => ({ sendNotificationEmail }));
 
 import { sendAuthEmail } from "./send-auth-email";
@@ -34,7 +34,7 @@ describe("authentication email", () => {
     expect(message).toMatchObject({
       kind: "AUTH_PASSWORD_RESET",
       to: "buyer@example.test",
-      subject: "Redefina sua senha na Moto Shop",
+      subject: "Redefina sua senha no Moto Shop",
     });
     expect(message.eventKey).toMatch(/^auth\.reset:[a-f0-9]{64}$/);
     expect(message.eventKey).not.toContain("secret-token");
@@ -48,7 +48,7 @@ describe("authentication email", () => {
       token: "another-token",
     });
     expect(sendNotificationEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: "AUTH_EMAIL_VERIFICATION", subject: "Confirme seu e-mail na Moto Shop" }),
+      expect.objectContaining({ kind: "AUTH_EMAIL_VERIFICATION", subject: "Confirme seu e-mail no Moto Shop" }),
     );
     const message = sendNotificationEmail.mock.calls[0]?.[0];
     expect(renderToStaticMarkup(message.react)).toContain("callbackURL=%2Flogin%3Fverified%3D1");

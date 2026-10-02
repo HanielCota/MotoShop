@@ -5,6 +5,7 @@ import { createHmac, randomUUID } from "node:crypto";
 import { env } from "@/config/env";
 import { logger } from "@/lib/logger";
 import type { PaymentProvider } from "@/shared/payment/payment-provider";
+import { PaymentProviderError } from "@/shared/payment/payment-provider-error";
 
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
@@ -51,7 +52,7 @@ export async function executeCheckout(
   ) {
     throw new ApplicationError({
       code: "CONFIGURATION_ERROR",
-      message: "A configuração de pagamento ainda precisa ser concluída pela Moto Shop.",
+      message: "A configuração de pagamento ainda precisa ser concluída pelo Moto Shop.",
     });
   }
   if (paymentProvider === mercadoPagoProvider && !env.MERCADO_PAGO_ACCESS_TOKEN)
@@ -95,14 +96,65 @@ export async function executeCheckout(
   } catch (error) {
     // A timeout can happen AFTER the provider accepted a charge. Keep the order and
     // reservation pending for reconciliation instead of allowing a second charge.
+    if (error instanceof PaymentProviderError && error.details.outcome === "DEFINITIVE_REJECTION") {
+      try {
+        await markPaymentInitiationRejected({
+          order,
+          httpStatus: error.details.httpStatus,
+        });
+      } catch (settlementError) {
+        logger.error({
+          event: "checkout.payment_rejection_settlement_failed",
+          orderId: order.orderId,
+          errorType: settlementError instanceof Error ? settlementError.name : "UnknownError",
+        });
+      }
+    }
     logger.error({
-      event: "checkout.payment_confirmation_pending",
+      event:
+        error instanceof PaymentProviderError && error.details.outcome === "DEFINITIVE_REJECTION"
+          ? "checkout.payment.rejected"
+          : "checkout.payment_confirmation_pending",
       orderId: order.orderId,
       errorType: error instanceof Error ? error.name : "UnknownError",
+      ...(error instanceof PaymentProviderError
+        ? { providerHttpStatus: error.details.httpStatus, providerCode: error.details.providerCode }
+        : {}),
     });
   }
 
   return { orderNumber, ...(guestAccessToken ? { guestAccessToken } : {}) };
+}
+
+async function markPaymentInitiationRejected(input: {
+  order: { orderId: string; paymentId: string; paymentTransactionId: string };
+  httpStatus: number;
+}) {
+  await db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "orders" WHERE id = ${input.order.orderId} FOR UPDATE`;
+    const order = await tx.order.findUniqueOrThrow({
+      where: { id: input.order.orderId },
+      include: { sellerOrders: { include: { items: true } } },
+    });
+    if (order.status !== "PENDING_PAYMENT") return;
+
+    await tx.payment.update({
+      where: { id: input.order.paymentId },
+      data: { status: "FAILED", failedAt: new Date(), providerMetadata: { rejectionHttpStatus: input.httpStatus } },
+    });
+    await tx.paymentTransaction.update({
+      where: { id: input.order.paymentTransactionId },
+      data: {
+        status: "FAILED",
+        processedAt: new Date(),
+        providerMetadata: { rejectionHttpStatus: input.httpStatus },
+      },
+    });
+    await releaseOrderReservations(tx, order.sellerOrders, order.id, "Payment request rejected by provider");
+    await tx.couponRedemption.deleteMany({ where: { orderId: order.id } });
+    await tx.order.update({ where: { id: order.id }, data: { status: "CANCELLED" } });
+    await tx.sellerOrder.updateMany({ where: { orderId: order.id }, data: { status: "CANCELLED" } });
+  });
 }
 
 async function findExistingOrder(
@@ -286,7 +338,10 @@ function assertPaymentCanHandleSellers(sellerCount: number, provider: PaymentPro
   if (!provider.supportsSellerCount(sellerCount)) {
     throw new ApplicationError({
       code: "CONFIGURATION_ERROR",
-      message: "O pagamento com múltiplos sellers depende da habilitação do split 1:N no Mercado Pago.",
+      message:
+        sellerCount > 1
+          ? "O checkout com vários lojistas depende da habilitação do split 1:N no Mercado Pago."
+          : "O lojista ainda não conectou uma conta Mercado Pago ao marketplace. Nenhum pedido ou cobrança foi criado.",
       statusCode: 503,
     });
   }

@@ -281,8 +281,8 @@ export async function getApprovedProductBySlug(
         include: { motorcycleFitment: { include: { motorcycleModel: { include: { manufacturer: true } } } } },
       },
       productReviews: {
-        where: { hiddenAt: null, ...(reviewRating ? { rating: reviewRating } : {}) },
-        include: { user: { select: { name: true } } },
+        where: { hiddenAt: null, ...(reviewRating ? { ratingTenths: { gte: reviewRating * 10 } } : {}) },
+        include: { user: { select: { name: true } }, media: { orderBy: { sortOrder: "asc" } } },
         orderBy: { createdAt: input.reviewSort === "oldest" ? "asc" : "desc" },
         skip: (requestedReviewPage - 1) * pageSize,
         take: pageSize,
@@ -303,13 +303,28 @@ export async function getApprovedProductBySlug(
 
   if (!product) return null;
 
-  const [reviewSummary, reviewCount] = await Promise.all([
+  const [reviewSummary, reviewCount, unitsSoldResult] = await Promise.all([
     db.productReview.aggregate({
-      where: { productId: product.id, hiddenAt: null, ...(reviewRating ? { rating: reviewRating } : {}) },
-      _avg: { rating: true },
+      where: {
+        productId: product.id,
+        hiddenAt: null,
+        ...(reviewRating ? { ratingTenths: { gte: reviewRating * 10 } } : {}),
+      },
+      _avg: { ratingTenths: true },
     }),
     db.productReview.count({
-      where: { productId: product.id, hiddenAt: null, ...(reviewRating ? { rating: reviewRating } : {}) },
+      where: {
+        productId: product.id,
+        hiddenAt: null,
+        ...(reviewRating ? { ratingTenths: { gte: reviewRating * 10 } } : {}),
+      },
+    }),
+    db.orderItem.aggregate({
+      where: {
+        productId: product.id,
+        sellerOrder: { status: { in: ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"] } },
+      },
+      _sum: { quantity: true },
     }),
   ]);
   const reviewPageCount = Math.max(Math.ceil(reviewCount / pageSize), 1);
@@ -317,8 +332,9 @@ export async function getApprovedProductBySlug(
 
   return {
     ...product,
-    productReviewAverage: reviewSummary._avg.rating,
+    productReviewAverage: reviewSummary._avg.ratingTenths === null ? null : reviewSummary._avg.ratingTenths / 10,
     productReviewCount: reviewCount,
+    unitsSold: unitsSoldResult._sum.quantity ?? 0,
     questionCount: product._count.questions,
     reviewPage: Math.min(requestedReviewPage, reviewPageCount),
     reviewPageCount,
@@ -342,7 +358,7 @@ export async function getApprovedProductSeoBySlug(slug: string) {
       description: true,
       isDemo: true,
       updatedAt: true,
-      category: { select: { name: true } },
+      category: { select: { name: true, slug: true } },
       brand: { select: { name: true } },
       images: { select: { storageKey: true }, orderBy: { sortOrder: "asc" }, take: 4 },
       variants: {
@@ -354,7 +370,7 @@ export async function getApprovedProductSeoBySlug(slug: string) {
           promotionEndsAt: true,
         },
       },
-      productReviews: { where: { hiddenAt: null }, select: { rating: true } },
+      productReviews: { where: { hiddenAt: null }, select: { ratingTenths: true } },
     },
   });
 }

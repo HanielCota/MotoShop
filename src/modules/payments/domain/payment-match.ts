@@ -25,7 +25,7 @@ export function assertPaymentMatches(
   ) {
     throw new ApplicationError({
       code: "CONFLICT",
-      message: "Os dados da cobrança precisam de revisão pela Moto Shop. Nenhuma reserva foi alterada.",
+      message: "Os dados da cobrança precisam de revisão pelo Moto Shop. Nenhuma reserva foi alterada.",
     });
   }
 }

@@ -53,10 +53,12 @@ export function CheckoutForm({
   savedAddresses = [],
   cartSummary,
   cardPublicKey,
+  paymentAvailable = true,
 }: {
   savedAddresses?: CustomerAddress[];
   cartSummary: { itemCount: number; itemsSubtotalInCents: number };
   cardPublicKey?: string;
+  paymentAvailable?: boolean;
 }) {
   const router = useRouter();
   const [form, setForm] = useState(() => {
@@ -286,30 +288,41 @@ export function CheckoutForm({
 
       <aside className="h-fit rounded-xl border p-4 sm:p-6">
         <h2 className="font-semibold">Pagamento</h2>
-        <fieldset className="mt-3 space-y-2" disabled={isSubmitting}>
-          <legend className="sr-only">Forma de pagamento</legend>
-          <DesignRadioGroup
-            label="Forma de pagamento"
-            name="paymentType"
-            value={paymentType}
-            onValueChange={(nextValue) => setPaymentType(nextValue === "card" ? "card" : "pix")}
-            disabled={isSubmitting}
-            className="space-y-2"
-          >
-            <label className="flex items-center gap-2 text-sm">
-              <DesignRadio value="pix" />
-              Pix
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <DesignRadio value="card" disabled={!cardPublicKey} />
-              Cartão de crédito · 1 parcela
-            </label>
-          </DesignRadioGroup>
-          {!cardPublicKey ? (
-            <p className="text-muted-foreground text-xs">Cartão ainda indisponível. Você pode continuar com Pix.</p>
-          ) : null}
-        </fieldset>
-        {paymentType === "card" && cardPublicKey ? <SecureCardFields publicKey={cardPublicKey} ref={card} /> : null}
+        {paymentAvailable ? (
+          <>
+            <fieldset className="mt-3 space-y-2" disabled={isSubmitting}>
+              <legend className="sr-only">Forma de pagamento</legend>
+              <DesignRadioGroup
+                label="Forma de pagamento"
+                name="paymentType"
+                value={paymentType}
+                onValueChange={(nextValue) => setPaymentType(nextValue === "card" ? "card" : "pix")}
+                disabled={isSubmitting}
+                className="space-y-2"
+              >
+                <label className="flex items-center gap-2 text-sm">
+                  <DesignRadio value="pix" />
+                  Pix
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <DesignRadio value="card" disabled={!cardPublicKey} />
+                  Cartão de crédito · 1 parcela
+                </label>
+              </DesignRadioGroup>
+              {!cardPublicKey ? (
+                <p className="text-muted-foreground text-xs">Cartão ainda indisponível. Você pode continuar com Pix.</p>
+              ) : null}
+            </fieldset>
+            {paymentType === "card" && cardPublicKey ? (
+              <SecureCardFields publicKey={cardPublicKey} ref={card} />
+            ) : null}
+          </>
+        ) : (
+          <p role="status" className="bg-muted/40 mt-3 rounded-lg p-3 text-sm leading-6">
+            O pagamento pelo marketplace está temporariamente indisponível. O lojista precisa conectar a conta do
+            Mercado Pago antes de aceitar pedidos. Nenhuma cobrança será criada.
+          </p>
+        )}
         <label className="mt-4 flex flex-col gap-2 text-sm font-medium">
           Cupom de desconto
           <Input
@@ -341,8 +354,12 @@ export function CheckoutForm({
             {message}
           </p>
         ) : null}
-        <Button className="mt-6 w-full" type="submit" disabled={isSubmitting || quotes.length === 0}>
-          {isSubmitting ? "Criando pedido…" : "Finalizar pedido"}
+        <Button
+          className="mt-6 w-full"
+          type="submit"
+          disabled={isSubmitting || quotes.length === 0 || !paymentAvailable}
+        >
+          {isSubmitting ? "Criando pedido…" : paymentAvailable ? "Finalizar pedido" : "Pagamento indisponível"}
         </Button>
       </aside>
     </form>

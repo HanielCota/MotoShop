@@ -66,7 +66,7 @@ export function RequestDisputeForm({
         minLength={10}
         maxLength={2000}
         rows={4}
-        placeholder="Descreva o que aconteceu para a Moto Shop mediar o caso."
+        placeholder="Descreva o que aconteceu para o Moto Shop mediar o caso."
         className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
       />
       {message ? (

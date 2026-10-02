@@ -59,7 +59,11 @@ export async function createStoreBrandingUploadUrlAction(input: unknown): Promis
     const parsed = uploadInputSchema.parse(input);
     const extension = allowedContentTypes[parsed.contentType];
     const key = `stores/${context.seller.id}/${parsed.imageType}/${randomUUID()}.${extension}`;
-    const result = await new ImageKitStorageProvider().createUploadUrl({ key, contentType: parsed.contentType });
+    const result = await new ImageKitStorageProvider().createUploadUrl({
+      key,
+      contentType: parsed.contentType,
+      maxSizeInBytes: maxImageSizeInBytes,
+    });
     return { url: result.url, key: result.key, expiresAt: result.expiresAt.toISOString(), fields: result.fields };
   } catch (error) {
     return { error: asApplicationError(error).message };
@@ -81,32 +85,36 @@ export async function attachStoreBrandingImageAction(input: unknown): Promise<St
     });
 
     const field = fieldForImageType(parsed.imageType);
-    const previousStore = await db.store.findFirst({
-      where: { id: context.store.id, sellerId: context.seller.id },
-      select: { id: true, slug: true, logoStorageKey: true, bannerStorageKey: true },
-    });
-    if (!previousStore) return { error: "Loja não encontrada." };
+    const updatedStore = await db.$transaction(async (tx) => {
+      const previousStore = await tx.store.findFirst({
+        where: { id: context.store.id, sellerId: context.seller.id },
+        select: { id: true, slug: true, logoStorageKey: true, bannerStorageKey: true },
+      });
+      if (!previousStore) return null;
 
-    const updatedStore = await db.store.update({
-      where: { id: previousStore.id },
-      data: { [field]: parsed.storageKey },
-      select: { id: true, slug: true, logoStorageKey: true, bannerStorageKey: true },
-    });
+      const store = await tx.store.update({
+        where: { id: previousStore.id },
+        data: { [field]: parsed.storageKey },
+        select: { id: true, slug: true, logoStorageKey: true, bannerStorageKey: true },
+      });
 
-    await db.auditLog.create({
-      data: {
-        action: "STORE_BRANDING_UPDATED",
-        entityType: "STORE",
-        entityId: updatedStore.id,
-        actorUserId: context.session.user.id,
-        metadata: {
-          sellerId: context.seller.id,
-          imageType: parsed.imageType,
-          previousStorageKey: previousStore[field],
-          currentStorageKey: updatedStore[field],
-        } as Prisma.InputJsonValue,
-      },
+      await tx.auditLog.create({
+        data: {
+          action: "STORE_BRANDING_UPDATED",
+          entityType: "STORE",
+          entityId: store.id,
+          actorUserId: context.session.user.id,
+          metadata: {
+            sellerId: context.seller.id,
+            imageType: parsed.imageType,
+            previousStorageKey: previousStore[field],
+            currentStorageKey: store[field],
+          } as Prisma.InputJsonValue,
+        },
+      });
+      return store;
     });
+    if (!updatedStore) return { error: "Loja não encontrada." };
 
     await revalidateStorePaths(updatedStore.slug);
     return {

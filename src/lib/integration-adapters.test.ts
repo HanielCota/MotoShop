@@ -14,11 +14,10 @@ vi.mock("@/config/env", () => ({
     IMAGEKIT_PRIVATE_KEY: "private_test",
     IMAGEKIT_URL_ENDPOINT: "https://ik.imagekit.io/example",
     RESEND_API_KEY: "example-resend-key",
-    EMAIL_FROM: "Moto Shop <teste@example.com>",
+    EMAIL_FROM: "O Moto Shop <teste@example.com>",
     MERCADO_PAGO_ACCESS_TOKEN: "TEST-local-mocked-provider",
-    MELHOR_ENVIO_TOKEN: "example-shipping-token",
     MELHOR_ENVIO_API_URL: "https://sandbox.melhorenvio.com.br",
-    MELHOR_ENVIO_USER_AGENT: "Moto Shop (teste@example.com)",
+    MELHOR_ENVIO_USER_AGENT: "O Moto Shop (teste@example.com)",
   },
 }));
 
@@ -50,11 +49,14 @@ it("never treats a missing or malformed shipping price as free shipping", async 
       json: async () => prices.map((price, index) => ({ id: index + 1, name: "PAC", price })),
     }),
   );
-  const quotes = await new MelhorEnvioProvider().quote({
-    fromPostalCode: "01001000",
-    toPostalCode: "01310000",
-    products: [],
-  });
+  const quotes = await new MelhorEnvioProvider().quote(
+    {
+      fromPostalCode: "01001000",
+      toPostalCode: "01310000",
+      products: [],
+    },
+    "seller-sandbox-token",
+  );
   expect(quotes).toHaveLength(1);
   expect(quotes[0]).toMatchObject({ serviceCode: "7", priceInCents: 0 });
 });
@@ -63,6 +65,7 @@ it("signs a direct ImageKit upload without exposing the private key", async () =
   const result = await new ImageKitStorageProvider().createUploadUrl({
     key: "products/seller-1/product-1/photo.webp",
     contentType: "image/webp",
+    maxSizeInBytes: 5 * 1024 * 1024,
   });
   expect(result.url).toBe("https://upload.imagekit.io/api/v2/files/upload");
   expect(result.fields).toMatchObject({
@@ -77,7 +80,9 @@ it("signs a direct ImageKit upload without exposing the private key", async () =
     fileName: result.fields.fileName,
     overwriteFile: false,
     useUniqueFileName: false,
+    checks: '"file.mime" IN ["image/webp"] AND "file.size" <= 5242880',
   });
+  expect(result.fields.checks).toBe(claims.checks);
   expect(claims.exp - claims.iat).toBe(300);
   expect(signature).toBe(createHmac("sha256", "private_test").update(`${header}.${payload}`).digest("base64url"));
   const modified = Buffer.from(
@@ -85,6 +90,24 @@ it("signs a direct ImageKit upload without exposing the private key", async () =
   ).toString("base64url");
   expect(signature).not.toBe(createHmac("sha256", "private_test").update(`${header}.${modified}`).digest("base64url"));
   expect(JSON.stringify(result)).not.toContain("private_test");
+});
+
+it("rejects invalid ImageKit upload constraints before issuing a signed token", async () => {
+  const provider = new ImageKitStorageProvider();
+  await expect(
+    provider.createUploadUrl({
+      key: "products/seller-1/product-1/photo.webp",
+      contentType: "image/webp",
+      maxSizeInBytes: 20 * 1024 * 1024 + 1,
+    }),
+  ).rejects.toThrow();
+  await expect(
+    provider.createUploadUrl({
+      key: "products/seller-1/product-1/photo.webp",
+      contentType: "image/svg+xml",
+      maxSizeInBytes: 5 * 1024 * 1024,
+    }),
+  ).rejects.toThrow();
 });
 
 it("accepts only the expected uploaded image path and metadata", async () => {
@@ -154,7 +177,7 @@ it("sends a transactional email through the configured provider", async () => {
   expect(result).toEqual({ id: "email-test-id" });
   expect(sendEmail).toHaveBeenCalledWith(
     expect.objectContaining({
-      from: "Moto Shop <teste@example.com>",
+      from: "O Moto Shop <teste@example.com>",
       to: "buyer@example.test",
       subject: "Pedido de teste",
     }),
@@ -168,21 +191,24 @@ it("maps a Melhor Envio sandbox quote into cents without exposing provider detai
     json: async () => [{ id: 1, name: "PAC", company: { name: "Correios" }, custom_price: "23.45", delivery_time: 4 }],
   });
   vi.stubGlobal("fetch", fetchMock);
-  const quotes = await new MelhorEnvioProvider().quote({
-    fromPostalCode: "01001000",
-    toPostalCode: "01310000",
-    products: [
-      {
-        id: "SKU-1",
-        widthInCm: 10,
-        heightInCm: 10,
-        lengthInCm: 10,
-        weightInKg: 0.5,
-        insuranceValueInCents: 10000,
-        quantity: 1,
-      },
-    ],
-  });
+  const quotes = await new MelhorEnvioProvider().quote(
+    {
+      fromPostalCode: "01001000",
+      toPostalCode: "01310000",
+      products: [
+        {
+          id: "SKU-1",
+          widthInCm: 10,
+          heightInCm: 10,
+          lengthInCm: 10,
+          weightInKg: 0.5,
+          insuranceValueInCents: 10000,
+          quantity: 1,
+        },
+      ],
+    },
+    "seller-sandbox-token",
+  );
   expect(quotes).toMatchObject([
     {
       provider: "MELHOR_ENVIO",

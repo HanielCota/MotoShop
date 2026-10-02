@@ -76,6 +76,7 @@ export async function createProductImageUploadUrlAction(input: unknown): Promise
     const result = await new ImageKitStorageProvider().createUploadUrl({
       key,
       contentType: parsed.contentType,
+      maxSizeInBytes: maxImageSizeInBytes,
     });
     return { url: result.url, key: result.key, expiresAt: result.expiresAt.toISOString(), fields: result.fields };
   } catch (error) {

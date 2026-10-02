@@ -118,17 +118,23 @@ export async function refundReturnRequestAction(returnRequestId: string): Promis
         where: { id: request.id, status: "RETURNED" },
         data: { status: "REFUNDED" },
       });
-      if (updated.count === 1) {
-        await tx.auditLog.create({
-          data: {
-            action: "RETURN_REFUNDED",
-            entityType: "RETURN_REQUEST",
-            entityId: request.id,
-            actorUserId: session.user.id,
-            metadata: { amountInCents: request.amountInCents } as Prisma.InputJsonValue,
-          },
+      if (updated.count !== 1) {
+        throw new ApplicationError({
+          code: "CONFLICT",
+          message:
+            "A devolução mudou de estado e não foi possível confirmar a conclusão. Verifique o histórico antes de tentar novamente.",
+          statusCode: 409,
         });
       }
+      await tx.auditLog.create({
+        data: {
+          action: "RETURN_REFUNDED",
+          entityType: "RETURN_REQUEST",
+          entityId: request.id,
+          actorUserId: session.user.id,
+          metadata: { amountInCents: request.amountInCents } as Prisma.InputJsonValue,
+        },
+      });
     });
     revalidatePath("/admin");
     revalidatePath(`/orders/${request.order.orderNumber}`);

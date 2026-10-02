@@ -23,7 +23,7 @@ export function AskQuestionForm({ productId }: { productId: string }) {
         maxLength={500}
         rows={3}
         placeholder="Ex.: Serve na CRF 250R 2025?"
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moto-brand focus:ring-2 focus:ring-moto-brand/15"
       />
       {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
       {state.success ? <p className="text-sm text-emerald-700">{state.success}</p> : null}

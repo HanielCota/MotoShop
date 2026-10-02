@@ -1,0 +1,204 @@
+"use client";
+
+import { Popover } from "@base-ui/react/popover";
+import { ShoppingBag } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+
+import { formatMoneyInCents } from "@/lib/utils";
+
+import { clearCartAction, getCartPreviewAction, updateCartItemAction } from "../actions/cart-actions";
+
+type CartPreviewData = Awaited<ReturnType<typeof getCartPreviewAction>>;
+
+export function CartPreview() {
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState<CartPreviewData>();
+  const [message, setMessage] = useState<string>();
+  const [pending, setPending] = useState(false);
+
+  async function refresh() {
+    setPending(true);
+    try {
+      const result = await getCartPreviewAction();
+      setData(result);
+      setMessage(result.error);
+    } catch {
+      setMessage("Não foi possível carregar o carrinho.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (nextOpen) refresh();
+  }
+
+  async function updateItem(cartItemId: string, quantity: number) {
+    setMessage(undefined);
+    setPending(true);
+    try {
+      const result = await updateCartItemAction(cartItemId, quantity);
+      if (result.error) {
+        setMessage(result.error);
+        return;
+      }
+      const updated = await getCartPreviewAction();
+      setData(updated);
+    } catch {
+      setMessage("Não foi possível atualizar o carrinho. Tente novamente.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function clearCart() {
+    setMessage(undefined);
+    setPending(true);
+    try {
+      const result = await clearCartAction();
+      if (result.error) {
+        setMessage(result.error);
+        return;
+      }
+      setData({ items: [], itemCount: 0, subtotalInCents: 0 });
+      setMessage(result.success);
+    } catch {
+      setMessage("Não foi possível esvaziar o carrinho. Tente novamente.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <Popover.Root open={open} onOpenChange={handleOpenChange}>
+      <Popover.Trigger
+        openOnHover
+        delay={250}
+        closeDelay={180}
+        aria-label="Visualizar carrinho"
+        className="relative inline-flex size-11 items-center justify-center rounded-md text-white/85 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+      >
+        <ShoppingBag aria-hidden="true" className="size-5" />
+        {data && data.itemCount > 0 ? (
+          <span className="bg-moto-brand absolute top-0.5 right-0.5 min-w-4 rounded-full px-1 text-center text-[10px] leading-4 font-bold text-black">
+            {data.itemCount > 99 ? "99+" : data.itemCount}
+          </span>
+        ) : null}
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner side="bottom" align="end" sideOffset={8} className="z-[60]">
+          <Popover.Popup className="border-border bg-background text-foreground w-[min(92vw,24rem)] rounded-xl border p-4 shadow-xl outline-none">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <Popover.Title className="font-semibold">Seu carrinho</Popover.Title>
+                <Popover.Description className="text-muted-foreground text-xs">
+                  {data ? `${data.itemCount} ${data.itemCount === 1 ? "item" : "itens"}` : "Resumo rápido da compra"}
+                </Popover.Description>
+              </div>
+              {data && data.items.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={clearCart}
+                  disabled={pending}
+                  className="text-muted-foreground hover:text-foreground min-h-9 rounded-md px-2 text-xs font-medium underline underline-offset-4 disabled:opacity-50"
+                >
+                  Esvaziar
+                </button>
+              ) : null}
+            </div>
+
+            {!data || pending ? (
+              <p className="text-muted-foreground py-6 text-center text-sm">Carregando carrinho…</p>
+            ) : null}
+            {data && !pending && data.items.length === 0 ? (
+              <div className="py-6 text-center">
+                <ShoppingBag aria-hidden="true" className="text-muted-foreground mx-auto mb-2 size-7" />
+                <p className="text-sm font-medium">Seu carrinho está vazio</p>
+                <Link
+                  href="/products"
+                  className="mt-2 inline-flex min-h-10 items-center text-sm font-medium text-[#a63a0b] underline underline-offset-4"
+                >
+                  Explorar produtos
+                </Link>
+              </div>
+            ) : null}
+            {data && data.items.length > 0 ? (
+              <>
+                <ul className="max-h-72 divide-y overflow-y-auto" aria-label="Itens no carrinho">
+                  {data.items.slice(0, 5).map((item) => (
+                    <li key={item.id} className="flex items-start justify-between gap-3 py-3">
+                      <div className="min-w-0">
+                        <p className="line-clamp-2 text-sm font-medium">{item.name}</p>
+                        <p className="text-muted-foreground mt-0.5 text-xs">{item.variant}</p>
+                        <div className="mt-1 flex items-center gap-2" aria-label={`Quantidade de ${item.name}`}>
+                          <button
+                            type="button"
+                            aria-label={`Diminuir quantidade de ${item.name}`}
+                            disabled={pending || item.quantity <= 1}
+                            onClick={() => updateItem(item.id, item.quantity - 1)}
+                            className="border-border hover:bg-muted inline-flex size-8 items-center justify-center rounded-md border text-base disabled:opacity-40"
+                          >
+                            −
+                          </button>
+                          <span className="min-w-5 text-center text-xs tabular-nums" aria-live="polite">
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label={`Aumentar quantidade de ${item.name}`}
+                            disabled={pending || item.quantity >= Math.min(99, item.availableQuantity)}
+                            onClick={() => updateItem(item.id, item.quantity + 1)}
+                            className="border-border hover:bg-muted inline-flex size-8 items-center justify-center rounded-md border text-base disabled:opacity-40"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <p className="mt-1 text-xs">{formatMoneyInCents(item.unitPriceInCents * item.quantity)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => updateItem(item.id, 0)}
+                        className="text-muted-foreground hover:text-foreground min-h-9 shrink-0 rounded-md px-2 text-xs font-medium underline underline-offset-4 disabled:opacity-50"
+                      >
+                        Remover
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {data.items.length > 5 ? (
+                  <p className="text-muted-foreground py-2 text-xs">e mais {data.items.length - 5} itens</p>
+                ) : null}
+                <div className="flex items-center justify-between border-t pt-3 text-sm">
+                  <span>Subtotal</span>
+                  <strong>{formatMoneyInCents(data.subtotalInCents)}</strong>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <Link
+                    href="/cart"
+                    className="border-border hover:bg-muted flex min-h-11 items-center justify-center rounded-md border px-4 text-sm font-semibold transition-colors"
+                  >
+                    Ver carrinho
+                  </Link>
+                  <Link
+                    href="/checkout"
+                    className="bg-moto-brand hover:bg-moto-brand/90 flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold text-black transition-colors"
+                  >
+                    Ir para checkout
+                  </Link>
+                </div>
+              </>
+            ) : null}
+            {message ? (
+              <p role="status" className="text-muted-foreground mt-2 text-xs">
+                {message}
+              </p>
+            ) : null}
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}

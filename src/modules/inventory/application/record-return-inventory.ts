@@ -48,7 +48,7 @@ export async function recordReturnedInventory(
         reservedQuantityAfter: after.reservedQuantity,
         referenceType: "RETURN_REQUEST",
         referenceId,
-        reason: "Item devolvido recebido pela Moto Shop",
+        reason: "Item devolvido recebido pelo Moto Shop",
         inventoryId: inventory.id,
         variantId: item.variantId,
         sellerId: item.sellerId,

@@ -62,6 +62,19 @@ export async function reconcileMercadoPagoPayment(input: {
     const isFailed = input.result.status === "FAILED" || input.result.status === "CANCELLED";
     // Late/duplicate provider events must never regress fulfilled or cancelled orders.
     if (freshPayment.order.status !== "PENDING_PAYMENT") {
+      const paymentWasAlreadySettled = ["APPROVED", "PARTIALLY_REFUNDED", "REFUNDED"].includes(freshPayment.status);
+      const lateApprovalRequiresReview = isApproved && !paymentWasAlreadySettled;
+      if (lateApprovalRequiresReview && input.webhookEventId) {
+        await tx.webhookEvent.update({
+          where: { id: input.webhookEventId },
+          data: {
+            status: "FAILED",
+            processedAt: null,
+            error:
+              "O provedor informou pagamento aprovado após o pedido sair de PENDING_PAYMENT. Revisão financeira manual necessária.",
+          },
+        });
+      }
       const isRefundUpdate =
         ["APPROVED", "PARTIALLY_REFUNDED"].includes(freshPayment.status) &&
         ["PARTIALLY_REFUNDED", "REFUNDED"].includes(input.result.status);
@@ -76,7 +89,7 @@ export async function reconcileMercadoPagoPayment(input: {
           },
         });
       }
-      if (input.webhookEventId)
+      if (input.webhookEventId && !lateApprovalRequiresReview)
         await tx.webhookEvent.update({
           where: { id: input.webhookEventId },
           data: { status: "PROCESSED", processedAt: new Date(), error: null },

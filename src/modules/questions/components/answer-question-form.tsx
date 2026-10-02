@@ -26,14 +26,14 @@ export function AnswerQuestionForm({
         rows={3}
         defaultValue={currentAnswer ?? ""}
         placeholder="Escreva uma resposta pública"
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moto-brand focus:ring-2 focus:ring-moto-brand/15"
       />
       {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
       {state.success ? <p className="text-sm text-emerald-700">{state.success}</p> : null}
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+        className="rounded-lg bg-moto-brand px-4 py-2 text-sm font-semibold text-moto-brand-foreground transition hover:bg-[#e95f00] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending ? "Publicando..." : currentAnswer ? "Atualizar resposta" : "Responder"}
       </button>

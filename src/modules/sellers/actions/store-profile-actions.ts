@@ -21,6 +21,10 @@ export async function updateStoreProfileAction(
     name: formData.get("name"),
     slug: slugify(String(formData.get("slug") ?? "")),
     description: String(formData.get("description") ?? "").trim(),
+    instagramUrl: String(formData.get("instagramUrl") ?? "").trim(),
+    youtubeUrl: String(formData.get("youtubeUrl") ?? "").trim(),
+    whatsappUrl: String(formData.get("whatsappUrl") ?? "").trim(),
+    facebookUrl: String(formData.get("facebookUrl") ?? "").trim(),
   });
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os dados da loja." };
@@ -28,7 +32,16 @@ export async function updateStoreProfileAction(
   try {
     const store = await db.store.findFirst({
       where: { id: context.store.id, sellerId: context.seller.id },
-      select: { id: true, name: true, slug: true, description: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        instagramUrl: true,
+        youtubeUrl: true,
+        whatsappUrl: true,
+        facebookUrl: true,
+      },
     });
     if (!store) return { error: "Loja não encontrada." };
 
@@ -38,8 +51,21 @@ export async function updateStoreProfileAction(
         name: parsed.data.name,
         slug: parsed.data.slug,
         description: parsed.data.description || null,
+        instagramUrl: parsed.data.instagramUrl || null,
+        youtubeUrl: parsed.data.youtubeUrl || null,
+        whatsappUrl: parsed.data.whatsappUrl || null,
+        facebookUrl: parsed.data.facebookUrl || null,
       },
-      select: { id: true, name: true, slug: true, description: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        instagramUrl: true,
+        youtubeUrl: true,
+        whatsappUrl: true,
+        facebookUrl: true,
+      },
     });
 
     await db.auditLog.create({
@@ -50,11 +76,23 @@ export async function updateStoreProfileAction(
         actorUserId: context.session.user.id,
         metadata: {
           sellerId: context.seller.id,
-          previous: { name: store.name, slug: store.slug, description: store.description },
+          previous: {
+            name: store.name,
+            slug: store.slug,
+            description: store.description,
+            instagramUrl: store.instagramUrl,
+            youtubeUrl: store.youtubeUrl,
+            whatsappUrl: store.whatsappUrl,
+            facebookUrl: store.facebookUrl,
+          },
           current: {
             name: updatedStore.name,
             slug: updatedStore.slug,
             description: updatedStore.description,
+            instagramUrl: updatedStore.instagramUrl,
+            youtubeUrl: updatedStore.youtubeUrl,
+            whatsappUrl: updatedStore.whatsappUrl,
+            facebookUrl: updatedStore.facebookUrl,
           },
         } as Prisma.InputJsonValue,
       },

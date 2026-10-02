@@ -26,6 +26,23 @@ const managementEndpoint = "https://api.imagekit.io/v1/files";
 export class ImageKitStorageProvider implements StorageProvider {
   async createUploadUrl(input: CreateUploadUrlInput): Promise<CreateUploadUrlResult> {
     const config = this.getConfig();
+    const maxSizeInBytes = z
+      .number()
+      .int()
+      .positive()
+      .max(20 * 1024 * 1024)
+      .parse(input.maxSizeInBytes);
+    const contentType = z
+      .enum(["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/quicktime"])
+      .parse(input.contentType);
+    const expectedExtensionByContentType: Record<typeof contentType, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "video/mp4": "mp4",
+      "video/webm": "webm",
+      "video/quicktime": "mov",
+    };
     const expiresInSeconds = z
       .number()
       .int()
@@ -35,13 +52,19 @@ export class ImageKitStorageProvider implements StorageProvider {
     const issuedAt = Math.floor(Date.now() / 1000);
     const expire = issuedAt + expiresInSeconds;
     const separator = input.key.lastIndexOf("/");
-    if (separator < 0 || !/^[a-zA-Z0-9_/-]+\/[a-zA-Z0-9_-]+\.(jpg|png|webp)$/.test(input.key))
-      throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Caminho de imagem inválido." });
+    if (separator < 0 || !/^[a-zA-Z0-9_/-]+\/[a-zA-Z0-9_-]+\.(jpg|png|webp|mp4|webm|mov)$/.test(input.key))
+      throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Caminho de arquivo inválido." });
+    if (!input.key.endsWith(`.${expectedExtensionByContentType[contentType]}`))
+      throw new ApplicationError({
+        code: "VALIDATION_ERROR",
+        message: "A extensão não corresponde ao tipo do arquivo.",
+      });
     const payload = {
       fileName: input.key.slice(separator + 1),
       folder: `/${input.key.slice(0, separator)}`,
       useUniqueFileName: false,
       overwriteFile: false,
+      checks: `"file.mime" IN ["${contentType}"] AND "file.size" <= ${maxSizeInBytes}`,
     };
     // V1 signs only token/expiry, allowing a client to change the destination or
     // overwrite flag. V2 authenticates the upload parameters as well.
@@ -65,6 +88,7 @@ export class ImageKitStorageProvider implements StorageProvider {
         folder: payload.folder,
         useUniqueFileName: "false",
         overwriteFile: "false",
+        checks: payload.checks,
       },
     };
   }
@@ -91,6 +115,40 @@ export class ImageKitStorageProvider implements StorageProvider {
         message: "A imagem enviada não corresponde ao arquivo autorizado.",
       });
     }
+  }
+
+  async verifyAsset(input: {
+    key: string;
+    fileId: string;
+    maxSizeInBytes: number;
+    contentTypes: readonly string[];
+  }): Promise<{ mediaType: "image" | "video"; contentType: string; sizeInBytes: number }> {
+    const response = await this.managementRequest(`${managementEndpoint}/${encodeURIComponent(input.fileId)}/details`);
+    if (!response.ok)
+      throw new ApplicationError({
+        code: "VALIDATION_ERROR",
+        message: "Não foi possível confirmar o arquivo enviado.",
+      });
+    const parsed = assetSchema.safeParse(await response.json());
+    if (
+      !parsed.success ||
+      parsed.data.filePath !== `/${input.key}` ||
+      !input.contentTypes.includes(parsed.data.mime) ||
+      parsed.data.size > input.maxSizeInBytes ||
+      (parsed.data.mime.startsWith("image/") && parsed.data.fileType !== "image") ||
+      (parsed.data.mime.startsWith("video/") && parsed.data.fileType === "image") ||
+      (!parsed.data.mime.startsWith("image/") && !parsed.data.mime.startsWith("video/"))
+    ) {
+      throw new ApplicationError({
+        code: "VALIDATION_ERROR",
+        message: "O arquivo enviado não corresponde ao tipo, caminho ou tamanho autorizado.",
+      });
+    }
+    return {
+      mediaType: parsed.data.mime.startsWith("image/") ? "image" : "video",
+      contentType: parsed.data.mime,
+      sizeInBytes: parsed.data.size,
+    };
   }
 
   async deleteObject(input: DeleteObjectInput): Promise<void> {

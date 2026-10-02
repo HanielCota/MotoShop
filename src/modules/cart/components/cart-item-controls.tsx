@@ -16,8 +16,19 @@ export function CartItemControls({ cartItemId, quantity }: { cartItemId: string;
     setMessage(undefined);
     setValue(String(nextQuantity));
     startTransition(async () => {
-      const result = await updateCartItemAction(cartItemId, nextQuantity);
-      setMessage(result.error ?? result.success);
+      try {
+        const result = await updateCartItemAction(cartItemId, nextQuantity);
+        if (result.error) {
+          setValue(String(quantity));
+          setMessage(result.error);
+          return;
+        }
+        setValue(String(nextQuantity));
+        setMessage(result.success);
+      } catch {
+        setValue(String(quantity));
+        setMessage("Não foi possível atualizar o carrinho. Tente novamente.");
+      }
     });
   }
 
@@ -29,13 +40,20 @@ export function CartItemControls({ cartItemId, quantity }: { cartItemId: string;
       <Input
         id={`quantity-${cartItemId}`}
         className="border-input bg-background h-8 w-16 rounded-md border px-2 text-center text-sm"
-        type="number"
-        min={0}
-        max={99}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        maxLength={2}
         value={value}
         disabled={isPending}
         onChange={(event) => setValue(event.target.value)}
-        onBlur={() => update(Math.min(99, Math.max(0, Number(value) || 0)))}
+        onBlur={() => {
+          if (!/^\d+$/.test(value)) {
+            setValue(String(quantity));
+            return;
+          }
+          update(Math.min(99, Math.max(0, Number(value))));
+        }}
       />
       <Button type="button" variant="ghost" size="sm" disabled={isPending} onClick={() => update(0)}>
         Remover

@@ -11,9 +11,13 @@ export async function retryWebhookEventAction(webhookEventId: string): Promise<v
   const event = await db.webhookEvent.findFirst({ where: { id: webhookEventId, status: "FAILED" } });
   if (!event) return;
 
-  await db.$transaction([
-    db.webhookEvent.update({ where: { id: event.id }, data: { status: "RECEIVED", error: null, processedAt: null } }),
-    db.auditLog.create({
+  const claimed = await db.$transaction(async (tx) => {
+    const updated = await tx.webhookEvent.updateMany({
+      where: { id: event.id, status: "FAILED" },
+      data: { status: "RECEIVED", error: null, processedAt: null },
+    });
+    if (updated.count !== 1) return false;
+    await tx.auditLog.create({
       data: {
         action: "WEBHOOK_RETRY_REQUESTED",
         entityType: "WebhookEvent",
@@ -21,15 +25,20 @@ export async function retryWebhookEventAction(webhookEventId: string): Promise<v
         metadata: { provider: event.provider, externalId: event.externalId, type: event.type },
         actorUserId: session.user.id,
       },
-    }),
-  ]);
+    });
+    return true;
+  });
+  if (!claimed) return;
 
   try {
     await inngest.send({ name: "motoshop/payment.webhook.received", data: { webhookEventId: event.id } });
   } catch (error) {
-    await db.webhookEvent.update({
-      where: { id: event.id },
-      data: { status: "FAILED", error: error instanceof Error ? error.message.slice(0, 1000) : "Falha ao reenfileirar." },
+    await db.webhookEvent.updateMany({
+      where: { id: event.id, status: "RECEIVED" },
+      data: {
+        status: "FAILED",
+        error: error instanceof Error ? error.message.slice(0, 1000) : "Falha ao reenfileirar.",
+      },
     });
     throw error;
   }

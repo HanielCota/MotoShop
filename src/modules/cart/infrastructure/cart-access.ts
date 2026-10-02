@@ -45,7 +45,9 @@ export async function findOrCreateActiveCart(identity: CartIdentity) {
   return db.$transaction(async (tx) => {
     const lockKey =
       "userId" in identity ? `cart:user:${identity.userId}` : `cart:guest:${identity.guestAccessTokenHash}`;
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+    // Select a concrete scalar instead of PostgreSQL's `void` lock result;
+    // Prisma cannot deserialize `void` through `$queryRaw`.
+    await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
     const existing = await tx.cart.findFirst({ where: { ...owner, status: "ACTIVE" } });
     if (existing) return existing;
 

@@ -13,6 +13,12 @@ vi.mock("@/config/env", () => ({
 
 import { MercadoPagoProvider } from "./mercado-pago-provider";
 
+class ConnectedSellerTestProvider extends MercadoPagoProvider {
+  override supportsSellerCount(sellerCount: number): boolean {
+    return sellerCount === 1;
+  }
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
   paymentEnv.MERCADO_PAGO_NOTIFICATION_URL = undefined;
@@ -24,7 +30,7 @@ it("sends only the card token, issuer and one installment with a scoped webhook 
   paymentEnv.MERCADO_PAGO_WEBHOOK_SECRET = "test-signature";
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 123, status: "approved" }) });
   vi.stubGlobal("fetch", fetchMock);
-  await new MercadoPagoProvider().createPayment({
+  await new ConnectedSellerTestProvider().createPayment({
     orderNumber: "MS-CARD",
     amountInCents: 12345,
     payerEmail: "buyer@example.test",
@@ -47,12 +53,61 @@ it("sends only the card token, issuer and one installment with a scoped webhook 
   expect(body).not.toHaveProperty("security_code");
 });
 
+it("keeps only payment-matching fields and Pix instructions from provider responses", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        id: 123,
+        status: "pending",
+        status_detail: "pending_waiting_transfer",
+        external_reference: "MS-PRIVACY",
+        transaction_amount: 123.45,
+        currency_id: "BRL",
+        payment_method_id: "pix",
+        payer: { email: "buyer@example.test", identification: { type: "CPF", number: "19119119100" } },
+        card: { last_four_digits: "1234" },
+        point_of_interaction: {
+          transaction_data: {
+            qr_code: "pix-copy-code",
+            qr_code_base64: "cGl4LWltYWdl",
+            payer: { email: "buyer@example.test" },
+          },
+        },
+      }),
+    }),
+  );
+
+  const result = await new ConnectedSellerTestProvider().createPayment({
+    orderNumber: "MS-PRIVACY",
+    amountInCents: 12_345,
+    payerEmail: "buyer@example.test",
+    payerTaxId: "19119119100",
+    paymentMethodId: "pix",
+    idempotencyKey: "privacy-test",
+    sellerCount: 1,
+  });
+
+  expect(result.providerMetadata).toEqual({
+    external_reference: "MS-PRIVACY",
+    currency_id: "BRL",
+    payment_method_id: "pix",
+    status: "pending",
+    status_detail: "pending_waiting_transfer",
+    transaction_amount: 123.45,
+    point_of_interaction: { transaction_data: { qr_code: "pix-copy-code", qr_code_base64: "cGl4LWltYWdl" } },
+  });
+  expect(JSON.stringify(result.providerMetadata)).not.toContain("19119119100");
+  expect(JSON.stringify(result.providerMetadata)).not.toContain("buyer@example.test");
+});
+
 it("rejects a scoped webhook URL without its secret before sending a charge", async () => {
   paymentEnv.MERCADO_PAGO_NOTIFICATION_URL = "https://example.test/api/webhooks/mercado-pago";
   const fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);
   await expect(
-    new MercadoPagoProvider().createPayment({
+    new ConnectedSellerTestProvider().createPayment({
       orderNumber: "MS-CARD",
       amountInCents: 100,
       payerEmail: "buyer@example.test",
@@ -88,6 +143,35 @@ it("returns unresolved for an empty search", async () => {
   expect(await new MercadoPagoProvider().findPaymentByOrderNumber("MS-123")).toBeNull();
 });
 
+it("classifies validation failures as definitive and transient failures as uncertain", async () => {
+  const provider = new ConnectedSellerTestProvider();
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({ error: "bad_request" }) })
+      .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ error: "temporary_failure" }) }),
+  );
+  const input = {
+    orderNumber: "MS-REJECTION",
+    amountInCents: 100,
+    payerEmail: "buyer@example.test",
+    payerTaxId: "19119119100",
+    paymentMethodId: "pix",
+    idempotencyKey: "attempt",
+    sellerCount: 1,
+  } as const;
+
+  await expect(provider.createPayment(input)).rejects.toMatchObject({
+    name: "PaymentProviderError",
+    details: { httpStatus: 400, outcome: "DEFINITIVE_REJECTION", providerCode: "bad_request" },
+  });
+  await expect(provider.createPayment({ ...input, idempotencyKey: "attempt-2" })).rejects.toMatchObject({
+    name: "PaymentProviderError",
+    details: { httpStatus: 503, outcome: "UNKNOWN" },
+  });
+});
+
 it("does not pick an arbitrary payment from an ambiguous search", async () => {
   const fetchMock = vi
     .fn()
@@ -104,7 +188,7 @@ it("sends the validated payer CPF when creating a Pix payment", async () => {
   });
   vi.stubGlobal("fetch", fetchMock);
 
-  await new MercadoPagoProvider().createPayment({
+  await new ConnectedSellerTestProvider().createPayment({
     orderNumber: "MS-TEST-123",
     amountInCents: 10_000,
     payerEmail: "buyer@example.test",
@@ -129,7 +213,7 @@ it("does not call the gateway when a Pix payment has no CPF", async () => {
   vi.stubGlobal("fetch", fetchMock);
 
   await expect(
-    new MercadoPagoProvider().createPayment({
+    new ConnectedSellerTestProvider().createPayment({
       orderNumber: "MS-TEST-123",
       amountInCents: 10_000,
       payerEmail: "buyer@example.test",
@@ -138,5 +222,25 @@ it("does not call the gateway when a Pix payment has no CPF", async () => {
       sellerCount: 1,
     }),
   ).rejects.toThrow("CPF válido");
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it("blocks marketplace charges until seller-linked Mercado Pago OAuth is available", async () => {
+  const fetchMock = vi.fn();
+  vi.stubGlobal("fetch", fetchMock);
+  const provider = new MercadoPagoProvider();
+
+  expect(provider.supportsSellerCount(1)).toBe(false);
+  await expect(
+    provider.createPayment({
+      orderNumber: "MS-NO-SELLER-AUTH",
+      amountInCents: 100,
+      payerEmail: "buyer@example.test",
+      paymentMethodId: "pix",
+      payerTaxId: "19119119100",
+      idempotencyKey: "blocked-payment",
+      sellerCount: 1,
+    }),
+  ).rejects.toThrow("Nenhuma cobrança foi criada");
   expect(fetchMock).not.toHaveBeenCalled();
 });

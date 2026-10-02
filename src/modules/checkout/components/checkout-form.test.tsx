@@ -42,3 +42,11 @@ it("shows a recoverable error when the quote request rejects", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("conexão");
   expect(await screen.findByRole("button", { name: "Calcular frete" })).toBeEnabled();
 });
+
+it("does not invite the customer to pay before the seller connects a Mercado Pago account", () => {
+  render(<CheckoutForm paymentAvailable={false} cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
+
+  expect(screen.getByRole("status")).toHaveTextContent("O lojista precisa conectar a conta do Mercado Pago");
+  expect(screen.queryByRole("radiogroup", { name: "Forma de pagamento" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Pagamento indisponível" })).toBeDisabled();
+});

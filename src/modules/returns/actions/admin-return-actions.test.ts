@@ -38,3 +38,25 @@ it("finishes a fully discounted return without sending a zero refund", async () 
   expect(mocks.refund).not.toHaveBeenCalled();
   expect(mocks.audit).toHaveBeenCalled();
 });
+it("does not report success when the return state changed after the provider refund", async () => {
+  mocks.find.mockResolvedValue({
+    id: "return",
+    status: "RETURNED",
+    amountInCents: 100,
+    orderId: "order-1",
+    order: { orderNumber: "MS-1" },
+    sellerOrder: {
+      items: [{ totalAmountInCents: 100 }],
+      itemsSubtotalInCents: 100,
+      discountAmountInCents: 0,
+    },
+  });
+  mocks.refund.mockResolvedValue(undefined);
+  mocks.update.mockResolvedValue({ count: 0 });
+
+  const result = await refundReturnRequestAction("return");
+
+  expect(result.error).toContain("mudou de estado");
+  expect(mocks.refund).toHaveBeenCalledOnce();
+  expect(mocks.audit).not.toHaveBeenCalled();
+});

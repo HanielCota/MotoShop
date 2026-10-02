@@ -1,18 +1,34 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+const integrationMocks = vi.hoisted(() => ({
+  refund: vi.fn(),
+  adminSession: { user: { id: "" } },
+}));
 import { testDb, cleanupFixtures } from "../support/database";
 vi.mock("@/lib/database", async () => ({ db: (await import("../support/database")).testDb }));
 vi.mock("@/lib/inngest/client", () => ({ inngest: { send: vi.fn(async () => ({ ids: [] })) } }));
-vi.mock("@/modules/auth/application/authorization", () => ({ getCurrentSession: vi.fn(async () => null) }));
+vi.mock("@/lib/payment/mercado-pago-provider", () => ({ mercadoPagoProvider: { refund: integrationMocks.refund } }));
+vi.mock("@/modules/auth/application/authorization", () => ({
+  getCurrentSession: vi.fn(async () => null),
+  requireAdminAccess: vi.fn(async () => integrationMocks.adminSession),
+}));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 import { executeCheckout } from "@/modules/checkout/application/checkout-service";
 import { updateSellerCommission } from "@/modules/admin/application/update-seller-commission";
 import { quoteShippingForCart } from "@/modules/checkout/application/shipping-quotes";
 import { advanceOwnShipment, setOwnShippingMethodActive } from "@/modules/shipping/application/own-shipping";
 import { reconcileMercadoPagoPayment } from "@/modules/payments/application/reconcile-payment";
 import { recoverPayment } from "@/modules/payments/application/recover-payment";
+import { refundPayment } from "@/modules/payments/application/refund-payment";
 import { listApprovedProducts } from "@/modules/products/queries/products";
+import { requestReturn } from "@/modules/returns/application/request-return";
+import { requestCancellation } from "@/modules/returns/application/request-cancellation";
+import { reviewCancellationRequestAction } from "@/modules/returns/actions/admin-cancellation-actions";
+import { refundReturnRequestAction, reviewReturnRequestAction } from "@/modules/returns/actions/admin-return-actions";
 import type { CheckoutInput } from "@/modules/checkout/schemas/checkout";
 import type { CreatePaymentResult, PaymentProvider } from "@/shared/payment/payment-provider";
+import { PaymentProviderError } from "@/shared/payment/payment-provider-error";
+import { hashGuestToken } from "@/modules/cart/infrastructure/cart-access";
 
 const run = randomUUID().slice(0, 8);
 const email = `integration-${run}@example.test`;
@@ -22,6 +38,7 @@ const fixtures = {
   emails: [email],
   cartIds: [] as string[],
   couponIds: [] as string[],
+  webhookEventIds: [] as string[],
 };
 const variants: string[] = [];
 const methods: string[] = [];
@@ -64,11 +81,43 @@ async function cartInput(quantity = 1, withCoupon = false) {
   };
   return { data, identity, session: null };
 }
+async function createPaidOrder() {
+  const checkout = await executeCheckout(await cartInput(), provider("PENDING"));
+  const initialOrder = await testDb.order.findUniqueOrThrow({
+    where: { orderNumber: checkout.orderNumber },
+    include: { payments: true },
+  });
+  const payment = initialOrder.payments[0]!;
+  await reconcileMercadoPagoPayment({
+    externalId: payment.externalId!,
+    result: {
+      externalId: payment.externalId!,
+      status: "APPROVED",
+      providerMetadata: {
+        external_reference: initialOrder.orderNumber,
+        transaction_amount: initialOrder.totalAmountInCents / 100,
+        currency_id: "BRL",
+        payment_method_id: "pix",
+      },
+    },
+  });
+  const order = await testDb.order.findUniqueOrThrow({
+    where: { id: initialOrder.id },
+    include: { payments: true, sellerOrders: { include: { items: true, shipment: true } } },
+  });
+  return { checkout, order };
+}
 beforeAll(async () => {
   const category = await testDb.category.findFirstOrThrow({ where: { active: true } });
   const brand = await testDb.brand.findFirstOrThrow({ where: { active: true } });
   const actor = await testDb.user.create({ data: { name: "Integration", email, emailVerified: false } });
   fixtures.userIds.push(actor.id);
+  integrationMocks.adminSession.user.id = actor.id;
+  integrationMocks.refund.mockResolvedValue({
+    externalId: `simulated-refund-${run}`,
+    status: "APPROVED",
+    providerMetadata: { simulated: true },
+  });
   for (let i = 0; i < 2; i++) {
     const seller = await testDb.seller.create({
       data: {
@@ -131,6 +180,7 @@ beforeAll(async () => {
   });
   fixtures.couponIds.push(coupon.id);
 });
+beforeEach(() => integrationMocks.refund.mockClear());
 afterAll(async () => {
   await cleanupFixtures(fixtures);
   await testDb.$disconnect();
@@ -388,6 +438,63 @@ describe("checkout with real development database and simulated payments", () =>
     expect(await testDb.order.count({ where: { customerEmail: email } })).toBe(before);
     expect(fake.createPayment).not.toHaveBeenCalled();
   });
+  it("does not reserve the same last unit for two concurrent checkouts", async () => {
+    const scarceVariantId = variants[0]!;
+    const originalInventory = await testDb.inventory.findMany({ where: { variantId: { in: variants } } });
+    const scarceInventory = originalInventory.find((inventory) => inventory.variantId === scarceVariantId)!;
+    const reservationCountBefore = await testDb.inventoryMovement.count({
+      where: { inventoryId: scarceInventory.id, type: "RESERVATION", quantityChange: -1 },
+    });
+    await testDb.inventory.update({
+      where: { id: scarceInventory.id },
+      data: { availableQuantity: 1, reservedQuantity: 0 },
+    });
+    const inputs = await Promise.all([cartInput(), cartInput()]);
+    const results = await Promise.allSettled(inputs.map((input) => executeCheckout(input, provider("PENDING"))));
+    try {
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
+      const inventoryAfter = await testDb.inventory.findUniqueOrThrow({ where: { variantId: scarceVariantId } });
+      expect(inventoryAfter).toMatchObject({ availableQuantity: 0, reservedQuantity: 1 });
+      expect(
+        await testDb.inventoryMovement.count({
+          where: { inventoryId: scarceInventory.id, type: "RESERVATION", quantityChange: -1 },
+        }),
+      ).toBe(reservationCountBefore + 1);
+    } finally {
+      const successfulResult = results.find((result) => result.status === "fulfilled");
+      if (successfulResult?.status === "fulfilled") {
+        const order = await testDb.order.findUniqueOrThrow({
+          where: { orderNumber: successfulResult.value.orderNumber },
+          include: { payments: true },
+        });
+        const payment = order.payments[0];
+        if (payment?.externalId) {
+          await reconcileMercadoPagoPayment({
+            externalId: payment.externalId,
+            result: {
+              externalId: payment.externalId,
+              status: "FAILED",
+              providerMetadata: {
+                external_reference: order.orderNumber,
+                transaction_amount: order.totalAmountInCents / 100,
+                currency_id: "BRL",
+                payment_method_id: "pix",
+              },
+            },
+          });
+        }
+      }
+      await testDb.$transaction(
+        originalInventory.map(({ id, availableQuantity, reservedQuantity }) =>
+          testDb.inventory.update({
+            where: { id },
+            data: { availableQuantity, reservedQuantity },
+          }),
+        ),
+      );
+    }
+  });
   it("releases reservations and coupon usage on definitive decline", async () => {
     const input = await cartInput(1, true);
     const before = await testDb.inventory.findMany({
@@ -416,6 +523,39 @@ describe("checkout with real development database and simulated payments", () =>
     );
     expect(await executeCheckout(input, fake)).toEqual(result);
     expect(fake.createPayment).toHaveBeenCalledTimes(1);
+  });
+  it("releases stock and coupon usage after an explicit provider rejection", async () => {
+    const input = await cartInput(1, true);
+    const before = await testDb.inventory.findMany({
+      where: { variantId: { in: variants } },
+      orderBy: { variantId: "asc" },
+    });
+    const fake = provider();
+    vi.mocked(fake.createPayment).mockRejectedValue(
+      new PaymentProviderError("Rejected", {
+        httpStatus: 400,
+        outcome: "DEFINITIVE_REJECTION",
+        providerCode: "bad_request",
+      }),
+    );
+
+    const checkout = await executeCheckout(input, fake);
+    const order = await testDb.order.findUniqueOrThrow({
+      where: { orderNumber: checkout.orderNumber },
+      include: { payments: true, sellerOrders: true },
+    });
+    expect(order.status).toBe("CANCELLED");
+    expect(order.payments[0]?.status).toBe("FAILED");
+    expect(order.payments[0]?.externalId).toBeNull();
+    expect(order.sellerOrders.every((sellerOrder) => sellerOrder.status === "CANCELLED")).toBe(true);
+    expect(await testDb.couponRedemption.count({ where: { orderId: order.id } })).toBe(0);
+    const after = await testDb.inventory.findMany({
+      where: { variantId: { in: variants } },
+      orderBy: { variantId: "asc" },
+    });
+    expect(after.map(({ availableQuantity, reservedQuantity }) => [availableQuantity, reservedQuantity])).toEqual(
+      before.map(({ availableQuantity, reservedQuantity }) => [availableQuantity, reservedQuantity]),
+    );
   });
   it("confirms a pending Pix once despite duplicate and late payment updates", async () => {
     const result = await executeCheckout(await cartInput(), provider("PENDING"));
@@ -447,6 +587,182 @@ describe("checkout with real development database and simulated payments", () =>
     expect((await testDb.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe("PAID");
     expect((await testDb.payment.findFirstOrThrow({ where: { orderId: order.id } })).status).toBe("APPROVED");
     expect(await testDb.inventoryMovement.count({ where: { referenceId: order.id, type: "SALE" } })).toBe(2);
+  });
+  it("flags a late provider approval after local cancellation for manual financial review", async () => {
+    const result = await executeCheckout(await cartInput(), provider("PENDING"));
+    const order = await testDb.order.findUniqueOrThrow({
+      where: { orderNumber: result.orderNumber },
+      include: { payments: true },
+    });
+    const payment = order.payments[0]!;
+    const providerMetadata = {
+      external_reference: order.orderNumber,
+      transaction_amount: order.totalAmountInCents / 100,
+      currency_id: "BRL",
+      payment_method_id: "pix",
+    };
+
+    await reconcileMercadoPagoPayment({
+      externalId: payment.externalId!,
+      result: { externalId: payment.externalId!, status: "FAILED", providerMetadata },
+    });
+    const webhookEvent = await testDb.webhookEvent.create({
+      data: {
+        provider: "MERCADO_PAGO",
+        externalId: `notification-${randomUUID()}`,
+        type: "payment",
+        payload: { data: { id: payment.externalId } },
+        status: "PROCESSING",
+      },
+    });
+    fixtures.webhookEventIds.push(webhookEvent.id);
+
+    await reconcileMercadoPagoPayment({
+      externalId: payment.externalId!,
+      webhookEventId: webhookEvent.id,
+      result: { externalId: payment.externalId!, status: "APPROVED", providerMetadata },
+    });
+
+    expect((await testDb.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe("CANCELLED");
+    expect((await testDb.payment.findUniqueOrThrow({ where: { id: payment.id } })).status).toBe("FAILED");
+    expect(await testDb.inventoryMovement.count({ where: { referenceId: order.id, type: "SALE" } })).toBe(0);
+    expect(await testDb.webhookEvent.findUniqueOrThrow({ where: { id: webhookEvent.id } })).toMatchObject({
+      status: "FAILED",
+      processedAt: null,
+      error: expect.stringContaining("Revisão financeira manual necessária"),
+    });
+  });
+  it("cancels one seller order, refunds once and restores only that seller's inventory", async () => {
+    const { order } = await createPaidOrder();
+    const target = order.sellerOrders[0]!;
+    const untouched = order.sellerOrders[1]!;
+    const expectedRefundInCents =
+      target.itemsSubtotalInCents - target.discountAmountInCents + target.customerShippingAmountInCents;
+    const inventoryBefore = await testDb.inventory.findMany({
+      where: { variantId: { in: target.items.map((item) => item.variantId!).filter(Boolean) } },
+    });
+    const cancellation = await testDb.cancellationRequest.create({
+      data: {
+        status: "REQUESTED",
+        reason: "Integração: cancelamento parcial",
+        amountInCents: expectedRefundInCents,
+        previousSellerOrderStatus: target.status,
+        idempotencyKey: `cancel-${run}-${randomUUID()}`,
+        orderId: order.id,
+        sellerOrderId: target.id,
+        sellerId: target.sellerId,
+      },
+    });
+    await testDb.sellerOrder.update({ where: { id: target.id }, data: { status: "CANCELLATION_REQUESTED" } });
+    const form = new FormData();
+    form.set("decision", "APPROVE");
+
+    const actionResult = await reviewCancellationRequestAction(cancellation.id, form);
+    expect(actionResult.success).toContain("reembolso processado");
+
+    const updatedOrder = await testDb.order.findUniqueOrThrow({
+      where: { id: order.id },
+      include: { payments: { include: { transactions: true } }, sellerOrders: true },
+    });
+    expect(updatedOrder.status).toBe("PARTIALLY_CANCELLED");
+    expect(updatedOrder.sellerOrders.find(({ id }) => id === target.id)?.status).toBe("CANCELLED");
+    expect(updatedOrder.sellerOrders.find(({ id }) => id === untouched.id)?.status).toBe("PAID");
+    expect(updatedOrder.payments[0]?.status).toBe("PARTIALLY_REFUNDED");
+    expect(updatedOrder.payments[0]?.transactions).toContainEqual(
+      expect.objectContaining({ type: "REFUND", status: "SUCCEEDED", amountInCents: expectedRefundInCents }),
+    );
+    expect(await testDb.cancellationRequest.findUniqueOrThrow({ where: { id: cancellation.id } })).toMatchObject({
+      status: "REFUNDED",
+      amountInCents: expectedRefundInCents,
+    });
+    const inventoryAfter = await testDb.inventory.findMany({
+      where: { id: { in: inventoryBefore.map(({ id }) => id) } },
+    });
+    expect(inventoryAfter.map(({ availableQuantity }) => availableQuantity)).toEqual(
+      inventoryBefore.map(({ availableQuantity }) => availableQuantity + 1),
+    );
+    expect(integrationMocks.refund).toHaveBeenCalledTimes(1);
+
+    await refundPayment({
+      orderId: order.id,
+      amountInCents: expectedRefundInCents,
+      idempotencyKey: `cancellation-refund:${cancellation.id}`,
+    });
+    expect(integrationMocks.refund).toHaveBeenCalledTimes(1);
+  });
+  it("keeps Order status aligned when a cancellation is requested and rejected", async () => {
+    const { checkout, order } = await createPaidOrder();
+    const target = order.sellerOrders[0]!;
+    const untouched = order.sellerOrders[1]!;
+    const cancellation = await requestCancellation({
+      orderNumber: order.orderNumber,
+      sellerOrderId: target.id,
+      reason: "Integração: validar estado agregado",
+      idempotencyKey: randomUUID(),
+      identity: { guestAccessTokenHash: hashGuestToken(checkout.guestAccessToken!) },
+    });
+
+    const requestedOrder = await testDb.order.findUniqueOrThrow({
+      where: { id: order.id },
+      include: { sellerOrders: true },
+    });
+    expect(requestedOrder.status).toBe("PROCESSING");
+    expect(requestedOrder.sellerOrders.find(({ id }) => id === target.id)?.status).toBe("CANCELLATION_REQUESTED");
+    expect(requestedOrder.sellerOrders.find(({ id }) => id === untouched.id)?.status).toBe("PAID");
+
+    const form = new FormData();
+    form.set("decision", "REJECT");
+    const result = await reviewCancellationRequestAction(cancellation.id, form);
+    expect(result.success).toContain("rejeitada");
+
+    const rejectedOrder = await testDb.order.findUniqueOrThrow({
+      where: { id: order.id },
+      include: { sellerOrders: true },
+    });
+    expect(rejectedOrder.status).toBe("PAID");
+    expect(rejectedOrder.sellerOrders.find(({ id }) => id === target.id)?.status).toBe("PAID");
+    expect(rejectedOrder.sellerOrders.find(({ id }) => id === untouched.id)?.status).toBe("PAID");
+    expect(integrationMocks.refund).not.toHaveBeenCalled();
+  });
+  it("records a received return, restores its stock and refunds with the simulated provider", async () => {
+    const { checkout, order } = await createPaidOrder();
+    const sellerOrder = order.sellerOrders[0]!;
+    const item = sellerOrder.items[0]!;
+    const inventoryBefore = await testDb.inventory.findUniqueOrThrow({ where: { variantId: item.variantId! } });
+    await testDb.sellerOrder.update({ where: { id: sellerOrder.id }, data: { status: "DELIVERED" } });
+    await testDb.shipment.update({ where: { sellerOrderId: sellerOrder.id }, data: { status: "DELIVERED" } });
+
+    const request = await requestReturn({
+      orderNumber: order.orderNumber,
+      orderItemId: item.id,
+      quantity: 1,
+      reason: "Integração: devolução parcial",
+      idempotencyKey: `return-${run}-${randomUUID()}`,
+      identity: { guestAccessTokenHash: hashGuestToken(checkout.guestAccessToken!) },
+    });
+    const approve = new FormData();
+    approve.set("decision", "APPROVE");
+    expect(await reviewReturnRequestAction(request.id, approve)).toHaveProperty("success");
+
+    const receive = new FormData();
+    receive.set("decision", "RECEIVE");
+    expect(await reviewReturnRequestAction(request.id, receive)).toHaveProperty("success");
+    expect(await refundReturnRequestAction(request.id)).toHaveProperty("success");
+
+    expect(await testDb.returnRequest.findUniqueOrThrow({ where: { id: request.id } })).toMatchObject({
+      status: "REFUNDED",
+      amountInCents: item.totalAmountInCents,
+    });
+    expect((await testDb.payment.findFirstOrThrow({ where: { orderId: order.id } })).status).toBe("PARTIALLY_REFUNDED");
+    expect(
+      (await testDb.inventory.findUniqueOrThrow({ where: { variantId: item.variantId! } })).availableQuantity,
+    ).toBe(inventoryBefore.availableQuantity + 1);
+    expect(
+      await testDb.inventoryMovement.count({
+        where: { referenceType: "RETURN_REQUEST", referenceId: request.id, type: "RETURN", quantityChange: 1 },
+      }),
+    ).toBe(1);
+    expect(integrationMocks.refund).toHaveBeenCalledOnce();
   });
   it("does not treat authorization without capture as a paid order", async () => {
     const result = await executeCheckout(await cartInput(), provider("AUTHORIZED"));
