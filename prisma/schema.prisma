@@ -227,7 +227,7 @@ model Session {
 
 model Account {
   id                    String    @id @default(cuid())
-  accountId             String
+  accountId             String?
   providerId            String
   accessToken           String?
   refreshToken          String?
@@ -259,9 +259,9 @@ model Verification {
 }
 
 model RateLimitCounter {
-  key       String   @id
-  count     Int
-  resetAt   DateTime
+  key     String   @id
+  count   Int
+  resetAt DateTime
 
   @@index([resetAt])
   @@map("rate_limit_counters")
@@ -292,9 +292,28 @@ model Seller {
   disputes               Dispute[]
   subscriptions          SellerSubscription[]
   shippingMethods        SellerShippingMethod[]
+  shippingIntegration    SellerShippingIntegration?
 
   @@index([status])
   @@map("sellers")
+}
+
+model SellerShippingIntegration {
+  id                    String   @id @default(cuid())
+  sellerId              String   @unique
+  provider              String   @default("MELHOR_ENVIO")
+  accountId             String?
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String
+  scopes                String
+  accessTokenExpiresAt  DateTime
+  refreshTokenExpiresAt DateTime
+  refreshLeaseUntil     DateTime?
+  connectedAt           DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  seller                Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@map("seller_shipping_integrations")
 }
 
 model SellerShippingMethod {
@@ -336,6 +355,10 @@ model Store {
   description         String?
   logoStorageKey      String?
   bannerStorageKey    String?
+  instagramUrl        String?
+  youtubeUrl          String?
+  whatsappUrl         String?
+  facebookUrl         String?
   originPostalCode    String?
   originName          String?
   originEmail         String?
@@ -980,23 +1003,24 @@ model AuditLog {
 }
 
 model ProductReview {
-  id          String    @id @default(cuid())
-  rating      Int
-  title       String?
-  comment     String?
-  productId   String
-  sellerId    String
-  orderId     String
-  orderItemId String    @unique
-  userId      String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  hiddenAt    DateTime?
-  product     Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
-  seller      Seller    @relation(fields: [sellerId], references: [id], onDelete: Restrict)
-  order       Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  id           String               @id @default(cuid())
+  ratingTenths Int
+  title        String?
+  comment      String?
+  productId    String
+  sellerId     String
+  orderId      String
+  orderItemId  String               @unique
+  userId       String
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  hiddenAt     DateTime?
+  product      Product              @relation(fields: [productId], references: [id], onDelete: Restrict)
+  seller       Seller               @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  order        Order                @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  orderItem    OrderItem            @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  media        ProductReviewMedia[]
 
   @@index([productId, createdAt])
   @@index([sellerId, createdAt])
@@ -1004,19 +1028,34 @@ model ProductReview {
   @@map("product_reviews")
 }
 
+model ProductReviewMedia {
+  id              String        @id @default(cuid())
+  productReviewId String
+  storageKey      String        @unique
+  mediaType       String
+  contentType     String
+  sizeInBytes     Int
+  sortOrder       Int
+  createdAt       DateTime      @default(now())
+  productReview   ProductReview @relation(fields: [productReviewId], references: [id], onDelete: Cascade)
+
+  @@index([productReviewId, sortOrder])
+  @@map("product_review_media")
+}
+
 model SellerReview {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   rating    Int
   comment   String?
   sellerId  String
   orderId   String
   userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   hiddenAt  DateTime?
-  seller    Seller   @relation(fields: [sellerId], references: [id], onDelete: Restrict)
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  seller    Seller    @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@unique([orderId, sellerId, userId])
   @@index([sellerId, createdAt])

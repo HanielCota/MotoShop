@@ -16,7 +16,7 @@ const stores = [
   {
     slug: "demo-pista-norte",
     name: "Pista Norte · demonstração",
-    description: "Loja fictícia criada para apresentar a experiência da Moto Shop.",
+    description: "Loja fictícia criada para apresentar a experiência do Moto Shop.",
   },
   {
     slug: "demo-trilha-sul",
