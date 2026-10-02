@@ -4,6 +4,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
 import { melhorEnvioProvider } from "@/lib/shipping/melhor-envio-provider";
 import { ApplicationError } from "@/shared/errors/application-error";
+import { getSellerMelhorEnvioAccessTokenWithScopes } from "@/modules/shipping/infrastructure/melhor-envio-oauth";
 
 type ReconciliationInput = {
   shipmentId: string;
@@ -16,7 +17,7 @@ type ReconciliationInput = {
 export async function reconcileShipmentPurchase(input: ReconciliationInput): Promise<void> {
   const shipment = await db.shipment.findUnique({
     where: { id: input.shipmentId },
-    include: { sellerOrder: { select: { orderId: true, order: { select: { orderNumber: true } } } } },
+    include: { sellerOrder: { select: { sellerId: true, orderId: true, order: { select: { orderNumber: true } } } } },
   });
   if (!shipment || shipment.provider !== "MELHOR_ENVIO") {
     throw new ApplicationError({ code: "NOT_FOUND", message: "Tentativa de envio não encontrada." });
@@ -40,7 +41,14 @@ export async function reconcileShipmentPurchase(input: ReconciliationInput): Pro
     if (!externalShipmentId || externalShipmentId.length > 100) {
       throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Informe um ID de envio válido." });
     }
-    const details = await melhorEnvioProvider.getShipmentDetails(externalShipmentId);
+    const accessToken = await getSellerMelhorEnvioAccessTokenWithScopes(shipment.sellerOrder.sellerId, ["orders-read"]);
+    if (!accessToken)
+      throw new ApplicationError({
+        code: "CONFIGURATION_ERROR",
+        message: "A loja precisa reconectar o Melhor Envio antes de conferir esta etiqueta.",
+        statusCode: 409,
+      });
+    const details = await melhorEnvioProvider.getShipmentDetails(externalShipmentId, accessToken);
     const tags = readOrderTags(details);
     if (tags.length > 0 && !tags.includes(shipment.sellerOrder.order.orderNumber)) {
       throw new ApplicationError({
@@ -63,7 +71,10 @@ export async function reconcileShipmentPurchase(input: ReconciliationInput): Pro
           purchaseState: null,
           purchaseError: null,
           status: "READY_TO_SHIP",
-          providerMetadata: details as Prisma.InputJsonValue,
+          providerMetadata: {
+            reconciled: true,
+            providerTagMatched: tags.includes(shipment.sellerOrder.order.orderNumber),
+          } as Prisma.InputJsonValue,
         },
       });
       if (updated.count !== 1)

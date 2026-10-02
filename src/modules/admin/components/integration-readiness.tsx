@@ -27,9 +27,14 @@ export function IntegrationReadiness() {
     },
     {
       name: "Melhor Envio",
-      description: "Cotações e etiquetas do serviço de frete.",
-      configured: Boolean(env.MELHOR_ENVIO_TOKEN && env.MELHOR_ENVIO_USER_AGENT),
-      missing: "Token de acesso e identificação da aplicação",
+      description: "OAuth de lojistas para consulta de fretes no sandbox.",
+      configured: Boolean(
+        env.MELHOR_ENVIO_CLIENT_ID &&
+          env.MELHOR_ENVIO_CLIENT_SECRET &&
+          env.MELHOR_ENVIO_REDIRECT_URI &&
+          env.MELHOR_ENVIO_TOKEN_ENCRYPTION_KEY,
+      ),
+      missing: "Client ID, Client Secret, callback local e chave de criptografia",
     },
     {
       name: "Fotos de produtos e lojas",
@@ -39,7 +44,7 @@ export function IntegrationReadiness() {
     },
     {
       name: "E-mails",
-      description: "Mensagens transacionais enviadas pela Moto Shop.",
+      description: "Mensagens transacionais enviadas pelo Moto Shop.",
       configured: Boolean(env.RESEND_API_KEY && env.EMAIL_FROM),
       missing: "Chave do Resend e remetente",
     },

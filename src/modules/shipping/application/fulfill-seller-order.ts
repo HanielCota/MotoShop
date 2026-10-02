@@ -14,6 +14,7 @@ import {
 import { syncOrderStatusFromSellerOrders } from "@/modules/orders/application/sync-order-status";
 import type { ShippingAddress, ShippingProduct, ShippingVolume } from "@/shared/shipping/shipping-provider";
 import { ApplicationError } from "@/shared/errors/application-error";
+import { getSellerMelhorEnvioAccessTokenWithScopes } from "@/modules/shipping/infrastructure/melhor-envio-oauth";
 
 export type FulfillSellerOrderInput = {
   sellerOrderId: string;
@@ -34,6 +35,7 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
   if (!sellerOrder.shipment?.serviceCode) {
     throw new ApplicationError({ code: "CONFIGURATION_ERROR", message: "O serviço de frete não foi salvo no pedido." });
   }
+  const accessToken = await requireSellerShippingToken(sellerOrder.sellerId, ["cart-write", "shipping-checkout"]);
   if (sellerOrder.shipment.externalShipmentId) return sellerOrder.shipment;
   if (sellerOrder.shipment.purchaseState) {
     throw new ApplicationError({
@@ -63,23 +65,26 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
 
   let result: Awaited<ReturnType<typeof melhorEnvioProvider.createShipment>>;
   try {
-    result = await melhorEnvioProvider.createShipment({
-      sellerOrderId: input.sellerOrderId,
-      serviceCode: sellerOrder.shipment.serviceCode,
-      ...shipmentData,
-      ...(input.tags ? { tags: input.tags } : { tags: [{ tag: sellerOrder.order.orderNumber }] }),
-      quote: {
-        provider: sellerOrder.shipment.provider,
+    result = await melhorEnvioProvider.createShipment(
+      {
+        sellerOrderId: input.sellerOrderId,
         serviceCode: sellerOrder.shipment.serviceCode,
-        carrier: sellerOrder.shipment.carrier,
-        service: sellerOrder.shipment.service,
-        priceInCents: sellerOrder.shipment.priceInCents,
-        ...(sellerOrder.shipment.estimatedDeliveryDays !== null
-          ? { estimatedDeliveryDays: sellerOrder.shipment.estimatedDeliveryDays }
-          : {}),
-        raw: {},
+        ...shipmentData,
+        ...(input.tags ? { tags: input.tags } : { tags: [{ tag: sellerOrder.order.orderNumber }] }),
+        quote: {
+          provider: sellerOrder.shipment.provider,
+          serviceCode: sellerOrder.shipment.serviceCode,
+          carrier: sellerOrder.shipment.carrier,
+          service: sellerOrder.shipment.service,
+          priceInCents: sellerOrder.shipment.priceInCents,
+          ...(sellerOrder.shipment.estimatedDeliveryDays !== null
+            ? { estimatedDeliveryDays: sellerOrder.shipment.estimatedDeliveryDays }
+            : {}),
+          raw: {},
+        },
       },
-    });
+      accessToken,
+    );
   } catch (error) {
     await db.shipment.updateMany({
       where: { id: sellerOrder.shipment.id, purchaseState: "IN_PROGRESS", externalShipmentId: null },
@@ -118,12 +123,13 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
 }
 
 export async function generateSellerOrderShipment(sellerOrderId: string, actorUserId: string) {
-  const shipment = await getShipment(sellerOrderId);
+  const { shipment, sellerId } = await getShipment(sellerOrderId);
   assertIntegratedShipment(shipment.provider);
   if (!shipment.externalShipmentId)
     throw new ApplicationError({ code: "CONFLICT", message: "A etiqueta ainda não foi comprada." });
 
-  const result = await melhorEnvioProvider.generateShipment(shipment.externalShipmentId);
+  const accessToken = await requireSellerShippingToken(sellerId, ["shipping-generate"]);
+  const result = await melhorEnvioProvider.generateShipment(shipment.externalShipmentId, accessToken);
   const updatedShipment = await db.$transaction(async (tx) => {
     const updatedShipment = await tx.shipment.update({
       where: { id: shipment.id },
@@ -137,12 +143,13 @@ export async function generateSellerOrderShipment(sellerOrderId: string, actorUs
 }
 
 export async function refreshSellerOrderTracking(sellerOrderId: string, actorUserId: string) {
-  const shipment = await getShipment(sellerOrderId);
+  const { shipment, sellerId } = await getShipment(sellerOrderId);
   assertIntegratedShipment(shipment.provider);
   if (!shipment.externalShipmentId)
     throw new ApplicationError({ code: "CONFLICT", message: "A etiqueta ainda não foi comprada." });
 
-  const result = await melhorEnvioProvider.track(shipment.externalShipmentId);
+  const accessToken = await requireSellerShippingToken(sellerId, ["shipping-tracking"]);
+  const result = await melhorEnvioProvider.track(shipment.externalShipmentId, accessToken);
   const reportedStatus = mapProviderShipmentStatus(result.status);
   if (!reportedStatus) {
     logger.warn(
@@ -165,7 +172,9 @@ export async function refreshSellerOrderTracking(sellerOrderId: string, actorUse
         ...(result.trackingCode ? { trackingCode: result.trackingCode } : {}),
         ...(result.trackingUrl ? { trackingUrl: result.trackingUrl } : {}),
         providerMetadata: result.providerMetadata as Prisma.InputJsonValue,
-        ...(status === "SHIPPED" || status === "IN_TRANSIT" ? { shippedAt: currentShipment.shippedAt ?? new Date() } : {}),
+        ...(status === "SHIPPED" || status === "IN_TRANSIT"
+          ? { shippedAt: currentShipment.shippedAt ?? new Date() }
+          : {}),
         ...(status === "DELIVERED" ? { deliveredAt: currentShipment.deliveredAt ?? new Date() } : {}),
       },
     });
@@ -256,10 +265,24 @@ async function getSellerOrderForFulfillment(sellerOrderId: string) {
 }
 
 async function getShipment(sellerOrderId: string) {
-  const sellerOrder = await db.sellerOrder.findUnique({ where: { id: sellerOrderId }, include: { shipment: true } });
+  const sellerOrder = await db.sellerOrder.findUnique({
+    where: { id: sellerOrderId },
+    select: { sellerId: true, shipment: true },
+  });
   if (!sellerOrder?.shipment)
     throw new ApplicationError({ code: "NOT_FOUND", message: "Envio do seller não encontrado." });
-  return sellerOrder.shipment;
+  return { shipment: sellerOrder.shipment, sellerId: sellerOrder.sellerId };
+}
+
+async function requireSellerShippingToken(sellerId: string, requiredScopes: readonly string[]): Promise<string> {
+  const accessToken = await getSellerMelhorEnvioAccessTokenWithScopes(sellerId, requiredScopes);
+  if (!accessToken)
+    throw new ApplicationError({
+      code: "CONFIGURATION_ERROR",
+      message: "Conecte a conta do Melhor Envio da loja para gerenciar este envio.",
+      statusCode: 409,
+    });
+  return accessToken;
 }
 
 function assertIntegratedShipment(provider: string | undefined) {

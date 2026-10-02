@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   updateMany: vi.fn(),
   auditCreate: vi.fn(),
   getShipmentDetails: vi.fn(),
+  getSellerAccessToken: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -15,6 +16,9 @@ vi.mock("@/lib/database", () => ({
 vi.mock("@/lib/shipping/melhor-envio-provider", () => ({
   melhorEnvioProvider: { getShipmentDetails: mocks.getShipmentDetails },
 }));
+vi.mock("@/modules/shipping/infrastructure/melhor-envio-oauth", () => ({
+  getSellerMelhorEnvioAccessTokenWithScopes: mocks.getSellerAccessToken,
+}));
 
 import { reconcileShipmentPurchase } from "./reconcile-shipment-purchase";
 
@@ -23,7 +27,11 @@ const shipment = {
   provider: "MELHOR_ENVIO",
   purchaseState: "OUTCOME_UNKNOWN",
   externalShipmentId: null,
-  sellerOrder: { orderId: "clorder0000000000000001", order: { orderNumber: "MS-202610-0001" } },
+  sellerOrder: {
+    sellerId: "seller-1",
+    orderId: "clorder0000000000000001",
+    order: { orderNumber: "MS-202610-0001" },
+  },
 };
 
 beforeEach(() => {
@@ -38,10 +46,16 @@ beforeEach(() => {
     id: "external-shipment-1",
     options: { tags: [{ tag: "MS-202610-0001" }] },
   });
+  mocks.getSellerAccessToken.mockResolvedValue("seller-sandbox-token");
 });
 
 describe("reconcileShipmentPurchase", () => {
   it("associates a verified provider shipment and audits the admin decision atomically", async () => {
+    mocks.getShipmentDetails.mockResolvedValue({
+      id: "external-shipment-1",
+      options: { tags: [{ tag: "MS-202610-0001" }] },
+      receiver: { document: "12345678900", address: "Rua confidencial" },
+    });
     await reconcileShipmentPurchase({
       shipmentId: shipment.id,
       actorUserId: "admin-1",
@@ -63,6 +77,8 @@ describe("reconcileShipmentPurchase", () => {
         status: "READY_TO_SHIP",
       }),
     });
+    expect(mocks.getShipmentDetails).toHaveBeenCalledWith("external-shipment-1", "seller-sandbox-token");
+    expect(mocks.getSellerAccessToken).toHaveBeenCalledWith("seller-1", ["orders-read"]);
     expect(mocks.auditCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         action: "SHIPMENT_PURCHASE_RECONCILED",
@@ -70,6 +86,11 @@ describe("reconcileShipmentPurchase", () => {
         metadata: expect.objectContaining({ providerTagMatched: true }),
       }),
     });
+    expect(mocks.updateMany.mock.calls[0]?.[0]?.data.providerMetadata).toEqual({
+      reconciled: true,
+      providerTagMatched: true,
+    });
+    expect(JSON.stringify(mocks.updateMany.mock.calls[0]?.[0]?.data.providerMetadata)).not.toContain("12345678900");
   });
 
   it("does not associate a shipment carrying another order's platform tag", async () => {

@@ -15,10 +15,11 @@ import type {
 const DEFAULT_API_URL = "https://sandbox.melhorenvio.com.br";
 
 export class MelhorEnvioProvider implements ShippingProvider {
-  async quote(input: ShippingQuoteInput): Promise<ShippingQuote[]> {
-    this.assertConfigured();
+  async quote(input: ShippingQuoteInput, accessToken: string): Promise<ShippingQuote[]> {
+    this.assertToken(accessToken);
     const response = await this.request("/api/v2/me/shipment/calculate", {
       method: "POST",
+      accessToken,
       body: {
         from: { postal_code: input.fromPostalCode },
         to: { postal_code: input.toPostalCode },
@@ -36,8 +37,15 @@ export class MelhorEnvioProvider implements ShippingProvider {
       },
     });
 
-    const payload = Array.isArray(response) ? response : [];
-    return payload
+    if (!Array.isArray(response)) {
+      throw new ApplicationError({
+        code: "CONFLICT",
+        message: "O Melhor Envio retornou uma resposta de cotação inválida.",
+        statusCode: 502,
+      });
+    }
+
+    return response
       .filter((item): item is Record<string, unknown> => typeof item === "object" && item !== null)
       .filter((item) => !item.error)
       .filter((item) => typeof item.id === "number" || (typeof item.id === "string" && item.id.length > 0))
@@ -56,8 +64,8 @@ export class MelhorEnvioProvider implements ShippingProvider {
       .filter((quote) => quote.priceInCents >= 0);
   }
 
-  async createShipment(input: CreateShipmentInput): Promise<ShipmentResult> {
-    this.assertConfigured();
+  async createShipment(input: CreateShipmentInput, accessToken: string): Promise<ShipmentResult> {
+    this.assertToken(accessToken);
     const service = Number(input.serviceCode);
     if (!Number.isInteger(service) || service <= 0) {
       throw new ApplicationError({
@@ -68,6 +76,7 @@ export class MelhorEnvioProvider implements ShippingProvider {
 
     const cartPayload = await this.request("/api/v2/me/cart", {
       method: "POST",
+      accessToken,
       body: {
         service,
         from: input.from,
@@ -102,31 +111,34 @@ export class MelhorEnvioProvider implements ShippingProvider {
 
     const checkoutPayload = await this.request("/api/v2/me/shipment/checkout", {
       method: "POST",
+      accessToken,
       body: { orders: [externalShipmentId] },
     });
     return {
       externalShipmentId,
       status: "READY_TO_SHIP",
-      providerMetadata: { cart: cartPayload, checkout: checkoutPayload },
+      providerMetadata: { checkoutResult: readSafeProviderString(checkoutPayload, "result") },
     };
   }
 
-  async generateShipment(externalShipmentId: string): Promise<ShipmentGenerationResult> {
-    this.assertConfigured();
+  async generateShipment(externalShipmentId: string, accessToken: string): Promise<ShipmentGenerationResult> {
+    this.assertToken(accessToken);
     const payload = await this.request("/api/v2/me/shipment/generate", {
       method: "POST",
+      accessToken,
       body: { orders: [externalShipmentId] },
     });
-    return { externalShipmentId, providerMetadata: toRecord(payload) };
+    return { externalShipmentId, providerMetadata: toSafeProviderMetadata(payload, ["status", "result", "protocol"]) };
   }
 
-  async getShipmentDetails(externalShipmentId: string): Promise<Record<string, unknown>> {
-    this.assertConfigured();
+  async getShipmentDetails(externalShipmentId: string, accessToken: string): Promise<Record<string, unknown>> {
+    this.assertToken(accessToken);
     if (!externalShipmentId.trim()) {
       throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Informe o identificador do envio." });
     }
     const payload = await this.request(`/api/v2/me/orders/${encodeURIComponent(externalShipmentId)}`, {
       method: "GET",
+      accessToken,
     });
     const details = toRecord(payload);
     const returnedId = details.id ?? details.order_id;
@@ -140,10 +152,11 @@ export class MelhorEnvioProvider implements ShippingProvider {
     return details;
   }
 
-  async track(externalShipmentId: string): Promise<TrackingResult> {
-    this.assertConfigured();
+  async track(externalShipmentId: string, accessToken: string): Promise<TrackingResult> {
+    this.assertToken(accessToken);
     const payload = await this.request("/api/v2/me/shipment/tracking", {
       method: "POST",
+      accessToken,
       body: { orders: [externalShipmentId] },
     });
     const tracking = Array.isArray(payload) ? payload[0] : payload;
@@ -153,15 +166,15 @@ export class MelhorEnvioProvider implements ShippingProvider {
       ...(typeof data.tracking === "string" ? { trackingCode: data.tracking } : {}),
       ...(typeof data.tracking_code === "string" ? { trackingCode: data.tracking_code } : {}),
       ...(typeof data.tracking_url === "string" ? { trackingUrl: data.tracking_url } : {}),
-      providerMetadata: data,
+      providerMetadata: toSafeProviderMetadata(data, ["status"]),
     };
   }
 
-  private assertConfigured(): void {
-    if (!env.MELHOR_ENVIO_TOKEN) {
+  private assertToken(accessToken: string): void {
+    if (!accessToken.trim()) {
       throw new ApplicationError({
         code: "CONFIGURATION_ERROR",
-        message: "Melhor Envio ainda não está configurado no ambiente da Moto Shop.",
+        message: "Conecte a conta do Melhor Envio da loja para consultar o frete.",
         statusCode: 503,
       });
     }
@@ -169,15 +182,15 @@ export class MelhorEnvioProvider implements ShippingProvider {
 
   private async request(
     path: string,
-    input: { method: "GET" | "POST"; body?: Record<string, unknown> },
+    input: { method: "GET" | "POST"; body?: Record<string, unknown>; accessToken: string },
   ): Promise<unknown> {
     const response = await fetch(`${env.MELHOR_ENVIO_API_URL ?? DEFAULT_API_URL}${path}`, {
       method: input.method,
       headers: {
-        Authorization: `Bearer ${env.MELHOR_ENVIO_TOKEN}`,
+        Authorization: `Bearer ${input.accessToken}`,
         "Content-Type": "application/json",
         Accept: "application/json",
-        "User-Agent": env.MELHOR_ENVIO_USER_AGENT ?? "Moto Shop (suporte@example.com)",
+        "User-Agent": env.MELHOR_ENVIO_USER_AGENT ?? "O Moto Shop (suporte@motoshopbrasil.com.br)",
       },
       ...(input.body ? { body: JSON.stringify(input.body) } : {}),
       cache: "no-store",
@@ -189,7 +202,6 @@ export class MelhorEnvioProvider implements ShippingProvider {
         code: "CONFLICT",
         message: "O Melhor Envio não conseguiu calcular o frete.",
         statusCode: response.status >= 500 ? 502 : 409,
-        cause: payload,
       });
     }
     return payload;
@@ -204,6 +216,23 @@ function readExternalId(payload: unknown): string | undefined {
 
 function toRecord(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+}
+
+function readSafeProviderString(value: unknown, key: string): string | undefined {
+  const candidate = toRecord(value)[key];
+  return typeof candidate === "string" && candidate.length <= 100 ? candidate : undefined;
+}
+
+function toSafeProviderMetadata(value: unknown, keys: readonly string[]): Record<string, string | number | boolean> {
+  const record = toRecord(value);
+  const safe: Record<string, string | number | boolean> = {};
+  for (const key of keys) {
+    const candidate = record[key];
+    if (typeof candidate === "string" && candidate.length <= 100) safe[key] = candidate;
+    else if (typeof candidate === "number" && Number.isFinite(candidate)) safe[key] = candidate;
+    else if (typeof candidate === "boolean") safe[key] = candidate;
+  }
+  return safe;
 }
 
 function toCents(value: unknown): number {

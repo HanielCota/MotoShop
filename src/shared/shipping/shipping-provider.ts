@@ -67,8 +67,8 @@ export type TrackingResult = {
 };
 
 export interface ShippingProvider {
-  quote(input: ShippingQuoteInput): Promise<ShippingQuote[]>;
-  createShipment(input: CreateShipmentInput): Promise<ShipmentResult>;
-  generateShipment(externalShipmentId: string): Promise<ShipmentGenerationResult>;
-  track(trackingCode: string): Promise<TrackingResult>;
+  quote(input: ShippingQuoteInput, accessToken: string): Promise<ShippingQuote[]>;
+  createShipment(input: CreateShipmentInput, accessToken: string): Promise<ShipmentResult>;
+  generateShipment(externalShipmentId: string, accessToken: string): Promise<ShipmentGenerationResult>;
+  track(trackingCode: string, accessToken: string): Promise<TrackingResult>;
 }

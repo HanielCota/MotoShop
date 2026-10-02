@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   send: vi.fn(),
   syncOrderStatus: vi.fn(),
   loggerError: vi.fn(),
+  getSellerAccessToken: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -25,6 +26,9 @@ vi.mock("@/lib/logger", () => ({ logger: { error: mocks.loggerError } }));
 vi.mock("@/lib/shipping/melhor-envio-provider", () => ({
   melhorEnvioProvider: { createShipment: mocks.createShipment },
 }));
+vi.mock("@/modules/shipping/infrastructure/melhor-envio-oauth", () => ({
+  getSellerMelhorEnvioAccessTokenWithScopes: mocks.getSellerAccessToken,
+}));
 vi.mock("@/modules/orders/application/sync-order-status", () => ({
   syncOrderStatusFromSellerOrders: mocks.syncOrderStatus,
 }));
@@ -33,6 +37,7 @@ import { purchaseSellerOrderShipment } from "./fulfill-seller-order";
 
 const pendingSellerOrder = {
   id: "seller-order-1",
+  sellerId: "seller-1",
   status: "PAID",
   shipment: {
     id: "shipment-1",
@@ -110,6 +115,7 @@ beforeEach(() => {
     status: "READY_TO_SHIP",
     providerMetadata: {},
   });
+  mocks.getSellerAccessToken.mockResolvedValue("seller-sandbox-token");
   mocks.send.mockResolvedValue({ ids: ["event-1"] });
 });
 
@@ -122,6 +128,8 @@ describe("purchaseSellerOrderShipment retry safety", () => {
       data: { purchaseState: "IN_PROGRESS", purchaseError: null },
     });
     expect(mocks.createShipment).toHaveBeenCalledOnce();
+    expect(mocks.createShipment.mock.calls[0]?.[1]).toBe("seller-sandbox-token");
+    expect(mocks.getSellerAccessToken).toHaveBeenCalledWith("seller-1", ["cart-write", "shipping-checkout"]);
     expect(mocks.shipmentUpdate).toHaveBeenCalledWith({
       where: { id: "shipment-1" },
       data: expect.objectContaining({ externalShipmentId: "external-1", purchaseState: null, purchaseError: null }),
@@ -160,6 +168,17 @@ describe("purchaseSellerOrderShipment retry safety", () => {
     await expect(
       purchaseSellerOrderShipment({ sellerOrderId: "seller-order-1", actorUserId: "seller-user-1" }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(mocks.createShipment).not.toHaveBeenCalled();
+  });
+
+  it("requires the shop's own OAuth token before claiming a paid shipping operation", async () => {
+    mocks.getSellerAccessToken.mockResolvedValueOnce(null);
+
+    await expect(
+      purchaseSellerOrderShipment({ sellerOrderId: "seller-order-1", actorUserId: "seller-user-1" }),
+    ).rejects.toMatchObject({ code: "CONFIGURATION_ERROR" });
+
+    expect(mocks.updateMany).not.toHaveBeenCalled();
     expect(mocks.createShipment).not.toHaveBeenCalled();
   });
 });
