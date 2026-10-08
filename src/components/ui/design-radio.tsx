@@ -43,7 +43,7 @@ export function DesignRadio({ value, disabled, className }: { value: string; dis
       value={value}
       disabled={disabled}
       className={cn(
-        "border-input bg-background data-checked:border-primary data-checked:text-primary flex size-4 shrink-0 items-center justify-center rounded-full border",
+        "border-input bg-background data-checked:border-brand-strong data-checked:text-brand-strong flex size-4 shrink-0 items-center justify-center rounded-full border",
         "focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 data-disabled:cursor-not-allowed data-disabled:opacity-50",
         className,
       )}
