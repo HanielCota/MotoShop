@@ -39,3 +39,31 @@ export async function sendAuthEmail(input: { kind: AuthEmailKind; to: string; ur
     ),
   });
 }
+
+/**
+ * Sent when someone signs up with an e-mail that already has an account. With e-mail verification
+ * required, the sign-up response is the same for new and existing e-mails (no account enumeration),
+ * so the owner learns about it here instead. One message per address per day caps abuse.
+ */
+export async function sendExistingAccountEmail(input: { to: string; now?: Date }) {
+  const baseUrl = getApplicationBaseUrl();
+  const day = (input.now ?? new Date()).toISOString().slice(0, 10);
+  const addressKey = createHash("sha256").update(input.to.toLowerCase()).digest("hex");
+  await sendNotificationEmail({
+    eventKey: `auth.existing-account:${addressKey}:${day}`,
+    kind: "AUTH_EXISTING_ACCOUNT",
+    to: input.to,
+    subject: "Você já tem uma conta no Moto Shop",
+    react: (
+      <div style={{ color: "#172033", fontFamily: "Arial, sans-serif", lineHeight: 1.5 }}>
+        <h1>Você já tem uma conta</h1>
+        <p>Alguém tentou criar uma conta no Moto Shop com este e-mail, que já está cadastrado.</p>
+        <p>
+          <a href={`${baseUrl}/login`}>Entrar na minha conta</a> ·{" "}
+          <a href={`${baseUrl}/forgot-password`}>Esqueci minha senha</a>
+        </p>
+        <p>Se não foi você, ignore esta mensagem. Nenhum dado da conta foi alterado.</p>
+      </div>
+    ),
+  });
+}

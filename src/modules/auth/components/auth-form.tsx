@@ -100,7 +100,7 @@ export function AuthForm({
 
       if (mode === "sign-up" && verificationRequired) {
         setMode("sign-in");
-        setNotice("Conta criada. Enviamos um link para confirmar seu e-mail antes de entrar.");
+        setNotice("Enviamos um e-mail para você. Siga as instruções da mensagem para entrar.");
         return;
       }
 
