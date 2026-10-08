@@ -75,3 +75,21 @@ it("rejects an empty address before opening a transaction", async () => {
   expect(mocks.lock).not.toHaveBeenCalled();
   expect(mocks.create).not.toHaveBeenCalled();
 });
+
+it.each(["ZZ", "12", "S"])("rejects the invalid state code %s", async (state) => {
+  const form = new FormData();
+  for (const [key, value] of Object.entries({
+    label: "Casa",
+    recipient: "Cliente",
+    postalCode: "01001000",
+    street: "Rua Teste",
+    number: "1",
+    neighborhood: "Centro",
+    city: "São Paulo",
+    state,
+  }))
+    form.set(key, value);
+
+  expect((await createCustomerAddressAction({}, form)).error).toBe("Informe uma UF válida, como SP ou RJ.");
+  expect(mocks.create).not.toHaveBeenCalled();
+});
