@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 
+import { FormMessage } from "@/components/ui/form-message";
+
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
 
 export function PasswordRecoveryForm() {
@@ -15,10 +17,14 @@ export function PasswordRecoveryForm() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Informe um e-mail válido.");
+      return;
+    }
     setPending(true);
     setError(undefined);
     try {
-      const result = await authClient.requestPasswordReset({ email, redirectTo: "/reset-password" });
+      const result = await authClient.requestPasswordReset({ email: email.trim(), redirectTo: "/reset-password" });
       if (result.error) {
         setError("Não foi possível solicitar a recuperação agora. Tente novamente em instantes.");
         return;
@@ -32,11 +38,9 @@ export function PasswordRecoveryForm() {
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
+    <form onSubmit={submit} noValidate className="flex flex-col gap-4">
       {done ? (
-        <p role="status" className="text-sm">
-          Se este e-mail estiver cadastrado, você receberá um link para criar uma nova senha.
-        </p>
+        <FormMessage success="Se este e-mail estiver cadastrado, você receberá um link para criar uma nova senha." />
       ) : (
         <>
           <label className="flex flex-col gap-2 text-sm font-medium">
@@ -47,24 +51,20 @@ export function PasswordRecoveryForm() {
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="h-12 rounded-lg border-[#cfd2d5] bg-white px-4"
+              className="bg-card h-12 rounded-lg px-4"
             />
           </label>
-          {error ? (
-            <p role="alert" className="text-destructive text-sm">
-              {error}
-            </p>
-          ) : null}
+          <FormMessage error={error ?? null} />
           <Button
             type="submit"
             disabled={pending}
-            className="h-12 rounded-lg bg-[#242527] px-4 font-semibold text-white hover:bg-[#353638]"
+            className="h-12 rounded-lg px-4 font-semibold"
           >
             {pending ? "Aguarde..." : "Enviar link de recuperação"}
           </Button>
         </>
       )}
-      <Link href="/login" className="text-primary text-sm underline-offset-4 hover:underline">
+      <Link href="/login" className="text-brand-strong inline-flex min-h-10 items-center text-sm font-medium underline-offset-4 hover:underline">
         Voltar para entrar
       </Link>
     </form>

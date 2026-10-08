@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 
+import { FormMessage } from "@/components/ui/form-message";
+
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
 
 export function ResetPasswordForm({ token }: { token: string }) {
@@ -39,9 +41,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       {done ? (
-        <p role="status" className="text-sm">
-          Senha atualizada. Entre novamente com sua nova senha.
-        </p>
+        <FormMessage success="Senha atualizada. Entre novamente com sua nova senha." />
       ) : (
         <>
           <label className="flex flex-col gap-2 text-sm font-medium">
@@ -54,7 +54,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
               required
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="h-12 rounded-lg border-[#cfd2d5] bg-white px-4"
+              className="bg-card h-12 rounded-lg px-4"
             />
           </label>
           <label className="flex flex-col gap-2 text-sm font-medium">
@@ -67,24 +67,20 @@ export function ResetPasswordForm({ token }: { token: string }) {
               required
               value={confirmation}
               onChange={(event) => setConfirmation(event.target.value)}
-              className="h-12 rounded-lg border-[#cfd2d5] bg-white px-4"
+              className="bg-card h-12 rounded-lg px-4"
             />
           </label>
-          {error ? (
-            <p role="alert" className="text-destructive text-sm">
-              {error}
-            </p>
-          ) : null}
+          <FormMessage error={error ?? null} />
           <Button
             type="submit"
             disabled={pending}
-            className="h-12 rounded-lg bg-[#242527] px-4 font-semibold text-white hover:bg-[#353638]"
+            className="h-12 rounded-lg px-4 font-semibold"
           >
             {pending ? "Aguarde..." : "Salvar nova senha"}
           </Button>
         </>
       )}
-      <Link href="/login" className="text-primary text-sm underline-offset-4 hover:underline">
+      <Link href="/login" className="text-brand-strong inline-flex min-h-10 items-center text-sm font-medium underline-offset-4 hover:underline">
         Ir para o login
       </Link>
     </form>

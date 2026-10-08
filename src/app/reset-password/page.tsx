@@ -16,7 +16,7 @@ export default async function ResetPasswordPage({
       ) : (
         <p className="text-sm">
           Este link é inválido ou expirou.{" "}
-          <Link className="text-primary underline" href="/forgot-password">
+          <Link className="text-brand-text underline" href="/forgot-password">
             Solicitar novo link
           </Link>
         </p>

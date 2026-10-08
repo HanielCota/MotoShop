@@ -17,9 +17,11 @@ export async function toggleFavoriteAction(productId: string): Promise<FavoriteA
   const parsedProductId = productIdSchema.safeParse(productId);
   if (!parsedProductId.success) return { error: "Produto inválido." };
 
-  const product = await db.product.findFirst({
-    where: { id: parsedProductId.data, status: ProductStatus.APPROVED },
-    select: { id: true, slug: true },
+  // Sem filtro de status aqui: o cliente precisa conseguir remover um favorito mesmo
+  // depois que o produto foi pausado, reprovado ou arquivado.
+  const product = await db.product.findUnique({
+    where: { id: parsedProductId.data },
+    select: { id: true, slug: true, status: true },
   });
   if (!product) return { error: "Produto não encontrado." };
 
@@ -29,11 +31,13 @@ export async function toggleFavoriteAction(productId: string): Promise<FavoriteA
     });
 
     if (existingFavorite) {
-      await db.favorite.delete({ where: { id: existingFavorite.id } });
+      await db.favorite.deleteMany({ where: { id: existingFavorite.id, userId: session.user.id } });
       revalidatePath("/favorites");
       revalidatePath(`/products/${product.slug}`);
       return { isFavorite: false };
     }
+
+    if (product.status !== ProductStatus.APPROVED) return { error: "Produto não encontrado." };
 
     await db.favorite.create({ data: { userId: session.user.id, productId: product.id } });
     revalidatePath("/favorites");

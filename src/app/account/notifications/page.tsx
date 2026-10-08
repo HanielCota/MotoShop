@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/lib/database";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
@@ -14,14 +14,16 @@ export default async function NotificationPreferencesPage() {
       <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
         <CustomerAccountNavigation pathname="/account/notifications" />
         <div className="flex min-w-0 flex-col gap-8">
-          <div>
-            <Badge variant="secondary">Minha conta</Badge>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-5xl">Notificações</h1>
-            <p className="text-muted-foreground mt-3">Escolha como acompanhar as atualizações dos seus pedidos.</p>
-          </div>
+          <PageHeader
+            eyebrow="Minha conta"
+            title="Notificações"
+            description="Escolha como acompanhar as atualizações dos seus pedidos."
+          />
           <Card>
             <CardHeader>
-              <CardTitle>Preferências de e-mail</CardTitle>
+              <CardTitle>
+                <h2 className="text-xl">Preferências de e-mail</h2>
+              </CardTitle>
               <CardDescription>As alterações valem para os próximos eventos do pedido.</CardDescription>
             </CardHeader>
             <CardContent>

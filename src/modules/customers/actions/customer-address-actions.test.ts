@@ -66,3 +66,12 @@ it("decides the initial default address only after locking the customer", async 
     expect.objectContaining({ data: expect.objectContaining({ isDefault: true, userId: "buyer" }) }),
   );
 });
+
+it("rejects an empty address before opening a transaction", async () => {
+  const form = new FormData();
+  form.set("label", "");
+
+  expect((await createCustomerAddressAction({}, form)).error).toBe("Informe um nome para o endereço.");
+  expect(mocks.lock).not.toHaveBeenCalled();
+  expect(mocks.create).not.toHaveBeenCalled();
+});

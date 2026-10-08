@@ -35,8 +35,30 @@ it("recovers the login button after a network rejection", async () => {
 it("shows a localized inline validation error without submitting an empty login", async () => {
   render(<AuthForm emailEnabled verificationRequired={false} />);
   fireEvent.submit(screen.getByRole("button", { name: "Entrar" }).closest("form")!);
-  expect(await screen.findByRole("alert")).toHaveTextContent("Informe um e-mail válido.");
+  const emailInput = screen.getByLabelText("E-mail");
+  expect(emailInput).toHaveAttribute("aria-invalid", "true");
+  expect(emailInput).toHaveAccessibleDescription("Informe um e-mail válido.");
+  expect(emailInput).toHaveFocus();
+  expect(screen.getByLabelText("Senha")).toHaveAccessibleDescription("A senha precisa ter pelo menos 8 caracteres.");
   expect(mocks.signIn).not.toHaveBeenCalled();
+});
+it("toggles password visibility with an accessible button", () => {
+  render(<AuthForm emailEnabled verificationRequired={false} />);
+  const toggle = screen.getByRole("button", { name: "Mostrar senha" });
+  expect(screen.getByLabelText("Senha")).toHaveAttribute("type", "password");
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByLabelText("Senha")).toHaveAttribute("type", "text");
+});
+it("syncs the sign-up mode to the URL so it can be linked", () => {
+  window.history.replaceState(null, "", "/login?next=%2Fseller");
+  render(<AuthForm emailEnabled verificationRequired={false} />);
+  fireEvent.click(screen.getByRole("button", { name: "Ainda não tenho conta" }));
+  expect(new URLSearchParams(window.location.search).get("modo")).toBe("cadastro");
+  expect(new URLSearchParams(window.location.search).get("next")).toBe("/seller");
+  fireEvent.click(screen.getByRole("button", { name: "Já tenho uma conta" }));
+  expect(window.location.search).toBe("?next=%2Fseller");
+  window.history.replaceState(null, "", "/");
 });
 it("clears the login password when changing modes but keeps the email", () => {
   render(<AuthForm emailEnabled verificationRequired={false} />);

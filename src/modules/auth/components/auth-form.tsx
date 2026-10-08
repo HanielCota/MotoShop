@@ -1,14 +1,37 @@
 "use client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
-import { FormEvent, useState } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Route } from "next";
 import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
+import { FormMessage } from "@/components/ui/form-message";
+import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
+
 import { getAuthErrorMessage } from "../domain/auth-error-message";
+import { getSafeRedirectPath } from "../domain/safe-redirect";
+
+type Mode = "sign-in" | "sign-up";
+type Field = "name" | "email" | "password";
+type FieldErrors = Partial<Record<Field, string>>;
+
+/** `?modo=cadastro` torna o cadastro linkável; ausência do parâmetro = entrar. */
+const MODE_PARAM = "modo";
+const SIGN_UP_VALUE = "cadastro";
+
+const fieldIds: Record<Field, string> = { name: "auth-name", email: "auth-email", password: "auth-password" };
+
+function validate(mode: Mode, values: Record<Field, string>): FieldErrors {
+  const errors: FieldErrors = {};
+  if (mode === "sign-up" && !values.name.trim()) errors.name = "Informe seu nome.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) errors.email = "Informe um e-mail válido.";
+  if (values.password.length < 8) errors.password = "A senha precisa ter pelo menos 8 caracteres.";
+  return errors;
+}
 
 export function AuthForm({
   emailEnabled,
@@ -19,29 +42,43 @@ export function AuthForm({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const formRef = useRef<HTMLFormElement>(null);
+  const [mode, setModeState] = useState<Mode>(searchParams.get(MODE_PARAM) === SIGN_UP_VALUE ? "sign-up" : "sign-in");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<string>();
   const [pending, setPending] = useState(false);
+
+  function setMode(next: Mode) {
+    setModeState(next);
+    setPassword("");
+    setError(undefined);
+    setFieldErrors({});
+    // A History API nativa é integrada ao roteador do Next.js e não refaz a navegação.
+    const params = new URLSearchParams(window.location.search);
+    if (next === "sign-up") params.set(MODE_PARAM, SIGN_UP_VALUE);
+    else params.delete(MODE_PARAM);
+    const query = params.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+  }
+
+  function clearFieldError(field: Field) {
+    setFieldErrors((current) => (current[field] ? { ...current, [field]: undefined } : current));
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(undefined);
     setNotice(undefined);
 
-    if (mode === "sign-up" && !name.trim()) {
-      setError("Informe seu nome.");
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError("Informe um e-mail válido.");
-      return;
-    }
-    if (password.length < 8) {
-      setError("A senha precisa ter pelo menos 8 caracteres.");
+    const errors = validate(mode, { name, email, password });
+    setFieldErrors(errors);
+    const firstInvalid = (["name", "email", "password"] as const).find((field) => errors[field]);
+    if (firstInvalid) {
+      formRef.current?.querySelector<HTMLInputElement>(`#${fieldIds[firstInvalid]}`)?.focus();
       return;
     }
     setPending(true);
@@ -59,14 +96,13 @@ export function AuthForm({
 
       if (mode === "sign-up" && verificationRequired) {
         setMode("sign-in");
-        setPassword("");
         setNotice("Conta criada. Enviamos um link para confirmar seu e-mail antes de entrar.");
         return;
       }
 
-      const next = searchParams.get("next");
-      const safeNext = next?.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : undefined;
-      router.push((safeNext || (mode === "sign-up" ? "/seller" : "/products")) as Route);
+      const safeNext = getSafeRedirectPath(searchParams.get("next"), "");
+      // Shoppers are the default audience; the seller entry points pass ?next=/seller explicitly.
+      router.push((safeNext || "/products") as Route);
       router.refresh();
     } catch {
       setError("Não foi possível conectar. Verifique sua conexão e tente novamente.");
@@ -76,85 +112,95 @@ export function AuthForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
+    <form ref={formRef} onSubmit={handleSubmit} noValidate className="flex flex-col gap-5">
       <div className="mb-1">
-        <h1 className="text-3xl font-bold tracking-tight text-[#1b1a18] uppercase sm:text-4xl">
+        <h1 className="text-foreground text-3xl font-bold tracking-tight uppercase sm:text-4xl">
           {mode === "sign-in" ? "Acesse sua conta" : "Crie sua conta"}
         </h1>
-        <p className="mt-2 text-sm leading-6 text-[#626365]">
+        <p className="text-muted-foreground mt-2 text-sm leading-6">
           {mode === "sign-in"
             ? "Entre para acompanhar seus pedidos e cuidar da sua loja."
             : "Uma conta para comprar e vender no Moto Shop."}
         </p>
       </div>
       {mode === "sign-up" ? (
-        <label className="flex flex-col gap-2 text-sm font-medium">
-          Nome
+        <FormField id={fieldIds.name} label="Nome" error={fieldErrors.name}>
+          {(control) => (
+            <Input
+              {...control}
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                clearFieldError("name");
+              }}
+              autoComplete="name"
+              placeholder="Como podemos chamar você?"
+              className="bg-card h-12 px-4"
+              required
+            />
+          )}
+        </FormField>
+      ) : null}
+      <FormField id={fieldIds.email} label="E-mail" error={fieldErrors.email}>
+        {(control) => (
           <Input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            autoComplete="name"
-            placeholder="Como podemos chamar você?"
-            className="h-12 rounded-lg border-[#cfd2d5] bg-white px-4"
+            {...control}
+            type="email"
+            inputMode="email"
+            value={email}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              clearFieldError("email");
+            }}
+            autoComplete="email"
+            placeholder="voce@exemplo.com"
+            className="bg-card h-12 px-4"
             required
           />
-        </label>
-      ) : null}
-      <label className="flex flex-col gap-2 text-sm font-medium">
-        E-mail
-        <Input
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          autoComplete="email"
-          placeholder="voce@exemplo.com"
-          className="h-12 rounded-lg border-[#cfd2d5] bg-white px-4"
-          required
-        />
-      </label>
-      <label className="flex flex-col gap-2 text-sm font-medium">
-        Senha
-        <Input
-          type="password"
-          minLength={8}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
-          placeholder="Pelo menos 8 caracteres"
-          className="h-12 rounded-lg border-[#cfd2d5] bg-white px-4"
-          required
-        />
-      </label>
+        )}
+      </FormField>
+      <FormField
+        id={fieldIds.password}
+        label="Senha"
+        error={fieldErrors.password}
+        hint={mode === "sign-up" ? "Use pelo menos 8 caracteres." : undefined}
+      >
+        {(control) => (
+          <PasswordInput
+            {...control}
+            minLength={8}
+            value={password}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              clearFieldError("password");
+            }}
+            autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
+            placeholder="Pelo menos 8 caracteres"
+            className="bg-card h-12 px-4 pr-12"
+            required
+          />
+        )}
+      </FormField>
       {searchParams.has("error") ? (
-        <p className="text-destructive text-sm" role="alert">
-          Não foi possível confirmar o e-mail. Solicite outro link de confirmação.
-        </p>
+        <FormMessage error="Não foi possível confirmar o e-mail. Solicite outro link de confirmação." />
       ) : searchParams.get("verified") === "1" ? (
-        <p className="text-sm text-green-700" role="status">
-          E-mail confirmado. Entre com sua senha.
-        </p>
+        <FormMessage success="E-mail confirmado. Entre com sua senha." />
       ) : null}
-      {notice ? (
-        <p className="text-sm text-green-700" role="status">
-          {notice}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="text-destructive text-sm" role="alert">
-          {error}
-        </p>
-      ) : null}
-      <Button type="submit" className="h-12 rounded-sm px-4 font-bold tracking-wide uppercase" disabled={pending}>
+      <FormMessage error={error ?? null} success={notice ?? null} />
+      <Button type="submit" size="lg" className="font-bold tracking-wide uppercase" disabled={pending}>
         {pending ? "Aguarde..." : mode === "sign-in" ? "Entrar" : "Criar conta"}
       </Button>
       {emailEnabled && mode === "sign-in" ? (
         <div className="flex flex-wrap justify-between gap-3 text-sm">
-          <Link className="text-primary underline-offset-4 hover:underline" href="/forgot-password">
+          <Link
+            className="text-brand-text inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline"
+            href="/forgot-password"
+          >
             Esqueci minha senha
           </Link>
           <button
             type="button"
-            className="text-primary underline-offset-4 hover:underline disabled:opacity-50"
+            className="text-brand-text inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline disabled:opacity-50"
             disabled={pending || !email}
             onClick={async () => {
               setPending(true);
@@ -175,16 +221,14 @@ export function AuthForm({
           </button>
         </div>
       ) : null}
-      <div className="mt-1 border-t border-[#e1e3e5] pt-5 text-center text-sm text-[#626365]">
+      <div className="border-border text-muted-foreground mt-1 border-t pt-5 text-center text-sm">
         {mode === "sign-in" ? "Novo por aqui?" : "Já faz parte do Moto Shop?"}{" "}
         <button
           type="button"
-          className="font-semibold text-[#222326] underline underline-offset-4 hover:text-[#bd4618] disabled:opacity-50"
+          className="text-foreground hover:text-brand-strong inline-flex min-h-11 items-center font-semibold underline underline-offset-4 disabled:opacity-50"
           disabled={pending}
           onClick={() => {
             setMode(mode === "sign-in" ? "sign-up" : "sign-in");
-            setPassword("");
-            setError(undefined);
             setNotice(undefined);
           }}
         >
