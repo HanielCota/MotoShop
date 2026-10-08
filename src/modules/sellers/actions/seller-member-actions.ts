@@ -13,6 +13,7 @@ const addMemberSchema = z.object({
   role: z.enum(["ADMIN", "CATALOG", "ORDERS", "FINANCE"]),
 });
 
+const memberIdSchema = z.string().cuid();
 const updateRoleSchema = z.object({
   role: z.enum(["ADMIN", "CATALOG", "ORDERS", "FINANCE"]),
 });
@@ -32,6 +33,14 @@ export async function addSellerMemberAction(
       const user = await tx.user.findUnique({ where: { email: parsed.data.email } });
       if (!user) return { error: "O usuário precisa criar uma conta no Moto Shop antes de ser adicionado." };
       if (user.id === context.session.user.id) return { error: "O responsável atual já faz parte da equipe." };
+      // TODO(convite): adicionar membros sem consentimento não é o fluxo final. Substituir por um
+      // convite: criar SellerMemberInvite (sellerId, email, role, tokenHash, expiresAt, status),
+      // enviar e-mail com link de aceite, criar o SellerMember apenas quando o usuário convidado
+      // (logado com o mesmo e-mail verificado) aceitar, e permitir revogar/expirar convites.
+      // Até lá, exigimos pelo menos que o e-mail do usuário de destino esteja verificado.
+      if (!user.emailVerified) {
+        return { error: "O usuário precisa confirmar o e-mail da conta no Moto Shop antes de ser adicionado." };
+      }
 
       await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${user.id} FOR UPDATE`;
       const existingMembership = await tx.sellerMember.findFirst({ where: { userId: user.id } });
@@ -52,7 +61,7 @@ export async function addSellerMemberAction(
       return { success: `${user.email} foi adicionado à equipe.` };
     });
     if ("error" in result) return result;
-    revalidatePath("/seller");
+    revalidatePath("/seller", "layout");
     return result;
   } catch (error) {
     return { error: asApplicationError(error).message };
@@ -62,7 +71,9 @@ export async function addSellerMemberAction(
 export async function updateSellerMemberRoleAction(memberId: string, formData: FormData): Promise<void> {
   const context = await requireSellerAccess("SELLER_MANAGE");
   const parsed = updateRoleSchema.safeParse({ role: formData.get("role") });
-  if (!parsed.success) return;
+  const parsedMemberId = memberIdSchema.safeParse(memberId);
+  if (!parsed.success || !parsedMemberId.success) return;
+  memberId = parsedMemberId.data;
 
   try {
     const updated = await db.$transaction(async (tx) => {
@@ -91,7 +102,7 @@ export async function updateSellerMemberRoleAction(memberId: string, formData: F
       });
       return true;
     });
-    if (updated) revalidatePath("/seller");
+    if (updated) revalidatePath("/seller", "layout");
   } catch (error) {
     throw asApplicationError(error);
   }
@@ -99,6 +110,9 @@ export async function updateSellerMemberRoleAction(memberId: string, formData: F
 
 export async function removeSellerMemberAction(memberId: string): Promise<void> {
   const context = await requireSellerAccess("SELLER_MANAGE");
+  const parsedMemberId = memberIdSchema.safeParse(memberId);
+  if (!parsedMemberId.success) return;
+  memberId = parsedMemberId.data;
 
   try {
     const removed = await db.$transaction(async (tx) => {
@@ -121,7 +135,7 @@ export async function removeSellerMemberAction(memberId: string): Promise<void> 
       });
       return true;
     });
-    if (removed) revalidatePath("/seller");
+    if (removed) revalidatePath("/seller", "layout");
   } catch (error) {
     throw asApplicationError(error);
   }

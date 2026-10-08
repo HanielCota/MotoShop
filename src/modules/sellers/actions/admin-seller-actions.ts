@@ -26,8 +26,8 @@ export async function approveSellerAction(sellerId: string): Promise<void> {
       },
     }),
   ]);
-  revalidatePath("/admin");
-  revalidatePath("/seller");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/seller", "layout");
 }
 
 export async function rejectSellerAction(sellerId: string): Promise<void> {
@@ -50,8 +50,8 @@ export async function rejectSellerAction(sellerId: string): Promise<void> {
       },
     }),
   ]);
-  revalidatePath("/admin");
-  revalidatePath("/seller");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/seller", "layout");
 }
 
 export async function suspendSellerAction(sellerId: string): Promise<void> {
@@ -74,8 +74,8 @@ export async function suspendSellerAction(sellerId: string): Promise<void> {
       },
     }),
   ]);
-  revalidatePath("/admin");
-  revalidatePath("/seller");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/seller", "layout");
 }
 
 export async function reactivateSellerAction(sellerId: string): Promise<void> {
@@ -98,6 +98,6 @@ export async function reactivateSellerAction(sellerId: string): Promise<void> {
       },
     }),
   ]);
-  revalidatePath("/admin");
-  revalidatePath("/seller");
+  revalidatePath("/admin", "layout");
+  revalidatePath("/seller", "layout");
 }

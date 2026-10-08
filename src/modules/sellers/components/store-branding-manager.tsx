@@ -1,4 +1,5 @@
 "use client";
+import { FormMessage } from "@/components/ui/form-message";
 
 import Image from "next/image";
 import { useRef, useState } from "react";
@@ -6,6 +7,7 @@ import { useRef, useState } from "react";
 import {
   attachStoreBrandingImageAction,
   createStoreBrandingUploadUrlAction,
+  discardStoreBrandingUploadAction,
   type StoreBrandingImageType,
   type StoreBrandingResult,
 } from "../actions/store-branding-actions";
@@ -42,13 +44,36 @@ export function StoreBrandingManager({ initialImages }: { initialImages: StoreBr
       });
       if ("error" in upload) throw new Error(upload.error);
 
-      const fileId = await uploadImageToImageKit({ url: upload.url, fields: upload.fields, file });
+      let fileId: string;
+      try {
+        fileId = await uploadImageToImageKit({ url: upload.url, fields: upload.fields, file });
+      } catch (uploadError) {
+        const cleanup = await discardStoreBrandingUploadAction({ imageType, storageKey: upload.key });
+        if (cleanup.error) {
+          throw new Error(
+            `${uploadError instanceof Error ? uploadError.message : "Falha ao enviar a imagem."} ${cleanup.error}`,
+          );
+        }
+        throw uploadError;
+      }
 
-      const attached: StoreBrandingResult = await attachStoreBrandingImageAction({
-        imageType,
-        storageKey: upload.key,
-        fileId,
-      });
+      let attached: StoreBrandingResult;
+      try {
+        attached = await attachStoreBrandingImageAction({
+          imageType,
+          storageKey: upload.key,
+          fileId,
+        });
+        if ("error" in attached) throw new Error(attached.error);
+      } catch (attachError) {
+        const cleanup = await discardStoreBrandingUploadAction({ imageType, storageKey: upload.key });
+        if (cleanup.error) {
+          throw new Error(
+            `${attachError instanceof Error ? attachError.message : "Falha ao associar a imagem."} ${cleanup.error}`,
+          );
+        }
+        throw attachError;
+      }
       if ("error" in attached) throw new Error(attached.error);
       if (attached.image.url) {
         setImages((current) => ({
@@ -97,16 +122,7 @@ export function StoreBrandingManager({ initialImages }: { initialImages: StoreBr
         />
       </div>
       {uploading ? <p className="text-muted-foreground text-sm">Enviando {uploading}...</p> : null}
-      {error ? (
-        <p className="text-destructive text-sm" role="alert">
-          {error}
-        </p>
-      ) : null}
-      {success ? (
-        <p className="text-sm text-emerald-700" role="status">
-          {success}
-        </p>
-      ) : null}
+      <FormMessage error={error ?? null} success={success ?? null} />
     </div>
   );
 }
@@ -157,7 +173,7 @@ function BrandingImageField({
         type="button"
         disabled={disabled}
         onClick={() => fileInputRef.current?.click()}
-        className="text-primary focus-visible:ring-ring/40 inline-flex min-h-10 items-center rounded-md text-sm font-medium underline underline-offset-4 focus-visible:outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50"
+        className="text-brand-text focus-visible:ring-ring/40 inline-flex min-h-10 items-center rounded-md text-sm font-medium underline underline-offset-4 focus-visible:ring-3 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       >
         {imageUrl ? "Substituir imagem" : "Enviar imagem"}
       </button>

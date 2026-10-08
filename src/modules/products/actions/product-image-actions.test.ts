@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   imageCount: vi.fn(),
   imageCreate: vi.fn(),
   imageFindFirst: vi.fn(),
+  deleteObject: vi.fn(),
   lock: vi.fn(),
   createUploadUrl: vi.fn(),
   verifyImage: vi.fn(),
@@ -12,11 +13,12 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("server-only", () => ({}));
 vi.mock("@/lib/logger", () => ({ logger: { warn: vi.fn() } }));
 vi.mock("@/lib/database", () => ({
   db: {
     product: { findFirst: mocks.productFindFirst },
-    productImage: { count: mocks.imageCount, create: mocks.imageCreate },
+    productImage: { count: mocks.imageCount, create: mocks.imageCreate, findFirst: mocks.imageFindFirst },
     $transaction: async (callback: (tx: unknown) => unknown) =>
       callback({
         $queryRaw: mocks.lock,
@@ -32,11 +34,17 @@ vi.mock("@/lib/storage/imagekit-storage-provider", () => ({
   ImageKitStorageProvider: class {
     createUploadUrl = mocks.createUploadUrl;
     verifyImage = mocks.verifyImage;
+    deleteObject = mocks.deleteObject;
   },
 }));
 vi.mock("@/shared/storage/public-storage-url", () => ({ getPublicStorageUrl: vi.fn(() => null) }));
+vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
 
-import { attachProductImageAction, createProductImageUploadUrlAction } from "./product-image-actions";
+import {
+  attachProductImageAction,
+  createProductImageUploadUrlAction,
+  discardProductImageUploadAction,
+} from "./product-image-actions";
 
 const productId = "cmf8w8m4p0000s6o5zj2q8v3k";
 
@@ -45,6 +53,7 @@ beforeEach(() => {
   mocks.productFindFirst.mockResolvedValue({ id: productId, sellerId: "seller-a" });
   mocks.imageCount.mockResolvedValue(0);
   mocks.imageFindFirst.mockResolvedValue(null);
+  mocks.deleteObject.mockResolvedValue(undefined);
   mocks.createUploadUrl.mockResolvedValue({
     key: `products/seller-a/${productId}/photo.jpg`,
     url: "https://storage.example.test/upload",
@@ -104,5 +113,27 @@ describe("seller product image upload", () => {
 
     expect(result.error).toMatch(/não pertence/i);
     expect(mocks.imageCreate).not.toHaveBeenCalled();
+  });
+
+  it("removes an uploaded file only while it is still unattached to this seller's product", async () => {
+    const storageKey = `products/seller-a/${productId}/photo.jpg`;
+    const result = await discardProductImageUploadAction({ productId, storageKey });
+
+    expect(result).toEqual({});
+    expect(mocks.deleteObject).toHaveBeenCalledWith({ key: storageKey });
+
+    mocks.imageFindFirst.mockResolvedValueOnce({ id: "image-a" });
+    await discardProductImageUploadAction({ productId, storageKey });
+    expect(mocks.deleteObject).toHaveBeenCalledOnce();
+  });
+
+  it("cannot discard an upload under another seller's product prefix", async () => {
+    const result = await discardProductImageUploadAction({
+      productId,
+      storageKey: `products/seller-b/${productId}/photo.jpg`,
+    });
+
+    expect(result.error).toMatch(/não pertence/i);
+    expect(mocks.deleteObject).not.toHaveBeenCalled();
   });
 });

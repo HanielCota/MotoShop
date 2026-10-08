@@ -1,4 +1,5 @@
 "use client";
+import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -56,16 +57,7 @@ export function ShippingOriginForm({ store }: ShippingOriginFormProps) {
         Esses dados são enviados ao Melhor Envio como remetente. Para envios sem nota fiscal, use “ISENTO” quando
         aplicável.
       </p>
-      {state.error ? (
-        <p className="text-destructive text-sm sm:col-span-2" role="alert">
-          {state.error}
-        </p>
-      ) : null}
-      {state.success ? (
-        <p className="text-sm text-emerald-600 sm:col-span-2" role="status">
-          {state.success}
-        </p>
-      ) : null}
+      <FormMessage error={state.error ?? null} success={state.success ?? null} className="sm:col-span-2" />
       <Button type="submit" className="rounded-md px-4 sm:col-span-2" disabled={pending}>
         {pending ? "Salvando..." : "Salvar dados de envio"}
       </Button>

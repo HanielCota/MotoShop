@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   createAudit: vi.fn(),
   requireSellerAccess: vi.fn(),
   verifyImage: vi.fn(),
+  deleteObject: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
@@ -18,16 +19,19 @@ vi.mock("@/shared/storage/public-storage-url", () => ({
 vi.mock("@/lib/database", () => ({
   db: {
     $transaction: mocks.transaction,
+    store: { findFirst: mocks.findStore },
   },
 }));
+vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
 vi.mock("@/modules/auth/application/authorization", () => ({ requireSellerAccess: mocks.requireSellerAccess }));
 vi.mock("@/lib/storage/imagekit-storage-provider", () => ({
   ImageKitStorageProvider: class {
     verifyImage = mocks.verifyImage;
+    deleteObject = mocks.deleteObject;
   },
 }));
 
-import { attachStoreBrandingImageAction } from "./store-branding-actions";
+import { attachStoreBrandingImageAction, discardStoreBrandingUploadAction } from "./store-branding-actions";
 
 const context = {
   seller: { id: "seller-1" },
@@ -46,6 +50,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.requireSellerAccess.mockResolvedValue(context);
   mocks.verifyImage.mockResolvedValue(undefined);
+  mocks.deleteObject.mockResolvedValue(undefined);
   mocks.findStore.mockResolvedValue(previousStore);
   mocks.updateStore.mockResolvedValue(updatedStore);
   mocks.createAudit.mockResolvedValue({ id: "audit-1" });
@@ -89,4 +94,22 @@ it("does not revalidate or report success when the audit event fails", async () 
   expect(mocks.updateStore).toHaveBeenCalledOnce();
   expect(mocks.transaction).toHaveBeenCalledOnce();
   expect(mocks.revalidatePath).not.toHaveBeenCalled();
+});
+
+it("discards only an unassociated branding image under this seller's store prefix", async () => {
+  mocks.findStore.mockResolvedValue({ logoStorageKey: null });
+  const storageKey = "stores/seller-1/logo/12345678-1234-4234-8234-123456789abc.jpg";
+
+  expect(await discardStoreBrandingUploadAction({ imageType: "logo", storageKey })).toEqual({});
+  expect(mocks.deleteObject).toHaveBeenCalledWith({ key: storageKey });
+
+  mocks.findStore.mockResolvedValueOnce({ logoStorageKey: storageKey });
+  await discardStoreBrandingUploadAction({ imageType: "logo", storageKey });
+  expect(mocks.deleteObject).toHaveBeenCalledOnce();
+
+  const otherSellerKey = "stores/seller-2/logo/12345678-1234-4234-8234-123456789abc.jpg";
+  expect(await discardStoreBrandingUploadAction({ imageType: "logo", storageKey: otherSellerKey })).toHaveProperty(
+    "error",
+  );
+  expect(mocks.deleteObject).toHaveBeenCalledOnce();
 });

@@ -22,7 +22,7 @@ function Feedback({ state }: { state: CatalogActionState }) {
   return (
     <>
       {state.error ? <p className="text-destructive text-sm">{state.error}</p> : null}
-      {state.success ? <p className="text-sm text-emerald-700">{state.success}</p> : null}
+      {state.success ? <p role="status" className="text-success-foreground text-sm">{state.success}</p> : null}
     </>
   );
 }

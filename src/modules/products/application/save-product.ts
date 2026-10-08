@@ -107,6 +107,7 @@ export async function updateSellerProduct(
   actor: ProductActor,
   productId: string,
   input: ProductInput,
+  options: { revision?: Date } = {},
 ): Promise<string> {
   const product = await db.product.findFirst({
     where: {
@@ -122,6 +123,10 @@ export async function updateSellerProduct(
       message: "Somente produtos editáveis com variante podem ser alterados.",
       statusCode: 404,
     });
+  // The revision is the `updatedAt` the editor loaded. When it differs from the
+  // current row (or changes before the write below), someone else saved first.
+  const revision = options.revision ?? product.updatedAt;
+  if (revision.getTime() !== product.updatedAt.getTime()) throw productChangedConflict();
 
   const [category, brand] = await Promise.all([
     db.category.findFirst({ where: { id: input.categoryId, active: true } }),
@@ -137,7 +142,7 @@ export async function updateSellerProduct(
       where: {
         id: product.id,
         sellerId: actor.sellerId,
-        updatedAt: product.updatedAt,
+        updatedAt: revision,
         status: { in: [ProductStatus.DRAFT, ProductStatus.REJECTED] },
       },
       data: {
@@ -149,12 +154,7 @@ export async function updateSellerProduct(
         brandId: input.brandId,
       },
     });
-    if (updated.count !== 1)
-      throw new ApplicationError({
-        code: "CONFLICT",
-        message: "O produto mudou. Atualize a página antes de salvar.",
-        statusCode: 409,
-      });
+    if (updated.count !== 1) throw productChangedConflict();
     const existingVariantsById = new Map(product.variants.map((variant) => [variant.id, variant]));
     const submittedVariantIds = new Set<string>();
     for (const variantInput of input.variants) {
@@ -271,4 +271,12 @@ export async function updateSellerProduct(
   });
 
   return product.id;
+}
+
+function productChangedConflict() {
+  return new ApplicationError({
+    code: "CONFLICT",
+    message: "O produto foi alterado por outra pessoa. Recarregue a página.",
+    statusCode: 409,
+  });
 }

@@ -1,6 +1,5 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
@@ -9,20 +8,21 @@ import { db } from "@/lib/database";
 import { logger } from "@/lib/logger";
 import { ImageKitStorageProvider } from "@/lib/storage/imagekit-storage-provider";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
+import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
+import {
+  attachVerifiedAsset,
+  createImageUploadUrl,
+  IMAGE_MAX_SIZE_IN_BYTES,
+  isStorageKeyUnderPrefix,
+  SAFE_IMAGE_NAME,
+} from "@/shared/storage/attach-verified-asset";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
-
-const maxImageSizeInBytes = 5 * 1024 * 1024;
-const allowedContentTypes = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-} as const;
 
 const uploadInputSchema = z.object({
   productId: z.string().cuid(),
   contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
-  sizeInBytes: z.number().int().positive().max(maxImageSizeInBytes),
+  sizeInBytes: z.number().int().positive().max(IMAGE_MAX_SIZE_IN_BYTES),
 });
 
 const attachInputSchema = z.object({
@@ -36,6 +36,7 @@ const reorderInputSchema = z.object({
   imageIds: z.array(z.string().cuid()).min(1).max(8),
 });
 const removeInputSchema = z.object({ imageId: z.string().cuid() });
+const discardInputSchema = z.object({ productId: z.string().cuid(), storageKey: z.string().min(1).max(300) });
 
 export type ProductImageActionState = { error?: string; success?: string };
 export type ProductImageUploadResult =
@@ -44,6 +45,10 @@ export type ProductImageUploadResult =
 export type ProductImageResult =
   | { error: string; image?: never }
   | { error?: never; image: { id: string; storageKey: string; altText: string | null; url: string | null } };
+
+function productImagePrefix(sellerId: string, productId: string) {
+  return `products/${sellerId}/${productId}/`;
+}
 
 async function getEditableProduct(
   productId: string,
@@ -67,18 +72,36 @@ export async function createProductImageUploadUrlAction(input: unknown): Promise
   try {
     const parsed = uploadInputSchema.parse(input);
     await getEditableProduct(parsed.productId, context.seller.id);
+    await assertRateLimit({ key: `product-image-upload:${context.seller.id}`, windowSeconds: 60, max: 20 });
 
     const imageCount = await db.productImage.count({ where: { productId: parsed.productId } });
     if (imageCount >= 8) return { error: "O produto pode ter no máximo 8 imagens." };
 
-    const extension = allowedContentTypes[parsed.contentType];
-    const key = `products/${context.seller.id}/${parsed.productId}/${randomUUID()}.${extension}`;
-    const result = await new ImageKitStorageProvider().createUploadUrl({
-      key,
+    return await createImageUploadUrl({
+      prefix: productImagePrefix(context.seller.id, parsed.productId),
       contentType: parsed.contentType,
-      maxSizeInBytes: maxImageSizeInBytes,
     });
-    return { url: result.url, key: result.key, expiresAt: result.expiresAt.toISOString(), fields: result.fields };
+  } catch (error) {
+    return { error: asApplicationError(error).message };
+  }
+}
+
+export async function discardProductImageUploadAction(input: unknown): Promise<ProductImageActionState> {
+  const context = await requireSellerAccess("PRODUCT_UPDATE");
+  try {
+    const parsed = discardInputSchema.parse(input);
+    const prefix = productImagePrefix(context.seller.id, parsed.productId);
+    if (!isStorageKeyUnderPrefix(parsed.storageKey, prefix, SAFE_IMAGE_NAME)) {
+      return { error: "A imagem não pertence a este produto." };
+    }
+
+    const [product, attachedImage] = await Promise.all([
+      db.product.findFirst({ where: { id: parsed.productId, sellerId: context.seller.id }, select: { id: true } }),
+      db.productImage.findFirst({ where: { productId: parsed.productId, storageKey: parsed.storageKey } }),
+    ]);
+    if (!product) return { error: "Produto não encontrado." };
+    if (!attachedImage) await new ImageKitStorageProvider().deleteObject({ key: parsed.storageKey });
+    return {};
   } catch (error) {
     return { error: asApplicationError(error).message };
   }
@@ -90,38 +113,34 @@ export async function attachProductImageAction(input: unknown): Promise<ProductI
     const parsed = attachInputSchema.parse(input);
     await getEditableProduct(parsed.productId, context.seller.id);
 
-    const prefix = `products/${context.seller.id}/${parsed.productId}/`;
-    if (
-      !parsed.storageKey.startsWith(prefix) ||
-      !/^[a-zA-Z0-9_-]+\.(jpg|png|webp)$/.test(parsed.storageKey.slice(prefix.length))
-    )
-      return { error: "A imagem não pertence a este produto." };
-    await new ImageKitStorageProvider().verifyImage({
-      key: parsed.storageKey,
+    const attached = await attachVerifiedAsset({
+      storageKey: parsed.storageKey,
       fileId: parsed.fileId,
-      maxSizeInBytes: maxImageSizeInBytes,
-      contentTypes: Object.keys(allowedContentTypes),
+      prefix: productImagePrefix(context.seller.id, parsed.productId),
+      namePattern: SAFE_IMAGE_NAME,
+      persist: () =>
+        db.$transaction(async (tx) => {
+          await tx.$queryRaw`SELECT id FROM "products" WHERE id = ${parsed.productId} FOR UPDATE`;
+          await getEditableProduct(parsed.productId, context.seller.id, tx);
+          const existing = await tx.productImage.findFirst({
+            where: { productId: parsed.productId, storageKey: parsed.storageKey },
+          });
+          if (existing) return existing;
+          const imageCount = await tx.productImage.count({ where: { productId: parsed.productId } });
+          if (imageCount >= 8)
+            throw new ApplicationError({ code: "CONFLICT", message: "O produto pode ter no máximo 8 imagens." });
+          return tx.productImage.create({
+            data: {
+              storageKey: parsed.storageKey,
+              altText: parsed.altText || null,
+              productId: parsed.productId,
+              sortOrder: imageCount,
+            },
+          });
+        }),
     });
-
-    const image = await db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM "products" WHERE id = ${parsed.productId} FOR UPDATE`;
-      await getEditableProduct(parsed.productId, context.seller.id, tx);
-      const existing = await tx.productImage.findFirst({
-        where: { productId: parsed.productId, storageKey: parsed.storageKey },
-      });
-      if (existing) return existing;
-      const imageCount = await tx.productImage.count({ where: { productId: parsed.productId } });
-      if (imageCount >= 8)
-        throw new ApplicationError({ code: "CONFLICT", message: "O produto pode ter no máximo 8 imagens." });
-      return tx.productImage.create({
-        data: {
-          storageKey: parsed.storageKey,
-          altText: parsed.altText || null,
-          productId: parsed.productId,
-          sortOrder: imageCount,
-        },
-      });
-    });
+    if (!attached.ok) return { error: "A imagem não pertence a este produto." };
+    const image = attached.value;
     revalidatePath(`/seller/products/${parsed.productId}/edit`);
     revalidatePath("/products");
     return { image: { ...image, url: getPublicStorageUrl(image.storageKey) } };

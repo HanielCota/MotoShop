@@ -1,52 +1,85 @@
 import Link from "next/link";
+import type { Route } from "next";
+import { Plug, Truck } from "lucide-react";
+
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { formatMoneyInCents } from "@/lib/format";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
-import { db } from "@/lib/database";
-import { formatMoneyInCents } from "@/lib/utils";
+import { listSellerShippingMethods } from "@/modules/sellers/queries/seller-shipping-methods";
 import { OwnShippingMethodForm, OwnShippingToggle } from "@/modules/shipping/components/own-shipping-forms";
+import { Badge } from "@/components/ui/badge";
 
 export default async function SellerShippingPage() {
   const context = await requireSellerAccess("SELLER_MANAGE");
-  const methods = await db.sellerShippingMethod.findMany({
-    where: { sellerId: context.seller.id },
-    orderBy: { createdAt: "desc" },
-  });
+  const methods = await listSellerShippingMethods(context.seller.id);
+
   return (
-    <div className="mx-auto grid w-full max-w-3xl gap-6">
-      <Link href="/seller" className="underline">
-        Voltar à central
-      </Link>
-      <header>
-        <h2 className="text-2xl font-semibold">Frete próprio</h2>
-        <p className="text-muted-foreground mt-2">
-          Defina onde sua loja entrega, o valor e o prazo. Não depende do Melhor Envio e não compra etiquetas.
-        </p>
-      </header>
-      <section className="rounded-xl border p-5">
-        <h3 className="mb-4 text-lg font-semibold">Nova modalidade</h3>
-        <p className="text-muted-foreground mb-4 text-sm">
-          O preço é fixo para todos os itens da sua loja no pedido, não por produto. O prazo é contado em dias úteis
-          após a confirmação do pagamento. Novas modalidades começam desativadas. Para substituir uma regra, crie outra
-          e desative a anterior; pedidos existentes mantêm as condições contratadas.
-        </p>
-        <OwnShippingMethodForm />
+    <>
+      <PageHeader
+        eyebrow="Sua operação"
+        title="Frete próprio"
+        description="Defina onde sua loja entrega, o valor e o prazo. Não depende do Melhor Envio e não compra etiquetas."
+        actions={
+          <Link
+            href={"/seller/shipping/integrations" as Route}
+            className={buttonVariants({ variant: "outline", size: "lg" })}
+          >
+            <Plug aria-hidden="true" />
+            Integrações de frete
+          </Link>
+        }
+      />
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2 className="text-lg">Nova modalidade</h2>
+          </CardTitle>
+          <CardDescription>
+            O preço é fixo para todos os itens da sua loja no pedido, não por produto. O prazo é contado em dias úteis
+            após a confirmação do pagamento. Novas modalidades começam desativadas. Para substituir uma regra, crie
+            outra e desative a anterior; pedidos existentes mantêm as condições contratadas.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <OwnShippingMethodForm />
+        </CardContent>
+      </Card>
+      <section className="grid gap-4" aria-labelledby="shipping-methods-title">
+        <h2 id="shipping-methods-title" className="text-xl">
+          Modalidades cadastradas
+        </h2>
+        {methods.length === 0 ? (
+          <EmptyState
+            icon={Truck}
+            title="Nenhuma modalidade cadastrada"
+            description="Crie a primeira modalidade acima para oferecer entrega própria."
+          />
+        ) : (
+          methods.map((method) => (
+            <Card key={method.id}>
+              <CardContent className="grid gap-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-base">{method.name}</h3>
+                  <Badge variant={method.active ? "success" : "neutral"}>
+                    {method.active ? "Ativa" : "Desativada"}
+                  </Badge>
+                </div>
+                <p className="text-muted-foreground">
+                  CEPs {method.postalCodeStart} a {method.postalCodeEnd}
+                </p>
+                <p className="tabular-nums">
+                  {formatMoneyInCents(method.priceInCents)} · até {method.estimatedDeliveryDays}{" "}
+                  {method.estimatedDeliveryDays === 1 ? "dia útil" : "dias úteis"}
+                </p>
+                <OwnShippingToggle id={method.id} active={method.active} />
+              </CardContent>
+            </Card>
+          ))
+        )}
       </section>
-      <section className="grid gap-4" aria-label="Modalidades cadastradas">
-        {methods.length === 0 && <p>Nenhuma modalidade cadastrada.</p>}
-        {methods.map((method) => (
-          <article key={method.id} className="grid gap-3 rounded-xl border p-5">
-            <h3 className="font-semibold">
-              {method.name} · {method.active ? "Ativa" : "Desativada"}
-            </h3>
-            <p>
-              CEPs {method.postalCodeStart} a {method.postalCodeEnd}
-            </p>
-            <p>
-              {formatMoneyInCents(method.priceInCents)} · até {method.estimatedDeliveryDays} dia(s) úteis
-            </p>
-            <OwnShippingToggle id={method.id} active={method.active} />
-          </article>
-        ))}
-      </section>
-    </div>
+    </>
   );
 }

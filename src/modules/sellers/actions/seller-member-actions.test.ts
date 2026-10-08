@@ -29,13 +29,18 @@ beforeEach(() => {
     callback({
       $queryRaw: mocks.lock,
       user: { findUnique: mocks.userFind },
-      sellerMember: { findFirst: mocks.memberFind, create: mocks.memberCreate, updateMany: mocks.memberUpdate, deleteMany: mocks.memberDelete },
+      sellerMember: {
+        findFirst: mocks.memberFind,
+        create: mocks.memberCreate,
+        updateMany: mocks.memberUpdate,
+        deleteMany: mocks.memberDelete,
+      },
       auditLog: { create: mocks.auditCreate },
     }),
   );
-  mocks.userFind.mockResolvedValue({ id: "member-a", email: "member@example.test" });
-  mocks.memberFind.mockResolvedValue({ id: "member-link-a", userId: "member-a", role: "CATALOG" });
-  mocks.memberCreate.mockResolvedValue({ id: "member-link-a" });
+  mocks.userFind.mockResolvedValue({ id: "member-a", email: "member@example.test", emailVerified: true });
+  mocks.memberFind.mockResolvedValue({ id: "cmemberlinka0000000000001", userId: "member-a", role: "CATALOG" });
+  mocks.memberCreate.mockResolvedValue({ id: "cmemberlinka0000000000001" });
   mocks.memberUpdate.mockResolvedValue({ count: 1 });
   mocks.memberDelete.mockResolvedValue({ count: 1 });
 });
@@ -63,15 +68,25 @@ describe("seller member audit transactions", () => {
     );
   });
 
+  it("does not add a user whose e-mail is not verified", async () => {
+    mocks.memberFind.mockResolvedValue(null);
+    mocks.userFind.mockResolvedValue({ id: "member-a", email: "member@example.test", emailVerified: false });
+    const result = await addSellerMemberAction({}, memberForm());
+
+    expect(result.error).toContain("confirmar o e-mail");
+    expect(mocks.memberCreate).not.toHaveBeenCalled();
+    expect(mocks.auditCreate).not.toHaveBeenCalled();
+  });
+
   it("updates a member role and its audit record in one tenant-scoped transaction", async () => {
     const form = new FormData();
     form.set("role", "ADMIN");
 
-    await updateSellerMemberRoleAction("member-link-a", form);
+    await updateSellerMemberRoleAction("cmemberlinka0000000000001", form);
 
-    expect(mocks.memberFind).toHaveBeenCalledWith({ where: { id: "member-link-a", sellerId: "seller-a" } });
+    expect(mocks.memberFind).toHaveBeenCalledWith({ where: { id: "cmemberlinka0000000000001", sellerId: "seller-a" } });
     expect(mocks.memberUpdate).toHaveBeenCalledWith({
-      where: { id: "member-link-a", sellerId: "seller-a", role: "CATALOG" },
+      where: { id: "cmemberlinka0000000000001", sellerId: "seller-a", role: "CATALOG" },
       data: { role: "ADMIN" },
     });
     expect(mocks.auditCreate).toHaveBeenCalledWith(
@@ -85,10 +100,10 @@ describe("seller member audit transactions", () => {
   });
 
   it("removes a member and its audit record in one tenant-scoped transaction", async () => {
-    await removeSellerMemberAction("member-link-a");
+    await removeSellerMemberAction("cmemberlinka0000000000001");
 
     expect(mocks.memberDelete).toHaveBeenCalledWith({
-      where: { id: "member-link-a", sellerId: "seller-a", role: "CATALOG" },
+      where: { id: "cmemberlinka0000000000001", sellerId: "seller-a", role: "CATALOG" },
     });
     expect(mocks.auditCreate).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ action: "SELLER_MEMBER_REMOVED" }) }),
@@ -96,15 +111,27 @@ describe("seller member audit transactions", () => {
   });
 
   it("never changes or removes the owner membership", async () => {
-    mocks.memberFind.mockResolvedValue({ id: "owner-link", userId: "owner-a", role: "OWNER" });
+    mocks.memberFind.mockResolvedValue({ id: "cownerlink000000000000002", userId: "owner-a", role: "OWNER" });
     const form = new FormData();
     form.set("role", "ADMIN");
 
-    await updateSellerMemberRoleAction("owner-link", form);
-    await removeSellerMemberAction("owner-link");
+    await updateSellerMemberRoleAction("cownerlink000000000000002", form);
+    await removeSellerMemberAction("cownerlink000000000000002");
 
     expect(mocks.memberUpdate).not.toHaveBeenCalled();
     expect(mocks.memberDelete).not.toHaveBeenCalled();
     expect(mocks.auditCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe("seller member id validation", () => {
+  it("ignores malformed member ids before opening a transaction", async () => {
+    const form = new FormData();
+    form.set("role", "ORDERS");
+
+    await updateSellerMemberRoleAction("not a cuid", form);
+    await removeSellerMemberAction("../member");
+
+    expect(mocks.memberFind).not.toHaveBeenCalled();
   });
 });

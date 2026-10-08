@@ -1,4 +1,5 @@
 "use client";
+import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -46,8 +47,7 @@ export function SellerTeamManager({ members }: { members: Member[] }) {
         <Button type="submit" disabled={pending} className="rounded-md font-semibold">
           {pending ? "Adicionando..." : "Adicionar membro"}
         </Button>
-        {state.error ? <p className="text-destructive text-sm sm:col-span-3">{state.error}</p> : null}
-        {state.success ? <p className="text-sm text-emerald-700 sm:col-span-3">{state.success}</p> : null}
+        <FormMessage error={state.error ?? null} success={state.success ?? null} className="sm:col-span-3" />
       </form>
 
       <div className="divide-border divide-y">
@@ -68,17 +68,21 @@ export function SellerTeamManager({ members }: { members: Member[] }) {
                     aria-label={`Perfil de ${member.name || member.email}`}
                     name="role"
                     defaultValue={member.role}
-                    className="h-9 rounded-md border px-2 text-xs"
+                    className="h-9"
                   >
                     <option value="ADMIN">Administrador</option>
                     <option value="CATALOG">Catálogo</option>
                     <option value="ORDERS">Pedidos</option>
                     <option value="FINANCE">Financeiro</option>
                   </DesignSelect>
-                  <button className="h-9 rounded-md border px-3 text-xs font-medium">Salvar perfil</button>
+                  <Button type="submit" variant="outline" size="sm">
+                    Salvar perfil
+                  </Button>
                 </form>
                 <form action={removeSellerMemberAction.bind(null, member.id)}>
-                  <button className="text-destructive h-9 rounded-md border px-3 text-xs font-medium">Remover</button>
+                  <Button type="submit" variant="outline" size="sm" className="text-destructive">
+                    Remover
+                  </Button>
                 </form>
               </div>
             )}

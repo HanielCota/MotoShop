@@ -87,8 +87,8 @@ export async function activateVipSubscriptionAction(
       }
     });
 
-    revalidatePath("/admin");
-    revalidatePath("/seller");
+    revalidatePath("/admin", "layout");
+    revalidatePath("/seller", "layout");
     revalidatePath("/products");
     return { success: "Plano VIP ativado/renovado." };
   } catch (error) {

@@ -1,4 +1,4 @@
-import { createLoader, parseAsInteger, parseAsString, parseAsStringLiteral } from "nuqs/server";
+import { createLoader, createSerializer, parseAsInteger, parseAsString, parseAsStringLiteral } from "nuqs/server";
 
 export const sellerProductStatusValues = ["ALL", "DRAFT", "SUBMITTED", "APPROVED", "REJECTED", "ARCHIVED"] as const;
 export type SellerProductStatus = (typeof sellerProductStatusValues)[number];
@@ -22,3 +22,6 @@ export const sellerProductSearchParams = {
 };
 
 export const loadSellerProductSearchParams = createLoader(sellerProductSearchParams);
+
+/** Gera URLs da listagem de produtos do lojista omitindo valores padrão. */
+export const serializeSellerProductSearchParams = createSerializer(sellerProductSearchParams);

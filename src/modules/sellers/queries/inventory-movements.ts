@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db } from "@/lib/database";
+import { parseDateFilter } from "@/lib/date-filter";
 
 import { InventoryMovementType } from "@/generated/prisma/enums";
 import type { InventorySort } from "../inventory-search-params";
@@ -18,8 +19,8 @@ export async function listSellerInventoryMovements(
 ) {
   const query = input.q?.trim().slice(0, 100);
   const type = input.type && input.type !== "ALL" ? (input.type as InventoryMovementType) : undefined;
-  const from = parseInventoryDate(input.from, false);
-  const to = parseInventoryDate(input.to, true);
+  const from = parseDateFilter(input.from, false);
+  const to = parseDateFilter(input.to, true);
   return db.inventoryMovement.findMany({
     where: {
       sellerId,
@@ -51,12 +52,4 @@ export async function listSellerInventoryMovements(
     orderBy: { createdAt: input.sort === "oldest" ? "asc" : "desc" },
     take: Math.min(Math.max(input.limit ?? 20, 1), 50),
   });
-}
-
-function parseInventoryDate(value: string | null | undefined, endOfDay: boolean) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
-  const date = new Date(`${value}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime())) return undefined;
-  if (endOfDay) date.setUTCDate(date.getUTCDate() + 1);
-  return date;
 }

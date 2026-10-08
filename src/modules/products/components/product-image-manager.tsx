@@ -5,9 +5,14 @@ import Image from "next/image";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { Upload } from "lucide-react";
 
+import { Button, buttonVariants } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
+import { cn } from "@/lib/utils";
+
 import {
   attachProductImageAction,
   createProductImageUploadUrlAction,
+  discardProductImageUploadAction,
   removeProductImageAction,
   reorderProductImagesAction,
   type ProductImageResult,
@@ -37,6 +42,10 @@ export function ProductImageManager({
     if (!files || files.length === 0) return;
     setError(undefined);
     setSuccess(undefined);
+    if (images.length + files.length > 8) {
+      setError(`Você pode adicionar mais ${Math.max(0, 8 - images.length)} imagem(ns) a este produto.`);
+      return;
+    }
     setUploading(true);
 
     try {
@@ -51,16 +60,38 @@ export function ProductImageManager({
         });
         if ("error" in upload) throw new Error(upload.error);
 
-        const fileId = await uploadImageToImageKit({ url: upload.url, fields: upload.fields, file });
+        let fileId: string;
+        try {
+          fileId = await uploadImageToImageKit({ url: upload.url, fields: upload.fields, file });
+        } catch (uploadError) {
+          const cleanup = await discardProductImageUploadAction({ productId, storageKey: upload.key });
+          if (cleanup.error) {
+            throw new Error(
+              `${uploadError instanceof Error ? uploadError.message : "Falha ao enviar a imagem."} ${cleanup.error}`,
+            );
+          }
+          throw uploadError;
+        }
 
-        const attached: ProductImageResult = await attachProductImageAction({
-          productId,
-          storageKey: upload.key,
-          fileId,
-          altText: file.name.replace(/\.[^.]+$/, ""),
-        });
-        if ("error" in attached) throw new Error(attached.error);
-        setImages((current) => [...current, attached.image]);
+        try {
+          const attached: ProductImageResult = await attachProductImageAction({
+            productId,
+            storageKey: upload.key,
+            fileId,
+            altText: file.name.replace(/\.[^.]+$/, ""),
+          });
+          if ("error" in attached) throw new Error(attached.error);
+          setImages((current) => [...current, attached.image]);
+        } catch (attachError) {
+          // The attach request may have committed even if its response was lost;
+          // the server-side cleanup keeps associated assets and removes only orphans.
+          const cleanup = await discardProductImageUploadAction({ productId, storageKey: upload.key });
+          if (cleanup.error)
+            throw new Error(
+              `${attachError instanceof Error ? attachError.message : "Falha ao associar a imagem."} ${cleanup.error}`,
+            );
+          throw attachError;
+        }
       }
       setSuccess("Imagem(ns) adicionada(s). Salve o produto e envie para aprovação quando terminar.");
     } catch (uploadError) {
@@ -144,27 +175,29 @@ export function ProductImageManager({
                 <span className="text-muted-foreground mr-auto text-xs">
                   {index === 0 ? "Capa" : `Imagem ${index + 1}`}
                 </span>
-                <button
+                <Button
                   type="button"
-                  className="rounded border px-2 py-1 text-xs disabled:opacity-50"
+                  variant="outline"
+                  size="sm"
                   aria-label="Mover imagem para cima"
                   disabled={uploading || busyImageId !== undefined || index === 0}
                   onClick={() => void moveImage(image.id, -1)}
                 >
                   ←
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="rounded border px-2 py-1 text-xs disabled:opacity-50"
+                  variant="outline"
+                  size="sm"
                   aria-label="Mover imagem para baixo"
                   disabled={uploading || busyImageId !== undefined || index === images.length - 1}
                   onClick={() => void moveImage(image.id, 1)}
                 >
                   →
-                </button>
+                </Button>
                 <AlertDialog.Root>
                   <AlertDialog.Trigger
-                    className="text-destructive rounded border px-2 py-1 text-xs disabled:opacity-50"
+                    className={cn(buttonVariants({ variant: "outline", size: "sm" }), "text-destructive")}
                     aria-label="Remover imagem"
                     disabled={uploading || busyImageId !== undefined}
                   >
@@ -178,9 +211,11 @@ export function ProductImageManager({
                         Esta imagem será retirada do produto. Essa ação não pode ser desfeita.
                       </AlertDialog.Description>
                       <div className="flex justify-end gap-2">
-                        <AlertDialog.Close className="rounded-md border px-4 py-2 text-sm font-medium">Manter imagem</AlertDialog.Close>
+                        <AlertDialog.Close className={buttonVariants({ variant: "outline" })}>
+                          Manter imagem
+                        </AlertDialog.Close>
                         <AlertDialog.Close
-                          className="bg-destructive text-white rounded-md px-4 py-2 text-sm font-medium"
+                          className={buttonVariants({ variant: "destructive" })}
                           onClick={() => void removeImage(image.id)}
                         >
                           Remover
@@ -209,18 +244,21 @@ export function ProductImageManager({
         tabIndex={-1}
         aria-hidden="true"
       />
-      <button
+      <Button
         type="button"
+        variant="outline"
         disabled={uploading || images.length >= 8}
         onClick={() => fileInputRef.current?.click()}
-        className="border-input bg-background hover:bg-accent focus-visible:ring-ring/40 inline-flex min-h-10 items-center gap-2 rounded-md border px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Upload aria-hidden="true" className="size-4" />
         {uploading ? "Enviando imagens..." : "Adicionar imagens"}
-      </button>
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
-      {success ? <p className="text-sm text-emerald-700">{success}</p> : null}
-      {uploading ? <p className="text-muted-foreground text-sm">Enviando...</p> : null}
+      </Button>
+      <FormMessage error={error ?? null} success={success ?? null} />
+      {uploading ? (
+        <p className="text-muted-foreground text-sm" role="status" aria-live="polite">
+          Enviando...
+        </p>
+      ) : null}
     </div>
   );
 }
