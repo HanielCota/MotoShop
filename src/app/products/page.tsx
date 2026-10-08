@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { Route } from "next";
 import { Bike, X } from "lucide-react";
 
@@ -68,7 +69,17 @@ export default async function ProductsPage({
   ]);
   const primaryMotorcycle = session ? await getPrimarySavedMotorcycle(session.user.id) : null;
   const primaryFitment = fitments.find((fitment) => fitment.id === primaryMotorcycle?.motorcycleFitmentId);
-  const activeMoto = params.moto === "all" ? "" : (params.moto ?? primaryFitment?.id ?? "");
+  // AGENTS.md: the effective motorcycle filter always lives in the URL (?moto=). When the primary
+  // motorcycle is applied by default, make it explicit so the link stays shareable.
+  if (params.moto === null && primaryFitment) {
+    const explicit = new URLSearchParams();
+    for (const [key, value] of Object.entries(await searchParams)) {
+      for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value]) explicit.append(key, entry);
+    }
+    explicit.set("moto", primaryFitment.id);
+    redirect(`/products?${explicit.toString()}` as Route);
+  }
+  const activeMoto = params.moto === "all" ? "" : (params.moto ?? "");
   const query: CatalogQuery = {
     q: params.q,
     moto: activeMoto,
