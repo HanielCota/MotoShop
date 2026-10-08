@@ -4,7 +4,7 @@ import { PackageSearch } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDate, formatMoneyInCents } from "@/lib/format";
+import { formatDate, formatMoneyInCents, formatCount } from "@/lib/format";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { getAdminCatalogData } from "@/modules/catalog/queries/admin-catalog";
 import { ProductStatusActions } from "@/modules/products/components/product-status-actions";
@@ -196,7 +196,7 @@ export async function AdminProductsSection({ searchParams }: AdminSectionProps) 
           pageCount={result.pageCount}
           previousHref={pageHref(result.page - 1)}
           nextHref={pageHref(result.page + 1)}
-          summary={<>{result.total} produto(s)</>}
+          summary={<>{formatCount(result.total, "produto", "produtos")}</>}
         />
       ) : null}
     </AdminCard>
