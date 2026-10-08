@@ -8,19 +8,27 @@ Roteiro para revisar todas as telas com dados de demonstração. Tudo o que apar
 
 ## 1. Como abrir
 
-> **Atenção: o banco do `.env.local` é o mesmo do site em produção (motoshopbrasil.com.br).** A produção ainda roda a `main`, que não bloqueia a compra de produtos de demonstração. Por isso, no banco de produção as lojas de demonstração ficam **`PENDING`**: invisíveis na vitrine e sem acesso à Central do Lojista. Para revisar **todas** as telas, use um banco isolado (passo 0).
+> **Atenção: o banco do `.env.local` é o mesmo do site em produção (motoshopbrasil.com.br).** Sem `REVIEW_PUBLISH_STORES=true`, as lojas de demonstração ficam **`PENDING`**: invisíveis na vitrine e sem acesso à Central do Lojista. Até o lançamento, o responsável pelo projeto decidiu publicar os dados de demonstração nesse banco para a revisão do cliente; depois, remova tudo com `pnpm db:remove:review` (passo 5). Se preferir não expor nada, use um banco isolado (passo 0).
 
 0. **Banco isolado para a revisão (recomendado).** No console da Neon, crie um branch a partir do principal (por exemplo, `review`) e copie a connection string dele. Use essa URL em `DATABASE_URL` e `DIRECT_URL` só enquanto durar a revisão: nada do que acontecer ali afeta o site. Apague o branch ao final.
 
 1. No `.env.local`, deixe `BETTER_AUTH_URL="http://localhost:3001"` e inclua `review.admin@example.test` em `ADMIN_EMAILS` (separado por vírgula). Sem isso, o login falha na porta 3001 e o Admin fica bloqueado.
 
-2. Na pasta do projeto, crie os dados de demonstração (pode rodar quantas vezes quiser; não duplica nada). **Só no banco isolado**, publique as lojas de demonstração com a variável `REVIEW_PUBLISH_STORES`:
+2. Na pasta do projeto, crie os dados de demonstração (pode rodar quantas vezes quiser; não duplica nada). Publique as lojas de demonstração com a variável `REVIEW_PUBLISH_STORES`:
 
    ```bash
-   REVIEW_PUBLISH_STORES=true pnpm db:seed:review
+   REVIEW_PUBLISH_STORES=true \
+   REVIEW_VIEWER_CUSTOMER_EMAILS="<e-mail da conta de cliente>" \
+   REVIEW_VIEWER_SELLER_EMAILS="<e-mail da conta de lojista>" \
+   pnpm db:seed:review
    ```
 
-   Sem a variável, as lojas são criadas como `PENDING` (seguro para qualquer banco). Se algum dia elas aparecerem publicadas no banco de produção, esconda-as na hora:
+   - `REVIEW_PUBLISH_STORES=true` deixa as lojas aprovadas/ativas visíveis. Sem a variável, elas ficam `PENDING`.
+   - `REVIEW_VIEWER_CUSTOMER_EMAILS` (opcional, separado por vírgula): contas **já existentes** de quem vai revisar. Cada uma recebe um histórico fictício de cliente: 2 endereços "(demonstração)", motos salvas (a principal só se ainda não houver uma), 5 favoritos, carrinho com 3 lojas (só se a conta não tiver carrinho ativo) e 11 pedidos `MS-REVIEW-V<n>-0001…0011` em todas as etapas (aguardando pagamento, pago, em separação, enviado com rastreio, entregue com avaliações, cancelado, multi-loja parcial, devolução, pedido de cancelamento e disputa aberta). Mantenha a mesma ordem dos e-mails nas execuções seguintes.
+   - `REVIEW_VIEWER_SELLER_EMAILS` (opcional): contas já existentes adicionadas como **ADMIN** da loja Garagem MX. Se a conta já pertence a outra loja, o vínculo é ignorado (um lojista por conta). O acesso ao Admin continua vindo de `ADMIN_EMAILS`.
+   - O seed nunca cria, apaga nem altera e-mail/senha dessas contas. Não coloque e-mails reais neste documento nem no código: use as variáveis.
+
+   Se for preciso esconder as lojas de demonstração rapidamente:
 
    ```bash
    pnpm db:hide:review
@@ -36,11 +44,14 @@ Roteiro para revisar todas as telas com dados de demonstração. Tudo o que apar
 
 4. Abra **http://localhost:3001**.
 
-5. Para apagar todos os dados de demonstração ao final da revisão:
+5. Para apagar todos os dados de demonstração ao final da revisão, confira antes o que seria removido (nada é apagado) e depois rode de verdade:
 
    ```bash
+   pnpm db:remove:review -- --dry-run
    pnpm db:remove:review
    ```
+
+   A remoção apaga as contas `review.*@example.test`, as lojas/produtos/pedidos de demonstração e as imagens `public/images/demo/review-*.webp`. Das contas de visualização, saem apenas o vínculo com a loja de demonstração, os pedidos `MS-REVIEW-V*`, favoritos e itens de carrinho de produtos de demonstração e os endereços/motos/carrinho criados pelo seed; as contas em si continuam intactas.
 
 ## 2. Contas de demonstração
 
@@ -53,7 +64,13 @@ Todas usam a mesma senha: o valor de `REVIEW_ACCOUNTS_PASSWORD`, no início de `
 | Lojista (equipe de catálogo) | `review.catalogo@example.test` | A mesma loja com permissões limitadas (só catálogo) |
 | Lojista pendente | `review.pendente@example.test` | Loja aguardando aprovação |
 | Lojista (segunda loja) | `review.lojista2@example.test` | Loja **Box 77**, com comissão própria de 10% |
+| Lojistas das demais lojas | `review.lojista3` … `review.lojista6@example.test` | **Trilha Forte** (VIP), **Racing Sul** (comissão de 8%, VIP expirado), **Areia Motos**, **Cross Center** (VIP) |
+| Lojistas da fila de sellers | `review.lojista7` … `review.lojista9@example.test` | Cadastro pendente, loja suspensa e cadastro recusado |
+| Clientes extras | `review.cliente2` … `review.cliente13@example.test` | Autores das avaliações e perguntas; cada um tem 5–6 pedidos |
 | Admin | `review.admin@example.test` | Painel administrativo (exige o passo 1 acima) |
+| Contas de visualização | definidas por `REVIEW_VIEWER_*_EMAILS` | Histórico de cliente próprio e/ou acesso à Garagem MX como ADMIN |
+
+**Volume de dados** (para conferir paginação, filtros e indicadores): 6 lojas publicadas + 2 pendentes + 1 suspensa + 1 recusada; cerca de 60 produtos aprovados em todas as categorias e marcas ativas (1 a 5 variações, estoque normal/baixo/esgotado, promoções ativas, futuras e expiradas, galerias com até 4 imagens); fila de moderação com rascunhos, enviados, recusados e arquivados; cerca de 95 pedidos nos últimos 120 dias em todas as etapas; ~130 avaliações de produto (1 a 5 estrelas, duas ocultadas pela moderação), ~45 avaliações de loja e ~60 perguntas (2/3 respondidas); 9 devoluções, 7 cancelamentos e 6 disputas em vários status; 10 cupons; auditoria, notificações, webhooks e eventos de outbox com falha. As imagens geradas mostram só a categoria e o selo "Demonstração" (sem marcas).
 
 **Pedido de convidado** (sem conta): o seed imprime no final um link `http://localhost:3001/orders/MS-REVIEW-0008?accessToken=…`. Abra-o numa janela anônima para ver o acompanhamento sem login. O token muda a cada execução do seed.
 
