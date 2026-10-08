@@ -4,7 +4,7 @@
  *   2. launch  120–600ms wheelie lean + forward surge, settles with a small overshoot
  *   3. livery  the orange version sweeps in on a race-stripe diagonal (reversible on leave)
  *   4. fx      speed lines cut through the mark; an exhaust puff trails on the left
- * Only transform, opacity and clip-path are animated. Reduced motion: plain crossfade.
+ * Only transform, opacity and clip-path are animated. Reduced motion: stripe sweep only, no movement.
  * Variants: header (horizontal mark), footer and auth (stacked main logo on its plate).
  */
 
@@ -311,7 +311,11 @@
   }
 }
 
-/* Reduced motion: no movement, only the livery crossfade. */
+/*
+ * Reduced motion: keep the livery change but drop everything that moves the mark. The race-stripe
+ * sweep stays (it is a colour wipe inside a fixed frame, no translation, rotation or scaling); the
+ * rev shake, wheelie, speed lines and exhaust are removed.
+ */
 @media (prefers-reduced-motion: reduce) {
   .rider,
   .speedLines span,
@@ -328,18 +332,14 @@
   .brand:hover .primary,
   .brand:focus-visible .primary {
     transform: none;
-    transition: opacity 160ms ease;
   }
 
-  .alternate {
-    clip-path: none;
-    opacity: 0;
-    transition: opacity 160ms ease;
+  /* globals.css zeroes every transition under reduced motion; the wipe and fade are exempt. */
+  .brand .alternate {
+    transition-duration: 420ms !important;
   }
 
-  .brand:hover .alternate,
-  .brand:focus-visible .alternate {
-    clip-path: none;
-    opacity: 1;
+  .brand .primary {
+    transition-duration: 160ms !important;
   }
 }
