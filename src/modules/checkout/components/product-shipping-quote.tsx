@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { DesignSelect } from "@/components/ui/design-select";
 import { FormMessage } from "@/components/ui/form-message";
-import { formatMoneyInCents } from "@/lib/format";
+import { formatMoneyInCents, formatCount } from "@/lib/format";
 import { formatCep, isCompleteCep } from "@/modules/customers/domain/brazilian-address";
 import { quoteProductShippingAction } from "../actions/shipping-actions";
 
@@ -101,7 +101,7 @@ export function ProductShippingQuote({ options }: { options: Option[] }) {
                 {formatMoneyInCents(quote.priceInCents)}
                 {quote.estimatedDeliveryDays !== undefined ? (
                   <span className="text-muted-foreground ml-2 font-normal">
-                    · {quote.estimatedDeliveryDays} dia(s) útil(eis)
+                    · {formatCount(quote.estimatedDeliveryDays, "dia útil", "dias úteis")}
                   </span>
                 ) : null}
               </span>

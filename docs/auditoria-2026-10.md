@@ -199,7 +199,7 @@ Validação final: `tsc` 0 erros (os tipos de rota estavam apontando para um bui
 
 ## Decisões pendentes do responsável
 
-1. **WhatsApp na vitrine da loja** contraria o §28 (sem canal privado/venda por fora). Manter, remover ou restringir?
+1. **WhatsApp na vitrine da loja**: decidido em 08/10/2026, o link fica mantido por decisão do cliente (registrado no `AGENTS.md`).
 2. **Código de cupom é único globalmente**: um lojista pode ocupar `BLACKFRIDAY` antes do Admin. Unicidade por dono ou prefixo reservado?
-3. **Montagem da etiqueta**: a compra envia um volume por linha com dimensões unitárias, diferente da cotação. Confirmar com a documentação do Melhor Envio antes de homologar.
+3. **Montagem da etiqueta**: resolvido no PR `fix/melhor-envio-purchase`, que reaproveita os volumes da cotação na compra.
 4. Os itens da seção 2 da primeira rodada continuam em aberto (split com cupom do marketplace, base da comissão, convite de equipe).

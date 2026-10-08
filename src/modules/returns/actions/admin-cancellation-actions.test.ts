@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ review: vi.fn(), revalidate: vi.fn() }));
 vi.mock("server-only", () => ({}));
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn() } }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("@/modules/auth/application/authorization", () => ({
   requireAdminAccess: async () => ({ user: { id: "admin" } }),
@@ -45,4 +46,11 @@ it("maps application errors to a predictable action result", async () => {
 it("rejects an invalid decision without calling the service", async () => {
   expect(await reviewCancellationRequestAction("request", form("MAYBE"))).toHaveProperty("error");
   expect(mocks.review).not.toHaveBeenCalled();
+});
+
+it("keeps an unexpected refund failure retryable instead of leaking a generic English error", async () => {
+  mocks.review.mockRejectedValue(new Error("Mercado Pago request failed with status 404"));
+  const result = await reviewCancellationRequestAction("request", form("APPROVE"));
+  expect(result.error).toContain("pode ser reprocessada");
+  expect(result.error).not.toContain("unexpected");
 });

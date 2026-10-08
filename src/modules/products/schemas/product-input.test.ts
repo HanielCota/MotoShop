@@ -75,6 +75,12 @@ describe("productInputSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it.each([1.5, 2147483648])("rejects stock %s that does not fit an int4 column", (stock) => {
+    const result = productInputSchema.safeParse({ ...baseInput, variants: [{ ...variant, stock }] });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toMatch(/estoque/i);
+  });
+
   it("requires at least one variant", () => {
     const result = productInputSchema.safeParse({ ...baseInput, variants: [] });
 

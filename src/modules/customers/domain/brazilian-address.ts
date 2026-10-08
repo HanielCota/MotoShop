@@ -6,6 +6,41 @@ export type CepAutofillField = (typeof CEP_AUTOFILL_FIELDS)[number];
 export type CepAddress = Record<CepAutofillField, string>;
 export type CepAutofillMemory = Partial<Record<CepAutofillField, string>>;
 
+/** Siglas das 27 unidades federativas aceitas em endereços de entrega. */
+export const BRAZILIAN_STATE_CODES = [
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+] as const;
+
+export function isBrazilianStateCode(value: string): boolean {
+  return (BRAZILIAN_STATE_CODES as readonly string[]).includes(value);
+}
+
 /** Mantém somente os dígitos do CEP (máximo de 8), formato esperado pelo servidor. */
 export function normalizeCep(value: string): string {
   return value.replace(/\D/g, "").slice(0, 8);

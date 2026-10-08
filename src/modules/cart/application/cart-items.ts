@@ -5,8 +5,9 @@ import { purchasableVariantWhere } from "@/modules/products/application/purchasa
 import { ApplicationError } from "@/shared/errors/application-error";
 
 import { cartOwnerWhere, findOrCreateActiveCart, type CartIdentity } from "../infrastructure/cart-access";
+import { MAX_CART_ITEM_QUANTITY } from "./merge-guest-cart";
 
-export const MAX_CART_ITEM_QUANTITY = 99;
+export { MAX_CART_ITEM_QUANTITY };
 
 function outOfStock() {
   return new ApplicationError({

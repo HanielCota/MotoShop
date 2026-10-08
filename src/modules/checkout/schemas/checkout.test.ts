@@ -44,3 +44,19 @@ it("normalizes the customer e-mail so coupon limits cannot be bypassed by casing
   const result = checkoutSchema.parse({ ...checkout, customerEmail: "  Buyer@Example.TEST " });
   expect(result.customerEmail).toBe("buyer@example.test");
 });
+it.each([{ state: "S1" }, { state: "XX" }])("rejects a state that is not a Brazilian UF %j", (address) => {
+  const result = checkoutSchema.safeParse({ ...checkout, ...address });
+  expect(result.success).toBe(false);
+  expect(result.error?.issues[0]?.message).toBe("Informe a UF.");
+});
+it("normalizes a lowercase UF", () => {
+  expect(checkoutSchema.parse({ ...checkout, state: " sp " }).state).toBe("SP");
+});
+it.each([
+  { street: "x".repeat(161) },
+  { number: "1".repeat(21) },
+  { neighborhood: "x".repeat(101) },
+  { city: "x".repeat(101) },
+])("bounds the address snapshot like saved addresses %j", (address) => {
+  expect(checkoutSchema.safeParse({ ...checkout, ...address }).success).toBe(false);
+});

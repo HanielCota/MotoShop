@@ -61,7 +61,7 @@ export const trustItems: { title: string; text: string; icon: LucideIcon }[] = [
   { icon: BadgeCheck, title: "Lojistas parceiros", text: "Lojas aprovadas pelo Moto Shop" },
   { icon: PackageCheck, title: "Peças compatíveis", text: "Confira se a peça serve na sua moto" },
   { icon: MapPin, title: "Frete por loja", text: "Opções e prazos no checkout" },
-  { icon: ShieldCheck, title: "Pedido acompanhado", text: "Acompanhe tudo na plataforma" },
+  { icon: ShieldCheck, title: "Pedido acompanhado", text: "Status de pagamento e entrega" },
 ];
 
 /** Links de categoria só aparecem quando a categoria existe e está ativa. */

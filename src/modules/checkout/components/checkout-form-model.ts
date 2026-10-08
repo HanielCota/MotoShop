@@ -1,5 +1,10 @@
 import type { CustomerAddress } from "@/modules/customers/queries/customer-addresses";
-import { formatCep, normalizeCep, normalizeCpf } from "@/modules/customers/domain/brazilian-address";
+import {
+  formatCep,
+  isBrazilianStateCode,
+  normalizeCep,
+  normalizeCpf,
+} from "@/modules/customers/domain/brazilian-address";
 
 import { isValidCpf } from "../domain/cpf";
 
@@ -94,7 +99,7 @@ export function validateCheckoutForm(form: CheckoutFormState): CheckoutFieldErro
   if (!form.number.trim()) errors.number = "Informe o número.";
   if (form.neighborhood.trim().length < 2) errors.neighborhood = "Informe o bairro.";
   if (form.city.trim().length < 2) errors.city = "Informe a cidade.";
-  if (form.state.trim().length !== 2) errors.state = "Informe a UF.";
+  if (!isBrazilianStateCode(form.state.trim().toUpperCase())) errors.state = "Informe a UF.";
   return errors;
 }
 

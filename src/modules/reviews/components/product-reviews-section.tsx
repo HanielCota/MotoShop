@@ -57,7 +57,7 @@ export function ProductReviewsSection({
         <CardTitle>
           <h2 className="text-xl">Avaliações do produto</h2>
         </CardTitle>
-        <CardDescription>Notas de compradores verificados do O Moto Shop.</CardDescription>
+        <CardDescription>Notas de compradores verificados do Moto Shop.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-8 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] lg:items-start">
         <div className="min-w-0 space-y-5">
