@@ -1,6 +1,8 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ updateMany: vi.fn(), createFunction: vi.fn() }));
+// Plain array instead of a vi.fn(): createFunction runs at import time, and Vitest 5 clears mock
+// call history before every test (clearMocks is on by default).
+const mocks = vi.hoisted(() => ({ updateMany: vi.fn(), createdFunctions: [] as unknown[] }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/database", () => ({ db: { webhookEvent: { updateMany: mocks.updateMany } } }));
 vi.mock("@/lib/payment/mercado-pago-provider", () => ({ mercadoPagoProvider: { getPayment: vi.fn() } }));
@@ -8,7 +10,7 @@ vi.mock("@/modules/payments/application/reconcile-payment", () => ({ reconcileMe
 vi.mock("@/lib/inngest/client", () => ({
   inngest: {
     createFunction: (config: unknown, handler: unknown) => {
-      mocks.createFunction(config);
+      mocks.createdFunctions.push(config);
       return handler;
     },
   },
@@ -24,7 +26,7 @@ beforeEach(() => {
 });
 
 it("registers the failure handler on the webhook reconciliation function", () => {
-  expect(mocks.createFunction).toHaveBeenCalledWith(
+  expect(mocks.createdFunctions).toContainEqual(
     expect.objectContaining({ id: "reconcile-mercado-pago-webhook", onFailure: markWebhookEventFailedAfterRetries }),
   );
 });
