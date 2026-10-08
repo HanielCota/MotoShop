@@ -40,4 +40,13 @@ describe("inventory adjustments", () => {
       "cannot make availableQuantity negative",
     );
   });
+
+  it("rejects adjustments beyond the persisted int4 limit", () => {
+    expect(() => adjustAvailableInventory({ availableQuantity: 2, reservedQuantity: 0 }, 2 ** 31)).toThrow(
+      "cannot exceed the maximum",
+    );
+    expect(adjustAvailableInventory({ availableQuantity: 0, reservedQuantity: 0 }, 2 ** 31 - 1).availableQuantity).toBe(
+      2 ** 31 - 1,
+    );
+  });
 });

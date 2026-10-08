@@ -151,7 +151,11 @@ export async function adjustInventoryAction(variantId: string, quantityChange: n
     revalidatePath("/products");
     return { success: "Estoque atualizado." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    const applicationError = asApplicationError(error);
+    if (applicationError.code === "INVALID_INVENTORY_QUANTITY")
+      return { error: "O ajuste deixaria o estoque negativo ou acima do limite permitido." };
+    if (applicationError.code === "INTERNAL_ERROR") return { error: "Não foi possível atualizar o estoque." };
+    return { error: applicationError.message };
   }
 }
 
@@ -164,10 +168,15 @@ export async function approveProductAction(productId: string): Promise<ProductAc
   return { success: "Produto aprovado." };
 }
 
+const MAX_REJECTION_REASON_LENGTH = 1000;
+
 export async function rejectProductAction(productId: string, formData: FormData): Promise<ProductActionState> {
   const session = await requireAdminAccess();
   const cleanReason = String(formData.get("reason") ?? "").trim();
   if (cleanReason.length < 5) return { error: "Informe o motivo da rejeição." };
+  // O motivo é exibido ao lojista e copiado para a auditoria: sem limite, um payload forjado grava megabytes.
+  if (cleanReason.length > MAX_REJECTION_REASON_LENGTH)
+    return { error: `Use no máximo ${MAX_REJECTION_REASON_LENGTH} caracteres no motivo da rejeição.` };
   const result = await rejectSubmittedProduct({ userId: session.user.id }, productId, cleanReason);
   if (!result.ok) return { error: result.error };
   revalidatePath("/admin", "layout");
