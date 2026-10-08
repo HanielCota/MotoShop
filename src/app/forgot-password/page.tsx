@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
 import { AuthPageShell } from "@/modules/auth/components/auth-page-shell";
 import { PasswordRecoveryForm } from "@/modules/auth/components/password-recovery-form";
 import { authEmailConfigured } from "@/modules/auth/infrastructure/auth";
+
+export const metadata: Metadata = {
+  title: "Recuperar acesso",
+};
 
 export default function ForgotPasswordPage() {
   return (

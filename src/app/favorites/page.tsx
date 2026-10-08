@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { DesignSelect } from "@/components/ui/design-select";
 import Link from "next/link";
-import type { Route } from "next";
+import type { Metadata, Route } from "next";
 
 import { Heart, SearchX } from "lucide-react";
 
@@ -16,6 +16,11 @@ import { listFavoriteProducts } from "@/modules/favorites/queries/favorites";
 import { loadFavoriteSearchParams } from "@/modules/favorites/search-params";
 import { toProductCardData } from "@/modules/products/components/product-grid";
 import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
+
+export const metadata: Metadata = {
+  title: "Meus favoritos",
+  robots: { index: false, follow: false },
+};
 
 export default async function FavoritesPage({
   searchParams,
@@ -46,7 +51,7 @@ export default async function FavoritesPage({
   }
 
   return (
-    <CustomerAccountShell pathname="/favorites">
+    <CustomerAccountShell pathname="/favorites" userName={session.user.name}>
       <PageHeader
         eyebrow="Minha conta"
         title="Meus favoritos"

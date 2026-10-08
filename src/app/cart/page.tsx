@@ -1,4 +1,4 @@
-import type { Route } from "next";
+import type { Metadata, Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ImageOff, ShieldCheck, ShoppingBag, Store } from "lucide-react";
@@ -15,6 +15,11 @@ import { getCheckoutPaymentAvailability } from "@/modules/payments/application/a
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 
 import { getCartThumbnails } from "./cart-thumbnails";
+
+export const metadata: Metadata = {
+  title: "Carrinho",
+  robots: { index: false, follow: false },
+};
 
 export default async function CartPage({ searchParams }: { searchParams: Promise<{ preview?: string | string[] }> }) {
   const { preview } = await searchParams;

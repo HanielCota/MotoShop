@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { DesignSelect } from "@/components/ui/design-select";
 import { DateFilterInput } from "@/components/ui/date-filter-input";
-import type { Route } from "next";
+import type { Metadata, Route } from "next";
 import { createSerializer } from "nuqs/server";
 import { ClipboardList } from "lucide-react";
 
@@ -25,6 +25,11 @@ import {
   sellerOrdersSearchParams,
   shipmentStatusValues,
 } from "@/modules/shipping/search-params";
+
+export const metadata: Metadata = {
+  title: "Pedidos · Central do Lojista",
+  robots: { index: false, follow: false },
+};
 
 const serializeSellerOrdersSearchParams = createSerializer(sellerOrdersSearchParams);
 const basePath = "/seller/orders";
