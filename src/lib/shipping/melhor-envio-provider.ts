@@ -4,7 +4,9 @@ import { env } from "@/config/env";
 import { ApplicationError } from "@/shared/errors/application-error";
 import { ShippingProviderRequestError } from "./shipping-provider-error";
 import type {
-  CreateShipmentInput,
+  AddShipmentToCartInput,
+  CartItemResult,
+  ShippingPackage,
   ShippingProvider,
   ShippingQuote,
   ShippingQuoteInput,
@@ -31,6 +33,7 @@ export class MelhorEnvioProvider implements ShippingProvider {
           height: product.heightInCm,
           length: product.lengthInCm,
           weight: product.weightInKg,
+          // Valor UNITÁRIO: o Melhor Envio multiplica o `insurance_value` pela `quantity`.
           insurance_value: product.insuranceValueInCents / 100,
           quantity: product.quantity,
         })),
@@ -53,6 +56,7 @@ export class MelhorEnvioProvider implements ShippingProvider {
       .filter((item) => typeof item.id === "number" || (typeof item.id === "string" && item.id.length > 0))
       .map((item) => {
         const estimatedDeliveryDays = toOptionalInteger(item.custom_delivery_time ?? item.delivery_time);
+        const packages = readPackages(item.packages);
         return {
           provider: "MELHOR_ENVIO",
           serviceCode: String(item.id),
@@ -60,19 +64,30 @@ export class MelhorEnvioProvider implements ShippingProvider {
           service: String(item.name ?? item.service ?? "Serviço"),
           priceInCents: toCents(item.custom_price ?? item.price),
           ...(estimatedDeliveryDays !== undefined ? { estimatedDeliveryDays } : {}),
+          ...(packages ? { packages } : {}),
           raw: item,
         };
       })
       .filter((quote) => quote.priceInCents >= 0);
   }
 
-  async createShipment(input: CreateShipmentInput, accessToken: string): Promise<ShipmentResult> {
+  /**
+   * Passo 1 da compra: insere o envio no carrinho do Melhor Envio. Não é idempotente no provedor
+   * (cada chamada cria outro item), por isso o id retornado deve ser persistido antes do checkout.
+   */
+  async addToCart(input: AddShipmentToCartInput, accessToken: string): Promise<CartItemResult> {
     this.assertToken(accessToken);
     const service = Number(input.serviceCode);
     if (!Number.isInteger(service) || service <= 0) {
       throw new ApplicationError({
         code: "VALIDATION_ERROR",
         message: "O serviço de frete do Melhor Envio é inválido.",
+      });
+    }
+    if (input.volumes.length === 0) {
+      throw new ApplicationError({
+        code: "VALIDATION_ERROR",
+        message: "Informe ao menos um volume para registrar a etiqueta.",
       });
     }
 
@@ -87,7 +102,7 @@ export class MelhorEnvioProvider implements ShippingProvider {
         products: input.products.map((product) => ({
           name: product.name ?? product.id,
           quantity: product.quantity,
-          unitary_value: (product.unitaryValueInCents ?? product.insuranceValueInCents / product.quantity) / 100,
+          unitary_value: (product.unitaryValueInCents ?? product.insuranceValueInCents) / 100,
         })),
         volumes: input.volumes.map((volume) => ({
           height: volume.heightInCm,
@@ -96,6 +111,7 @@ export class MelhorEnvioProvider implements ShippingProvider {
           weight: volume.weightInKg,
         })),
         options: {
+          // "Deve conter o valor total de seguro do envio" (docs: inserir fretes no carrinho).
           insurance_value: input.insuranceValueInCents / 100,
           receipt: false,
           own_hand: false,
@@ -104,24 +120,46 @@ export class MelhorEnvioProvider implements ShippingProvider {
         },
       },
     });
-    const externalShipmentId = readExternalId(cartPayload);
-    if (!externalShipmentId) {
+    const cartItemId = readExternalId(cartPayload);
+    if (!cartItemId) {
       throw new ApplicationError({
         code: "CONFLICT",
-        message: "O Melhor Envio não retornou o identificador da etiqueta.",
+        message: "O Melhor Envio não retornou o identificador da etiqueta no carrinho.",
       });
     }
+    return {
+      cartItemId,
+      providerMetadata: toSafeProviderMetadata(toRecord(Array.isArray(cartPayload) ? cartPayload[0] : cartPayload), [
+        "protocol",
+        "status",
+      ]),
+    };
+  }
 
+  /** Passo 2 da compra: paga um item de carrinho existente. Novas tentativas reutilizam o mesmo id. */
+  async checkoutCart(cartItemId: string, accessToken: string): Promise<ShipmentResult> {
+    this.assertToken(accessToken);
+    if (!cartItemId.trim()) {
+      throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Informe o identificador da etiqueta." });
+    }
     const checkoutPayload = await this.request("/api/v2/me/shipment/checkout", {
       method: "POST",
       operation: "comprar a etiqueta",
       accessToken,
-      body: { orders: [externalShipmentId] },
+      body: { orders: [cartItemId] },
     });
+    const purchase = toRecord(toRecord(checkoutPayload).purchase);
+    const checkoutResult = readSafeProviderString(checkoutPayload, "result");
+    const purchaseId = readSafeProviderString(purchase, "id");
+    const purchaseStatus = readSafeProviderString(purchase, "status");
     return {
-      externalShipmentId,
+      externalShipmentId: cartItemId,
       status: "READY_TO_SHIP",
-      providerMetadata: { checkoutResult: readSafeProviderString(checkoutPayload, "result") },
+      providerMetadata: {
+        ...(checkoutResult ? { checkoutResult } : {}),
+        ...(purchaseId ? { purchaseId } : {}),
+        ...(purchaseStatus ? { purchaseStatus } : {}),
+      },
     };
   }
 
@@ -218,6 +256,39 @@ function readExternalId(payload: unknown): string | undefined {
   const data = toRecord(Array.isArray(payload) ? payload[0] : payload);
   const id = data.id ?? data.order_id;
   return typeof id === "string" || typeof id === "number" ? String(id) : undefined;
+}
+
+/**
+ * Lê os pacotes que o Melhor Envio calculou para um serviço (`packages` da cotação). Retorna
+ * `undefined` se algum pacote vier sem medidas válidas, para a compra nunca usar volumes parciais.
+ */
+function readPackages(value: unknown): ShippingPackage[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const packages: ShippingPackage[] = [];
+  for (const entry of value) {
+    const record = toRecord(entry);
+    const dimensions = toRecord(record.dimensions);
+    const heightInCm = toPositiveNumber(dimensions.height);
+    const widthInCm = toPositiveNumber(dimensions.width);
+    const lengthInCm = toPositiveNumber(dimensions.length);
+    const weightInKg = toPositiveNumber(record.weight);
+    if (!heightInCm || !widthInCm || !lengthInCm || !weightInKg) return undefined;
+    const insuranceValueInCents = toCents(record.insurance_value);
+    packages.push({
+      heightInCm,
+      widthInCm,
+      lengthInCm,
+      weightInKg,
+      ...(insuranceValueInCents >= 0 ? { insuranceValueInCents } : {}),
+    });
+  }
+  return packages;
+}
+
+function toPositiveNumber(value: unknown): number | undefined {
+  if (typeof value !== "number" && (typeof value !== "string" || value.trim() === "")) return undefined;
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) && numberValue > 0 ? numberValue : undefined;
 }
 
 function toRecord(value: unknown): Record<string, unknown> {

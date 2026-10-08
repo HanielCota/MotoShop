@@ -8,6 +8,8 @@ import { getSellerMelhorEnvioAccessTokenWithScopes } from "@/modules/shipping/in
 import { canRunShipmentOperation } from "@/modules/orders/domain/fulfillment-status";
 import { syncFulfillmentStatuses } from "@/modules/orders/application/sync-fulfillment-status";
 
+import { withoutPurchaseCart } from "@/modules/shipping/domain/purchase-cart";
+
 import { STALE_PURCHASE_MESSAGE, lockSellerOrderStatus, withLabelCancellationFlag } from "./shipment-operation-guard";
 
 type ReconciliationInput = {
@@ -83,7 +85,12 @@ export async function reconcileShipmentPurchase(input: ReconciliationInput): Pro
       // enquanto a tentativa aguardava conferência.
       const sellerOrderStatus = await lockSellerOrderStatus(tx, shipment.sellerOrderId);
       const fulfillmentAllowed = canRunShipmentOperation(sellerOrderStatus, "PURCHASE");
-      const reconciledMetadata = { reconciled: true, providerTagMatched };
+      // Preserva o histórico (ex.: etiquetas anteriores) e encerra o item de carrinho pendente.
+      const reconciledMetadata = {
+        ...withoutPurchaseCart(shipment.providerMetadata),
+        reconciled: true,
+        providerTagMatched,
+      };
       const updated = await tx.shipment.updateMany({
         where: {
           id: shipment.id,
