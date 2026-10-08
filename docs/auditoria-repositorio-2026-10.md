@@ -231,3 +231,42 @@ Fora do escopo, de propósito: Docker/Kubernetes, CD próprio, release semântic
 - Testes de integração e Playwright não foram executados: precisam de banco e servidor dedicados.
 - Os advisories vêm do banco do npm em 07/10/2026 e precisam ser reavaliados a cada atualização.
 - As recomendações sobre majors (Sentry 11, ESLint 10, Vitest 5, TypeScript 7) indicam que existe nova versão; os guias de migração devem ser lidos no PR de cada uma.
+
+---
+
+## Status da execução — 08/10/2026
+
+Executado na branch `chore/repo-hardening` (PR empilhado sobre `codex/moto-shop-readiness`), um commit por assunto. Validação final: `pnpm typecheck` 0 erros, `eslint .` limpo, `prettier --check .` limpo, Vitest 138 arquivos / 762 testes, `next build` concluído **sem banco** (simulando o CI), páginas principais respondendo 200 no dev server.
+
+| Ação                                          | Status         | Observação                                                                                                                                                                           |
+| --------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| P0-1 Versionar trabalho pendente              | ✅             | Feito na branch `codex/moto-shop-readiness` (31 migrations versionadas)                                                                                                              |
+| P0-2 `sharp` 0.35.5 + overrides               | ✅             | Também `source-map-js` ^1.2.2. `braces` 3.0.3 segue sem versão corrigida publicada (só build, via fast-glob)                                                                         |
+| P0-3 Proteções no painel do GitHub            | ⏳ Responsável | Exige acesso de administrador (ver checklist abaixo)                                                                                                                                 |
+| P1-1 CI                                       | ✅             | `.github/workflows/ci.yml`; actions fixadas por SHA; build sem banco (sitemap passou a ser dinâmico)                                                                                 |
+| P1-2 Dependabot + dependency review           | ✅             | `dependabot.yml` (npm semanal agrupado, actions mensal) e `pull-request.yml`                                                                                                         |
+| P1-3 CodeQL                                   | ✅             | `codeql.yml`; em repositório privado requer GitHub Code Security                                                                                                                     |
+| P1-4 Headers de segurança                     | ✅             | `src/config/security-headers.ts`; CSP em report-only até homologar o Secure Fields                                                                                                   |
+| P1-5 `.gitattributes` + Prettier              | ✅             | LF obrigatório; repositório formatado num commit isolado                                                                                                                             |
+| P1-6 Versões fixadas                          | ✅             | `engines` (Node 24), `.nvmrc`, `packageManager` pnpm 12.10.1                                                                                                                         |
+| P1-7 Integração no CI                         | ✅             | Job condicionado aos secrets `TEST_DATABASE_URL`/`TEST_DATABASE_DIRECT_URL` (branch Neon descartável)                                                                                |
+| P2-1 Minors/patches                           | ✅             | Next 16.4, React 19.3, Better Auth 1.7.7, Zod 4.6, Inngest 4.22, cn 0.4 e outros. Playwright mantido em 1.63: 1.64 violava a política de idade mínima de release                     |
+| P2-2 Limpeza de dependências                  | ✅             | `@neon/env` removido; `shadcn` e `@neon/config` em devDependencies                                                                                                                   |
+| P2-3 `tsconfig`                               | ✅             | Includes de builds antigos removidos; `typecheck` roda `next typegen` antes                                                                                                          |
+| P2-4 Playwright no CI                         | ✅             | `e2e.yml` noturno/manual, condicionado aos mesmos secrets                                                                                                                            |
+| P2-5 Majors                                   | ✅ parcial     | Sentry 11 e Vitest 5 atualizados. **Adiados de propósito:** ESLint 10 (plugins react/import/jsx-a11y sem suporte declarado), TypeScript 7 e Prisma 8 (RC) — registrados no AGENTS.md |
+| P2-6 Node 26                                  | ✅ decisão     | Manter Node 24; reavaliar após o LTS do 26 (28/10/2026) e suporte do Vercel                                                                                                          |
+| P3-1 SECURITY / CONTRIBUTING / template de PR | ✅             | Prazos de resposta do SECURITY.md são sugestão — confirmar com o responsável                                                                                                         |
+| P3-2 CODEOWNERS                               | ✅             | `@HanielCota` em todo o repo e nos caminhos críticos                                                                                                                                 |
+| P3-3 Templates de issue                       | ✅             | Bug e decisão de produto (formulários)                                                                                                                                               |
+| P3-4 Conventional Commits                     | ✅             | Verificação do título do PR em `pull-request.yml`                                                                                                                                    |
+| P3-5 README + CHANGELOG                       | ✅             | README enxuto; histórico das fases em `CHANGELOG.md`                                                                                                                                 |
+| P3-6 `.agents/` e `skills-lock.json`          | ✅ sem mudança | **Correção do diagnóstico:** eles não estão no `.gitignore`, só no `.vercelignore` (fora do deploy). Versionados de propósito; nada a fazer                                          |
+| P3-7 Limpeza local                            | ✅             | ~3 GB de builds antigos removidos (`.next-*`, relatórios de teste e cache do Turbopack). `tmp/` preservado                                                                           |
+
+### Checklist que depende do responsável (painel do GitHub)
+
+- [ ] Settings → Rules: proteger `main` (PR obrigatório, 1 aprovação, sem force-push/exclusão, checks obrigatórios: `Typecheck, lint, format, unit tests and build`, `Dependency review`, `Conventional Commits title`).
+- [ ] Settings → Code security: secret scanning + push protection, Dependabot alerts e security updates; Code Security para o CodeQL (ou desativar o workflow).
+- [ ] Settings → Secrets and variables → Actions: `TEST_DATABASE_URL` e `TEST_DATABASE_DIRECT_URL` de um branch Neon descartável, para ligar integração e E2E.
+- [ ] Settings → Code security: ativar "Private vulnerability reporting" (referenciado no SECURITY.md).
