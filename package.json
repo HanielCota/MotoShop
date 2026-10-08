@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1 --port 3005",
+    "dev:review": "next dev --hostname localhost --port 3001",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -20,6 +21,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
+    "db:seed:review": "tsx scripts/seed-review-data.ts",
+    "db:remove:review": "tsx scripts/remove-review-data.ts",
     "inngest:dev": "pnpm dlx inngest-cli@latest dev"
   },
   "dependencies": {
