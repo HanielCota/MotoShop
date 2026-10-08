@@ -155,4 +155,46 @@ describe("MelhorEnvioProvider shipment reconciliation", () => {
       code: "CONFLICT",
     });
   });
+
+  it.each([
+    [400, true],
+    [422, true],
+    [401, true],
+    [408, false],
+    [409, false],
+    [429, false],
+    [500, false],
+  ])("classifies provider HTTP %i as definitive=%s", async (status, definitive) => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(Response.json({ message: "erro" }, { status })));
+
+    await expect(
+      new MelhorEnvioProvider().generateShipment("external-1", "seller-specific-token"),
+    ).rejects.toMatchObject({ definitive, providerStatus: status, message: "O Melhor Envio não conseguiu gerar a etiqueta." });
+  });
+
+  it("uses an operation-specific message when label checkout fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(Response.json({ id: "cart-shipment-1" }))
+        .mockResolvedValueOnce(Response.json({ message: "saldo insuficiente" }, { status: 422 })),
+    );
+
+    await expect(
+      new MelhorEnvioProvider().createShipment(
+        {
+          sellerOrderId: "seller-order-1",
+          serviceCode: "1",
+          from: {},
+          to: {},
+          products: [],
+          volumes: [],
+          insuranceValueInCents: 0,
+          quote: { provider: "MELHOR_ENVIO", serviceCode: "1", carrier: "C", service: "S", priceInCents: 1, raw: {} },
+        },
+        "seller-specific-token",
+      ),
+    ).rejects.toMatchObject({ message: "O Melhor Envio não conseguiu comprar a etiqueta.", definitive: true });
+  });
 });

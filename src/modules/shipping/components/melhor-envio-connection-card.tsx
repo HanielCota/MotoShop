@@ -45,9 +45,9 @@ export function MelhorEnvioConnectionCard({
         {message ? (
           <p className="flex items-start gap-2 text-sm" role="status">
             {shippingStatus === "connected" ? (
-              <CheckCircle2 className="mt-0.5 size-4 text-emerald-600" aria-hidden="true" />
+              <CheckCircle2 className="text-success mt-0.5 size-4" aria-hidden="true" />
             ) : (
-              <CircleAlert className="mt-0.5 size-4 text-amber-600" aria-hidden="true" />
+              <CircleAlert className="text-warning mt-0.5 size-4" aria-hidden="true" />
             )}
             {message}
           </p>

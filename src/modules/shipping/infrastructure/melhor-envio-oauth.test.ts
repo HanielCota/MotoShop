@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ findUnique: vi.fn() }));
+const mocks = vi.hoisted(() => ({ findUnique: vi.fn(), updateMany: vi.fn() }));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/config/env", () => ({
@@ -17,7 +17,7 @@ vi.mock("@/config/env", () => ({
   },
 }));
 vi.mock("@/lib/database", () => ({
-  db: { sellerShippingIntegration: { upsert: vi.fn(), findUnique: mocks.findUnique } },
+  db: { sellerShippingIntegration: { upsert: vi.fn(), findUnique: mocks.findUnique, updateMany: mocks.updateMany } },
 }));
 
 import {
@@ -33,15 +33,23 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   mocks.findUnique.mockReset();
+  mocks.updateMany.mockReset();
 });
 
 describe("Melhor Envio OAuth", () => {
-  it("requests only the quote permission and signs seller-specific state", () => {
+  it("requests every permission used by quote, purchase, generation, tracking and reconciliation", () => {
     const { url, state } = createMelhorEnvioAuthorizationUrl({ userId: "user-1", sellerId: "seller-1" });
     const authorization = new URL(url);
 
     expect(authorization.origin).toBe("https://sandbox.melhorenvio.com.br");
-    expect(authorization.searchParams.get("scope")).toBe("shipping-calculate");
+    expect(authorization.searchParams.get("scope")?.split(" ")).toEqual([
+      "shipping-calculate",
+      "cart-write",
+      "shipping-checkout",
+      "shipping-generate",
+      "shipping-tracking",
+      "orders-read",
+    ]);
     expect(verifyMelhorEnvioState(state)).toMatchObject({ userId: "user-1", sellerId: "seller-1" });
     expect(verifyMelhorEnvioState(`${state}x`)).toBeNull();
   });
@@ -80,6 +88,34 @@ describe("Melhor Envio OAuth", () => {
     await expect(
       getSellerMelhorEnvioAccessTokenWithScopes("seller-1", ["cart-write", "shipping-checkout"]),
     ).resolves.toBe("seller-sandbox-token");
+  });
+
+  it("reuses a token refreshed by a concurrent request after acquiring the refresh lease", async () => {
+    const integration = {
+      id: "integration-1",
+      scopes: "cart-write shipping-checkout",
+      accessTokenExpiresAt: new Date(Date.now() + 30_000),
+      refreshTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60_000),
+      accessTokenEncrypted: encryptToken("stale-token"),
+      refreshTokenEncrypted: encryptToken("already-rotated-refresh-token"),
+    };
+    mocks.findUnique.mockResolvedValueOnce(integration).mockResolvedValueOnce({
+      ...integration,
+      accessTokenExpiresAt: new Date(Date.now() + 60 * 60_000),
+      accessTokenEncrypted: encryptToken("fresh-token"),
+    });
+    mocks.updateMany.mockResolvedValue({ count: 1 });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getSellerMelhorEnvioAccessTokenWithScopes("seller-1", ["cart-write", "shipping-checkout"]),
+    ).resolves.toBe("fresh-token");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(mocks.updateMany).toHaveBeenLastCalledWith({
+      where: { id: "integration-1" },
+      data: { refreshLeaseUntil: null },
+    });
   });
 
   it("rejects OAuth state at the exact expiration boundary", () => {

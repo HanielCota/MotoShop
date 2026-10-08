@@ -2,6 +2,7 @@ import "server-only";
 
 import { env } from "@/config/env";
 import { ApplicationError } from "@/shared/errors/application-error";
+import { ShippingProviderRequestError } from "./shipping-provider-error";
 import type {
   CreateShipmentInput,
   ShippingProvider,
@@ -19,6 +20,7 @@ export class MelhorEnvioProvider implements ShippingProvider {
     this.assertToken(accessToken);
     const response = await this.request("/api/v2/me/shipment/calculate", {
       method: "POST",
+      operation: "calcular o frete",
       accessToken,
       body: {
         from: { postal_code: input.fromPostalCode },
@@ -76,6 +78,7 @@ export class MelhorEnvioProvider implements ShippingProvider {
 
     const cartPayload = await this.request("/api/v2/me/cart", {
       method: "POST",
+      operation: "registrar a etiqueta no carrinho",
       accessToken,
       body: {
         service,
@@ -111,6 +114,7 @@ export class MelhorEnvioProvider implements ShippingProvider {
 
     const checkoutPayload = await this.request("/api/v2/me/shipment/checkout", {
       method: "POST",
+      operation: "comprar a etiqueta",
       accessToken,
       body: { orders: [externalShipmentId] },
     });
@@ -125,6 +129,7 @@ export class MelhorEnvioProvider implements ShippingProvider {
     this.assertToken(accessToken);
     const payload = await this.request("/api/v2/me/shipment/generate", {
       method: "POST",
+      operation: "gerar a etiqueta",
       accessToken,
       body: { orders: [externalShipmentId] },
     });
@@ -138,6 +143,7 @@ export class MelhorEnvioProvider implements ShippingProvider {
     }
     const payload = await this.request(`/api/v2/me/orders/${encodeURIComponent(externalShipmentId)}`, {
       method: "GET",
+      operation: "consultar o envio",
       accessToken,
     });
     const details = toRecord(payload);
@@ -156,6 +162,7 @@ export class MelhorEnvioProvider implements ShippingProvider {
     this.assertToken(accessToken);
     const payload = await this.request("/api/v2/me/shipment/tracking", {
       method: "POST",
+      operation: "atualizar o rastreio",
       accessToken,
       body: { orders: [externalShipmentId] },
     });
@@ -182,7 +189,7 @@ export class MelhorEnvioProvider implements ShippingProvider {
 
   private async request(
     path: string,
-    input: { method: "GET" | "POST"; body?: Record<string, unknown>; accessToken: string },
+    input: { method: "GET" | "POST"; operation: string; body?: Record<string, unknown>; accessToken: string },
   ): Promise<unknown> {
     const response = await fetch(`${env.MELHOR_ENVIO_API_URL ?? DEFAULT_API_URL}${path}`, {
       method: input.method,
@@ -198,10 +205,9 @@ export class MelhorEnvioProvider implements ShippingProvider {
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new ApplicationError({
-        code: "CONFLICT",
-        message: "O Melhor Envio não conseguiu calcular o frete.",
-        statusCode: response.status >= 500 ? 502 : 409,
+      throw new ShippingProviderRequestError({
+        message: `O Melhor Envio não conseguiu ${input.operation}.`,
+        providerStatus: response.status,
       });
     }
     return payload;

@@ -1,5 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
 
 import { useActionState } from "react";
 
@@ -15,11 +16,18 @@ type ShipmentActionsProps = {
   canPurchase: boolean;
   hasShipment: boolean;
   hasTrackingCode: boolean;
+  generationState: "IN_PROGRESS" | "OUTCOME_UNKNOWN" | "GENERATED" | null;
 };
 
 const initialState: FulfillmentActionState = {};
 
-export function ShipmentActions({ sellerOrderId, canPurchase, hasShipment, hasTrackingCode }: ShipmentActionsProps) {
+export function ShipmentActions({
+  sellerOrderId,
+  canPurchase,
+  hasShipment,
+  hasTrackingCode,
+  generationState,
+}: ShipmentActionsProps) {
   const [purchaseState, purchaseAction, purchasePending] = useActionState(
     async (previousState: FulfillmentActionState, formData: FormData) => {
       void previousState;
@@ -66,36 +74,46 @@ export function ShipmentActions({ sellerOrderId, canPurchase, hasShipment, hasTr
             <Button
               type="submit"
               variant="outline"
-              size="xs"
-              className="rounded-md px-2.5 text-xs"
+              size="sm"
+             
               disabled={hasShipment || purchasePending}
             >
               {purchasePending ? "Comprando..." : hasShipment ? "Frete comprado" : "Comprar frete"}
             </Button>
           </form>
         ) : null}
-        {hasShipment && !hasTrackingCode ? (
+        {hasShipment && !hasTrackingCode && generationState === "GENERATED" ? (
+          <span className="text-muted-foreground text-xs">Etiqueta gerada · atualize o rastreio</span>
+        ) : hasShipment && !hasTrackingCode && generationState ? (
+          <span className="text-muted-foreground text-xs">
+            {generationState === "IN_PROGRESS" ? "Geração em andamento…" : "Geração incerta · aguardando conferência"}
+          </span>
+        ) : hasShipment && !hasTrackingCode ? (
           <form action={generateAction}>
-            <Button type="submit" size="xs" className="rounded-md px-2.5 text-xs" disabled={generatePending}>
+            <Button type="submit" size="sm" disabled={generatePending}>
               {generatePending ? "Gerando..." : "Gerar etiqueta"}
             </Button>
           </form>
         ) : null}
         {hasShipment ? (
           <form action={trackingAction}>
-            <button
-              className="hover:bg-muted h-7 rounded-md px-2.5 text-xs font-medium disabled:opacity-50"
+            <Button
+              type="submit"
+              variant="ghost"
+              size="sm"
+             
               disabled={trackingPending}
             >
               {trackingPending ? "Atualizando..." : "Atualizar rastreio"}
-            </button>
+            </Button>
           </form>
         ) : null}
       </div>
       {feedback ? (
-        <p className={feedback.isError ? "text-destructive text-xs" : "text-muted-foreground text-xs"} role="status">
-          {feedback.message}
-        </p>
+        <FormMessage
+          className="text-xs"
+          {...(feedback.isError ? { error: feedback.message } : { success: feedback.message })}
+        />
       ) : null}
     </div>
   );

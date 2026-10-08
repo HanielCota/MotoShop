@@ -9,7 +9,21 @@ import { logger } from "@/lib/logger";
 import { ApplicationError } from "@/shared/errors/application-error";
 
 const DEFAULT_API_URL = "https://sandbox.melhorenvio.com.br";
-const REQUESTED_SCOPES = ["shipping-calculate"];
+/**
+ * Permissões pedidas na conexão da loja. Precisam cobrir todo o fluxo usado pelo código:
+ * cotação (checkout), compra no carrinho + checkout, geração da etiqueta, rastreio e a
+ * conferência de compras/gerações com resultado incerto (consulta de pedidos).
+ * `cart-read` e `shipping-print` não são solicitados porque nenhum fluxo os utiliza.
+ */
+export const MELHOR_ENVIO_REQUESTED_SCOPES = [
+  "shipping-calculate",
+  "cart-write",
+  "shipping-checkout",
+  "shipping-generate",
+  "shipping-tracking",
+  "orders-read",
+] as const;
+const REQUESTED_SCOPES = MELHOR_ENVIO_REQUESTED_SCOPES;
 const tokenResponseSchema = z.object({
   access_token: z.string().min(1),
   refresh_token: z.string().min(1),
@@ -151,7 +165,18 @@ export async function getSellerMelhorEnvioAccessToken(
   }
 
   try {
-    const refreshToken = decryptToken(integration.refreshTokenEncrypted);
+    // Outra requisição pode ter renovado o token entre a leitura inicial e a obtenção do lease:
+    // relê a integração para não gastar (e invalidar) o refresh token já rotacionado.
+    const current = await db.sellerShippingIntegration.findUnique({ where: { sellerId } });
+    if (!current) {
+      await releaseRefreshLease(integration.id, sellerId);
+      return null;
+    }
+    if (current.accessTokenExpiresAt.getTime() > refreshBefore) {
+      await releaseRefreshLease(integration.id, sellerId);
+      return decryptToken(current.accessTokenEncrypted);
+    }
+    const refreshToken = decryptToken(current.refreshTokenEncrypted);
     const response = await fetch(`${env.MELHOR_ENVIO_API_URL ?? DEFAULT_API_URL}/oauth/token`, {
       method: "POST",
       headers: {
@@ -184,15 +209,19 @@ export async function getSellerMelhorEnvioAccessToken(
     });
     return parsed.data.access_token;
   } catch (error) {
-    try {
-      await db.sellerShippingIntegration.updateMany({
-        where: { id: integration.id },
-        data: { refreshLeaseUntil: null },
-      });
-    } catch (releaseError) {
-      logger.error({ event: "shipping.token_refresh_lease_release_failed", sellerId, error: releaseError });
-    }
+    await releaseRefreshLease(integration.id, sellerId);
     throw error;
+  }
+}
+
+async function releaseRefreshLease(integrationId: string, sellerId: string): Promise<void> {
+  try {
+    await db.sellerShippingIntegration.updateMany({
+      where: { id: integrationId },
+      data: { refreshLeaseUntil: null },
+    });
+  } catch (releaseError) {
+    logger.error({ event: "shipping.token_refresh_lease_release_failed", sellerId, error: releaseError });
   }
 }
 

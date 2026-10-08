@@ -2,7 +2,7 @@ import "server-only";
 import { db } from "@/lib/database";
 import { ApplicationError } from "@/shared/errors/application-error";
 import { ownShippingMethodSchema, type OwnShippingMethodInput, canAdvanceOwnShipment } from "../domain/own-shipping";
-import { syncFulfillmentStatuses, enqueueFulfillmentNotification } from "./fulfill-seller-order";
+import { syncFulfillmentStatuses } from "@/modules/orders/application/sync-fulfillment-status";
 
 export async function createOwnShippingMethod(sellerId: string, actorUserId: string, input: OwnShippingMethodInput) {
   const data = ownShippingMethodSchema.parse(input);
@@ -81,5 +81,4 @@ export async function advanceOwnShipment(input: {
     });
     await syncFulfillmentStatuses(tx, order.id, input.status, input.actorUserId);
   });
-  await enqueueFulfillmentNotification(input.sellerOrderId);
 }

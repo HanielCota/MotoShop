@@ -7,6 +7,9 @@ const mocks = vi.hoisted(() => ({
   auditCreate: vi.fn(),
   getShipmentDetails: vi.fn(),
   getSellerAccessToken: vi.fn(),
+  txSellerOrderFindUnique: vi.fn(),
+  txShipmentFindUnique: vi.fn(),
+  syncFulfillment: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -19,11 +22,15 @@ vi.mock("@/lib/shipping/melhor-envio-provider", () => ({
 vi.mock("@/modules/shipping/infrastructure/melhor-envio-oauth", () => ({
   getSellerMelhorEnvioAccessTokenWithScopes: mocks.getSellerAccessToken,
 }));
+vi.mock("@/modules/orders/application/sync-fulfillment-status", () => ({
+  syncFulfillmentStatuses: mocks.syncFulfillment,
+}));
 
 import { reconcileShipmentPurchase } from "./reconcile-shipment-purchase";
 
 const shipment = {
   id: "clshipment00000000000001",
+  sellerOrderId: "seller-order-1",
   provider: "MELHOR_ENVIO",
   purchaseState: "OUTCOME_UNKNOWN",
   externalShipmentId: null,
@@ -40,14 +47,26 @@ beforeEach(() => {
   mocks.updateMany.mockResolvedValue({ count: 1 });
   mocks.auditCreate.mockResolvedValue({ id: "audit-1" });
   mocks.transaction.mockImplementation((callback) =>
-    callback({ shipment: { updateMany: mocks.updateMany }, auditLog: { create: mocks.auditCreate } }),
+    callback({
+      $queryRaw: vi.fn(),
+      sellerOrder: { findUnique: mocks.txSellerOrderFindUnique },
+      shipment: { updateMany: mocks.updateMany, findUnique: mocks.txShipmentFindUnique },
+      auditLog: { create: mocks.auditCreate },
+    }),
   );
   mocks.getShipmentDetails.mockResolvedValue({
     id: "external-shipment-1",
     options: { tags: [{ tag: "MS-202610-0001" }] },
   });
   mocks.getSellerAccessToken.mockResolvedValue("seller-sandbox-token");
+  lockedSellerOrderStatus("PROCESSING");
+  mocks.txShipmentFindUnique.mockResolvedValue({ status: "READY_TO_SHIP", providerMetadata: { result: "ok" } });
 });
+
+function lockedSellerOrderStatus(status: string) {
+  mocks.txSellerOrderFindUnique.mockReset();
+  mocks.txSellerOrderFindUnique.mockResolvedValueOnce({ orderId: "order-1" }).mockResolvedValueOnce({ status });
+}
 
 describe("reconcileShipmentPurchase", () => {
   it("associates a verified provider shipment and audits the admin decision atomically", async () => {
@@ -69,7 +88,7 @@ describe("reconcileShipmentPurchase", () => {
         id: shipment.id,
         provider: "MELHOR_ENVIO",
         externalShipmentId: null,
-        purchaseState: { in: ["IN_PROGRESS", "OUTCOME_UNKNOWN"] },
+        purchaseState: "OUTCOME_UNKNOWN",
       },
       data: expect.objectContaining({
         externalShipmentId: "external-shipment-1",
@@ -91,6 +110,49 @@ describe("reconcileShipmentPurchase", () => {
       providerTagMatched: true,
     });
     expect(JSON.stringify(mocks.updateMany.mock.calls[0]?.[0]?.data.providerMetadata)).not.toContain("12345678900");
+    expect(mocks.syncFulfillment).toHaveBeenCalledWith(expect.anything(), "seller-order-1", "READY_TO_SHIP", "admin-1");
+  });
+
+  it("does not mark a shipment ready when the seller order was cancelled before reconciliation", async () => {
+    lockedSellerOrderStatus("CANCELLED");
+    await reconcileShipmentPurchase({
+      shipmentId: shipment.id,
+      actorUserId: "admin-1",
+      confirmedOrderNumber: "MS-202610-0001",
+      decision: "CONFIRMED_PURCHASE",
+      externalShipmentId: "external-shipment-1",
+    });
+
+    const data = mocks.updateMany.mock.calls[0]?.[0]?.data;
+    expect(data).toMatchObject({
+      externalShipmentId: "external-shipment-1",
+      purchaseState: null,
+      status: "CANCELLED",
+      purchaseError: expect.stringContaining("Cancele a etiqueta"),
+      providerMetadata: expect.objectContaining({ labelCancellationRequired: true }),
+    });
+    expect(mocks.syncFulfillment).not.toHaveBeenCalled();
+    expect(mocks.auditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        metadata: expect.objectContaining({ staleSellerOrderStatus: "CANCELLED" }),
+      }),
+    });
+  });
+
+  it("keeps the status untouched while a cancellation request is under review", async () => {
+    lockedSellerOrderStatus("CANCELLATION_REQUESTED");
+    await reconcileShipmentPurchase({
+      shipmentId: shipment.id,
+      actorUserId: "admin-1",
+      confirmedOrderNumber: "MS-202610-0001",
+      decision: "CONFIRMED_PURCHASE",
+      externalShipmentId: "external-shipment-1",
+    });
+
+    const data = mocks.updateMany.mock.calls[0]?.[0]?.data;
+    expect(data).not.toHaveProperty("status");
+    expect(data.purchaseError).toContain("Cancele a etiqueta");
+    expect(mocks.syncFulfillment).not.toHaveBeenCalled();
   });
 
   it("does not associate a shipment carrying another order's platform tag", async () => {
@@ -134,7 +196,7 @@ describe("reconcileShipmentPurchase", () => {
         id: shipment.id,
         provider: "MELHOR_ENVIO",
         externalShipmentId: null,
-        purchaseState: { in: ["IN_PROGRESS", "OUTCOME_UNKNOWN"] },
+        purchaseState: "OUTCOME_UNKNOWN",
       },
       data: { purchaseState: null, purchaseError: null },
     });
@@ -153,5 +215,19 @@ describe("reconcileShipmentPurchase", () => {
       }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
     expect(mocks.auditCreate).not.toHaveBeenCalled();
+  });
+
+  it("does not release an active purchase claim before the provider timeout window", async () => {
+    mocks.shipmentFindUnique.mockResolvedValue({ ...shipment, purchaseState: "IN_PROGRESS", updatedAt: new Date() });
+
+    await expect(
+      reconcileShipmentPurchase({
+        shipmentId: shipment.id,
+        actorUserId: "admin-1",
+        confirmedOrderNumber: "MS-202610-0001",
+        decision: "CONFIRMED_NOT_PURCHASED",
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(mocks.updateMany).not.toHaveBeenCalled();
   });
 });

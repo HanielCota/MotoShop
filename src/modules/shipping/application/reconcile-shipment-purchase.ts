@@ -5,6 +5,10 @@ import { db } from "@/lib/database";
 import { melhorEnvioProvider } from "@/lib/shipping/melhor-envio-provider";
 import { ApplicationError } from "@/shared/errors/application-error";
 import { getSellerMelhorEnvioAccessTokenWithScopes } from "@/modules/shipping/infrastructure/melhor-envio-oauth";
+import { canRunShipmentOperation } from "@/modules/orders/domain/fulfillment-status";
+import { syncFulfillmentStatuses } from "@/modules/orders/application/sync-fulfillment-status";
+
+import { STALE_PURCHASE_MESSAGE, lockSellerOrderStatus, withLabelCancellationFlag } from "./shipment-operation-guard";
 
 type ReconciliationInput = {
   shipmentId: string;
@@ -13,6 +17,8 @@ type ReconciliationInput = {
   decision: "CONFIRMED_PURCHASE" | "CONFIRMED_NOT_PURCHASED";
   externalShipmentId?: string;
 };
+
+const purchaseClaimTimeoutMs = 5 * 60 * 1000;
 
 export async function reconcileShipmentPurchase(input: ReconciliationInput): Promise<void> {
   const shipment = await db.shipment.findUnique({
@@ -36,6 +42,19 @@ export async function reconcileShipmentPurchase(input: ReconciliationInput): Pro
     });
   }
 
+  const staleCutoff = new Date(Date.now() - purchaseClaimTimeoutMs);
+  if (shipment.purchaseState === "IN_PROGRESS" && shipment.updatedAt > staleCutoff) {
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "A chamada de compra ainda pode estar em andamento. Aguarde cinco minutos antes de reconciliar.",
+      statusCode: 409,
+    });
+  }
+  const claimStateFilter =
+    shipment.purchaseState === "OUTCOME_UNKNOWN"
+      ? { purchaseState: "OUTCOME_UNKNOWN" as const }
+      : { purchaseState: "IN_PROGRESS" as const, updatedAt: { lte: staleCutoff } };
+
   if (input.decision === "CONFIRMED_PURCHASE") {
     const externalShipmentId = input.externalShipmentId?.trim();
     if (!externalShipmentId || externalShipmentId.length > 100) {
@@ -58,27 +77,45 @@ export async function reconcileShipmentPurchase(input: ReconciliationInput): Pro
       });
     }
 
+    const providerTagMatched = tags.includes(shipment.sellerOrder.order.orderNumber);
     await db.$transaction(async (tx) => {
+      // Mesmo travamento/revalidação da compra normal: o pedido pode ter sido cancelado
+      // enquanto a tentativa aguardava conferência.
+      const sellerOrderStatus = await lockSellerOrderStatus(tx, shipment.sellerOrderId);
+      const fulfillmentAllowed = canRunShipmentOperation(sellerOrderStatus, "PURCHASE");
+      const reconciledMetadata = { reconciled: true, providerTagMatched };
       const updated = await tx.shipment.updateMany({
         where: {
           id: shipment.id,
           provider: "MELHOR_ENVIO",
           externalShipmentId: null,
-          purchaseState: { in: ["IN_PROGRESS", "OUTCOME_UNKNOWN"] },
+          ...claimStateFilter,
         },
-        data: {
-          externalShipmentId,
-          purchaseState: null,
-          purchaseError: null,
-          status: "READY_TO_SHIP",
-          providerMetadata: {
-            reconciled: true,
-            providerTagMatched: tags.includes(shipment.sellerOrder.order.orderNumber),
-          } as Prisma.InputJsonValue,
-        },
+        data: fulfillmentAllowed
+          ? {
+              externalShipmentId,
+              purchaseState: null,
+              purchaseError: null,
+              status: "READY_TO_SHIP",
+              providerMetadata: reconciledMetadata as Prisma.InputJsonValue,
+            }
+          : {
+              externalShipmentId,
+              purchaseState: null,
+              purchaseError: STALE_PURCHASE_MESSAGE,
+              ...(sellerOrderStatus === "CANCELLED"
+                ? {
+                    status: "CANCELLED" as const,
+                    providerMetadata: withLabelCancellationFlag(reconciledMetadata, "PURCHASED_AFTER_CANCELLATION"),
+                  }
+                : { providerMetadata: reconciledMetadata as Prisma.InputJsonValue }),
+            },
       });
       if (updated.count !== 1)
         throw new ApplicationError({ code: "CONFLICT", message: "A tentativa já foi atualizada." });
+      if (fulfillmentAllowed) {
+        await syncFulfillmentStatuses(tx, shipment.sellerOrderId, "READY_TO_SHIP", input.actorUserId);
+      }
       await tx.auditLog.create({
         data: {
           action: "SHIPMENT_PURCHASE_RECONCILED",
@@ -89,7 +126,8 @@ export async function reconcileShipmentPurchase(input: ReconciliationInput): Pro
             decision: input.decision,
             externalShipmentId,
             orderNumber: shipment.sellerOrder.order.orderNumber,
-            providerTagMatched: tags.includes(shipment.sellerOrder.order.orderNumber),
+            providerTagMatched,
+            ...(fulfillmentAllowed ? {} : { staleSellerOrderStatus: sellerOrderStatus }),
           },
         },
       });
@@ -103,7 +141,7 @@ export async function reconcileShipmentPurchase(input: ReconciliationInput): Pro
         id: shipment.id,
         provider: "MELHOR_ENVIO",
         externalShipmentId: null,
-        purchaseState: { in: ["IN_PROGRESS", "OUTCOME_UNKNOWN"] },
+        ...claimStateFilter,
       },
       data: { purchaseState: null, purchaseError: null },
     });
