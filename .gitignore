@@ -18,6 +18,7 @@
 /.next-e2e/
 /.next-garage-check/
 /.next-audit-build/
+/.next-build-check/
 /out/
 
 # production
@@ -51,3 +52,8 @@ next-env.d.ts
 /test-results/
 /.playwright-mcp/
 .neon
+
+# Local review material and source artwork; keep out of application commits.
+/tmp/
+/public/*.psd
+/public/images/demo/freitas-qa-oculos.webp

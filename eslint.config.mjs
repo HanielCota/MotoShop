@@ -8,10 +8,8 @@ const eslintConfig = defineConfig([
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
-    ".next/**",
-    ".next-e2e/**",
-    ".next-garage-check/**",
-    ".next-audit-build/**",
+    // Every local Next.js dist dir (.next, .next-e2e, .next-build-check, ...).
+    ".next*/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

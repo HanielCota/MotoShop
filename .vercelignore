@@ -4,6 +4,7 @@ skills-lock.json
 tmp/
 .next/
 .next-audit-build/
+.next-build-check/
 .next-e2e/
 .next-garage-check/
 node_modules/
@@ -17,4 +18,5 @@ test-results/
 .neon/
 src/generated/
 public/*.psd
+public/images/demo/freitas-qa-oculos.webp
 *.tsbuildinfo
