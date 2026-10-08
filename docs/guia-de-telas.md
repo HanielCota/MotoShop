@@ -8,12 +8,22 @@ Roteiro para revisar todas as telas com dados de demonstração. Tudo o que apar
 
 ## 1. Como abrir
 
+> **Atenção: o banco do `.env.local` é o mesmo do site em produção (motoshopbrasil.com.br).** A produção ainda roda a `main`, que não bloqueia a compra de produtos de demonstração. Por isso, no banco de produção as lojas de demonstração ficam **`PENDING`**: invisíveis na vitrine e sem acesso à Central do Lojista. Para revisar **todas** as telas, use um banco isolado (passo 0).
+
+0. **Banco isolado para a revisão (recomendado).** No console da Neon, crie um branch a partir do principal (por exemplo, `review`) e copie a connection string dele. Use essa URL em `DATABASE_URL` e `DIRECT_URL` só enquanto durar a revisão: nada do que acontecer ali afeta o site. Apague o branch ao final.
+
 1. No `.env.local`, deixe `BETTER_AUTH_URL="http://localhost:3001"` e inclua `review.admin@example.test` em `ADMIN_EMAILS` (separado por vírgula). Sem isso, o login falha na porta 3001 e o Admin fica bloqueado.
 
-2. Na pasta do projeto, crie os dados de demonstração (pode rodar quantas vezes quiser; não duplica nada):
+2. Na pasta do projeto, crie os dados de demonstração (pode rodar quantas vezes quiser; não duplica nada). **Só no banco isolado**, publique as lojas de demonstração com a variável `REVIEW_PUBLISH_STORES`:
 
    ```bash
-   pnpm db:seed:review
+   REVIEW_PUBLISH_STORES=true pnpm db:seed:review
+   ```
+
+   Sem a variável, as lojas são criadas como `PENDING` (seguro para qualquer banco). Se algum dia elas aparecerem publicadas no banco de produção, esconda-as na hora:
+
+   ```bash
+   pnpm db:hide:review
    ```
 
 3. Suba o servidor:
