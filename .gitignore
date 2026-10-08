@@ -15,10 +15,8 @@
 
 # next.js
 /.next/
-/.next-e2e/
-/.next-garage-check/
-/.next-audit-build/
-/.next-build-check/
+# Every local dist dir (NEXT_TEST_DIST_DIR): .next-e2e, .next-build-check, ...
+/.next-*/
 /out/
 
 # production
