@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { isBrazilianStateCode } from "@/modules/customers/domain/brazilian-address";
+
 import { isValidCpf } from "../domain/cpf";
 
 export const checkoutSchema = z
@@ -25,12 +27,13 @@ export const checkoutSchema = z
       .string()
       .trim()
       .regex(/^\d{8}$/, "Informe um CEP com 8 números."),
-    street: z.string().trim().min(2, "Informe a rua."),
-    number: z.string().trim().min(1, "Informe o número."),
+    // Same limits as saved addresses (CustomerAddress), so an address snapshot is never unbounded.
+    street: z.string().trim().min(2, "Informe a rua.").max(160, "Use no máximo 160 caracteres na rua."),
+    number: z.string().trim().min(1, "Informe o número.").max(20, "Use no máximo 20 caracteres no número."),
     complement: z.string().trim().max(80).optional(),
-    neighborhood: z.string().trim().min(2, "Informe o bairro."),
-    city: z.string().trim().min(2, "Informe a cidade."),
-    state: z.string().trim().length(2, "Informe a UF.").toUpperCase(),
+    neighborhood: z.string().trim().min(2, "Informe o bairro.").max(100, "Use no máximo 100 caracteres no bairro."),
+    city: z.string().trim().min(2, "Informe a cidade.").max(100, "Use no máximo 100 caracteres na cidade."),
+    state: z.string().trim().toUpperCase().refine(isBrazilianStateCode, "Informe a UF."),
     paymentMethodId: z.enum(["pix", "visa", "master", "amex", "elo", "hipercard", "diners", "cabal"]),
     paymentToken: z
       .string()

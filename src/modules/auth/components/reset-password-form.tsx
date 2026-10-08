@@ -1,31 +1,34 @@
 "use client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
-import { useState, type FormEvent } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 
+import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
 import { FormMessage } from "@/components/ui/form-message";
-
+import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
 
+import { resetPasswordSchema, type ResetPasswordInput } from "../schemas/reset-password";
+
 export function ResetPasswordForm({ token }: { token: string }) {
-  const [password, setPassword] = useState("");
-  const [confirmation, setConfirmation] = useState("");
-  const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string>();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ResetPasswordInput>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { newPassword: "", confirmation: "" },
+  });
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (password !== confirmation) {
-      setError("As senhas não coincidem.");
-      return;
-    }
-    setPending(true);
+  const submit = handleSubmit(async ({ newPassword }) => {
     setError(undefined);
     try {
-      const result = await authClient.resetPassword({ newPassword: password, token });
+      const result = await authClient.resetPassword({ newPassword, token });
       if (result.error) {
         setError("Este link expirou ou já foi utilizado. Solicite um novo link.");
         return;
@@ -33,46 +36,39 @@ export function ResetPasswordForm({ token }: { token: string }) {
       setDone(true);
     } catch {
       setError("Não foi possível conectar. Verifique sua conexão e tente novamente.");
-    } finally {
-      setPending(false);
     }
-  }
+  });
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
+    <form onSubmit={submit} noValidate className="flex flex-col gap-4">
       {done ? (
         <FormMessage success="Senha atualizada. Entre novamente com sua nova senha." />
       ) : (
         <>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Nova senha
-            <Input
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              maxLength={128}
-              required
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="bg-card h-12 rounded-lg px-4"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Confirme a nova senha
-            <Input
-              type="password"
-              autoComplete="new-password"
-              minLength={8}
-              maxLength={128}
-              required
-              value={confirmation}
-              onChange={(event) => setConfirmation(event.target.value)}
-              className="bg-card h-12 rounded-lg px-4"
-            />
-          </label>
+          <FormField
+            id="reset-new-password"
+            label="Nova senha"
+            required
+            hint="Pelo menos 8 caracteres."
+            error={errors.newPassword?.message}
+          >
+            {(field) => (
+              <PasswordInput {...field} {...register("newPassword")} autoComplete="new-password" maxLength={128} />
+            )}
+          </FormField>
+          <FormField
+            id="reset-confirmation"
+            label="Confirme a nova senha"
+            required
+            error={errors.confirmation?.message}
+          >
+            {(field) => (
+              <PasswordInput {...field} {...register("confirmation")} autoComplete="new-password" maxLength={128} />
+            )}
+          </FormField>
           <FormMessage error={error ?? null} />
-          <Button type="submit" disabled={pending} className="h-12 rounded-lg px-4 font-semibold">
-            {pending ? "Aguarde..." : "Salvar nova senha"}
+          <Button type="submit" size="lg" disabled={isSubmitting} className="font-semibold">
+            {isSubmitting ? "Aguarde..." : "Salvar nova senha"}
           </Button>
         </>
       )}

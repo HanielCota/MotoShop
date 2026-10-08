@@ -4,7 +4,8 @@
  *   2. launch  120–600ms wheelie lean + forward surge, settles with a small overshoot
  *   3. livery  the orange version sweeps in on a race-stripe diagonal (reversible on leave)
  *   4. fx      speed lines cut through the mark; an exhaust puff trails on the left
- * Only transform, opacity and clip-path are animated. Reduced motion: plain crossfade.
+ * Only transform, opacity and clip-path are animated. Reduced motion: stripe sweep only, no movement.
+ * Variants: header (horizontal mark), footer and auth (stacked main logo on its plate).
  */
 
 .brand {
@@ -41,10 +42,46 @@
   width: 178px;
 }
 
-.footer,
+/*
+ * Stacked (main) logo: the artwork is a black 2.5:1 plate that swaps to the orange plate. The whole
+ * plate does the wheelie, so the stage does not clip it; rounded corners live on the images and the
+ * speed lines are clipped to the plate instead.
+ */
+.footer .stage,
+.auth .stage {
+  --brand-plate-radius: 8px;
+
+  overflow: visible;
+}
+
 .footer .stage {
-  width: 135px;
-  height: 44px;
+  width: 160px;
+  height: 64px;
+}
+
+.auth .stage {
+  --brand-plate-radius: 10px;
+
+  width: 220px;
+  height: 88px;
+}
+
+.footer .logo,
+.auth .logo,
+.footer .speedLines,
+.auth .speedLines {
+  border-radius: var(--brand-plate-radius);
+}
+
+.footer .speedLines,
+.auth .speedLines {
+  overflow: hidden;
+}
+
+.footer .exhaust,
+.auth .exhaust {
+  bottom: 12px;
+  left: -2px;
 }
 
 /* Wraps both logo images so the lean/launch moves them together. */
@@ -267,7 +304,18 @@
   }
 }
 
-/* Reduced motion: no movement, only the livery crossfade. */
+@media (min-width: 640px) {
+  .auth .stage {
+    width: 260px;
+    height: 104px;
+  }
+}
+
+/*
+ * Reduced motion: keep the livery change but drop everything that moves the mark. The race-stripe
+ * sweep stays (it is a colour wipe inside a fixed frame, no translation, rotation or scaling); the
+ * rev shake, wheelie, speed lines and exhaust are removed.
+ */
 @media (prefers-reduced-motion: reduce) {
   .rider,
   .speedLines span,
@@ -284,18 +332,14 @@
   .brand:hover .primary,
   .brand:focus-visible .primary {
     transform: none;
-    transition: opacity 160ms ease;
   }
 
-  .alternate {
-    clip-path: none;
-    opacity: 0;
-    transition: opacity 160ms ease;
+  /* globals.css zeroes every transition under reduced motion; the wipe and fade are exempt. */
+  .brand .alternate {
+    transition-duration: 420ms !important;
   }
 
-  .brand:hover .alternate,
-  .brand:focus-visible .alternate {
-    clip-path: none;
-    opacity: 1;
+  .brand .primary {
+    transition-duration: 160ms !important;
   }
 }

@@ -28,7 +28,17 @@ it("renders the shared footer on storefront routes with one seller label", () =>
   renderFooter();
   const footer = screen.getByRole("contentinfo");
   expect(within(footer).getByRole("link", { name: "Venda no Moto Shop" })).toHaveAttribute("href", "/seller");
-  expect(within(footer).getByText(/O Moto Shop é um marketplace/)).toBeInTheDocument();
+  expect(within(footer).getByText("O Marketplace de quem vive o OFF-ROAD!")).toBeInTheDocument();
+});
+
+it("uses the stacked main logo in the footer, swapping black and orange plates on hover", () => {
+  navigation.pathname = "/";
+  renderFooter();
+  const brand = within(screen.getByRole("contentinfo")).getByRole("link", { name: "O Moto Shop, página inicial" });
+  expect(Array.from(brand.querySelectorAll("img"), (image) => image.getAttribute("src"))).toEqual([
+    "/brand/logo-stacked-dark.webp",
+    "/brand/logo-stacked-orange.webp",
+  ]);
 });
 
 it("hides the storefront footer in the seller and admin areas", () => {

@@ -1,3 +1,5 @@
+import { ZodError } from "zod";
+
 export type ApplicationErrorCode =
   | "CONFIGURATION_ERROR"
   | "VALIDATION_ERROR"
@@ -29,14 +31,36 @@ export class ApplicationError extends Error {
   }
 }
 
+export const GENERIC_ERROR_MESSAGE = "Não foi possível concluir a operação. Tente novamente.";
+export const GENERIC_VALIDATION_MESSAGE = "Confira os dados informados.";
+
+// Zod's built-in (English) messages start with these words; schema-specific
+// messages in this project are written in Portuguese and are safe to show.
+const zodDefaultMessagePattern = /^(invalid|too (small|big)|unrecognized|expected|required)\b/i;
+
+function validationMessageFrom(error: ZodError): string {
+  const message = error.issues[0]?.message?.trim();
+  if (!message || zodDefaultMessagePattern.test(message)) return GENERIC_VALIDATION_MESSAGE;
+  return message;
+}
+
 export function asApplicationError(error: unknown): ApplicationError {
   if (error instanceof ApplicationError) {
     return error;
   }
 
+  if (error instanceof ZodError) {
+    return new ApplicationError({
+      code: "VALIDATION_ERROR",
+      message: validationMessageFrom(error),
+      statusCode: 400,
+      cause: error,
+    });
+  }
+
   return new ApplicationError({
     code: "INTERNAL_ERROR",
-    message: "An unexpected error occurred.",
+    message: GENERIC_ERROR_MESSAGE,
     cause: error,
   });
 }

@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: "Acesso não autorizado",
+  robots: { index: false, follow: false },
+};
 
 export default function ForbiddenPage() {
   return (

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { PageHeader } from "@/components/ui/page-header";
@@ -7,6 +8,11 @@ import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/moto
 import { listSavedMotorcycles } from "@/modules/motorcycles/queries/saved-motorcycles";
 import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
 
+export const metadata: Metadata = {
+  title: "Minhas motos",
+  robots: { index: false, follow: false },
+};
+
 export default async function MyMotorcyclesPage() {
   const session = await requireAuthenticatedUser("/account/motorcycles");
   const [fitments, savedMotorcycles] = await Promise.all([
@@ -15,7 +21,7 @@ export default async function MyMotorcyclesPage() {
   ]);
 
   return (
-    <CustomerAccountShell pathname="/account/motorcycles">
+    <CustomerAccountShell pathname="/account/motorcycles" userName={session.user.name}>
       <PageHeader
         eyebrow="Minha conta"
         title="Minhas motos"

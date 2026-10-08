@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AuthPageShell } from "@/modules/auth/components/auth-page-shell";
 import { ResetPasswordForm } from "@/modules/auth/components/reset-password-form";
+
+export const metadata: Metadata = {
+  title: "Nova senha",
+  robots: { index: false, follow: false },
+};
 
 export default async function ResetPasswordPage({
   searchParams,

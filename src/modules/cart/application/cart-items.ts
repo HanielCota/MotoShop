@@ -5,8 +5,9 @@ import { purchasableVariantWhere } from "@/modules/products/application/purchasa
 import { ApplicationError } from "@/shared/errors/application-error";
 
 import { cartOwnerWhere, findOrCreateActiveCart, type CartIdentity } from "../infrastructure/cart-access";
+import { MAX_CART_ITEM_QUANTITY } from "./merge-guest-cart";
 
-export const MAX_CART_ITEM_QUANTITY = 99;
+export { MAX_CART_ITEM_QUANTITY };
 
 function outOfStock() {
   return new ApplicationError({
@@ -67,5 +68,24 @@ export async function updateCartItemQuantity(input: { identity: CartIdentity; ca
     }
     if ((item.variant.inventory?.availableQuantity ?? 0) < quantity) throw outOfStock();
     await tx.cartItem.update({ where: { id: item.id }, data: { quantity } });
+  });
+}
+
+/**
+ * Remove todos os itens do carrinho ATIVO do dono atual (usuário ou visitante), com lock
+ * e nova checagem de ownership. Retorna quantos itens foram removidos.
+ */
+export async function clearActiveCart(identity: CartIdentity): Promise<number> {
+  return db.$transaction(async (tx) => {
+    const cart = await tx.cart.findFirst({
+      where: { ...cartOwnerWhere(identity), status: "ACTIVE" },
+      select: { id: true },
+    });
+    if (!cart) return 0;
+    await tx.$queryRaw`SELECT id FROM "carts" WHERE id = ${cart.id} FOR UPDATE`;
+    const removed = await tx.cartItem.deleteMany({
+      where: { cartId: cart.id, cart: { ...cartOwnerWhere(identity), status: "ACTIVE" } },
+    });
+    return removed.count;
   });
 }

@@ -59,7 +59,7 @@ export async function findPublicProductPage(input: PublicProductFilter, now: Dat
     HAVING true
       ${input.availability === "IN_STOCK" ? Prisma.sql`AND bool_or(o.available)` : input.availability === "OUT_OF_STOCK" ? Prisma.sql`AND NOT bool_or(o.available)` : Prisma.empty}
       ${input.promotion === "ON_SALE" ? Prisma.sql`AND bool_or(o.sale)` : Prisma.empty}
-      ${min !== null || max !== null ? Prisma.sql`AND bool_or((${min}::bigint IS NULL OR o.price >= ${min}) AND (${max}::bigint IS NULL OR o.price <= ${max}))` : Prisma.empty}
+      ${min !== null || max !== null ? Prisma.sql`AND bool_or((${min}::bigint IS NULL OR o.price >= ${min}::bigint) AND (${max}::bigint IS NULL OR o.price <= ${max}::bigint))` : Prisma.empty}
   )`;
   const counts = await db.$queryRaw<Array<{ total: bigint }>>(Prisma.sql`${cte} SELECT count(*) AS total FROM matches`);
   const total = Number(counts[0]?.total ?? 0);

@@ -44,6 +44,7 @@ export function ProductStatusActions({ productId }: { productId: string }) {
             placeholder="Motivo da rejeição"
             required
             minLength={5}
+            maxLength={1000}
             className="min-w-0 flex-1"
           />
           <Button type="submit" variant="outline" size="sm" disabled={pending}>

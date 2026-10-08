@@ -2,6 +2,7 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
+import { BRAND_SHORT_DESCRIPTION, BRAND_SLOGAN } from "@/config/brand";
 
 import { sellerLinkLabel } from "./storefront-routes";
 
@@ -39,12 +40,8 @@ export function SiteFooter() {
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 pt-10 pb-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <div className="space-y-3">
           <MotoShopBrand variant="footer" />
-          <p className="max-w-sm text-sm leading-6 text-white/65">
-            O Moto Shop é um marketplace de motopeças, acessórios e equipamentos, com foco especial no off-road.
-          </p>
-          <p className="max-w-sm text-sm leading-6 text-white/65">
-            Aproximamos quem vive o motocross de lojas parceiras em uma plataforma de compra e venda especializada.
-          </p>
+          <p className="text-moto-brand text-xs font-bold tracking-[0.12em] uppercase">{BRAND_SLOGAN}</p>
+          <p className="max-w-sm text-sm leading-6 text-white/65">{BRAND_SHORT_DESCRIPTION}</p>
         </div>
         <nav aria-label="Links do rodapé" className="grid grid-cols-2 gap-6 sm:grid-cols-3">
           {footerColumns.map((column) => (

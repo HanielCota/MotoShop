@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Route } from "next";
+import type { Metadata, Route } from "next";
 import { MessageCircleQuestion } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,11 @@ import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { AnswerQuestionForm } from "@/modules/questions/components/answer-question-form";
 import { listSellerQuestions } from "@/modules/questions/queries/questions";
 import { loadSellerQuestionSearchParams, serializeSellerQuestionSearchParams } from "@/modules/questions/search-params";
+
+export const metadata: Metadata = {
+  title: "Perguntas · Central do Lojista",
+  robots: { index: false, follow: false },
+};
 
 const basePath = "/seller/questions";
 

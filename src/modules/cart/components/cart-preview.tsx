@@ -18,6 +18,7 @@ export function CartPreview() {
   const [message, setMessage] = useState<string>();
   const [pending, setPending] = useState(false);
   const [isError, setIsError] = useState(false);
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
   async function refresh() {
     setPending(true);
@@ -43,6 +44,7 @@ export function CartPreview() {
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
+    setConfirmingClear(false);
     if (nextOpen) refresh();
   }
 
@@ -79,10 +81,11 @@ export function CartPreview() {
         return;
       }
       setData({ items: [], itemCount: 0, subtotalInCents: 0 });
+      setConfirmingClear(false);
       setMessage(result.success);
       setIsError(false);
     } catch {
-      setMessage("Não foi possível esvaziar o carrinho. Tente novamente.");
+      setMessage("Não foi possível limpar o carrinho. Tente novamente.");
       setIsError(true);
     } finally {
       setPending(false);
@@ -116,16 +119,51 @@ export function CartPreview() {
                 </Popover.Description>
               </div>
               {data && data.items.length > 0 ? (
+                // Mantido montado durante a confirmação: desmontar o alvo do clique fecharia o popover.
                 <button
                   type="button"
-                  onClick={clearCart}
-                  disabled={pending}
+                  aria-expanded={confirmingClear}
+                  aria-controls="cart-clear-confirm"
+                  onClick={() => setConfirmingClear(true)}
+                  disabled={pending || confirmingClear}
                   className="text-muted-foreground hover:text-foreground min-h-9 rounded-md px-2 text-xs font-medium underline underline-offset-4 disabled:opacity-50"
                 >
-                  Esvaziar
+                  Limpar carrinho
                 </button>
               ) : null}
             </div>
+
+            {data && data.items.length > 0 ? (
+              // Oculto (não desmontado) ao cancelar: desmontar o alvo do clique fecharia o popover.
+              <div
+                hidden={!confirmingClear}
+                id="cart-clear-confirm"
+                role="alertdialog"
+                aria-labelledby="cart-clear-title"
+                className="border-destructive/30 bg-destructive/5 mb-3 rounded-lg border p-3"
+              >
+                <p id="cart-clear-title" className="text-sm font-medium">
+                  Remover todos os {data.itemCount} {data.itemCount === 1 ? "item" : "itens"} do carrinho?
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={clearCart}
+                    disabled={pending}
+                    className="bg-destructive hover:bg-destructive/90 inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    Sim, limpar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingClear(false)}
+                    className="border-border hover:bg-muted inline-flex min-h-11 items-center justify-center rounded-md border px-4 text-sm font-semibold"
+                  >
+                    Manter itens
+                  </button>
+                </div>
+              </div>
+            ) : null}
 
             {!data || pending ? (
               <p className="text-muted-foreground py-6 text-center text-sm">Carregando carrinho…</p>
