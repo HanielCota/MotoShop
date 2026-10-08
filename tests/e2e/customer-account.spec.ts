@@ -95,9 +95,21 @@ test("cliente mantém endereço principal, notificações, favoritos e consulta 
     await addressCards.first().getByRole("button", { name: "Remover" }).click();
     await expect(page.getByRole("region", { name: "Endereços cadastrados" })).toHaveCount(0);
 
+    const accountNavigation = page.getByRole("navigation", { name: "Serviços da minha conta" });
+    await expect(accountNavigation.getByRole("link", { name: "Meus endereços" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(accountNavigation.getByRole("link", { name: "Minhas motos" })).toHaveCount(0);
+    await expect(accountNavigation.getByRole("button", { name: "Sair" })).toBeVisible();
+
+    // Old notification links land on the preferences section of "Dados cadastrais".
     await page.goto("/account/notifications");
+    await expect(page).toHaveURL(/\/account\/profile#notificacoes$/);
     await expectNoHorizontalOverflow(page);
-    await expect(page.getByRole("heading", { name: "Notificações" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Dados cadastrais", level: 1 })).toBeVisible();
+    await expect(page.getByText("Olá, Cliente", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Notificações por e-mail" })).toBeVisible();
     const emailUpdates = page.getByRole("checkbox", { name: /Atualizações dos meus pedidos/ });
     await expect(emailUpdates).toBeChecked();
     await emailUpdates.uncheck();
