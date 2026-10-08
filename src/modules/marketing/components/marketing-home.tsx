@@ -39,7 +39,7 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
           alt="Piloto de motocross saltando com a moto em uma pista off-road"
           fill
           preload
-          sizes="100vw"
+          sizes="(min-width: 1024px) 56vw, 100vw"
         />
         <div className={styles.heroShade} aria-hidden="true" />
         <div className="mx-auto w-full max-w-6xl px-4 pt-12 pb-24 sm:px-6 sm:pt-20 sm:pb-28 lg:pt-24">
