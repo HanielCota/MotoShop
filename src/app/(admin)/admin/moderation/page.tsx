@@ -11,7 +11,7 @@ import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { ModerateContentButton } from "@/modules/moderation/components/moderate-content-button";
 import { listModerationQueue, type ModerationKind } from "@/modules/moderation/queries/moderation-queue";
 
-export const metadata = { title: "Moderação | Admin O Moto Shop" };
+export const metadata = { title: "Moderação · Admin" };
 
 const kinds: { value: ModerationKind; label: string }[] = [
   { value: "question", label: "Perguntas" },

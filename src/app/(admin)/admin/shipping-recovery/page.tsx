@@ -9,7 +9,7 @@ import { ShipmentRecoveryForms } from "@/modules/admin/components/shipment-recov
 import { listShipmentPurchasesNeedingReconciliation } from "@/modules/admin/queries/shipment-recovery";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 
-export const metadata = { title: "Conferir etiquetas | Admin O Moto Shop" };
+export const metadata = { title: "Conferir etiquetas · Admin" };
 
 // Estados técnicos da tentativa de compra/geração (não há domínio equivalente em status-labels).
 const attemptStateLabels = {

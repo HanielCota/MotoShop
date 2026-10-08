@@ -9,7 +9,7 @@ import { AdminCard, AdminTable, cellClassName } from "@/modules/admin/components
 import { listFailedOutboxEventsForAdmin } from "@/modules/admin/queries/outbox-events";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 
-export const metadata = { title: "Eventos pendentes | Admin O Moto Shop" };
+export const metadata = { title: "Eventos pendentes · Admin" };
 
 export default async function AdminOutboxPage() {
   await requireAdminAccess();

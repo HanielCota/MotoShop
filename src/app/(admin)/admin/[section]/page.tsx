@@ -8,7 +8,7 @@ import { requireAdminAccess } from "@/modules/auth/application/authorization";
 export async function generateMetadata({ params }: { params: Promise<{ section: string }> }) {
   const { section } = await params;
   const definition = adminSections.find((item) => item.slug === section);
-  return { title: definition ? `${definition.title} | Admin O Moto Shop` : "Admin O Moto Shop" };
+  return { title: definition ? `${definition.title} · Admin` : "Admin" };
 }
 
 export default async function AdminSectionPage({

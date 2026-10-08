@@ -19,7 +19,7 @@ import { adminSections } from "@/modules/admin/admin-sections";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { getAdminDashboardCounters } from "@/modules/admin/queries/dashboard-counters";
 
-export const metadata = { title: "Visão geral | Admin O Moto Shop" };
+export const metadata = { title: "Visão geral · Admin" };
 
 const groups = ["Marketplace", "Operação", "Sistema"] as const;
 
