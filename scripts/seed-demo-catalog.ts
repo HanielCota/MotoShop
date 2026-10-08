@@ -304,7 +304,13 @@ async function main() {
       }
 
       const categories = new Map<string, string>();
-      for (const slug of ["equipment-helmets", "equipment-boots", "equipment-goggles", "parts-brakes"] as const) {
+      for (const slug of [
+        "equipment-helmets",
+        "equipment-boots",
+        "equipment-goggles",
+        "parts-brakes",
+        "parts-accessories",
+      ] as const) {
         const category = await tx.category.findUnique({ where: { slug }, select: { id: true } });
         if (!category) throw new Error(`Missing category ${slug}; run the regular database seed first.`);
         categories.set(slug, category.id);

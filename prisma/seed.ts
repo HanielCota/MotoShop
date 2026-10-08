@@ -1,8 +1,10 @@
-import "dotenv/config";
+import { config } from "dotenv";
 
 import { PrismaNeon } from "@prisma/adapter-neon";
 
 import { PrismaClient } from "../src/generated/prisma/client";
+
+config({ path: ".env.local", quiet: true });
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -32,6 +34,7 @@ async function seed() {
     upsertCategory({ name: "Transmissão", slug: "parts-transmission", sortOrder: 20, parentId: parts.id }),
     upsertCategory({ name: "Suspensão", slug: "parts-suspension", sortOrder: 30, parentId: parts.id }),
     upsertCategory({ name: "Freios", slug: "parts-brakes", sortOrder: 40, parentId: parts.id }),
+    upsertCategory({ name: "Acessórios", slug: "parts-accessories", sortOrder: 50, parentId: parts.id }),
     upsertCategory({ name: "Capacetes", slug: "equipment-helmets", sortOrder: 10, parentId: equipment.id }),
     upsertCategory({ name: "Botas", slug: "equipment-boots", sortOrder: 20, parentId: equipment.id }),
     upsertCategory({ name: "Óculos", slug: "equipment-goggles", sortOrder: 30, parentId: equipment.id }),
