@@ -5,10 +5,18 @@
  * (storefront, conta do cliente, Central do Lojista e Admin). Tudo é isolado por:
  * - e-mails `review.*@example.test`;
  * - slugs `review-*`, SKUs/códigos `REVIEW-*` e pedidos `MS-REVIEW-*`;
- * - lojas com nome terminado em " · demonstração" e produtos `isDemo: true`.
+ * - lojas com nome terminado em " · demonstração" e produtos `isDemo: true`;
+ * - IDs determinísticos `rvw…` (scripts/review-seed-ids.ts) no conjunto ampliado.
  *
  * Idempotente: pode ser executado várias vezes. Nunca apaga nem altera dados que não
  * foram criados por este script. Para remover: `scripts/remove-review-data.ts`.
+ *
+ * Variáveis opcionais:
+ * - REVIEW_PUBLISH_STORES=true  publica as lojas aprovadas/ativas (padrão: PENDING, invisíveis);
+ * - REVIEW_VIEWER_CUSTOMER_EMAILS  contas EXISTENTES que recebem histórico de cliente fictício
+ *   (endereços, motos, favoritos, carrinho e pedidos `MS-REVIEW-V<n>-*`);
+ * - REVIEW_VIEWER_SELLER_EMAILS  contas EXISTENTES adicionadas como ADMIN da loja Garagem MX.
+ * As contas de visualização nunca são criadas, apagadas ou têm senha/e-mail alterados.
  *
  * Uso: node node_modules/tsx/dist/cli.mjs scripts/seed-review-data.ts
  */
@@ -20,6 +28,9 @@ import { copyFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { PrismaClient, type Prisma } from "../src/generated/prisma/client";
+import type { ReviewStoreCode } from "./review-seed-content";
+import { renderStoreBanner, renderStoreLogo, seedExpandedData } from "./review-seed-expanded";
+import { parseEmailList } from "./review-seed-ids";
 
 /** Senha compartilhada por todas as contas de revisão (somente ambiente de desenvolvimento). */
 export const REVIEW_ACCOUNTS_PASSWORD = "Revisao-Demo-2026!";
@@ -27,8 +38,9 @@ export const REVIEW_ACCOUNTS_PASSWORD = "Revisao-Demo-2026!";
 export const REVIEW_EMAIL_DOMAIN = "@example.test";
 export const REVIEW_ORDER_PREFIX = "MS-REVIEW-";
 const APP_BASE_URL = "http://localhost:3001";
-// The DATABASE_URL in .env.local is also read by production (motoshopbrasil.com.br). Never publish demo
-// stores there: set REVIEW_PUBLISH_STORES=true only against an isolated database.
+// The DATABASE_URL in .env.local is also read by production (motoshopbrasil.com.br). Publishing the demo
+// stores there (REVIEW_PUBLISH_STORES=true) is an explicit owner decision, valid only until launch.
+const PUBLISH_STORES = process.env.REVIEW_PUBLISH_STORES === "true";
 
 config({ path: ".env.local", quiet: true });
 
@@ -53,10 +65,17 @@ const users = {
   pendente: { email: "review.pendente@example.test", name: "Diego Santos" },
   cliente: { email: "review.cliente@example.test", name: "Carla Mendes" },
   lojista2: { email: "review.lojista2@example.test", name: "Bruno Teixeira" },
+  lojista3: { email: "review.lojista3@example.test", name: "Paula Guimarães" },
+  lojista4: { email: "review.lojista4@example.test", name: "André Kowalski" },
+  lojista5: { email: "review.lojista5@example.test", name: "Severino Albuquerque" },
+  lojista6: { email: "review.lojista6@example.test", name: "Marcelo Tavares" },
+  lojista7: { email: "review.lojista7@example.test", name: "Igor Fontana" },
+  lojista8: { email: "review.lojista8@example.test", name: "Rogério Batista" },
+  lojista9: { email: "review.lojista9@example.test", name: "Débora Lins" },
 } as const;
 type UserKey = keyof typeof users;
 
-type StoreKey = "garagem" | "box77" | "pendente";
+type StoreKey = ReviewStoreCode | "pendente" | "nova" | "suspensa" | "recusada";
 const storeDefinitions: Record<
   StoreKey,
   {
@@ -64,7 +83,7 @@ const storeDefinitions: Record<
     name: string;
     description: string;
     sellerType: "INDIVIDUAL" | "COMPANY";
-    sellerStatus: "PENDING" | "APPROVED" | "ACTIVE";
+    sellerStatus: "PENDING" | "APPROVED" | "ACTIVE" | "SUSPENDED" | "REJECTED";
     commissionBpsOverride: number | null;
     owner: UserKey;
     extra: Partial<Prisma.StoreUncheckedCreateInput>;
@@ -116,7 +135,99 @@ const storeDefinitions: Record<
     owner: "pendente",
     extra: {},
   },
+  trilha: {
+    slug: "review-trilha-forte",
+    name: "Trilha Forte Motopeças · demonstração",
+    description:
+      "Loja fictícia especializada em enduro e trilha: vestuário impermeável, proteções e acessórios para longas distâncias. Dados ilustrativos.",
+    sellerType: "COMPANY",
+    sellerStatus: "ACTIVE",
+    commissionBpsOverride: null,
+    owner: "lojista3",
+    extra: {
+      instagramUrl: "https://www.instagram.com/example",
+      facebookUrl: "https://www.facebook.com/example",
+      whatsappUrl: "https://wa.me/5531900000000",
+      originPostalCode: "30130000",
+      originCity: "Belo Horizonte",
+      originState: "MG",
+    },
+  },
+  racing: {
+    slug: "review-racing-sul",
+    name: "Racing Sul MX · demonstração",
+    description:
+      "Loja fictícia de preparação: motor, suspensão e transmissão para pilotos de competição. Preços e estoque ilustrativos.",
+    sellerType: "COMPANY",
+    sellerStatus: "APPROVED",
+    commissionBpsOverride: 800,
+    owner: "lojista4",
+    extra: { youtubeUrl: "https://www.youtube.com/@example", originPostalCode: "80010000", originCity: "Curitiba", originState: "PR" },
+  },
+  areia: {
+    slug: "review-areia-motos",
+    name: "Areia Motos Off-Road · demonstração",
+    description: "Loja fictícia do Nordeste com acessórios, óculos e consumíveis para pistas de areia. Dados ilustrativos.",
+    sellerType: "INDIVIDUAL",
+    sellerStatus: "ACTIVE",
+    commissionBpsOverride: null,
+    owner: "lojista5",
+    extra: { instagramUrl: "https://www.instagram.com/example", whatsappUrl: "https://wa.me/5581900000000", originPostalCode: "50010000", originCity: "Recife", originState: "PE" },
+  },
+  cross: {
+    slug: "review-cross-center",
+    name: "Cross Center Campinas · demonstração",
+    description: "Loja fictícia de equipamentos de proteção: capacetes, botas, óculos e joelheiras. Dados ilustrativos.",
+    sellerType: "COMPANY",
+    sellerStatus: "APPROVED",
+    commissionBpsOverride: null,
+    owner: "lojista6",
+    extra: {
+      instagramUrl: "https://www.instagram.com/example",
+      youtubeUrl: "https://www.youtube.com/@example",
+      facebookUrl: "https://www.facebook.com/example",
+      originPostalCode: "13015000",
+      originCity: "Campinas",
+      originState: "SP",
+    },
+  },
+  nova: {
+    slug: "review-motopecas-nova",
+    name: "Motopeças Nova Era · demonstração",
+    description: "Cadastro fictício recente aguardando análise do Admin.",
+    sellerType: "INDIVIDUAL",
+    sellerStatus: "PENDING",
+    commissionBpsOverride: null,
+    owner: "lojista7",
+    extra: { originPostalCode: "69005000", originCity: "Manaus", originState: "AM" },
+  },
+  suspensa: {
+    slug: "review-loja-suspensa",
+    name: "Pit Stop Suspensa · demonstração",
+    description: "Loja fictícia suspensa pelo Admin (exemplo da fila de sellers).",
+    sellerType: "COMPANY",
+    sellerStatus: "SUSPENDED",
+    commissionBpsOverride: null,
+    owner: "lojista8",
+    extra: { originPostalCode: "40010000", originCity: "Salvador", originState: "BA" },
+  },
+  recusada: {
+    slug: "review-loja-recusada",
+    name: "Moto Garage Recusada · demonstração",
+    description: "Cadastro fictício recusado por documentação incompleta (exemplo da fila de sellers).",
+    sellerType: "INDIVIDUAL",
+    sellerStatus: "REJECTED",
+    commissionBpsOverride: null,
+    owner: "lojista9",
+    extra: { originPostalCode: "60010000", originCity: "Fortaleza", originState: "CE" },
+  },
 };
+
+const PUBLIC_STORE_STATUSES = new Set(["APPROVED", "ACTIVE"]);
+/** Approved/active demo stores stay PENDING unless the owner explicitly publishes them. */
+function initialSellerStatus(status: (typeof storeDefinitions)[StoreKey]["sellerStatus"]) {
+  return PUBLIC_STORE_STATUSES.has(status) && !PUBLISH_STORES ? "PENDING" : status;
+}
 
 type VariantDefinition = {
   sku: string;
@@ -411,8 +522,12 @@ function commission(amountInCents: number, bps: number): number {
 
 const counts: Record<string, { created: number; existing: number }> = {};
 function track(entity: string, created: boolean) {
+  trackMany(entity, created ? 1 : 0, 1);
+}
+function trackMany(entity: string, created: number, total: number) {
   counts[entity] ??= { created: 0, existing: 0 };
-  counts[entity][created ? "created" : "existing"] += 1;
+  counts[entity].created += created;
+  counts[entity].existing += total - created;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -449,28 +564,47 @@ async function ensureStores(userIds: Record<UserKey, string>) {
   const defaultBps = configuration?.defaultCommissionBps ?? 1200;
 
   for (const [key, definition] of Object.entries(storeDefinitions) as Array<[StoreKey, (typeof storeDefinitions)[StoreKey]]>) {
-    let store = await db.store.findUnique({ where: { slug: definition.slug } });
+    let store = await db.store.findUnique({ where: { slug: definition.slug }, include: { seller: { select: { status: true } } } });
     if (store && store.name !== definition.name) throw new Error(`Refusing to touch unrelated store ${definition.slug}`);
     if (!store) {
       const seller = await db.seller.create({
         data: {
           type: definition.sellerType,
-          // AGENTS.md: demo stores stay PENDING while the deployed code lacks the isDemo purchase block.
-          // Publish them only on a database that no public deployment reads (e.g. a Neon review branch).
-          status: process.env.REVIEW_PUBLISH_STORES === "true" ? definition.sellerStatus : "PENDING",
+          // AGENTS.md: demo stores stay PENDING unless REVIEW_PUBLISH_STORES=true (explicit owner decision).
+          status: initialSellerStatus(definition.sellerStatus),
           commissionBpsOverride: definition.commissionBpsOverride,
-          createdAt: key === "pendente" ? daysAgo(1) : daysAgo(60),
+          createdAt: ["pendente", "nova"].includes(key) ? daysAgo(key === "nova" ? 3 : 1) : daysAgo(key === "garagem" || key === "box77" ? 60 : 150),
         },
       });
       store = await db.store.create({
         data: { slug: definition.slug, name: definition.name, description: definition.description, sellerId: seller.id, ...definition.extra },
+        include: { seller: { select: { status: true } } },
       });
       track("Seller", true);
       track("Store", true);
     } else {
       track("Seller", false);
       track("Store", false);
+      // Publishing later (second run with the flag) only promotes demo stores still PENDING.
+      if (PUBLISH_STORES && store.seller.status === "PENDING" && PUBLIC_STORE_STATUSES.has(definition.sellerStatus)) {
+        await db.seller.update({ where: { id: store.sellerId }, data: { status: definition.sellerStatus } });
+        track("SellerPublished", true);
+      }
     }
+
+    // Logo e banner gerados localmente (public/images/demo, ignorado pelo git) só para lojas de revisão.
+    if (!store.logoStorageKey || !store.bannerStorageKey) {
+      const base = definition.slug.replace(/^review-/, "");
+      const logoKey = `demo/review-loja-${base}-logo.webp`;
+      const bannerKey = `demo/review-loja-${base}-banner.webp`;
+      await renderStoreLogo(logoKey, definition.name);
+      await renderStoreBanner(bannerKey, definition.name);
+      await db.store.update({
+        where: { id: store.id },
+        data: { logoStorageKey: store.logoStorageKey ?? logoKey, bannerStorageKey: store.bannerStorageKey ?? bannerKey },
+      });
+      track("StoreBranding", true);
+    } else track("StoreBranding", false);
 
     const members: Array<[UserKey, "OWNER" | "CATALOG"]> = [[definition.owner, "OWNER"]];
     if (key === "garagem") members.push(["catalogo", "CATALOG"]);
@@ -502,6 +636,13 @@ async function ensureStores(userIds: Record<UserKey, string>) {
     { store: "garagem", name: "Entrega própria · Grande São Paulo", start: "01000000", end: "09999999", price: 1990, days: 3, active: true },
     { store: "garagem", name: "Motoboy expresso · Centro (desativado)", start: "01000000", end: "01599999", price: 2990, days: 1, active: false },
     { store: "box77", name: "Entrega própria · Sudeste", start: "01000000", end: "39999999", price: 2490, days: 5, active: true },
+    { store: "trilha", name: "Entrega própria · Minas Gerais", start: "30000000", end: "39999999", price: 1790, days: 2, active: true },
+    { store: "trilha", name: "Transportadora parceira · Brasil", start: "01000000", end: "99999999", price: 3490, days: 7, active: true },
+    { store: "racing", name: "Entrega própria · Sul", start: "80000000", end: "99999999", price: 2290, days: 4, active: true },
+    { store: "racing", name: "Retirada no box (desativada)", start: "80000000", end: "80999999", price: 0, days: 1, active: false },
+    { store: "areia", name: "Entrega própria · Nordeste", start: "40000000", end: "65999999", price: 2690, days: 6, active: true },
+    { store: "cross", name: "Entrega própria · Interior de SP", start: "11000000", end: "19999999", price: 1590, days: 3, active: true },
+    { store: "cross", name: "Entrega própria · Brasil", start: "01000000", end: "99999999", price: 2990, days: 8, active: true },
   ];
   for (const method of methods) {
     const sellerId = result[method.store].sellerId;
@@ -765,7 +906,14 @@ type OrderSpec = {
 const shippingByStore: Record<StoreKey, { name: string; price: number; days: number }> = {
   garagem: { name: "Entrega própria · Grande São Paulo", price: 1990, days: 3 },
   box77: { name: "Entrega própria · Sudeste", price: 2490, days: 5 },
+  trilha: { name: "Transportadora parceira · Brasil", price: 3490, days: 7 },
+  racing: { name: "Entrega própria · Sul", price: 2290, days: 4 },
+  areia: { name: "Entrega própria · Nordeste", price: 2690, days: 6 },
+  cross: { name: "Entrega própria · Brasil", price: 2990, days: 8 },
   pendente: { name: "-", price: 0, days: 0 },
+  nova: { name: "-", price: 0, days: 0 },
+  suspensa: { name: "-", price: 0, days: 0 },
+  recusada: { name: "-", price: 0, days: 0 },
 };
 
 const orders: OrderSpec[] = [
@@ -873,6 +1021,14 @@ async function ensureCoupons(stores: Awaited<ReturnType<typeof ensureStores>>) {
     { code: "REVIEW-PRIMEIRA20", ownerType: "MARKETPLACE", discountType: "FIXED_AMOUNT", fixedAmountInCents: 2000, minimumPurchaseInCents: 15000, startsAt: daysAgo(30), endsAt: daysAhead(60), globalUsageLimit: 500, perCustomerUsageLimit: 1, fundedBy: "MARKETPLACE" },
     { code: "REVIEW-GARAGEM15", ownerType: "SELLER", discountType: "PERCENTAGE", percentageBps: 1500, minimumPurchaseInCents: 30000, startsAt: daysAgo(5), endsAt: daysAhead(25), globalUsageLimit: 100, perCustomerUsageLimit: 1, fundedBy: "SELLER", sellerId: stores.garagem.sellerId },
     { code: "REVIEW-NATAL-GARAGEM", ownerType: "SELLER", discountType: "FIXED_AMOUNT", fixedAmountInCents: 5000, minimumPurchaseInCents: 40000, startsAt: daysAhead(30), endsAt: daysAhead(60), fundedBy: "SELLER", sellerId: stores.garagem.sellerId },
+    // Conjunto ampliado: marketplace e lojas, ativos/futuros/expirados/inativos, % e valor fixo.
+    { code: "REVIEW-MX10", ownerType: "MARKETPLACE", discountType: "PERCENTAGE", percentageBps: 1000, minimumPurchaseInCents: 10000, startsAt: daysAgo(130), endsAt: daysAhead(45), globalUsageLimit: 1000, perCustomerUsageLimit: 1, fundedBy: "MARKETPLACE" },
+    { code: "REVIEW-FRETE15-EXPIRADO", ownerType: "MARKETPLACE", discountType: "FIXED_AMOUNT", fixedAmountInCents: 1500, minimumPurchaseInCents: 8000, startsAt: daysAgo(90), endsAt: daysAgo(10), globalUsageLimit: 300, perCustomerUsageLimit: 1, fundedBy: "MARKETPLACE" },
+    { code: "REVIEW-BLACKFRIDAY20", ownerType: "MARKETPLACE", discountType: "PERCENTAGE", percentageBps: 2000, minimumPurchaseInCents: 30000, startsAt: daysAhead(45), endsAt: daysAhead(50), globalUsageLimit: 2000, perCustomerUsageLimit: 1, fundedBy: "MARKETPLACE" },
+    { code: "REVIEW-BOASVINDAS-INATIVO", ownerType: "MARKETPLACE", discountType: "FIXED_AMOUNT", fixedAmountInCents: 3000, minimumPurchaseInCents: 20000, active: false, fundedBy: "MARKETPLACE" },
+    { code: "REVIEW-TRILHA10", ownerType: "SELLER", discountType: "PERCENTAGE", percentageBps: 1000, minimumPurchaseInCents: 0, startsAt: daysAgo(120), endsAt: daysAhead(30), globalUsageLimit: 200, perCustomerUsageLimit: 2, fundedBy: "SELLER", sellerId: stores.trilha.sellerId },
+    { code: "REVIEW-RACING50-EXPIRADO", ownerType: "SELLER", discountType: "FIXED_AMOUNT", fixedAmountInCents: 5000, minimumPurchaseInCents: 50000, startsAt: daysAgo(60), endsAt: daysAgo(20), fundedBy: "SELLER", sellerId: stores.racing.sellerId },
+    { code: "REVIEW-CROSS5-INATIVO", ownerType: "SELLER", discountType: "PERCENTAGE", percentageBps: 500, minimumPurchaseInCents: 0, active: false, fundedBy: "SELLER", sellerId: stores.cross.sellerId },
   ];
   const ids = new Map<string, string>();
   for (const coupon of coupons) {
@@ -1314,6 +1470,30 @@ async function main() {
   const { orders: orderRefs, guestLink } = await ensureOrders(stores, variants, userIds.cliente, couponIds);
   await ensurePostSale(stores, userIds, orderRefs, productIds);
 
+  // Conjunto ampliado: mais lojas/produtos/pedidos/avaliações e histórico das contas de visualização.
+  const expanded = await seedExpandedData({
+    db,
+    now,
+    stores: { garagem: stores.garagem, box77: stores.box77, trilha: stores.trilha, racing: stores.racing, areia: stores.areia, cross: stores.cross },
+    storeOwnerIds: {
+      garagem: userIds.lojista,
+      box77: userIds.lojista2,
+      trilha: userIds.lojista3,
+      racing: userIds.lojista4,
+      areia: userIds.lojista5,
+      cross: userIds.lojista6,
+    },
+    adminUserId: userIds.admin,
+    passwordHash,
+    shippingByStore,
+    commission,
+    hashGuestToken,
+    trackMany,
+    viewerCustomerEmails: parseEmailList(process.env.REVIEW_VIEWER_CUSTOMER_EMAILS),
+    viewerSellerEmails: parseEmailList(process.env.REVIEW_VIEWER_SELLER_EMAILS),
+    notice: NOTICE,
+  });
+
   const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((email) => email.trim().toLowerCase());
   console.log(JSON.stringify(counts, null, 2));
   console.log(`\nContas: ${Object.values(users).map((user) => user.email).join(", ")}`);
@@ -1321,6 +1501,11 @@ async function main() {
   if (!adminEmails.includes(users.admin.email))
     console.log(`Admin: adicione ${users.admin.email} em ADMIN_EMAILS (.env.local) e reinicie o servidor para acessar /admin.`);
   console.log(`\nAcompanhamento do pedido convidado (token renovado a cada execução):\n${guestLink}`);
+  console.log(
+    `\nConjunto ampliado: ${expanded.approvedProducts} produtos aprovados novos, ${expanded.orders} pedidos planejados, ` +
+      `${expanded.viewerCustomers} conta(s) de visualização de cliente. Lojas publicadas: ${PUBLISH_STORES ? "sim" : "não (PENDING)"}.`,
+  );
+  console.log("Clientes extras: review.cliente2 … review.cliente13@example.test (mesma senha).");
 }
 
 try {
