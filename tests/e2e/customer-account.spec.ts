@@ -3,6 +3,11 @@ import { expect, test } from "@playwright/test";
 
 import { testDb } from "../support/database";
 
+async function expectNoHorizontalOverflow(page: import("@playwright/test").Page) {
+  const widths = await page.evaluate(() => ({ document: document.documentElement.scrollWidth, viewport: innerWidth }));
+  expect(widths.document, `Horizontal overflow at ${page.url()}`).toBeLessThanOrEqual(widths.viewport + 1);
+}
+
 async function signUpCustomer(page: import("@playwright/test").Page, email: string, password: string) {
   await page.goto("/login?next=/account/addresses");
   await page.getByRole("button", { name: "Ainda não tenho conta" }).click();
@@ -33,6 +38,7 @@ test("cliente mantém endereço principal, notificações, favoritos e consulta 
   const password = `Test-${randomUUID()}!`;
   try {
     await signUpCustomer(page, email, password);
+    await expectNoHorizontalOverflow(page);
 
     await fillAddress(page, {
       label: `Casa ${run}`,
@@ -42,7 +48,7 @@ test("cliente mantém endereço principal, notificações, favoritos e consulta 
       number: "10",
       city: "São Paulo",
     });
-    await page.getByRole("checkbox", { name: "Usar como endereço padrão" }).check();
+    await page.getByRole("checkbox", { name: "Usar como endereço padrão" }).click();
     await page.getByRole("button", { name: "Salvar endereço" }).click();
     await expect(page.getByText("Informe um CEP com 8 números.")).toBeVisible();
     await expect(page.getByRole("checkbox", { name: "Usar como endereço padrão" })).toBeChecked();
@@ -88,6 +94,7 @@ test("cliente mantém endereço principal, notificações, favoritos e consulta 
     await expect(page.getByRole("region", { name: "Endereços cadastrados" })).toHaveCount(0);
 
     await page.goto("/account/notifications");
+    await expectNoHorizontalOverflow(page);
     await expect(page.getByRole("heading", { name: "Notificações" })).toBeVisible();
     const emailUpdates = page.getByRole("checkbox", { name: /Atualizações dos meus pedidos/ });
     await expect(emailUpdates).toBeChecked();
@@ -111,6 +118,7 @@ test("cliente mantém endereço principal, notificações, favoritos e consulta 
     await favoriteButton.click();
     await expect(page.getByRole("button", { name: "Favoritado", exact: true })).toHaveAttribute("aria-pressed", "true");
     await page.goto("/favorites");
+    await expectNoHorizontalOverflow(page);
     await expect(page.getByRole("heading", { name: "Meus favoritos" })).toBeVisible();
     const favoriteCard = page.locator("[data-slot='card']").filter({ hasText: product.name });
     await expect(favoriteCard).toHaveCount(1);
@@ -118,6 +126,7 @@ test("cliente mantém endereço principal, notificações, favoritos e consulta 
     await expect(page.getByText("Você ainda não favoritou nenhum produto.")).toBeVisible();
 
     await page.goto("/orders");
+    await expectNoHorizontalOverflow(page);
     await expect(page.getByRole("heading", { name: "Meus pedidos" })).toBeVisible();
     await expect(page.getByText("Você ainda não fez nenhum pedido.")).toBeVisible();
   } finally {

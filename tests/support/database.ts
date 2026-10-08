@@ -20,8 +20,21 @@ export async function cleanupFixtures(input: {
     throw new Error("Refusing to clean non-test accounts");
   const orders = await testDb.order.findMany({ where: { customerEmail: { in: input.emails } }, select: { id: true } });
   const orderIds = orders.map((order) => order.id);
+  const sellerOrders = await testDb.sellerOrder.findMany({
+    where: { orderId: { in: orderIds } },
+    select: { id: true },
+  });
+  const sellerOrderIds = sellerOrders.map((sellerOrder) => sellerOrder.id);
   await testDb.$transaction(
     async (tx) => {
+      await tx.outboxEvent.deleteMany({
+        where: {
+          OR: [
+            { aggregateType: "ORDER", aggregateId: { in: orderIds } },
+            { aggregateType: "SELLER_ORDER", aggregateId: { in: sellerOrderIds } },
+          ],
+        },
+      });
       await tx.webhookEvent.deleteMany({ where: { id: { in: input.webhookEventIds ?? [] } } });
       await tx.auditLog.deleteMany({
         where: { OR: [{ actorUserId: { in: input.userIds } }, { entityId: { in: orderIds } }] },

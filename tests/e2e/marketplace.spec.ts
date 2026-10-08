@@ -13,7 +13,9 @@ async function noHorizontalOverflow(page: Page) {
           className: typeof element.className === "string" ? element.className : "",
           text: element.innerText?.slice(0, 80),
           formClassName: element.closest("form")?.className,
-          formWidth: element.closest("form") ? Math.round(element.closest("form")!.getBoundingClientRect().width) : null,
+          formWidth: element.closest("form")
+            ? Math.round(element.closest("form")!.getBoundingClientRect().width)
+            : null,
           left: Math.round(rect.left),
           right: Math.round(rect.right),
           width: Math.round(rect.width),
@@ -27,9 +29,7 @@ async function noHorizontalOverflow(page: Page) {
       overflowingElements,
     };
   });
-  expect(layout.documentWidth <= layout.viewportWidth + 1, `Horizontal overflow: ${JSON.stringify(layout)}`).toBe(
-    true,
-  );
+  expect(layout.documentWidth <= layout.viewportWidth + 1, `Horizontal overflow: ${JSON.stringify(layout)}`).toBe(true);
 }
 
 async function chooseOption(page: Page, label: string, optionName: string) {
@@ -43,11 +43,17 @@ test("store registration → approval → product → publication → catalog �
 }, testInfo) => {
   const run = randomUUID().slice(0, 8);
   const sellerEmail = `e2e-seller-${run}@example.test`;
+  const staffEmail = `e2e-orders-${run}@example.test`;
   const adminEmail = process.env.E2E_ADMIN_EMAIL!;
   const password = `Test-${randomUUID()}!`;
+  const staffPassword = `Staff-${randomUUID()}!`;
   const slug = `e2e-${run}`;
   const productName = `Capacete Teste ${run}`;
+  const couponCode = `E2E${run.toUpperCase()}`;
+  const sellerCouponCode = `SEL${run.toUpperCase()}`;
   const admin = await browser.newContext({ baseURL: testInfo.project.use.baseURL!, viewport: page.viewportSize() });
+  const staffRegistration = await browser.newContext({ baseURL: testInfo.project.use.baseURL! });
+  const staff = await browser.newContext({ baseURL: testInfo.project.use.baseURL!, viewport: page.viewportSize() });
   try {
     await page.goto("/login?next=/seller");
     await page.getByRole("button", { name: "Ainda não tenho conta" }).click();
@@ -71,6 +77,11 @@ test("store registration → approval → product → publication → catalog �
     await testDb.user.update({ where: { email: adminEmail }, data: { emailVerified: true } });
     const adminPage = await admin.newPage();
     await adminPage.goto("/admin");
+    await expect(adminPage.getByRole("heading", { name: "Visão geral" })).toBeVisible();
+    if ((adminPage.viewportSize()?.width ?? 1280) < 1024)
+      await adminPage.locator("summary").filter({ hasText: "Navegar pelo Admin" }).click();
+    await adminPage.getByRole("link", { name: "Lojistas", exact: true }).first().click();
+    await expect(adminPage).toHaveURL(/\/admin\/sellers$/);
     const fixtureStore = await testDb.store.findUniqueOrThrow({ where: { slug } });
     const sellerReview = adminPage.getByTestId(`seller-review-${fixtureStore.sellerId}`);
     await sellerReview.getByLabel("Comissão individual (%)", { exact: true }).fill("10,50");
@@ -96,6 +107,35 @@ test("store registration → approval → product → publication → catalog �
     await expect
       .poll(async () => (await testDb.store.findUnique({ where: { slug }, include: { seller: true } }))?.seller.status)
       .toBe("ACTIVE");
+
+    const staffSignup = await staffRegistration.request.post("/api/auth/sign-up/email", {
+      data: { name: "Equipe de pedidos", email: staffEmail, password: staffPassword },
+      headers: { origin: String(testInfo.project.use.baseURL) },
+    });
+    expect(staffSignup.ok()).toBe(true);
+    await testDb.user.update({ where: { email: staffEmail }, data: { emailVerified: true } });
+    await page.goto("/seller/settings");
+    await page.getByLabel("E-mail de uma conta existente").fill(staffEmail);
+    await chooseOption(page, "Perfil", "Pedidos");
+    await page.getByRole("button", { name: "Adicionar membro", exact: true }).click();
+    await expect(page.getByText(`${staffEmail} foi adicionado à equipe.`, { exact: true })).toBeVisible();
+    expect(
+      await testDb.sellerMember.findFirst({ where: { sellerId: fixtureStore.sellerId, user: { email: staffEmail } } }),
+    ).toMatchObject({ role: "ORDERS" });
+
+    const staffPage = await staff.newPage();
+    await staffPage.goto("/login?next=/seller/orders");
+    await staffPage.getByLabel("E-mail", { exact: true }).fill(staffEmail);
+    await staffPage.getByLabel("Senha", { exact: true }).fill(staffPassword);
+    await staffPage.getByRole("button", { name: "Entrar", exact: true }).click();
+    await expect(staffPage).toHaveURL(/\/seller\/orders$/);
+    await expect(staffPage.getByRole("heading", { name: "Fulfillment e envios" })).toBeVisible();
+    await staffPage.goto("/seller");
+    await expect(staffPage.getByRole("heading", { name: "Equipe da loja" })).toHaveCount(0);
+    await expect(staffPage.getByRole("heading", { name: "Resumo financeiro" })).toHaveCount(0);
+    await staffPage.goto("/seller/products/new");
+    await expect(staffPage).toHaveURL(/\/seller\?error=permission$/);
+
     await page.goto("/seller/orders");
     await expect(page.getByRole("heading", { name: "Fulfillment e envios" })).toBeVisible();
     await expect(page.getByText("Ainda não há pedidos para processar.")).toBeVisible();
@@ -104,6 +144,31 @@ test("store registration → approval → product → publication → catalog �
     await expect(page.getByText("Ainda não há perguntas nos seus produtos.")).toBeVisible();
     await page.goto("/seller/shipping/integrations");
     await expect(page.getByRole("heading", { name: "Integrações de frete" })).toBeVisible();
+    await page.goto("/seller/coupons");
+    await page.getByPlaceholder("Código (ex.: TRILHA10)").fill(sellerCouponCode);
+    await page.getByPlaceholder("Percentual em bps (1000 = 10%)").fill("1500");
+    await page.getByRole("button", { name: "Criar cupom", exact: true }).click();
+    await expect(page.getByText(`Cupom ${sellerCouponCode} criado.`, { exact: true })).toBeVisible();
+    const temporarySellerCoupon = await testDb.coupon.findUniqueOrThrow({ where: { code: sellerCouponCode } });
+    expect(temporarySellerCoupon).toMatchObject({
+      ownerType: "SELLER",
+      fundedBy: "SELLER",
+      sellerId: fixtureStore.sellerId,
+      active: true,
+    });
+    await page.goto(`/seller?couponQ=${sellerCouponCode}`);
+    const sellerCouponRow = page.getByText(sellerCouponCode, { exact: true }).locator("..");
+    await sellerCouponRow.getByRole("button", { name: "Desativar", exact: true }).click();
+    await expect
+      .poll(async () => (await testDb.coupon.findUnique({ where: { code: sellerCouponCode } }))?.active)
+      .toBe(false);
+    await expect
+      .poll(async () =>
+        testDb.auditLog.findFirst({
+          where: { action: "SELLER_COUPON_DEACTIVATED", entityId: temporarySellerCoupon.id },
+        }),
+      )
+      .not.toBeNull();
     await page.goto("/admin");
     await expect(page).toHaveURL(/\/forbidden$/);
 
@@ -111,13 +176,40 @@ test("store registration → approval → product → publication → catalog �
     await expect(adminPage.getByRole("heading", { name: "Moderação pública" })).toBeVisible();
     await expect(adminPage.getByRole("navigation", { name: "Tipo de conteúdo" })).toBeVisible();
     await adminPage.goto("/admin/shipping-recovery");
-    await expect(adminPage.getByRole("heading", { name: "Conferir compras de etiquetas" })).toBeVisible();
+    await expect(adminPage.getByRole("heading", { name: "Conferir etiquetas" })).toBeVisible();
+    await adminPage.goto("/admin/outbox");
+    await expect(adminPage.getByRole("heading", { name: "Eventos que precisam de atenção" })).toBeVisible();
+    await adminPage.goto("/admin/coupons");
+    await adminPage.getByPlaceholder("Código (ex.: TRILHA10)").fill(couponCode);
+    await adminPage.getByRole("button", { name: "Criar cupom", exact: true }).click();
+    await expect(adminPage.getByText("Informe o percentual em basis points.", { exact: true })).toBeVisible();
+    expect(await testDb.coupon.findUnique({ where: { code: couponCode } })).toBeNull();
+    // A failed server validation must preserve the required code so the same form can be corrected and retried.
+    await expect(adminPage.getByPlaceholder("Código (ex.: TRILHA10)")).toHaveValue(couponCode);
+    await adminPage.getByPlaceholder("Percentual em bps (1000 = 10%)").fill("1000");
+    await adminPage.getByRole("button", { name: "Criar cupom", exact: true }).click();
+    await expect(adminPage.getByText(`Cupom ${couponCode} criado.`, { exact: true })).toBeVisible();
+    const temporaryCoupon = await testDb.coupon.findUniqueOrThrow({ where: { code: couponCode } });
+    expect(temporaryCoupon).toMatchObject({ ownerType: "MARKETPLACE", fundedBy: "MARKETPLACE", active: true });
+    await adminPage.goto(`/admin/coupons?couponQ=${couponCode}`);
+    const couponRow = adminPage.getByText(couponCode, { exact: true }).locator("..");
+    await couponRow.getByRole("button", { name: "Desativar", exact: true }).click();
+    await expect
+      .poll(async () => (await testDb.coupon.findUnique({ where: { code: couponCode } }))?.active)
+      .toBe(false);
+    await expect
+      .poll(async () =>
+        testDb.auditLog.findFirst({
+          where: { action: "MARKETPLACE_COUPON_DEACTIVATED", entityId: temporaryCoupon.id },
+        }),
+      )
+      .not.toBeNull();
 
     await page.goto("/seller/products/new");
-    await page.getByLabel("Nome", { exact: true }).fill(productName);
-    await page.getByLabel("Slug", { exact: true }).fill(slug);
+    await page.getByLabel("Nome *", { exact: true }).fill(productName);
+    await page.getByLabel("Slug *", { exact: true }).fill(slug);
     await page
-      .getByLabel("Descrição", { exact: true })
+      .getByLabel("Descrição *", { exact: true })
       .fill("Produto temporário para validar a jornada do Moto Shop, sem vendas reais.");
     await chooseOption(page, "Categoria", "Capacetes");
     const brand = await testDb.brand.findFirstOrThrow({ where: { active: true }, orderBy: { name: "asc" } });
@@ -136,26 +228,35 @@ test("store registration → approval → product → publication → catalog �
     await fitmentSelect.click();
     await page.getByRole("option").first().click();
     await page.keyboard.press("Escape");
-    await page.getByLabel("Variação 1", { exact: true }).fill("Preto / M");
-    await page.getByLabel("SKU", { exact: true }).fill(`SKU-${run}`);
-    await page.getByLabel("Preço (R$)", { exact: true }).fill("199,90");
-    await page.getByLabel("Estoque", { exact: true }).fill("5");
-    const packaging = page.getByRole("group", { name: "Embalagem padrão para envio", exact: true });
+    await page.getByLabel("Variação 1 *", { exact: true }).fill("Preto / M");
+    await page.getByLabel("SKU *", { exact: true }).fill(`SKU-${run}`);
+    await page.getByLabel("Preço (R$) *", { exact: true }).fill("199,90");
+    await page.getByLabel("Estoque *", { exact: true }).fill("5");
+    await page.locator("summary").filter({ hasText: "Dados de embalagem" }).click();
+    const packaging = page.locator("details").filter({ hasText: "Dados de embalagem" }).first();
     await packaging.getByLabel("Peso embalado (g)").fill("1500");
     await packaging.getByLabel("Altura da embalagem (mm)").fill("200");
     await packaging.getByLabel("Largura da embalagem (mm)").fill("250");
     await packaging.getByLabel("Comprimento da embalagem (mm)").fill("300");
+    await page.locator("summary").filter({ hasText: "Embalagem desta variação" }).click();
     await page
-      .getByRole("group", { name: "Embalagem desta variação", exact: true })
+      .locator("details")
+      .filter({ hasText: "Embalagem desta variação" })
+      .first()
       .getByLabel("Peso embalado (g)")
       .fill("1600");
+    await page.locator("summary").filter({ hasText: "Promoção" }).first().click();
     await page.getByLabel("Preço promocional (R$)").fill("179,90");
     await page.getByLabel("Início da promoção").fill("2026-01-01T10:00");
     await page.getByLabel("Término da promoção").fill("2099-12-31T18:00");
     await noHorizontalOverflow(page);
-    await page.screenshot({ path: testInfo.outputPath("product-commercial-new.png"), fullPage: true, caret: "initial" });
+    await page.screenshot({
+      path: testInfo.outputPath("product-commercial-new.png"),
+      fullPage: true,
+      caret: "initial",
+    });
     await page.getByRole("button", { name: "Criar rascunho" }).click();
-    await expect(page).toHaveURL(/\/seller\/products\/[^/]+\/edit$/);
+    await expect(page).toHaveURL(/\/seller\/products\/[^/]+\/edit$/, { timeout: 45_000 });
     await expect(page.getByLabel("Preço promocional (R$)")).toHaveValue("179,90");
     await expect(page.getByLabel("Início da promoção")).toHaveValue("2026-01-01T10:00");
     await page.getByLabel("Preço promocional (R$)").fill("250,00");
@@ -173,35 +274,66 @@ test("store registration → approval → product → publication → catalog �
     expect(savedProduct.variants[0]?.heightInMillimeters).toBeNull();
     expect(savedProduct.variants[0]?.promotionStartsAt?.toISOString()).toBe("2026-01-01T13:00:00.000Z");
     await noHorizontalOverflow(page);
-    await page.screenshot({ path: testInfo.outputPath("product-commercial-edit.png"), fullPage: true, caret: "initial" });
+    await page.screenshot({
+      path: testInfo.outputPath("product-commercial-edit.png"),
+      fullPage: true,
+      caret: "initial",
+    });
     await page.goto(`/products?q=${run}`);
     await expect(page.getByRole("heading", { name: "0 produtos", exact: true })).toBeVisible();
     await page.goto("/seller");
+    await page.getByRole("button", { name: "Arquivar", exact: true }).click();
+    await expect.poll(async () => (await testDb.product.findUnique({ where: { slug } }))?.status).toBe("ARCHIVED");
+    await page.goto("/seller?productStatus=ARCHIVED");
+    await page.getByRole("button", { name: "Restaurar", exact: true }).click();
+    await expect.poll(async () => (await testDb.product.findUnique({ where: { slug } }))?.status).toBe("DRAFT");
+    await page.goto("/seller");
     await page.getByRole("button", { name: "Enviar para aprovação" }).click();
     await expect.poll(async () => (await testDb.product.findUnique({ where: { slug } }))?.status).toBe("SUBMITTED");
-    await adminPage.goto("/admin");
+    await adminPage.goto("/admin/products");
     const fixtureProduct = await testDb.product.findUniqueOrThrow({ where: { slug } });
     await adminPage
       .getByTestId(`product-review-${fixtureProduct.id}`)
       .getByRole("button", { name: "Aprovar", exact: true })
       .click();
     await expect.poll(async () => (await testDb.product.findUnique({ where: { slug } }))?.status).toBe("APPROVED");
+    await page.goto(`/seller?couponQ=${couponCode}`);
+    await expect(page.getByText(couponCode, { exact: true })).toHaveCount(0);
     await page.goto(`/products?q=${run}&moto=${fitment}`);
     await expect(page.getByRole("link", { name: productName, exact: true })).toBeVisible();
-    await page.getByText("Categoria, preço e outros filtros", { exact: true }).click();
+    const filtersToggle = page.getByRole("button", { name: /Filtrar produtos/ });
+    if (await filtersToggle.isVisible()) await filtersToggle.click();
     await page.getByLabel("Preço mínimo (R$)", { exact: true }).fill("189,00");
     await page.getByLabel("Preço máximo (R$)", { exact: true }).fill("200,00");
-    await page.getByRole("button", { name: "Aplicar busca", exact: true }).click();
+    await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
     await expect(page).toHaveURL(/minPrice=18900/);
     await expect(page.getByRole("link", { name: productName, exact: true })).toBeVisible();
     await noHorizontalOverflow(page);
     await page.screenshot({ path: testInfo.outputPath("catalog.png"), fullPage: true, caret: "initial" });
-    await page.getByRole("link", { name: productName, exact: true }).click();
+    await page.goto(`/loja/${slug}`);
+    await expect(page.getByRole("link", { name: productName, exact: true })).toBeVisible();
+    // No mobile os filtros da vitrine ficam recolhidos no painel compartilhado do catálogo.
+    const openStoreFilters = async () => {
+      const toggle = page.getByRole("button", { name: /Filtrar produtos/ });
+      if (await toggle.isVisible()) await toggle.click();
+    };
+    await openStoreFilters();
+    await page.getByRole("searchbox", { name: "Buscar produto" }).fill("sem-correspondencia-e2e");
+    await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
+    await expect(page.getByRole("status")).toContainText("Nenhum produto corresponde");
+    await openStoreFilters();
+    await expect(page.getByRole("searchbox", { name: "Buscar produto" })).toHaveValue("sem-correspondencia-e2e");
+    await page.getByRole("searchbox", { name: "Buscar produto" }).fill("");
+    await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
+    await expect(page.getByRole("link", { name: productName, exact: true })).toBeVisible();
+    await noHorizontalOverflow(page);
+    await page.goto(`/products/${slug}`);
     await expect(page.getByRole("heading", { name: productName, level: 1 })).toBeVisible();
     await noHorizontalOverflow(page);
     await page.screenshot({ path: testInfo.outputPath("product.png"), fullPage: true, caret: "initial" });
     await page.getByRole("button", { name: /Adicionar ao carrinho/i }).click();
-    await expect(page).toHaveURL(/\/cart$/);
+    await expect(page.getByRole("status").filter({ hasText: "Adicionado ao carrinho" })).toBeVisible();
+    await page.goto("/cart");
     await expect(page.getByText(productName, { exact: true }).first()).toBeVisible();
     await noHorizontalOverflow(page);
     await page.goto("/seller/shipping");
@@ -221,6 +353,14 @@ test("store registration → approval → product → publication → catalog �
     await page.getByRole("button", { name: /Calcular frete/i }).click();
     await expect(page.getByText(/Entrega de teste/).first()).toBeVisible();
     await noHorizontalOverflow(page);
+    const checkoutViewport = page.viewportSize();
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      await noHorizontalOverflow(page);
+      await expect(page.getByLabel("CEP", { exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: /Calcular frete/i })).toBeVisible();
+    }
+    if (checkoutViewport) await page.setViewportSize(checkoutViewport);
     // Test-only hosted-field contract: no real card data, tokenization or charge.
     await page.route("https://sdk.mercadopago.com/js/v2", (route) =>
       route.fulfill({
@@ -269,16 +409,24 @@ test("store registration → approval → product → publication → catalog �
     // No payment button is pressed: the checkout service is tested separately with an injected fake.
   } finally {
     testInfo.setTimeout(testInfo.timeout + 30_000);
+    await staff.close();
+    await staffRegistration.close();
     await admin.close();
     const users = await testDb.user.findMany({
-      where: { email: { in: [sellerEmail, adminEmail] } },
+      where: { email: { in: [sellerEmail, staffEmail, adminEmail] } },
       select: { id: true },
     });
     const store = await testDb.store.findUnique({ where: { slug }, select: { sellerId: true } });
+    const testCoupon = await testDb.coupon.findUnique({ where: { code: couponCode }, select: { id: true } });
+    const testSellerCoupon = await testDb.coupon.findUnique({
+      where: { code: sellerCouponCode },
+      select: { id: true },
+    });
     await cleanupFixtures({
       sellerIds: store ? [store.sellerId] : [],
       userIds: users.map((u) => u.id),
-      emails: [sellerEmail, adminEmail],
+      emails: [sellerEmail, staffEmail, adminEmail],
+      couponIds: [testCoupon?.id, testSellerCoupon?.id].filter((id): id is string => id !== undefined),
     });
   }
 });

@@ -17,6 +17,7 @@ import { executeCheckout } from "@/modules/checkout/application/checkout-service
 import { updateSellerCommission } from "@/modules/admin/application/update-seller-commission";
 import { quoteShippingForCart } from "@/modules/checkout/application/shipping-quotes";
 import { advanceOwnShipment, setOwnShippingMethodActive } from "@/modules/shipping/application/own-shipping";
+import { listSellerOrders } from "@/modules/shipping/queries/seller-orders";
 import { reconcileMercadoPagoPayment } from "@/modules/payments/application/reconcile-payment";
 import { recoverPayment } from "@/modules/payments/application/recover-payment";
 import { refundPayment } from "@/modules/payments/application/refund-payment";
@@ -29,6 +30,10 @@ import type { CheckoutInput } from "@/modules/checkout/schemas/checkout";
 import type { CreatePaymentResult, PaymentProvider } from "@/shared/payment/payment-provider";
 import { PaymentProviderError } from "@/shared/payment/payment-provider-error";
 import { hashGuestToken } from "@/modules/cart/infrastructure/cart-access";
+import {
+  fulfillmentStatusChangedEventName,
+  paymentStatusChangedEventName,
+} from "@/modules/outbox/domain/outbox-events";
 
 const run = randomUUID().slice(0, 8);
 const email = `integration-${run}@example.test`;
@@ -414,6 +419,24 @@ describe("checkout with real development database and simulated payments", () =>
       sellerOrderId: first.id,
       status: "DELIVERED",
     });
+    expect(
+      await testDb.outboxEvent.findMany({
+        where: { aggregateType: "SELLER_ORDER", aggregateId: first.id },
+        select: { eventKey: true, eventName: true, status: true },
+        orderBy: { eventKey: "asc" },
+      }),
+    ).toEqual([
+      {
+        eventKey: `seller-order-fulfillment:${first.id}:DELIVERED`,
+        eventName: fulfillmentStatusChangedEventName,
+        status: "PENDING",
+      },
+      {
+        eventKey: `seller-order-fulfillment:${first.id}:SHIPPED`,
+        eventName: fulfillmentStatusChangedEventName,
+        status: "PENDING",
+      },
+    ]);
     const payment = await testDb.payment.findFirstOrThrow({ where: { orderId: order.id } });
     await reconcileMercadoPagoPayment({
       externalId: payment.externalId!,
@@ -502,8 +525,11 @@ describe("checkout with real development database and simulated payments", () =>
       orderBy: { variantId: "asc" },
     });
     const result = await executeCheckout(input, provider("FAILED"));
+    expect(result.paymentDeclined).toBe(true);
     const order = await testDb.order.findUniqueOrThrow({ where: { orderNumber: result.orderNumber } });
     expect(order.status).toBe("CANCELLED");
+    // The declined attempt gives the cart back so the customer can retry with a new key.
+    expect(await testDb.cart.count({ where: { ...input.identity, status: "ACTIVE" } })).toBe(1);
     expect(await testDb.couponRedemption.count({ where: { orderId: order.id } })).toBe(0);
     const after = await testDb.inventory.findMany({
       where: { variantId: { in: variants } },
@@ -587,6 +613,18 @@ describe("checkout with real development database and simulated payments", () =>
     expect((await testDb.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe("PAID");
     expect((await testDb.payment.findFirstOrThrow({ where: { orderId: order.id } })).status).toBe("APPROVED");
     expect(await testDb.inventoryMovement.count({ where: { referenceId: order.id, type: "SALE" } })).toBe(2);
+    expect(
+      await testDb.outboxEvent.findMany({
+        where: { aggregateType: "ORDER", aggregateId: order.id },
+        select: { eventKey: true, eventName: true, status: true },
+      }),
+    ).toEqual([
+      {
+        eventKey: `order-payment:${order.id}:APPROVED`,
+        eventName: paymentStatusChangedEventName,
+        status: "PENDING",
+      },
+    ]);
   });
   it("flags a late provider approval after local cancellation for manual financial review", async () => {
     const result = await executeCheckout(await cartInput(), provider("PENDING"));
@@ -778,6 +816,32 @@ describe("checkout with real development database and simulated payments", () =>
       setOwnShippingMethodActive(fixtures.sellerIds[1]!, fixtures.userIds[0]!, methods[0]!, false),
     ).rejects.toThrow(/não encontrada/);
     await expect(quoteShippingForCart(null, "01001000")).rejects.toThrow(/produto/);
+  });
+  it("does not expose or advance another seller's order in the real database", async () => {
+    const { order } = await createPaidOrder();
+    const target = order.sellerOrders[0]!;
+    const otherSellerId = fixtures.sellerIds.find((id) => id !== target.sellerId)!;
+    const otherSellerOrders = await listSellerOrders(otherSellerId, {
+      sort: "newest",
+      status: "ALL",
+      shipmentStatus: "ALL",
+      page: 1,
+    });
+
+    expect(otherSellerOrders.orders.some((sellerOrder) => sellerOrder.id === target.id)).toBe(false);
+    await expect(
+      advanceOwnShipment({
+        sellerId: otherSellerId,
+        actorUserId: fixtures.userIds[0]!,
+        sellerOrderId: target.id,
+        status: "SHIPPED",
+        trackingCode: "QA-NAO-DEVE-ATUALIZAR",
+      }),
+    ).rejects.toThrow(/pedido não encontrado/i);
+    expect(await testDb.shipment.findUniqueOrThrow({ where: { sellerOrderId: target.id } })).toMatchObject({
+      status: "PENDING",
+      trackingCode: null,
+    });
   });
   it("rejects expired and exhausted coupons without creating a charge", async () => {
     const fake = provider();
