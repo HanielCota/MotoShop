@@ -48,7 +48,7 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
     <AdminCard
       id="admin-coupons"
       title="Cupons do marketplace"
-      description="Crie descontos globais financiados pelo Moto Shop. Valores são em centavos e percentuais usam basis points."
+      description="Crie descontos globais financiados pelo Moto Shop, em percentual ou em reais."
     >
       <CouponForm ownerType="MARKETPLACE" />
       <AdminFilterForm resetHref={adminHref("coupons", {})} label="Filtrar cupons">

@@ -116,8 +116,8 @@ describe("coupon creation audit", () => {
     const form = new FormData();
     form.set("code", "trilha10");
     form.set("discountType", "PERCENTAGE");
-    form.set("percentageBps", "1000");
-    form.set("minimumPurchaseInCents", "5000");
+    form.set("discountPercent", "10");
+    form.set("minimumPurchase", "50");
     return form;
   }
 

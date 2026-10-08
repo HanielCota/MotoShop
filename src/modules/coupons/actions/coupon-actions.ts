@@ -8,6 +8,8 @@ import { db } from "@/lib/database";
 import { requireAdminAccess, requireSellerAccess } from "@/modules/auth/application/authorization";
 import { asApplicationError } from "@/shared/errors/application-error";
 
+import { readCouponFormInput } from "../domain/coupon-form-input";
+
 const couponSchema = z.object({
   code: z
     .string()
@@ -15,9 +17,18 @@ const couponSchema = z.object({
     .toUpperCase()
     .regex(/^[A-Z0-9_-]{3,40}$/, "Use de 3 a 40 caracteres: letras, números, _ ou -."),
   discountType: z.enum(["PERCENTAGE", "FIXED_AMOUNT"]),
-  percentageBps: z.coerce.number().int().min(1).max(10_000).optional(),
-  fixedAmountInCents: z.coerce.number().int().positive().optional(),
-  minimumPurchaseInCents: z.coerce.number().int().min(0),
+  percentageBps: z
+    .number({ error: "Informe o percentual com até duas casas, ex.: 10 ou 10,5." })
+    .int()
+    .min(1, "O percentual precisa ser maior que zero.")
+    .max(10_000, "O percentual não pode passar de 100%.")
+    .optional(),
+  fixedAmountInCents: z
+    .number({ error: "Informe o valor em reais, ex.: 25,90." })
+    .int()
+    .positive("O desconto precisa ser maior que zero.")
+    .optional(),
+  minimumPurchaseInCents: z.number({ error: "Informe a compra mínima em reais, ex.: 150,00." }).int().min(0),
   globalUsageLimit: z.coerce.number().int().positive().optional(),
   perCustomerUsageLimit: z.coerce.number().int().positive().optional(),
 });
@@ -108,20 +119,12 @@ async function createCoupon(
     actorUserId: string;
   },
 ): Promise<CouponActionState> {
-  const parsed = couponSchema.safeParse({
-    code: formData.get("code"),
-    discountType: formData.get("discountType"),
-    percentageBps: formData.get("percentageBps") || undefined,
-    fixedAmountInCents: formData.get("fixedAmountInCents") || undefined,
-    minimumPurchaseInCents: formData.get("minimumPurchaseInCents") || 0,
-    globalUsageLimit: formData.get("globalUsageLimit") || undefined,
-    perCustomerUsageLimit: formData.get("perCustomerUsageLimit") || undefined,
-  });
+  const parsed = couponSchema.safeParse(readCouponFormInput(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os dados do cupom." };
   if (parsed.data.discountType === "PERCENTAGE" && parsed.data.percentageBps === undefined)
-    return { error: "Informe o percentual em basis points." };
+    return { error: "Informe o percentual de desconto." };
   if (parsed.data.discountType === "FIXED_AMOUNT" && parsed.data.fixedAmountInCents === undefined)
-    return { error: "Informe o desconto fixo em centavos." };
+    return { error: "Informe o valor do desconto em reais." };
 
   try {
     const data = {
