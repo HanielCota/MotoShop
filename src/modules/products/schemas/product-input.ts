@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const MAX_INT32 = 2_147_483_647;
+
 const measurement = z
   .number({ error: "Informe peso e medidas em números inteiros positivos." })
   .int()
@@ -42,7 +44,11 @@ export const productInputSchema = z.object({
           promotionalPriceInCents: z.number().int().positive().max(2_147_483_647).nullable().optional(),
           promotionStartsAt: z.date({ error: "Informe uma data inicial válida." }).nullable().optional(),
           promotionEndsAt: z.date({ error: "Informe uma data final válida." }).nullable().optional(),
-          stock: z.coerce.number().int().nonnegative("O estoque não pode ser negativo."),
+          stock: z.coerce
+            .number({ error: "Informe o estoque em unidades inteiras." })
+            .int("Informe o estoque em unidades inteiras.")
+            .nonnegative("O estoque não pode ser negativo.")
+            .max(MAX_INT32, "O estoque informado é maior que o permitido."),
         })
         .superRefine((variant, ctx) => {
           if (variant.promotionalPriceInCents != null && variant.promotionalPriceInCents >= variant.priceInCents) {

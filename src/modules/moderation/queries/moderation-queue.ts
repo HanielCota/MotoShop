@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db } from "@/lib/database";
+import { formatCount } from "@/lib/format";
 
 export type ModerationKind = "question" | "product-review" | "seller-review";
 
@@ -66,7 +67,7 @@ export async function listModerationQueue(kind: ModerationKind, requestedPage: n
       pageCount: Math.max(1, Math.ceil(total / pageSize)),
       items: records.map((item) => ({
         id: item.id,
-        text: item.comment || `Avaliação de ${(item.ratingTenths / 10).toFixed(1)} estrela(s)`,
+        text: item.comment || `Avaliação de ${(item.ratingTenths / 10).toFixed(1).replace(".", ",")} estrelas`,
         detail: null,
         hidden: Boolean(item.hiddenAt),
         createdAt: item.createdAt,
@@ -98,7 +99,7 @@ export async function listModerationQueue(kind: ModerationKind, requestedPage: n
     pageCount: Math.max(1, Math.ceil(total / pageSize)),
     items: records.map((item) => ({
       id: item.id,
-      text: item.comment || `Avaliação de ${item.rating} estrela(s)`,
+      text: item.comment || `Avaliação de ${formatCount(item.rating, "estrela", "estrelas")}`,
       detail: null,
       hidden: Boolean(item.hiddenAt),
       createdAt: item.createdAt,

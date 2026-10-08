@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Route } from "next";
+import type { Metadata, Route } from "next";
 import { ChevronRight, TicketPercent, Truck } from "lucide-react";
 
 import { PageHeader } from "@/components/ui/page-header";
@@ -7,6 +7,11 @@ import { requireSellerDashboardContext } from "@/modules/sellers/application/get
 import { SellerStoreSettingsSection } from "@/modules/sellers/components/dashboard/seller-store-settings-section";
 import { SellerTeamCard } from "@/modules/sellers/components/dashboard/seller-team-card";
 import { SellerVipCard } from "@/modules/sellers/components/dashboard/seller-vip-card";
+
+export const metadata: Metadata = {
+  title: "Configurações · Central do Lojista",
+  robots: { index: false, follow: false },
+};
 
 function SettingsShortcut({
   href,

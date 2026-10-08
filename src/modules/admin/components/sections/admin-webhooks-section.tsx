@@ -3,7 +3,7 @@ import { Webhook } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatCount } from "@/lib/format";
 import { getStatusOptions } from "@/shared/presentation/status-labels";
 
 import { retryWebhookEventAction } from "../../actions/webhook-actions";
@@ -109,7 +109,7 @@ export async function AdminWebhooksSection({ searchParams }: AdminSectionProps) 
           pageCount={result.pageCount}
           previousHref={pageHref(result.page - 1)}
           nextHref={pageHref(result.page + 1)}
-          summary={<>{result.total} evento(s)</>}
+          summary={<>{formatCount(result.total, "evento", "eventos")}</>}
         />
       ) : null}
     </AdminCard>

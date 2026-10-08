@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatCount } from "@/lib/format";
 import {
   approveSellerAction,
   reactivateSellerAction,
@@ -71,8 +71,8 @@ export async function AdminSellersSection({ searchParams }: AdminSectionProps) {
                   <StatusBadge domain="seller" status={seller.status} />
                 </div>
                 <p className="text-muted-foreground text-sm break-all">
-                  {seller.members[0]?.user.email ?? "Sem responsável"} · {seller._count.products} produto(s) · desde{" "}
-                  {formatDate(seller.createdAt)}
+                  {seller.members[0]?.user.email ?? "Sem responsável"} ·{" "}
+                  {formatCount(seller._count.products, "produto", "produtos")} · desde {formatDate(seller.createdAt)}
                 </p>
                 <SellerCommissionForm sellerId={seller.id} commissionBpsOverride={seller.commissionBpsOverride} />
               </div>
@@ -113,7 +113,7 @@ export async function AdminSellersSection({ searchParams }: AdminSectionProps) {
           pageCount={result.pageCount}
           previousHref={pageHref(result.page - 1)}
           nextHref={pageHref(result.page + 1)}
-          summary={<>{result.total} lojista(s)</>}
+          summary={<>{formatCount(result.total, "lojista", "lojistas")}</>}
         />
       ) : null}
     </AdminCard>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { Route } from "next";
+import type { Metadata, Route } from "next";
 import { Bike, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,10 +26,15 @@ import {
   buildCatalogHref,
   clearCatalogFiltersHref,
   countActiveCatalogFilters,
+  normalizeCatalogPrice,
   removeCatalogFilterHref,
   type CatalogFilterKey,
   type CatalogQuery,
 } from "./catalog-query";
+
+export const metadata: Metadata = {
+  title: "Catálogo",
+};
 
 const sortOptions: { value: ProductSort; label: string }[] = [
   { value: "relevance", label: "Mais relevantes" },
@@ -90,8 +95,8 @@ export default async function ProductsPage({
     seller: params.seller,
     sort: params.sort,
     availability: params.availability,
-    minPrice: params.minPrice ?? null,
-    maxPrice: params.maxPrice ?? null,
+    minPrice: normalizeCatalogPrice(params.minPrice),
+    maxPrice: normalizeCatalogPrice(params.maxPrice),
     promotion: params.promotion,
     page: params.page,
   };
@@ -121,8 +126,8 @@ export default async function ProductsPage({
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 sm:py-10">
       <PageHeader
         eyebrow="Catálogo"
-        title="Produtos para sua próxima sessão"
-        description="Encontre peças, equipamentos e acessórios aprovados pelo Moto Shop."
+        title="Peças, acessórios e equipamentos"
+        description="Produtos de lojistas parceiros do Moto Shop."
       />
 
       <PrimaryMotorcycleBanner

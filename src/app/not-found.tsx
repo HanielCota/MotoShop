@@ -15,10 +15,9 @@ export default function NotFound() {
     <main className="mx-auto flex w-full max-w-2xl flex-col items-start gap-6 px-4 py-16 sm:py-24">
       <div className="space-y-3">
         <p className="text-brand-strong text-xs font-semibold tracking-[0.14em] uppercase">Erro 404</p>
-        <h1 className="text-4xl text-balance sm:text-5xl">Saímos da trilha</h1>
+        <h1 className="text-4xl text-balance sm:text-5xl">Página não encontrada</h1>
         <p className="text-muted-foreground max-w-xl">
-          A página que você procura não existe, foi removida ou o produto não está mais disponível. Busque uma peça ou
-          volte ao catálogo do Moto Shop.
+          A página que você procura não existe ou foi removida. Busque um produto ou volte ao catálogo.
         </p>
       </div>
 

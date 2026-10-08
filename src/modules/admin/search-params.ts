@@ -1,6 +1,39 @@
-import { createLoader, parseAsInteger, parseAsString, parseAsStringLiteral } from "nuqs/server";
+import { createLoader, createParser, parseAsInteger, parseAsString, parseAsStringLiteral } from "nuqs/server";
 
+import { NotificationDeliveryStatus, WebhookEventStatus } from "@/generated/prisma/enums";
 import { sellerOrderSortValues, shipmentStatusValues } from "@/modules/shipping/search-params";
+
+/**
+ * Limite de página aceito na URL. `?page=99999999999999999999` vira 1e20 e o `skip` calculado
+ * estoura o inteiro de 64 bits aceito pelo Prisma, derrubando a seção inteira.
+ */
+export const MAX_ADMIN_PAGE = 10_000;
+
+export function clampAdminPage(page: number | null | undefined) {
+  if (typeof page !== "number" || !Number.isFinite(page)) return 1;
+  return Math.min(Math.max(Math.trunc(page), 1), MAX_ADMIN_PAGE);
+}
+
+/** Página da URL limitada a `1..MAX_ADMIN_PAGE`. */
+const parseAsAdminPage = createParser({
+  parse: (value) => {
+    const page = parseAsInteger.parse(value);
+    return page === null ? null : clampAdminPage(page);
+  },
+  serialize: (value) => String(value),
+}).withDefault(1);
+
+/** Texto livre da URL sem caracteres NUL: o PostgreSQL rejeita U+0000 e a consulta falharia. */
+const parseAsAdminText = createParser({
+  parse: (value) => {
+    const text = parseAsString.parse(value)?.replaceAll(String.fromCharCode(0), "");
+    return text ? text : null;
+  },
+  serialize: (value) => value,
+});
+
+export const adminWebhookStatusValues = ["ALL", ...Object.values(WebhookEventStatus)] as const;
+export const adminNotificationStatusValues = ["ALL", ...Object.values(NotificationDeliveryStatus)] as const;
 
 export const adminSellerStatusValues = [
   "ALL",
@@ -38,93 +71,93 @@ const sortNewestFirst = parseAsStringLiteral(["newest", "oldest"] as const).with
 
 export const adminSellerSearchParams = {
   sellerStatus: parseAsStringLiteral(adminSellerStatusValues).withDefault("ALL"),
-  sellerQ: parseAsString,
+  sellerQ: parseAsAdminText,
   sellerSort: parseAsStringLiteral(adminSellerSortValues).withDefault("newest"),
-  sellerPage: parseAsInteger.withDefault(1),
+  sellerPage: parseAsAdminPage,
 };
 
 export const adminProductReviewSearchParams = {
   productReviewStatus: parseAsStringLiteral(adminProductReviewStatusValues).withDefault("ALL"),
-  productReviewQ: parseAsString,
-  productReviewCategoryId: parseAsString,
-  productReviewBrandId: parseAsString,
-  productReviewSellerId: parseAsString,
-  productReviewFrom: parseAsString,
-  productReviewTo: parseAsString,
+  productReviewQ: parseAsAdminText,
+  productReviewCategoryId: parseAsAdminText,
+  productReviewBrandId: parseAsAdminText,
+  productReviewSellerId: parseAsAdminText,
+  productReviewFrom: parseAsAdminText,
+  productReviewTo: parseAsAdminText,
   productReviewSort: parseAsStringLiteral(["newest", "oldest"] as const).withDefault("oldest"),
-  productReviewPage: parseAsInteger.withDefault(1),
+  productReviewPage: parseAsAdminPage,
 };
 
 export const adminOrderSearchParams = {
   adminOrderStatus: parseAsStringLiteral(adminOrderStatusValues).withDefault("ALL"),
   adminOrderShipmentStatus: parseAsStringLiteral(shipmentStatusValues).withDefault("ALL"),
-  adminOrderQ: parseAsString,
-  adminOrderSellerId: parseAsString,
-  adminOrderFrom: parseAsString,
-  adminOrderTo: parseAsString,
+  adminOrderQ: parseAsAdminText,
+  adminOrderSellerId: parseAsAdminText,
+  adminOrderFrom: parseAsAdminText,
+  adminOrderTo: parseAsAdminText,
   adminOrderSort: parseAsStringLiteral(sellerOrderSortValues).withDefault("newest"),
-  adminOrderPage: parseAsInteger.withDefault(1),
+  adminOrderPage: parseAsAdminPage,
 };
 
 export const adminAuditSearchParams = {
-  auditAction: parseAsString,
-  auditEntityType: parseAsString,
-  auditQ: parseAsString,
-  auditActorQ: parseAsString,
-  auditFrom: parseAsString,
-  auditTo: parseAsString,
+  auditAction: parseAsAdminText,
+  auditEntityType: parseAsAdminText,
+  auditQ: parseAsAdminText,
+  auditActorQ: parseAsAdminText,
+  auditFrom: parseAsAdminText,
+  auditTo: parseAsAdminText,
   auditSort: sortNewestFirst,
-  auditPage: parseAsInteger.withDefault(1),
+  auditPage: parseAsAdminPage,
 };
 
 export const adminWebhookSearchParams = {
-  webhookStatus: parseAsString,
-  webhookQ: parseAsString,
-  webhookProvider: parseAsString,
-  webhookFrom: parseAsString,
-  webhookTo: parseAsString,
+  webhookStatus: parseAsStringLiteral(adminWebhookStatusValues),
+  webhookQ: parseAsAdminText,
+  webhookProvider: parseAsAdminText,
+  webhookFrom: parseAsAdminText,
+  webhookTo: parseAsAdminText,
   webhookSort: sortNewestFirst,
-  webhookPage: parseAsInteger.withDefault(1),
+  webhookPage: parseAsAdminPage,
 };
 
 export const adminNotificationSearchParams = {
-  notificationStatus: parseAsString,
-  notificationQ: parseAsString,
-  notificationKind: parseAsString,
-  notificationFrom: parseAsString,
-  notificationTo: parseAsString,
+  notificationStatus: parseAsStringLiteral(adminNotificationStatusValues),
+  notificationQ: parseAsAdminText,
+  notificationKind: parseAsAdminText,
+  notificationFrom: parseAsAdminText,
+  notificationTo: parseAsAdminText,
   notificationSort: sortNewestFirst,
-  notificationPage: parseAsInteger.withDefault(1),
+  notificationPage: parseAsAdminPage,
 };
 
 export const adminReturnSearchParams = {
   returnStatus: parseAsStringLiteral(adminReturnStatusValues).withDefault("ALL"),
-  returnQ: parseAsString,
-  returnSellerId: parseAsString,
-  returnFrom: parseAsString,
-  returnTo: parseAsString,
+  returnQ: parseAsAdminText,
+  returnSellerId: parseAsAdminText,
+  returnFrom: parseAsAdminText,
+  returnTo: parseAsAdminText,
   returnSort: parseAsStringLiteral(adminPostSaleSortValues).withDefault("oldest"),
-  returnPage: parseAsInteger.withDefault(1),
+  returnPage: parseAsAdminPage,
 };
 
 export const adminCancellationSearchParams = {
   cancellationStatus: parseAsStringLiteral(adminCancellationStatusValues).withDefault("ALL"),
-  cancellationQ: parseAsString,
-  cancellationSellerId: parseAsString,
-  cancellationFrom: parseAsString,
-  cancellationTo: parseAsString,
+  cancellationQ: parseAsAdminText,
+  cancellationSellerId: parseAsAdminText,
+  cancellationFrom: parseAsAdminText,
+  cancellationTo: parseAsAdminText,
   cancellationSort: parseAsStringLiteral(adminPostSaleSortValues).withDefault("oldest"),
-  cancellationPage: parseAsInteger.withDefault(1),
+  cancellationPage: parseAsAdminPage,
 };
 
 export const adminDisputeSearchParams = {
   disputeStatus: parseAsStringLiteral(adminDisputeStatusValues).withDefault("ALL"),
-  disputeQ: parseAsString,
-  disputeSellerId: parseAsString,
-  disputeFrom: parseAsString,
-  disputeTo: parseAsString,
+  disputeQ: parseAsAdminText,
+  disputeSellerId: parseAsAdminText,
+  disputeFrom: parseAsAdminText,
+  disputeTo: parseAsAdminText,
   disputeSort: parseAsStringLiteral(adminPostSaleSortValues).withDefault("oldest"),
-  disputePage: parseAsInteger.withDefault(1),
+  disputePage: parseAsAdminPage,
 };
 
 /** Cada seção do Admin carrega somente os próprios parâmetros. */

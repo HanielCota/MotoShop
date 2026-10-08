@@ -10,13 +10,21 @@ import { asApplicationError } from "@/shared/errors/application-error";
 
 import { readCouponFormInput } from "../domain/coupon-form-input";
 
+// Coupon amounts and limits are persisted as PostgreSQL int4.
+const MAX_INT32 = 2_147_483_647;
+const usageLimit = z.coerce
+  .number({ error: "Informe o limite de uso como um número inteiro." })
+  .int("Informe o limite de uso como um número inteiro.")
+  .positive("O limite de uso precisa ser maior que zero.")
+  .max(MAX_INT32, "O limite de uso informado é maior que o permitido.");
+
 const couponSchema = z.object({
   code: z
     .string()
     .trim()
     .toUpperCase()
     .regex(/^[A-Z0-9_-]{3,40}$/, "Use de 3 a 40 caracteres: letras, números, _ ou -."),
-  discountType: z.enum(["PERCENTAGE", "FIXED_AMOUNT"]),
+  discountType: z.enum(["PERCENTAGE", "FIXED_AMOUNT"], { error: "Escolha o tipo de desconto." }),
   percentageBps: z
     .number({ error: "Informe o percentual com até duas casas, ex.: 10 ou 10,5." })
     .int()
@@ -27,10 +35,15 @@ const couponSchema = z.object({
     .number({ error: "Informe o valor em reais, ex.: 25,90." })
     .int()
     .positive("O desconto precisa ser maior que zero.")
+    .max(MAX_INT32, "O desconto informado é maior que o permitido.")
     .optional(),
-  minimumPurchaseInCents: z.number({ error: "Informe a compra mínima em reais, ex.: 150,00." }).int().min(0),
-  globalUsageLimit: z.coerce.number().int().positive().optional(),
-  perCustomerUsageLimit: z.coerce.number().int().positive().optional(),
+  minimumPurchaseInCents: z
+    .number({ error: "Informe a compra mínima em reais, ex.: 150,00." })
+    .int()
+    .min(0)
+    .max(MAX_INT32, "A compra mínima informada é maior que a permitida."),
+  globalUsageLimit: usageLimit.optional(),
+  perCustomerUsageLimit: usageLimit.optional(),
 });
 
 export type CouponActionState = { error?: string; success?: string };

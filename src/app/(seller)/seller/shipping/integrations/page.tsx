@@ -1,11 +1,16 @@
 import Link from "next/link";
-import type { Route } from "next";
+import type { Metadata, Route } from "next";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireSellerPageContext } from "@/modules/sellers/application/get-seller-dashboard-context";
 import { hasSellerShippingIntegration } from "@/modules/sellers/queries/seller-shipping-methods";
 import { MelhorEnvioConnectionCard } from "@/modules/shipping/components/melhor-envio-connection-card";
+
+export const metadata: Metadata = {
+  title: "Integrações de frete · Central do Lojista",
+  robots: { index: false, follow: false },
+};
 
 export default async function SellerShippingIntegrationsPage({
   searchParams,

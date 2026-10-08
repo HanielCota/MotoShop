@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
@@ -7,6 +8,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SellerProductsCard } from "@/modules/products/components/seller-products-card";
 import { requireSellerPageContext } from "@/modules/sellers/application/get-seller-dashboard-context";
 import { SellerCardSkeleton } from "@/modules/sellers/components/dashboard/seller-card-skeleton";
+
+export const metadata: Metadata = {
+  title: "Produtos · Central do Lojista",
+  robots: { index: false, follow: false },
+};
 
 export default async function SellerProductsPage({
   searchParams,

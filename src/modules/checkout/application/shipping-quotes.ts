@@ -147,7 +147,8 @@ export async function quoteShippingForCart(
           ? {
               id: item.variant.sku,
               ...measurements,
-              insuranceValueInCents: getCurrentPriceInCents(item.variant) * item.quantity,
+              // Valor UNITÁRIO: o Melhor Envio multiplica o `insurance_value` pela `quantity`.
+              insuranceValueInCents: getCurrentPriceInCents(item.variant),
               quantity: item.quantity,
             }
           : null;

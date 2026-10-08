@@ -1,8 +1,16 @@
-/* Apenas a direção de arte do hero; o restante da homepage usa Tailwind e os tokens globais. */
+/*
+ * Apenas a direção de arte do hero; o restante da homepage usa Tailwind e os tokens globais.
+ * A foto (1280×853) tem o piloto no centro-esquerda. O `fill` do next/image define inset/tamanho
+ * inline, por isso as caixas abaixo usam !important para recortar a foto por breakpoint:
+ *   - mobile: só a faixa acima do seletor, com o piloto centralizado e fundindo no fundo escuro;
+ *   - lg+: só a metade direita, para o piloto ficar na área livre ao lado do título e do seletor.
+ */
 .heroImage {
   z-index: -2;
+  bottom: auto !important;
+  height: 470px !important;
   object-fit: cover;
-  object-position: 62% center;
+  object-position: 38% 30%;
 }
 
 .heroShade {
@@ -10,8 +18,8 @@
   z-index: -1;
   inset: 0;
   background:
-    linear-gradient(90deg, rgb(11 11 10 / 92%), rgb(11 11 10 / 40%)),
-    linear-gradient(0deg, rgb(11 11 10 / 90%), transparent 62%);
+    linear-gradient(90deg, rgb(11 11 10 / 80%), rgb(11 11 10 / 35%)),
+    linear-gradient(180deg, rgb(11 11 10 / 0%) 300px, var(--moto-brand-foreground) 470px);
 }
 
 /* Traço inclinado que acompanha o kicker do hero. */
@@ -24,6 +32,8 @@
 
 @media (min-width: 640px) {
   .heroImage {
+    bottom: 0 !important;
+    height: 100% !important;
     object-position: center;
   }
 
@@ -31,5 +41,19 @@
     background:
       linear-gradient(90deg, rgb(11 11 10 / 92%) 0%, rgb(11 11 10 / 72%) 42%, rgb(11 11 10 / 8%) 78%),
       linear-gradient(0deg, rgb(11 11 10 / 66%), transparent 55%);
+  }
+}
+
+@media (min-width: 1024px) {
+  .heroImage {
+    left: auto !important;
+    width: 56% !important;
+    object-position: 38% center;
+  }
+
+  .heroShade {
+    background:
+      linear-gradient(90deg, var(--moto-brand-foreground) 44%, rgb(11 11 10 / 55%) 54%, rgb(11 11 10 / 0%) 70%),
+      linear-gradient(0deg, rgb(11 11 10 / 60%), transparent 40%);
   }
 }

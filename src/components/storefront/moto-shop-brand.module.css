@@ -1,10 +1,25 @@
+/*
+ * Brand mark — "holeshot" hover (≈600ms):
+ *   1. rev     0–140ms   engine vibration (tiny jitter)
+ *   2. launch  120–600ms wheelie lean + forward surge, settles with a small overshoot
+ *   3. livery  the orange version sweeps in on a race-stripe diagonal (reversible on leave)
+ *   4. fx      speed lines cut through the mark; an exhaust puff trails on the left
+ * Only transform, opacity and clip-path are animated. Reduced motion: stripe sweep only, no movement.
+ * Variants: header (horizontal mark), footer and auth (stacked main logo on its plate).
+ */
+
 .brand {
+  --brand-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --brand-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  position: relative;
   display: inline-flex;
   min-height: 44px;
   flex: 0 0 auto;
   align-items: center;
   color: inherit;
   text-decoration: none;
+  isolation: isolate;
 }
 
 .brand:focus-visible {
@@ -22,93 +37,263 @@
   overflow: hidden;
 }
 
+.header,
+.header .stage {
+  width: 178px;
+}
+
+/*
+ * Stacked (main) logo: the artwork is a black 2.5:1 plate that swaps to the orange plate. The whole
+ * plate does the wheelie, so the stage does not clip it; rounded corners live on the images and the
+ * speed lines are clipped to the plate instead.
+ */
+.footer .stage,
+.auth .stage {
+  --brand-plate-radius: 8px;
+
+  overflow: visible;
+}
+
+.footer .stage {
+  width: 160px;
+  height: 64px;
+}
+
+.auth .stage {
+  --brand-plate-radius: 10px;
+
+  width: 220px;
+  height: 88px;
+}
+
+.footer .logo,
+.auth .logo,
+.footer .speedLines,
+.auth .speedLines {
+  border-radius: var(--brand-plate-radius);
+}
+
+.footer .speedLines,
+.auth .speedLines {
+  overflow: hidden;
+}
+
+.footer .exhaust,
+.auth .exhaust {
+  bottom: 12px;
+  left: -2px;
+}
+
+/* Wraps both logo images so the lean/launch moves them together. */
+.rider {
+  position: absolute;
+  inset: 0;
+  transform-origin: 12% 85%;
+}
+
 .logo {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  transition:
-    opacity 170ms ease,
-    transform 270ms cubic-bezier(0.23, 1, 0.32, 1),
-    clip-path 270ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
+/*
+ * The base livery stays put. Entering, it fades only after the stripe has swept over it (delay lives
+ * on the active rule); leaving, it returns at once so the mark never goes blank.
+ */
 .primary {
   opacity: 1;
-  transform: translateX(0) scale(1);
+  transition: opacity 160ms ease;
 }
 
+/* Race-stripe sweep: a skewed polygon grows from the left edge. */
 .alternate {
-  opacity: 0;
-  clip-path: inset(0 100% 0 0);
-  transform: translateX(14%) scale(0.96);
+  clip-path: polygon(0 0, 0 0, -14% 100%, -14% 100%);
+  opacity: 1;
+  transition: clip-path 420ms var(--brand-ease-out);
 }
 
-.stage::after {
+/* ---------- Speed lines ---------- */
+
+.speedLines {
   position: absolute;
-  z-index: 1;
-  inset-block: -10%;
-  left: 0;
-  width: 34%;
-  background: linear-gradient(105deg, transparent 12%, rgb(255 255 255 / 78%) 50%, transparent 88%);
-  content: "";
-  opacity: 0;
+  z-index: 2;
+  inset: 0;
   pointer-events: none;
-  transform: translateX(-145%) skewX(-14deg);
-  transition:
-    opacity 140ms ease,
-    transform 280ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-.brand:focus-visible .stage::after {
-  opacity: 0.78;
-  transform: translateX(490%) skewX(-14deg);
+.speedLines span {
+  position: absolute;
+  right: 0;
+  width: 46%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgb(255 255 255 / 0%), rgb(255 255 255 / 92%));
+  opacity: 0;
+  transform: translateX(110%) scaleX(0.4);
+  transform-origin: right center;
 }
 
-.footer {
-  width: 135px;
-  height: 44px;
+.speedLines span:nth-child(1) {
+  top: 24%;
 }
 
-.header {
-  width: 178px;
+.speedLines span:nth-child(2) {
+  top: 52%;
+  width: 62%;
 }
 
-.header .stage {
-  width: 178px;
+.speedLines span:nth-child(3) {
+  top: 76%;
+  width: 38%;
 }
 
-.footer .stage {
-  width: 135px;
+/* ---------- Exhaust puff (outside the clipped stage) ---------- */
+
+.exhaust {
+  position: absolute;
+  z-index: -1;
+  bottom: 9px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
 }
+
+.exhaust span {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgb(255 255 255 / 55%), rgb(255 255 255 / 0%) 70%);
+  opacity: 0;
+}
+
+/* ---------- Active state (hover on fine pointers, keyboard focus) ---------- */
 
 .brand:focus-visible .primary {
   opacity: 0;
-  transform: translateX(-14%) scale(0.96);
+  transition-delay: 240ms;
 }
 
 .brand:focus-visible .alternate {
-  opacity: 1;
-  clip-path: inset(0);
-  transform: translateX(0) scale(1);
+  clip-path: polygon(0 0, 114% 0, 100% 100%, -14% 100%);
+}
+
+.brand:focus-visible .rider {
+  animation: brand-holeshot 600ms var(--brand-ease-out) both;
+}
+
+.brand:focus-visible .speedLines span {
+  animation: brand-speed-line 520ms var(--brand-ease-out) both;
+}
+
+.brand:focus-visible .exhaust span {
+  animation: brand-exhaust 700ms ease-out both;
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .brand:hover .stage::after {
-    opacity: 0.78;
-    transform: translateX(490%) skewX(-14deg);
-  }
-
   .brand:hover .primary {
     opacity: 0;
-    transform: translateX(-14%) scale(0.96);
+    transition-delay: 240ms;
   }
 
   .brand:hover .alternate {
-    opacity: 1;
-    clip-path: inset(0);
-    transform: translateX(0) scale(1);
+    clip-path: polygon(0 0, 114% 0, 100% 100%, -14% 100%);
+  }
+
+  .brand:hover .rider {
+    animation: brand-holeshot 600ms var(--brand-ease-out) both;
+  }
+
+  .brand:hover .speedLines span {
+    animation: brand-speed-line 520ms var(--brand-ease-out) both;
+  }
+
+  .brand:hover .exhaust span {
+    animation: brand-exhaust 700ms ease-out both;
+  }
+}
+
+/* Stagger the secondary effects. */
+.speedLines span:nth-child(1) {
+  animation-delay: 150ms !important;
+}
+
+.speedLines span:nth-child(2) {
+  animation-delay: 110ms !important;
+}
+
+.speedLines span:nth-child(3) {
+  animation-delay: 210ms !important;
+}
+
+.exhaust span:nth-child(2) {
+  animation-delay: 90ms !important;
+}
+
+.exhaust span:nth-child(3) {
+  animation-delay: 170ms !important;
+}
+
+/* ---------- Keyframes ---------- */
+
+@keyframes brand-holeshot {
+  /* rev: engine vibration */
+  0% {
+    transform: none;
+  }
+  6% {
+    transform: translate(-1px, 0.5px);
+  }
+  12% {
+    transform: translate(1px, -0.5px);
+  }
+  18% {
+    transform: translate(-1px, 0);
+  }
+  /* launch: front lifts, mark surges forward */
+  42% {
+    transform: translateX(5px) rotate(-3deg) skewX(-7deg);
+  }
+  /* front wheel comes down, small overshoot */
+  68% {
+    transform: translateX(1px) rotate(0.8deg) skewX(2deg);
+  }
+  84% {
+    transform: translateX(0) rotate(-0.4deg) skewX(-0.5deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes brand-speed-line {
+  0% {
+    opacity: 0;
+    transform: translateX(110%) scaleX(0.4);
+  }
+  30% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-230%) scaleX(1);
+  }
+}
+
+@keyframes brand-exhaust {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.3);
+  }
+  25% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-16px, -4px) scale(1.9);
   }
 }
 
@@ -119,29 +304,42 @@
   }
 }
 
+@media (min-width: 640px) {
+  .auth .stage {
+    width: 260px;
+    height: 104px;
+  }
+}
+
+/*
+ * Reduced motion: keep the livery change but drop everything that moves the mark. The race-stripe
+ * sweep stays (it is a colour wipe inside a fixed frame, no translation, rotation or scaling); the
+ * rev shake, wheelie, speed lines and exhaust are removed.
+ */
 @media (prefers-reduced-motion: reduce) {
-  .logo {
-    transition-duration: 120ms !important;
+  .rider,
+  .speedLines span,
+  .exhaust span {
+    animation: none !important;
   }
 
-  .stage::after {
+  .speedLines,
+  .exhaust {
     display: none;
-    opacity: 0 !important;
-    transform: none;
   }
 
   .primary,
-  .alternate,
   .brand:hover .primary,
-  .brand:hover .alternate,
-  .brand:focus-visible .primary,
-  .brand:focus-visible .alternate {
+  .brand:focus-visible .primary {
     transform: none;
   }
 
-  .alternate,
-  .brand:hover .alternate,
-  .brand:focus-visible .alternate {
-    clip-path: none;
+  /* globals.css zeroes every transition under reduced motion; the wipe and fade are exempt. */
+  .brand .alternate {
+    transition-duration: 420ms !important;
+  }
+
+  .brand .primary {
+    transition-duration: 160ms !important;
   }
 }

@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { logger } from "@/lib/logger";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
 
 import { refundReturnRequest } from "../application/refund-return";
 import { reviewReturnRequest } from "../application/review-return";
@@ -15,6 +16,23 @@ const reviewSchema = z.object({
 });
 
 export type ReturnAdminActionState = { error?: string; success?: string };
+
+/**
+ * Erros de domínio têm mensagem própria. Falhas inesperadas (provedor de pagamento indisponível,
+ * timeout, rede) não podem chegar ao Admin como texto genérico em inglês: registra o erro e
+ * informa que a solicitação continua no mesmo estado e pode ser reprocessada.
+ */
+function toActionError(error: unknown, returnRequestId: string): { error: string } {
+  if (error instanceof ApplicationError && error.code !== "INTERNAL_ERROR") return { error: error.message };
+  logger.error({
+    event: "return.admin_action_failed",
+    returnRequestId,
+    error: error instanceof Error ? error.message : "unknown",
+  });
+  return {
+    error: "Não foi possível concluir agora. A devolução permanece pendente e pode ser reprocessada em instantes.",
+  };
+}
 
 export async function reviewReturnRequestAction(
   returnRequestId: string,
@@ -37,7 +55,7 @@ export async function reviewReturnRequestAction(
     revalidatePath("/admin", "layout");
     return { success: "Solicitação atualizada." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return toActionError(error, returnRequestId);
   }
 }
 
@@ -51,6 +69,6 @@ export async function refundReturnRequestAction(returnRequestId: string): Promis
     revalidatePath(`/orders/${result.orderNumber}`);
     return { success: "Reembolso processado." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return toActionError(error, returnRequestId);
   }
 }

@@ -14,11 +14,11 @@ import { isStorefrontPath, sellerLinkLabel } from "./storefront-routes";
 
 /** Atalhos da área do cliente exibidos no menu da conta. */
 export const accountLinks = [
-  { href: "/orders", label: "Pedidos" },
+  { href: "/orders", label: "Meus pedidos" },
   { href: "/favorites", label: "Favoritos" },
-  { href: "/account/motorcycles", label: "Minhas motos" },
-  { href: "/account/addresses", label: "Endereços" },
-  { href: "/account/notifications", label: "Notificações" },
+  { href: "/account/profile", label: "Dados cadastrais" },
+  { href: "/account/password", label: "Redefinir senha" },
+  { href: "/account/addresses", label: "Meus endereços" },
 ] as const;
 
 const iconButtonClassName =
@@ -46,10 +46,6 @@ export function StorefrontNavigation() {
     >
       <div className="mx-auto flex min-h-[68px] w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
         <MotoShopBrand />
-
-        <span className="hidden max-w-60 border-l border-white/20 pl-4 text-xs leading-4 font-semibold tracking-[0.12em] text-white/65 uppercase xl:block">
-          O Marketplace de quem vive o <span className="text-moto-brand">OFF-ROAD!</span>
-        </span>
 
         <nav
           className="ml-4 hidden items-center gap-6 text-sm font-medium text-white/75 md:flex lg:ml-6"

@@ -10,8 +10,12 @@ import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
 
 const subscriptionSchema = z.object({
-  sellerId: z.string().min(1),
-  months: z.coerce.number().int().min(1).max(12),
+  sellerId: z.string().min(1, "Selecione a loja."),
+  months: z.coerce
+    .number({ error: "Informe a duração em meses, de 1 a 12." })
+    .int("Informe a duração em meses, de 1 a 12.")
+    .min(1, "Informe a duração em meses, de 1 a 12.")
+    .max(12, "Informe a duração em meses, de 1 a 12."),
 });
 
 export type SubscriptionActionState = { error?: string; success?: string };
@@ -35,7 +39,7 @@ export async function activateVipSubscriptionAction(
         where: { id: parsed.data.sellerId, status: { in: ["APPROVED", "ACTIVE"] } },
       });
       if (!seller)
-        throw new ApplicationError({ code: "CONFLICT", message: "Seller não encontrado ou ainda não aprovado." });
+        throw new ApplicationError({ code: "CONFLICT", message: "Loja não encontrada ou ainda não aprovada." });
 
       const activeSubscription = await tx.sellerSubscription.findFirst({
         where: {

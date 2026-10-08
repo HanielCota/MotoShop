@@ -222,6 +222,16 @@ describe("product review workflow", () => {
     expect(mocks.auditLogCreate).not.toHaveBeenCalled();
   });
 
+  it("refuses an oversized rejection reason before touching the product", async () => {
+    const reason = new FormData();
+    reason.set("reason", "x".repeat(1001));
+    const result = await rejectProductAction(PRODUCT_ID, reason);
+
+    expect(result.error).toMatch(/no máximo 1000 caracteres/);
+    expect(mocks.productFindFirst).not.toHaveBeenCalled();
+    expect(mocks.auditLogCreate).not.toHaveBeenCalled();
+  });
+
   it("rejects malformed product ids before reading the catalog", async () => {
     const result = await submitProductAction("../product");
     await archiveProductAction("x");

@@ -30,7 +30,9 @@ describe("inventory reservations", () => {
   });
 
   it("rejects reservations larger than available inventory", () => {
-    expect(() => reserveInventory({ availableQuantity: 2, reservedQuantity: 0 }, 3)).toThrow("enough available");
+    expect(() => reserveInventory({ availableQuantity: 2, reservedQuantity: 0 }, 3)).toThrow(
+      "estoque disponível suficiente",
+    );
   });
 });
 
@@ -38,6 +40,15 @@ describe("inventory adjustments", () => {
   it("rejects adjustments that would create negative inventory", () => {
     expect(() => adjustAvailableInventory({ availableQuantity: 2, reservedQuantity: 0 }, -3)).toThrow(
       "cannot make availableQuantity negative",
+    );
+  });
+
+  it("rejects adjustments beyond the persisted int4 limit", () => {
+    expect(() => adjustAvailableInventory({ availableQuantity: 2, reservedQuantity: 0 }, 2 ** 31)).toThrow(
+      "cannot exceed the maximum",
+    );
+    expect(adjustAvailableInventory({ availableQuantity: 0, reservedQuantity: 0 }, 2 ** 31 - 1).availableQuantity).toBe(
+      2 ** 31 - 1,
     );
   });
 });

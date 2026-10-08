@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatCount } from "@/lib/format";
 import { AdminCard, AdminTable, cellClassName } from "@/modules/admin/components/admin-ui";
 import { listFailedOutboxEventsForAdmin } from "@/modules/admin/queries/outbox-events";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
@@ -26,7 +26,7 @@ export default async function AdminOutboxPage() {
         id="admin-outbox"
         title="Eventos que precisam de atenção"
         description="Esta tela é somente para consulta."
-        actions={<Badge variant={total > 0 ? "destructive" : "success"}>{total} falha(s)</Badge>}
+        actions={<Badge variant={total > 0 ? "destructive" : "success"}>{formatCount(total, "falha", "falhas")}</Badge>}
       >
         {events.length === 0 ? (
           <EmptyState
@@ -49,7 +49,9 @@ export default async function AdminOutboxPage() {
                 </td>
                 <td className={cellClassName}>
                   <StatusBadge domain="outbox" status="FAILED" />
-                  <p className="text-muted-foreground mt-1 text-xs">{event.attempts} tentativa(s)</p>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {formatCount(event.attempts, "tentativa", "tentativas")}
+                  </p>
                 </td>
                 <td className={`${cellClassName} max-w-xs text-xs break-words`}>
                   {event.lastError ?? "Não informado"}

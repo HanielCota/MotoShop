@@ -22,4 +22,9 @@ describe("buildProductInteractionHref", () => {
       ),
     ).toBe("/products/x?reviewRating=4&reviewPage=3&questionPage=2#avaliacoes");
   });
+  it("keeps the selected motorcycle", () => {
+    expect(buildProductInteractionHref("x", { ...defaults, moto: "fit1" }, { reviewPage: 2 })).toBe(
+      "/products/x?reviewPage=2&moto=fit1",
+    );
+  });
 });

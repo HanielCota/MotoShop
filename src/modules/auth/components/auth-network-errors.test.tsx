@@ -78,8 +78,8 @@ it("recovers the password recovery form after network rejection", async () => {
 });
 it("does not display success after a failed password reset", async () => {
   render(<ResetPasswordForm token="test-only-token" />);
-  fireEvent.change(screen.getByLabelText("Nova senha"), { target: { value: "new-password" } });
-  fireEvent.change(screen.getByLabelText("Confirme a nova senha"), { target: { value: "new-password" } });
+  fireEvent.change(screen.getByLabelText(/^Nova senha/), { target: { value: "new-password" } });
+  fireEvent.change(screen.getByLabelText(/^Confirme a nova senha/), { target: { value: "new-password" } });
   fireEvent.submit(screen.getByRole("button", { name: "Salvar nova senha" }).closest("form")!);
   expect(await screen.findByRole("alert")).toHaveTextContent("conexão");
   expect(screen.queryByRole("status")).toBeNull();

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { ProductStatus } from "@/generated/prisma/enums";
 import { db } from "@/lib/database";
 import { ApplicationError } from "@/shared/errors/application-error";
 
@@ -28,6 +29,18 @@ export async function adjustInventoryManually(input: ManualAdjustmentInput) {
   }
 
   return db.$transaction(async (tx) => {
+    // The product editor saves absolute stock values guarded by the product `updatedAt`
+    // revision. Bumping it for editable products makes an editor opened before this
+    // adjustment fail with a conflict instead of silently reverting it. Done before the
+    // inventory lock so both flows lock product -> inventory in the same order.
+    await tx.product.updateMany({
+      where: {
+        sellerId,
+        status: { in: [ProductStatus.DRAFT, ProductStatus.REJECTED] },
+        variants: { some: { id: variantId, sellerId } },
+      },
+      data: { updatedAt: new Date() },
+    });
     await tx.$queryRaw`SELECT id FROM "inventories" WHERE "variantId" = ${variantId} AND "sellerId" = ${sellerId} FOR UPDATE`;
     const inventory = await tx.inventory.findFirst({ where: { variantId, sellerId } });
     if (!inventory)

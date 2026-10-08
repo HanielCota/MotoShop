@@ -7,7 +7,12 @@ import { db } from "@/lib/database";
 import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 
-import { addCartItem, MAX_CART_ITEM_QUANTITY, updateCartItemQuantity } from "../application/cart-items";
+import {
+  addCartItem,
+  clearActiveCart,
+  MAX_CART_ITEM_QUANTITY,
+  updateCartItemQuantity,
+} from "../application/cart-items";
 import { cartOwnerWhere, getCartIdentity } from "../infrastructure/cart-access";
 
 const cartItemSchema = z.object({
@@ -101,20 +106,10 @@ export async function clearCartAction(): Promise<CartActionState> {
   try {
     const identity = await getCartIdentity();
     if (!identity) return { error: "Carrinho não encontrado." };
-    await db.$transaction(async (tx) => {
-      const cart = await tx.cart.findFirst({
-        where: { ...cartOwnerWhere(identity), status: "ACTIVE" },
-        select: { id: true },
-      });
-      if (!cart) return;
-      await tx.$queryRaw`SELECT id FROM "carts" WHERE id = ${cart.id} FOR UPDATE`;
-      await tx.cartItem.deleteMany({
-        where: { cartId: cart.id, cart: { ...cartOwnerWhere(identity), status: "ACTIVE" } },
-      });
-    });
+    await clearActiveCart(identity);
     revalidatePath("/cart");
     revalidatePath("/checkout");
-    return { success: "Carrinho esvaziado." };
+    return { success: "Carrinho limpo." };
   } catch (error) {
     return { error: asApplicationError(error).message };
   }
