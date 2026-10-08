@@ -1,9 +1,14 @@
 "use client";
-import { Button } from "@/components/ui/button";
 
 import { useState, useTransition } from "react";
 
-import { reviewCancellationRequestAction } from "../actions/admin-cancellation-actions";
+import { Button } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
+
+import {
+  reviewCancellationRequestAction,
+  type CancellationAdminActionState,
+} from "../actions/admin-cancellation-actions";
 
 export function CancellationStatusActions({
   cancellationRequestId,
@@ -13,32 +18,27 @@ export function CancellationStatusActions({
   status: string;
 }) {
   const [pending, startTransition] = useTransition();
-  const [message, setMessage] = useState<string>();
+  const [feedback, setFeedback] = useState<CancellationAdminActionState>({});
 
   function review(decision: "APPROVE" | "REJECT") {
     const formData = new FormData();
     formData.set("decision", decision);
     startTransition(async () => {
-      const result = await reviewCancellationRequestAction(cancellationRequestId, formData);
-      setMessage(result.error ?? result.success);
+      setFeedback(await reviewCancellationRequestAction(cancellationRequestId, formData));
     });
   }
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
-        <Button size="compact" type="button" onClick={() => review("APPROVE")} disabled={pending}>
+        <Button size="sm" type="button" onClick={() => review("APPROVE")} disabled={pending}>
           {pending ? "Processando..." : status === "APPROVED" ? "Continuar processamento" : "Aprovar e reembolsar"}
         </Button>
-        <Button variant="outline" size="compact" type="button" onClick={() => review("REJECT")} disabled={pending}>
+        <Button variant="outline" size="sm" type="button" onClick={() => review("REJECT")} disabled={pending}>
           Rejeitar
         </Button>
       </div>
-      {message ? (
-        <p className="text-muted-foreground text-xs" role="status">
-          {message}
-        </p>
-      ) : null}
+      <FormMessage error={feedback.error ?? null} success={feedback.success ?? null} className="text-xs" />
     </div>
   );
 }

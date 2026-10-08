@@ -1,13 +1,16 @@
 import "server-only";
 
 import { db } from "@/lib/database";
-import type { CustomerOrderIdentity } from "../application/request-return";
+import {
+  customerOrderIdentityWhere,
+  type CustomerOrderIdentity,
+} from "@/modules/orders/application/resolve-customer-order-access";
 
 export async function getCustomerOrder(orderNumber: string, identity: CustomerOrderIdentity) {
   return db.order.findFirst({
     where: {
       orderNumber,
-      ...("userId" in identity ? { userId: identity.userId } : { guestAccessTokenHash: identity.guestAccessTokenHash }),
+      ...customerOrderIdentityWhere(identity),
     },
     include: {
       productReviews: true,

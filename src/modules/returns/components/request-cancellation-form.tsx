@@ -1,10 +1,15 @@
 "use client";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
 import { Textarea } from "@/components/ui/textarea";
 
 import { useState, useTransition } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 
-import { requestCancellationAction } from "@/modules/returns/actions/cancellation-actions";
+import {
+  requestCancellationAction,
+  type CancellationActionState,
+} from "@/modules/returns/actions/cancellation-actions";
 
 export function RequestCancellationForm({
   orderNumber,
@@ -15,7 +20,7 @@ export function RequestCancellationForm({
   sellerOrderId: string;
   accessToken?: string;
 }) {
-  const [message, setMessage] = useState<string>();
+  const [feedback, setFeedback] = useState<CancellationActionState>({});
   const [open, setOpen] = useState(false);
   const [customerMessage, setCustomerMessage] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -31,20 +36,20 @@ export function RequestCancellationForm({
           idempotencyKey: crypto.randomUUID(),
           ...(accessToken ? { accessToken } : {}),
         });
-        setMessage(result.error ?? result.success);
+        setFeedback(result);
         if (!result.error) setOpen(false);
       } catch {
-        setMessage("Não foi possível solicitar o cancelamento. Tente novamente.");
+        setFeedback({ error: "Não foi possível solicitar o cancelamento. Tente novamente." });
       }
     });
   }
 
   return (
-    <div className="mt-3">
+    <div className="space-y-2">
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Trigger
-          className="rounded-md border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 focus-visible:ring-3 focus-visible:ring-red-300 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={isPending}
+          className={buttonVariants({ variant: "destructive", size: "sm" })}
+          disabled={isPending || Boolean(feedback.success)}
         >
           Solicitar cancelamento
         </Dialog.Trigger>
@@ -62,38 +67,22 @@ export function RequestCancellationForm({
                 onChange={(event) => setCustomerMessage(event.target.value)}
                 maxLength={1000}
                 rows={4}
-                className="border-input bg-background focus-visible:ring-ring/40 w-full resize-y rounded-md border p-3 text-sm focus-visible:ring-3 focus-visible:outline-none"
+                className="w-full resize-y"
               />
             </label>
             <div className="flex justify-end gap-2">
-              <Dialog.Close
-                disabled={isPending}
-                className="rounded-md border px-4 py-2 text-sm font-medium disabled:opacity-50"
-              >
+              <Dialog.Close disabled={isPending} className={buttonVariants({ variant: "outline" })}>
                 Voltar
               </Dialog.Close>
-              <button
-                type="button"
-                onClick={submit}
-                disabled={isPending}
-                className="bg-destructive rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-              >
+              <Button type="button" variant="destructive" onClick={submit} disabled={isPending}>
                 {isPending ? "Enviando..." : "Enviar solicitação"}
-              </button>
+              </Button>
             </div>
-            {message ? (
-              <p className="text-sm" role="status">
-                {message}
-              </p>
-            ) : null}
+            <FormMessage error={feedback.error ?? null} />
           </Dialog.Popup>
         </Dialog.Portal>
       </Dialog.Root>
-      {message && !open ? (
-        <p className="mt-2 text-sm text-slate-600" role="status">
-          {message}
-        </p>
-      ) : null}
+      {!open ? <FormMessage error={feedback.error ?? null} success={feedback.success ?? null} /> : null}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
 
 import { DesignSelect } from "@/components/ui/design-select";
@@ -42,7 +43,8 @@ export function RequestReturnForm({
   }, initialState);
 
   return (
-    <form action={action} className="bg-muted/40 mt-3 grid gap-3 rounded-lg p-3 sm:grid-cols-2">
+    <form action={action} className="bg-surface-sunken grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
+      <p className="text-foreground text-sm font-medium sm:col-span-2">Solicitar devolução</p>
       <label className="flex flex-col gap-1 text-xs font-medium">
         Quantidade
         <Input
@@ -69,17 +71,8 @@ export function RequestReturnForm({
         Observação (opcional)
         <Textarea className="h-20 min-h-20" name="customerMessage" maxLength={1000} />
       </label>
-      {state.error ? (
-        <p className="text-destructive text-xs sm:col-span-2" role="alert">
-          {state.error}
-        </p>
-      ) : null}
-      {state.success ? (
-        <p className="text-sm text-emerald-600 sm:col-span-2" role="status">
-          {state.success}
-        </p>
-      ) : null}
-      <Button type="submit" size="compact" className="sm:col-span-2" disabled={pending || Boolean(state.result)}>
+      <FormMessage error={state.error ?? null} success={state.success ?? null} className="sm:col-span-2" />
+      <Button type="submit" size="sm" className="sm:col-span-2" disabled={pending || Boolean(state.result)}>
         {pending ? "Enviando..." : state.result ? "Solicitação enviada" : "Solicitar devolução"}
       </Button>
     </form>

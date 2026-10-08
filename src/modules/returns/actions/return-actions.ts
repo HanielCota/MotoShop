@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentSession } from "@/modules/auth/application/authorization";
-import { hashGuestToken } from "@/modules/cart/infrastructure/cart-access";
-import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { resolveCustomerOrderIdentity } from "@/modules/orders/application/resolve-customer-order-access";
+import { asApplicationError } from "@/shared/errors/application-error";
 
 import { requestReturn, type ReturnRequestResult } from "../application/request-return";
 
@@ -31,14 +31,13 @@ export async function requestReturnAction(input: unknown): Promise<ReturnActionS
 
   try {
     const session = await getCurrentSession();
-    const identity = session
-      ? { userId: session.user.id }
-      : parsed.data.accessToken
-        ? { guestAccessTokenHash: hashGuestToken(parsed.data.accessToken) }
-        : null;
-    if (!identity) {
-      throw new ApplicationError({ code: "UNAUTHORIZED", message: "Acesse o pedido pelo link seguro do checkout." });
-    }
+    if (!session && !parsed.data.accessToken) return { error: "Acesse o pedido pelo link seguro do checkout." };
+    const identity = await resolveCustomerOrderIdentity({
+      orderNumber: parsed.data.orderNumber,
+      accessToken: parsed.data.accessToken,
+      userId: session?.user.id,
+    });
+    if (!identity) return { error: "Pedido não encontrado." };
 
     const result = await requestReturn({
       orderNumber: parsed.data.orderNumber,

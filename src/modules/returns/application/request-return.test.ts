@@ -86,6 +86,19 @@ describe("return quantity and amount boundaries", () => {
     await expect(requestReturn(input)).rejects.toThrow("status");
     expect(mocks.tx.returnRequest.create).not.toHaveBeenCalled();
   });
+  it.each(["PAID", "PROCESSING", "SHIPPED"])("rejects a return while the seller order is %s", async (status) => {
+    mocks.item.mockResolvedValue({ ...item, sellerOrder: { ...item.sellerOrder, status } });
+    await expect(requestReturn(input)).rejects.toThrow("após a entrega");
+    expect(mocks.transaction).not.toHaveBeenCalled();
+  });
+  it("rejects when the delivery status changes before the lock is obtained", async () => {
+    mocks.tx.orderItem.findUnique.mockResolvedValue({
+      ...item,
+      sellerOrder: { ...item.sellerOrder, status: "SHIPPED" },
+    });
+    await expect(requestReturn(input)).rejects.toThrow("status");
+    expect(mocks.tx.returnRequest.create).not.toHaveBeenCalled();
+  });
   it("returns a concurrent replay without consuming quantity again", async () => {
     mocks.tx.returnRequest.findUnique.mockResolvedValue({
       id: "prior",

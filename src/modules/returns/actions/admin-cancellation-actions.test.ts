@@ -1,32 +1,48 @@
-import { expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ find: vi.fn(), update: vi.fn(), audit: vi.fn(), refund: vi.fn() }));
+import { beforeEach, expect, it, vi } from "vitest";
+const mocks = vi.hoisted(() => ({ review: vi.fn(), revalidate: vi.fn() }));
 vi.mock("server-only", () => ({}));
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("@/modules/auth/application/authorization", () => ({
   requireAdminAccess: async () => ({ user: { id: "admin" } }),
 }));
-vi.mock("@/modules/payments/application/refund-payment", () => ({ refundPayment: mocks.refund }));
-vi.mock("@/lib/database", () => ({
-  db: {
-    cancellationRequest: { findUnique: mocks.find },
-    $transaction: async (callback: (tx: unknown) => unknown) =>
-      callback({ cancellationRequest: { updateMany: mocks.update }, auditLog: { create: mocks.audit } }),
-  },
-}));
+vi.mock("../application/review-cancellation", () => ({ reviewCancellationRequest: mocks.review }));
+import { ApplicationError } from "@/shared/errors/application-error";
+
 import { reviewCancellationRequestAction } from "./admin-cancellation-actions";
-it("does not refund a cancellation rejected by another administrator in the meantime", async () => {
-  mocks.find.mockResolvedValue({
-    id: "request",
-    status: "REQUESTED",
-    amountInCents: 100,
-    sellerOrder: { status: "CANCELLATION_REQUESTED", shipment: null },
-    order: { orderNumber: "MS-1" },
+
+function form(decision: string, note?: string) {
+  const data = new FormData();
+  data.set("decision", decision);
+  if (note) data.set("note", note);
+  return data;
+}
+
+beforeEach(() => {
+  vi.resetAllMocks();
+});
+
+it("delegates the decision to the application service and revalidates the order", async () => {
+  mocks.review.mockResolvedValue({ outcome: "REJECTED", orderNumber: "MS-1" });
+  expect(await reviewCancellationRequestAction("request", form("REJECT", "Já postado"))).toEqual({
+    success: "Solicitação de cancelamento rejeitada.",
   });
-  mocks.update.mockResolvedValue({ count: 0 });
-  const form = new FormData();
-  form.set("decision", "APPROVE");
-  expect((await reviewCancellationRequestAction("request", form)).error).toContain("já foi decidida");
-  expect(mocks.refund).not.toHaveBeenCalled();
-  expect(mocks.audit).not.toHaveBeenCalled();
-  expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "request", status: "REQUESTED" } }));
+  expect(mocks.review).toHaveBeenCalledWith({
+    cancellationRequestId: "request",
+    decision: "REJECT",
+    note: "Já postado",
+    actorUserId: "admin",
+  });
+  expect(mocks.revalidate).toHaveBeenCalledWith("/orders/MS-1");
+});
+
+it("maps application errors to a predictable action result", async () => {
+  mocks.review.mockRejectedValue(
+    new ApplicationError({ code: "CONFLICT", message: "Esta solicitação já foi decidida." }),
+  );
+  expect((await reviewCancellationRequestAction("request", form("APPROVE"))).error).toContain("já foi decidida");
+});
+
+it("rejects an invalid decision without calling the service", async () => {
+  expect(await reviewCancellationRequestAction("request", form("MAYBE"))).toHaveProperty("error");
+  expect(mocks.review).not.toHaveBeenCalled();
 });

@@ -1,8 +1,10 @@
 "use client";
-import { Textarea } from "@/components/ui/textarea";
 
 import { useActionState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
+import { Textarea } from "@/components/ui/textarea";
 import { askProductQuestionAction, type QuestionActionState } from "@/modules/questions/actions/question-actions";
 
 const initialState: QuestionActionState = {};
@@ -11,8 +13,8 @@ export function AskQuestionForm({ productId }: { productId: string }) {
   const [state, formAction, pending] = useActionState(askProductQuestionAction.bind(null, productId), initialState);
 
   return (
-    <form action={formAction} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
-      <label className="block text-sm font-medium text-slate-900" htmlFor="question">
+    <form action={formAction} noValidate className="border-border bg-card space-y-3 rounded-xl border p-4">
+      <label className="text-foreground block text-sm font-medium" htmlFor="question">
         Faça uma pergunta sobre este produto
       </label>
       <Textarea
@@ -23,17 +25,13 @@ export function AskQuestionForm({ productId }: { productId: string }) {
         maxLength={500}
         rows={3}
         placeholder="Ex.: Serve na CRF 250R 2025?"
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-moto-brand focus:ring-2 focus:ring-moto-brand/15"
+        aria-invalid={Boolean(state.error)}
+        className="w-full"
       />
-      {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
-      {state.success ? <p className="text-sm text-emerald-700">{state.success}</p> : null}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <FormMessage error={state.error ?? null} success={state.success ?? null} />
+      <Button type="submit" disabled={pending} className="px-4">
         {pending ? "Enviando..." : "Enviar pergunta"}
-      </button>
+      </Button>
     </form>
   );
 }

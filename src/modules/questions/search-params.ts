@@ -1,4 +1,4 @@
-import { createLoader, parseAsInteger, parseAsString, parseAsStringLiteral } from "nuqs/server";
+import { createLoader, createSerializer, parseAsInteger, parseAsString, parseAsStringLiteral } from "nuqs/server";
 
 export const sellerQuestionFilterValues = ["ALL", "UNANSWERED", "ANSWERED"] as const;
 export type SellerQuestionFilter = (typeof sellerQuestionFilterValues)[number];
@@ -14,3 +14,6 @@ export const sellerQuestionSearchParams = {
 };
 
 export const loadSellerQuestionSearchParams = createLoader(sellerQuestionSearchParams);
+
+/** Gera URLs da listagem de perguntas do lojista omitindo valores padrão. */
+export const serializeSellerQuestionSearchParams = createSerializer(sellerQuestionSearchParams);

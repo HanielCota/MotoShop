@@ -16,6 +16,6 @@ describe("getNextDisputeStatus", () => {
   });
 
   it("rejects invalid transitions", () => {
-    expect(() => getNextDisputeStatus("RESOLVED", "REJECT")).toThrow("Invalid dispute transition");
+    expect(() => getNextDisputeStatus("RESOLVED", "REJECT")).toThrow(/não é válida para o status atual/);
   });
 });

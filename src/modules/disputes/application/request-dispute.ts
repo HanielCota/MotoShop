@@ -4,6 +4,8 @@ import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
 import { ApplicationError } from "@/shared/errors/application-error";
 
+import { isSellerOrderEligibleForDispute } from "../domain/dispute-eligibility";
+
 export type DisputeIdentity = { userId: string } | { guestAccessTokenHash: string };
 
 export type RequestDisputeInput = {
@@ -34,7 +36,7 @@ export async function requestDispute(input: RequestDisputeInput) {
     assertTarget(existing.sellerOrderId, sellerOrder.id);
     return existing;
   }
-  if (["PENDING_PAYMENT", "CANCELLED", "CANCELLATION_REQUESTED"].includes(sellerOrder.status)) {
+  if (!isSellerOrderEligibleForDispute(sellerOrder.status)) {
     throw new ApplicationError({
       code: "CONFLICT",
       message: "Este pedido não está disponível para abrir uma disputa.",
@@ -59,7 +61,7 @@ export async function requestDispute(input: RequestDisputeInput) {
         return replay;
       }
       const current = await tx.sellerOrder.findUnique({ where: { id: sellerOrder.id }, select: { status: true } });
-      if (!current || ["PENDING_PAYMENT", "CANCELLED", "CANCELLATION_REQUESTED"].includes(current.status)) {
+      if (!current || !isSellerOrderEligibleForDispute(current.status)) {
         throw new ApplicationError({ code: "CONFLICT", message: "O status do pedido mudou durante a solicitação." });
       }
       const active = await tx.dispute.count({

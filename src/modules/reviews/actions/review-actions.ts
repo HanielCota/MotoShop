@@ -11,6 +11,8 @@ import { asApplicationError, ApplicationError } from "@/shared/errors/applicatio
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 import { ImageKitStorageProvider } from "@/lib/storage/imagekit-storage-provider";
 
+import { reviewEligibleOrderItemWhere } from "./review-eligibility";
+
 const mediaTypes = {
   "image/jpeg": { extension: "jpg", mediaType: "image" as const, maxSizeInBytes: 5 * 1024 * 1024 },
   "image/png": { extension: "png", mediaType: "image" as const, maxSizeInBytes: 5 * 1024 * 1024 },
@@ -57,14 +59,7 @@ export async function createReviewUploadUrlAction(input: {
   try {
     await assertRateLimit({ key: `review-upload:${session.user.id}`, windowSeconds: 60, max: 5 });
     const item = await db.orderItem.findFirst({
-      where: {
-        id: parsed.data.orderItemId,
-        sellerOrder: {
-          status: { in: ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"] },
-          order: { userId: session.user.id },
-        },
-        productReview: null,
-      },
+      where: { ...reviewEligibleOrderItemWhere(parsed.data.orderItemId, session.user.id), productReview: null },
       select: { id: true },
     });
     if (!item)
@@ -143,13 +138,7 @@ export async function createReviewAction(
   try {
     await assertRateLimit({ key: `review:${session.user.id}`, windowSeconds: 60, max: 5 });
     const orderItem = await db.orderItem.findFirst({
-      where: {
-        id: parsed.data.orderItemId,
-        sellerOrder: {
-          status: { in: ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"] },
-          order: { userId: session.user.id },
-        },
-      },
+      where: reviewEligibleOrderItemWhere(parsed.data.orderItemId, session.user.id),
       include: {
         sellerOrder: { include: { order: { select: { orderNumber: true } } } },
         product: true,
@@ -200,13 +189,7 @@ export async function createReviewAction(
 
     await db.$transaction(async (tx) => {
       const eligibleItem = await tx.orderItem.findFirst({
-        where: {
-          id: orderItem.id,
-          sellerOrder: {
-            status: { in: ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"] },
-            order: { userId: session.user.id },
-          },
-        },
+        where: reviewEligibleOrderItemWhere(orderItem.id, session.user.id),
         select: { id: true },
       });
       if (!eligibleItem)
@@ -221,7 +204,7 @@ export async function createReviewAction(
         },
       });
       if (!existingSellerReview && parsed.data.sellerRating === undefined) {
-        throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Informe também a nota para o seller." });
+        throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Informe também a nota para o lojista." });
       }
 
       await tx.productReview.create({

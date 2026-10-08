@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentSession } from "@/modules/auth/application/authorization";
-import { hashGuestToken } from "@/modules/cart/infrastructure/cart-access";
+import { resolveCustomerOrderIdentity } from "@/modules/orders/application/resolve-customer-order-access";
 import { asApplicationError } from "@/shared/errors/application-error";
 
 import { requestDispute } from "../application/request-dispute";
@@ -26,12 +26,13 @@ export async function requestDisputeAction(input: unknown): Promise<DisputeActio
 
   try {
     const session = await getCurrentSession();
-    const identity = session
-      ? { userId: session.user.id }
-      : parsed.data.accessToken
-        ? { guestAccessTokenHash: hashGuestToken(parsed.data.accessToken) }
-        : null;
-    if (!identity) return { error: "Acesse o pedido pelo link seguro do checkout." };
+    if (!session && !parsed.data.accessToken) return { error: "Acesse o pedido pelo link seguro do checkout." };
+    const identity = await resolveCustomerOrderIdentity({
+      orderNumber: parsed.data.orderNumber,
+      accessToken: parsed.data.accessToken,
+      userId: session?.user.id,
+    });
+    if (!identity) return { error: "Pedido não encontrado." };
 
     await requestDispute({
       orderNumber: parsed.data.orderNumber,
@@ -42,7 +43,7 @@ export async function requestDisputeAction(input: unknown): Promise<DisputeActio
       identity,
     });
     revalidatePath(`/orders/${parsed.data.orderNumber}`);
-    revalidatePath("/admin");
+    revalidatePath("/admin", "layout");
     return { success: "Disputa aberta. O Moto Shop fará a mediação." };
   } catch (error) {
     return { error: asApplicationError(error).message };

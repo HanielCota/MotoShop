@@ -1,62 +1,51 @@
 import { beforeEach, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ find: vi.fn(), refund: vi.fn(), update: vi.fn(), audit: vi.fn() }));
+const mocks = vi.hoisted(() => ({ review: vi.fn(), refund: vi.fn(), revalidate: vi.fn() }));
 vi.mock("server-only", () => ({}));
-vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("@/modules/auth/application/authorization", () => ({
   requireAdminAccess: async () => ({ user: { id: "admin" } }),
 }));
-vi.mock("@/modules/payments/application/refund-payment", () => ({ refundPayment: mocks.refund }));
-vi.mock("@/lib/database", () => ({
-  db: {
-    returnRequest: { findUnique: mocks.find },
-    $transaction: async (callback: (tx: unknown) => unknown) =>
-      callback({ returnRequest: { updateMany: mocks.update }, auditLog: { create: mocks.audit } }),
-  },
-}));
-import { refundReturnRequestAction } from "./admin-return-actions";
+vi.mock("../application/review-return", () => ({ reviewReturnRequest: mocks.review }));
+vi.mock("../application/refund-return", () => ({ refundReturnRequest: mocks.refund }));
+import { ApplicationError } from "@/shared/errors/application-error";
+
+import { refundReturnRequestAction, reviewReturnRequestAction } from "./admin-return-actions";
+
+function form(decision: string, note?: string) {
+  const data = new FormData();
+  data.set("decision", decision);
+  if (note) data.set("note", note);
+  return data;
+}
+
 beforeEach(() => vi.resetAllMocks());
-it("blocks old return requests whose item snapshots omitted a coupon", async () => {
-  mocks.find.mockResolvedValue({
-    id: "return",
-    status: "RETURNED",
-    amountInCents: 100,
-    sellerOrder: { items: [{ totalAmountInCents: 100 }], itemsSubtotalInCents: 100, discountAmountInCents: 50 },
-  });
-  expect((await refundReturnRequestAction("return")).error).toContain("históricos");
-  expect(mocks.refund).not.toHaveBeenCalled();
-});
-it("finishes a fully discounted return without sending a zero refund", async () => {
-  mocks.find.mockResolvedValue({
-    id: "return",
-    status: "RETURNED",
-    amountInCents: 0,
-    order: { orderNumber: "MS-1" },
-    sellerOrder: { items: [{ totalAmountInCents: 0 }], itemsSubtotalInCents: 100, discountAmountInCents: 100 },
-  });
-  mocks.update.mockResolvedValue({ count: 1 });
-  expect((await refundReturnRequestAction("return")).success).toBeTruthy();
-  expect(mocks.refund).not.toHaveBeenCalled();
-  expect(mocks.audit).toHaveBeenCalled();
-});
-it("does not report success when the return state changed after the provider refund", async () => {
-  mocks.find.mockResolvedValue({
-    id: "return",
-    status: "RETURNED",
-    amountInCents: 100,
-    orderId: "order-1",
-    order: { orderNumber: "MS-1" },
-    sellerOrder: {
-      items: [{ totalAmountInCents: 100 }],
-      itemsSubtotalInCents: 100,
-      discountAmountInCents: 0,
-    },
-  });
-  mocks.refund.mockResolvedValue(undefined);
-  mocks.update.mockResolvedValue({ count: 0 });
 
-  const result = await refundReturnRequestAction("return");
+it("delegates the review decision to the application service", async () => {
+  mocks.review.mockResolvedValue({ nextStatus: "REJECTED" });
+  expect(await reviewReturnRequestAction("return", form("REJECT", "Fora do prazo"))).toEqual({
+    success: "Solicitação atualizada.",
+  });
+  expect(mocks.review).toHaveBeenCalledWith({
+    returnRequestId: "return",
+    decision: "REJECT",
+    note: "Fora do prazo",
+    actorUserId: "admin",
+  });
+});
 
-  expect(result.error).toContain("mudou de estado");
-  expect(mocks.refund).toHaveBeenCalledOnce();
-  expect(mocks.audit).not.toHaveBeenCalled();
+it("rejects an invalid decision without calling the service", async () => {
+  expect(await reviewReturnRequestAction("return", form("MAYBE"))).toHaveProperty("error");
+  expect(mocks.review).not.toHaveBeenCalled();
+});
+
+it("revalidates the order after a refund", async () => {
+  mocks.refund.mockResolvedValue({ outcome: "REFUNDED", orderNumber: "MS-1" });
+  expect(await refundReturnRequestAction("return")).toEqual({ success: "Reembolso processado." });
+  expect(mocks.refund).toHaveBeenCalledWith({ returnRequestId: "return", actorUserId: "admin" });
+  expect(mocks.revalidate).toHaveBeenCalledWith("/orders/MS-1");
+});
+
+it("maps application errors to a predictable action result", async () => {
+  mocks.refund.mockRejectedValue(new ApplicationError({ code: "CONFLICT", message: "A devolução mudou de estado." }));
+  expect((await refundReturnRequestAction("return")).error).toContain("mudou de estado");
 });

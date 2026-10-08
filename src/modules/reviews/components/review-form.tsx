@@ -2,6 +2,8 @@
 
 import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 
+import { Button } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
 import { Textarea } from "@/components/ui/textarea";
 import { DesignSelect } from "@/components/ui/design-select";
 import { uploadFileToImageKit } from "@/shared/storage/upload-image";
@@ -11,6 +13,8 @@ import {
   removeReviewUploadAction,
   type ReviewActionState,
 } from "@/modules/reviews/actions/review-actions";
+
+import { formatRating } from "../domain/rating";
 
 const initialState: ReviewActionState = {};
 const allowedTypes: Record<string, number> = {
@@ -73,6 +77,7 @@ export function ReviewForm({
     setUploading(true);
     const formData = new FormData(event.currentTarget);
     const uploaded: UploadedMedia[] = [];
+    const uploadKeysToCleanup: string[] = [];
     try {
       for (const file of files) {
         const authorization = await createReviewUploadUrlAction({
@@ -81,6 +86,7 @@ export function ReviewForm({
           sizeInBytes: file.size,
         });
         if ("error" in authorization) throw new Error(authorization.error);
+        uploadKeysToCleanup.push(authorization.key);
         const fileId = await uploadFileToImageKit({ url: authorization.url, fields: authorization.fields, file });
         uploaded.push({ key: authorization.key, fileId, contentType: file.type });
       }
@@ -88,7 +94,7 @@ export function ReviewForm({
       uploadsToCleanup.current = uploaded;
       formAction(formData);
     } catch (error) {
-      await Promise.all(uploaded.map(({ key }) => removeReviewUploadAction({ orderItemId, key })));
+      await Promise.all(uploadKeysToCleanup.map((key) => removeReviewUploadAction({ orderItemId, key })));
       setUploadError(error instanceof Error ? error.message : "Não foi possível enviar o arquivo.");
     } finally {
       setUploading(false);
@@ -96,13 +102,13 @@ export function ReviewForm({
   }
 
   return (
-    <form onSubmit={submitReview} className="border-moto-brand/20 bg-moto-brand/5 mt-4 space-y-4 rounded-xl border p-4">
+    <form onSubmit={submitReview} className="border-moto-brand/30 bg-moto-brand-surface mt-4 space-y-4 rounded-xl border p-4">
       <input type="hidden" name="orderItemId" value={orderItemId} />
       <input type="hidden" name="productRatingTenths" value={ratingTenths} />
       <input type="hidden" name="media" value="[]" />
-      <p className="text-sm font-semibold text-slate-900">Avalie sua compra</p>
+      <p className="text-foreground text-sm font-semibold">Avalie sua compra</p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="text-sm text-slate-700" htmlFor={`product-rating-${orderItemId}`}>
+        <label className="text-foreground text-sm font-medium" htmlFor={`product-rating-${orderItemId}`}>
           Nota do produto
           <div className="mt-2 flex items-center gap-3">
             <input
@@ -113,19 +119,22 @@ export function ReviewForm({
               step={1}
               value={ratingTenths}
               onChange={(event) => setRatingTenths(Number(event.currentTarget.value))}
-              aria-valuetext={`${(ratingTenths / 10).toFixed(1).replace(".", ",")} de 5 estrelas`}
+              aria-valuetext={`${formatRating(ratingTenths / 10)} de 5 estrelas`}
               className="review-rating-range min-h-10 flex-1"
             />
             <output
               htmlFor={`product-rating-${orderItemId}`}
-              className="min-w-16 font-semibold text-slate-900 tabular-nums"
+              className="text-foreground min-w-16 font-semibold tabular-nums"
             >
-              ★ {(ratingTenths / 10).toFixed(1).replace(".", ",")}/5
+              <span aria-hidden="true" className="text-warning">
+                ★
+              </span>{" "}
+              {formatRating(ratingTenths / 10)}/5
             </output>
           </div>
         </label>
         {!sellerAlreadyReviewed ? (
-          <label className="text-sm text-slate-700">
+          <label className="text-foreground text-sm font-medium">
             Nota do lojista
             <DesignSelect
               aria-label="Nota do lojista"
@@ -147,12 +156,13 @@ export function ReviewForm({
         name="comment"
         maxLength={1000}
         rows={3}
+        aria-label="Comentário da avaliação"
         placeholder="Conte como foi sua experiência (opcional)"
-        className="focus:border-moto-brand focus:ring-moto-brand/15 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2"
+        className="bg-card w-full"
       />
       <section aria-label="Fotos e vídeos da avaliação" className="space-y-2">
-        <p id={`review-files-label-${orderItemId}`} className="block text-sm font-medium text-slate-800">
-          Fotos e vídeos <span className="font-normal text-slate-500">(opcional, até 3 arquivos)</span>
+        <p id={`review-files-label-${orderItemId}`} className="text-foreground block text-sm font-medium">
+          Fotos e vídeos <span className="text-muted-foreground font-normal">(opcional, até 3 arquivos)</span>
         </p>
         <input
           id={`review-files-${orderItemId}`}
@@ -173,7 +183,7 @@ export function ReviewForm({
         >
           Selecionar fotos ou vídeos
         </label>
-        <p className="text-xs text-slate-500">
+        <p className="text-muted-foreground text-xs">
           Imagens até 5 MB e vídeos até 10 MB cada. Os arquivos serão exibidos junto da avaliação.
         </p>
         {files.length && !state.success ? (
@@ -181,13 +191,14 @@ export function ReviewForm({
             {files.map((file, index) => (
               <li
                 key={`${file.name}-${file.lastModified}-${index}`}
-                className="flex items-center justify-between gap-2 rounded-md border bg-white px-3 py-2"
+                className="border-border bg-card flex items-center justify-between gap-2 rounded-md border py-1 pr-1 pl-3"
               >
                 <span className="min-w-0 truncate">{file.name}</span>
                 <button
                   type="button"
                   onClick={() => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}
-                  className="text-slate-600 underline underline-offset-2"
+                  aria-label={`Remover ${file.name}`}
+                  className="text-muted-foreground hover:text-foreground inline-flex min-h-10 items-center rounded-md px-2 underline underline-offset-2"
                 >
                   Remover
                 </button>
@@ -196,33 +207,21 @@ export function ReviewForm({
           </ul>
         ) : null}
         {uploading ? (
-          <p role="status" className="text-sm text-slate-600">
+          <p role="status" className="text-muted-foreground text-sm">
             Enviando arquivos e publicando avaliação…
           </p>
         ) : null}
-        {uploadError ? (
-          <p role="alert" className="text-sm text-red-700">
-            {uploadError}
-          </p>
-        ) : null}
+        <FormMessage error={uploadError ?? null} />
       </section>
-      {state.error ? (
-        <p role="alert" className="text-sm text-red-600">
-          {state.error}
-        </p>
-      ) : null}
-      {state.success ? (
-        <p role="status" className="text-sm text-emerald-700">
-          {state.success}
-        </p>
-      ) : null}
-      <button
+      <FormMessage error={state.error ?? null} success={state.success ?? null} />
+      <Button
         type="submit"
+        size="lg"
         disabled={pending || uploading || Boolean(state.success)}
-        className="bg-moto-brand text-moto-brand-foreground min-h-11 rounded-lg px-4 py-2 text-sm font-semibold hover:bg-[#e95f00] disabled:cursor-not-allowed disabled:opacity-60"
+        className="px-4 font-semibold"
       >
         {pending ? "Publicando..." : uploading ? "Enviando arquivos..." : "Publicar avaliação"}
-      </button>
+      </Button>
     </form>
   );
 }

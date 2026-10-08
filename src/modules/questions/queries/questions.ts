@@ -1,19 +1,7 @@
 import { db } from "@/lib/database";
+import { parseDateFilter } from "@/lib/date-filter";
 
 import type { sellerQuestionSortValues } from "../search-params";
-
-function parseQuestionDate(value: string | null | undefined, endOfDay = false) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
-  const parts = value.split("-");
-  if (parts.length !== 3) return undefined;
-  const year = Number(parts[0]);
-  const month = Number(parts[1]);
-  const day = Number(parts[2]);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
-  if (endOfDay) date.setUTCDate(date.getUTCDate() + 1);
-  return date;
-}
 
 export async function listSellerQuestions(
   sellerId: string,
@@ -29,8 +17,8 @@ export async function listSellerQuestions(
   const pageSize = 20;
   const requestedPage = Math.max(input.page ?? 1, 1);
   const query = input.q?.trim().slice(0, 100);
-  const from = parseQuestionDate(input.from);
-  const to = parseQuestionDate(input.to, true);
+  const from = parseDateFilter(input.from);
+  const to = parseDateFilter(input.to, true);
   const where = {
     sellerId,
     hiddenAt: null,

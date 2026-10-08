@@ -5,6 +5,8 @@ import { db } from "@/lib/database";
 import { syncOrderStatusFromSellerOrders } from "@/modules/orders/application/sync-order-status";
 import { ApplicationError } from "@/shared/errors/application-error";
 
+import { isSellerOrderCancellable, isShipmentPosted } from "../domain/cancellation-eligibility";
+
 export type CustomerCancellationIdentity = { userId: string } | { guestAccessTokenHash: string };
 
 export type RequestCancellationInput = {
@@ -35,14 +37,14 @@ export async function requestCancellation(input: RequestCancellationInput) {
     assertTarget(existing.sellerOrderId, sellerOrder.id);
     return existing;
   }
-  if (!["PAID", "PROCESSING"].includes(sellerOrder.status)) {
+  if (!isSellerOrderCancellable(sellerOrder.status)) {
     throw new ApplicationError({
       code: "CONFLICT",
       message: "Este pedido não está mais disponível para cancelamento. Se já foi enviado, solicite uma devolução.",
       statusCode: 409,
     });
   }
-  if (sellerOrder.shipment && ["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(sellerOrder.shipment.status)) {
+  if (isShipmentPosted(sellerOrder.shipment?.status)) {
     throw new ApplicationError({
       code: "CONFLICT",
       message: "O pedido já foi enviado. Solicite uma devolução após o recebimento.",
@@ -67,14 +69,14 @@ export async function requestCancellation(input: RequestCancellationInput) {
         where: { id: sellerOrder.id },
         include: { shipment: true },
       });
-      if (!locked || !["PAID", "PROCESSING"].includes(locked.status)) {
+      if (!locked || !isSellerOrderCancellable(locked.status)) {
         throw new ApplicationError({
           code: "CONFLICT",
           message: "O status do pedido mudou durante a solicitação.",
           statusCode: 409,
         });
       }
-      if (locked.shipment && ["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(locked.shipment.status)) {
+      if (isShipmentPosted(locked.shipment?.status)) {
         throw new ApplicationError({
           code: "CONFLICT",
           message: "O pedido já foi enviado. Solicite uma devolução após o recebimento.",

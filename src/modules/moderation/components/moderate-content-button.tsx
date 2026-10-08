@@ -19,12 +19,12 @@ export function ModerateContentButton({ kind, id, hidden }: { kind: ModerationKi
         {pending ? "Aguarde..." : hidden ? "Restaurar" : "Ocultar"}
       </Button>
       {state.error ? (
-        <span role="alert" className="text-sm text-red-700">
+        <span role="alert" className="text-destructive text-sm">
           {state.error}
         </span>
       ) : null}
       {state.success ? (
-        <span role="status" className="text-sm text-green-700">
+        <span role="status" className="text-success-foreground text-sm">
           {state.success}
         </span>
       ) : null}

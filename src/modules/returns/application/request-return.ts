@@ -2,18 +2,12 @@ import "server-only";
 
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
+import type { CustomerOrderIdentity } from "@/modules/orders/application/resolve-customer-order-access";
 import { ApplicationError } from "@/shared/errors/application-error";
 
-const ACTIVE_RETURN_STATUSES = [
-  "REQUESTED",
-  "UNDER_REVIEW",
-  "APPROVED",
-  "WAITING_RETURN",
-  "RETURNED",
-  "REFUNDED",
-] as const;
+import { isActiveReturnStatus, isSellerOrderEligibleForReturn } from "../domain/return-eligibility";
 
-export type CustomerOrderIdentity = { userId: string } | { guestAccessTokenHash: string };
+export type { CustomerOrderIdentity };
 
 export type RequestReturnInput = {
   orderNumber: string;
@@ -38,10 +32,10 @@ export async function requestReturn(input: RequestReturnInput): Promise<ReturnRe
   const orderItem = await findAuthorizedOrderItem(input);
   if (!orderItem)
     throw new ApplicationError({ code: "NOT_FOUND", message: "Item do pedido não encontrado.", statusCode: 404 });
-  if (["PENDING_PAYMENT", "CANCELLED", "CANCELLATION_REQUESTED"].includes(orderItem.sellerOrder.status)) {
+  if (!isSellerOrderEligibleForReturn(orderItem.sellerOrder.status)) {
     throw new ApplicationError({
       code: "CONFLICT",
-      message: "Este item ainda não pode receber uma solicitação de devolução.",
+      message: "A devolução fica disponível após a entrega. Antes disso, solicite o cancelamento.",
       statusCode: 409,
     });
   }
@@ -73,8 +67,12 @@ export async function requestReturn(input: RequestReturnInput): Promise<ReturnRe
         include: { sellerOrder: { include: { order: true } }, returnItems: { include: { returnRequest: true } } },
       });
       if (!lockedItem) throw new ApplicationError({ code: "NOT_FOUND", message: "Item do pedido não encontrado." });
-      if (["PENDING_PAYMENT", "CANCELLED", "CANCELLATION_REQUESTED"].includes(lockedItem.sellerOrder.status)) {
-        throw new ApplicationError({ code: "CONFLICT", message: "O status do pedido mudou durante a solicitação." });
+      if (!isSellerOrderEligibleForReturn(lockedItem.sellerOrder.status)) {
+        throw new ApplicationError({
+          code: "CONFLICT",
+          message: "O status do pedido mudou durante a solicitação.",
+          statusCode: 409,
+        });
       }
       const itemTotals = await tx.orderItem.aggregate({
         where: { sellerOrderId: lockedItem.sellerOrderId },
@@ -91,7 +89,7 @@ export async function requestReturn(input: RequestReturnInput): Promise<ReturnRe
       }
 
       const activeReturnItems = lockedItem.returnItems.filter((item) =>
-        ACTIVE_RETURN_STATUSES.includes(item.returnRequest.status as (typeof ACTIVE_RETURN_STATUSES)[number]),
+        isActiveReturnStatus(item.returnRequest.status),
       );
       const requestedQuantity = activeReturnItems.reduce((total, item) => total + item.quantity, 0);
       const requestedAmountInCents = activeReturnItems.reduce(
