@@ -2,7 +2,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/products" }));
+const navigation = vi.hoisted(() => ({ pathname: "/products" }));
+vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname, useRouter: () => ({ push: vi.fn() }) }));
 const authMocks = vi.hoisted(() => ({ useSession: vi.fn() }));
 vi.mock("@/modules/cart/actions/cart-actions", () => ({
   getCartPreviewAction: vi.fn(async () => ({ items: [], itemCount: 0, subtotalInCents: 0 })),
@@ -20,7 +21,32 @@ vi.mock("next/image", () => ({
 
 import { StorefrontNavigation } from "./storefront-navigation";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  navigation.pathname = "/products";
+});
+
+it("renders the same header on the homepage with a single seller link label", () => {
+  navigation.pathname = "/";
+  authMocks.useSession.mockReturnValue({ data: null });
+  render(<StorefrontNavigation />);
+  expect(screen.getByRole("banner")).toBeInTheDocument();
+  const sellerLinks = screen.getAllByRole("link", { name: "Venda no Moto Shop" });
+  expect(sellerLinks.length).toBeGreaterThan(0);
+  expect(sellerLinks.every((link) => link.getAttribute("href") === "/seller")).toBe(true);
+  expect(screen.queryByRole("link", { name: "Para lojistas" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Quero vender" })).not.toBeInTheDocument();
+});
+
+it("stays out of the seller and admin areas", () => {
+  authMocks.useSession.mockReturnValue({ data: null });
+  for (const pathname of ["/seller", "/seller/orders", "/admin"]) {
+    navigation.pathname = pathname;
+    const { container } = render(<StorefrontNavigation />);
+    expect(container).toBeEmptyDOMElement();
+    cleanup();
+  }
+});
 
 it("uses both complete logo variants for the hover transition", () => {
   authMocks.useSession.mockReturnValue({ data: null });
@@ -33,12 +59,27 @@ it("uses both complete logo variants for the hover transition", () => {
   ]);
 });
 
-it("links signed-in customers to their order history", () => {
+it("gives signed-in customers an account menu with their shortcuts", () => {
   authMocks.useSession.mockReturnValue({ data: { user: { id: "buyer", name: "Comprador" } } });
   render(<StorefrontNavigation />);
-  expect(screen.getByRole("link", { name: "Minha conta e pedidos" })).toHaveAttribute("href", "/orders");
+  const trigger = screen.getByRole("button", { name: "Minha conta" });
+  expect(trigger).toHaveAttribute("aria-expanded", "false");
+  fireEvent.click(trigger);
+  expect(trigger).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("link", { name: "Pedidos" })).toHaveAttribute("href", "/orders");
+  expect(screen.getByRole("link", { name: "Favoritos" })).toHaveAttribute("href", "/favorites");
+  expect(screen.getByRole("link", { name: "Minhas motos" })).toHaveAttribute("href", "/account/motorcycles");
+  fireEvent.keyDown(screen.getByRole("link", { name: "Pedidos" }), { key: "Escape" });
+  expect(trigger).toHaveAttribute("aria-expanded", "false");
+  expect(trigger).toHaveFocus();
   expect(screen.queryByRole("link", { name: "Compatibilidade" })).not.toBeInTheDocument();
   authMocks.useSession.mockReset();
+});
+
+it("links visitors to the login page", () => {
+  authMocks.useSession.mockReturnValue({ data: null });
+  render(<StorefrontNavigation />);
+  expect(screen.getByRole("link", { name: "Entrar na minha conta" })).toHaveAttribute("href", "/login");
 });
 
 it("closes the mobile navigation with Escape and restores trigger focus", () => {

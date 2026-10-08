@@ -3,15 +3,12 @@ import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ProductCardData } from "@/components/storefront/product-card";
+
 import { MarketingHome } from "./marketing-home";
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-vi.mock("@/modules/cart/actions/cart-actions", () => ({
-  clearCartAction: vi.fn(),
-  getCartPreviewAction: vi.fn(async () => ({ items: [], itemCount: 0, subtotalInCents: 0 })),
-  updateCartItemAction: vi.fn(),
-}));
 vi.mock("next/link", () => ({ default: (props: ComponentProps<"a">) => <a {...props} /> }));
 vi.mock("next/image", () => ({
   // Image optimization is covered by Next.js; these tests exercise the page UI.
@@ -39,6 +36,24 @@ const categories = [
   { id: "boots", slug: "equipment-boots", name: "Boots", parentId: "equipment" },
   { id: "helmets", slug: "equipment-helmets", name: "Helmets", parentId: "equipment" },
 ];
+
+function makeProduct(id: string, name: string, overrides: Partial<ProductCardData> = {}): ProductCardData {
+  return {
+    id,
+    name,
+    href: `/products/${id}`,
+    imageUrl: `/${id}.webp`,
+    imageAlt: name,
+    category: { label: "Capacetes" },
+    seller: { name: "Loja de teste" },
+    priceInCents: 89990,
+    hasPriceRange: false,
+    availableQuantity: 3,
+    isDemo: false,
+    sponsored: false,
+    ...overrides,
+  };
+}
 
 function renderHome(searchParams = "", options: Partial<ComponentProps<typeof MarketingHome>> = {}) {
   return render(
@@ -120,24 +135,11 @@ describe("marketing homepage", () => {
     expect(screen.queryByText("Honda CRF 250R")).not.toBeInTheDocument();
   });
 
-  it("opens the mobile navigation, closes on Escape and returns focus", () => {
+  it("leaves header and footer to the shared storefront layout", () => {
     renderHome();
-    const trigger = screen.getByRole("button", { name: "Abrir menu" });
-    fireEvent.click(trigger);
-    expect(trigger).toHaveAttribute("aria-expanded", "true");
-    const nav = screen.getByRole("navigation", { name: "Navegação mobile" });
-    const link = within(nav).getByRole("link", { name: "Categorias" });
-    link.focus();
-    fireEvent.keyDown(link, { key: "Escape" });
-    expect(trigger).toHaveAttribute("aria-expanded", "false");
-    expect(trigger).toHaveFocus();
-    fireEvent.click(trigger);
-    fireEvent.click(
-      within(screen.getByRole("navigation", { name: "Navegação mobile" })).getByRole("link", {
-        name: "Compatibilidade",
-      }),
-    );
-    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   });
 
   it("does not render a separate saved-motorcycles promotional section", () => {
@@ -159,9 +161,6 @@ describe("marketing homepage", () => {
     expect(screen.queryByText("Entrega ou retirada")).not.toBeInTheDocument();
     expect(screen.queryByText(/sem esconder equipamentos universais/)).not.toBeInTheDocument();
     expect(screen.queryByText("Ver opções")).not.toBeInTheDocument();
-    expect(
-      screen.getAllByRole("link", { name: "Comprar" }).every((link) => link.getAttribute("href") === "/products"),
-    ).toBe(true);
   });
 
   it("shows a truthful empty state before approved products exist", () => {
@@ -173,19 +172,7 @@ describe("marketing homepage", () => {
   it("links approved featured products to their details without invented installments", () => {
     renderHome("", {
       featuredProducts: [
-        {
-          id: "product-a",
-          name: "Capacete aprovado",
-          category: "Capacetes",
-          sellerName: "Loja A",
-          price: "R$ 899,90",
-          hasPriceRange: false,
-          href: "/products/capacete-aprovado",
-          image: null,
-          imageAlt: "Capacete aprovado",
-          sponsored: false,
-          isDemo: false,
-        },
+        makeProduct("capacete-aprovado", "Capacete aprovado", { imageUrl: null, seller: { name: "Loja A" } }),
       ],
     });
     expect(screen.getByRole("link", { name: "Ver Capacete aprovado" })).toHaveAttribute(
@@ -193,24 +180,22 @@ describe("marketing homepage", () => {
       "/products/capacete-aprovado",
     );
     expect(screen.getByText("Loja A")).toBeInTheDocument();
+    expect(screen.getByText("R$ 899,90")).toBeInTheDocument();
     expect(screen.queryByText(/10x de/)).not.toBeInTheDocument();
   });
 
-  it("prioritizes only the first featured product image", () => {
-    const makeProduct = (id: string, name: string) => ({
-      id,
-      name,
-      category: "Capacetes",
-      sellerName: "Loja de teste",
-      price: "R$ 899,90",
-      hasPriceRange: false,
-      href: `/products/${id}` as const,
-      image: `/${id}.webp`,
-      imageAlt: name,
-      sponsored: false,
-      isDemo: false,
+  it("marks sponsored and promotional offers with the shared product card", () => {
+    renderHome("", {
+      featuredProducts: [
+        makeProduct("capacete-vip", "Capacete VIP", { sponsored: true, compareAtPriceInCents: 99990 }),
+      ],
     });
+    expect(screen.getByText("Patrocinado · Loja VIP")).toBeInTheDocument();
+    expect(screen.getByText("Oferta")).toBeInTheDocument();
+    expect(screen.getByText("R$ 999,90")).toHaveClass("line-through");
+  });
 
+  it("prioritizes only the first featured product image", () => {
     renderHome("", {
       featuredProducts: [makeProduct("capacete-a", "Primeiro capacete"), makeProduct("capacete-b", "Segundo capacete")],
     });

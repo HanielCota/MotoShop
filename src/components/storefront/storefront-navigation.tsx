@@ -2,24 +2,42 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, UserRound, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { ChevronDown, Menu, Search, UserRound, X } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
+import { SignOutButton } from "@/modules/auth/components/sign-out-button";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
 import { CartPreview } from "@/modules/cart/components/cart-preview";
+
+import { isStorefrontPath, sellerLinkLabel } from "./storefront-routes";
+
+/** Atalhos da área do cliente exibidos no menu da conta. */
+export const accountLinks = [
+  { href: "/orders", label: "Pedidos" },
+  { href: "/favorites", label: "Favoritos" },
+  { href: "/account/motorcycles", label: "Minhas motos" },
+  { href: "/account/addresses", label: "Endereços" },
+  { href: "/account/notifications", label: "Notificações" },
+] as const;
+
+const iconButtonClassName =
+  "inline-flex size-11 items-center justify-center rounded-md text-white/85 transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-3 focus-visible:ring-moto-brand/60 focus-visible:outline-none";
 
 export function StorefrontNavigation() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
 
-  if (!pathname || pathname === "/" || /^\/(admin|api|seller)(\/|$)/.test(pathname)) return null;
+  if (!isStorefrontPath(pathname)) return null;
 
   const catalogActive = pathname === "/products" || pathname.startsWith("/products/");
+  // A listagem já tem a própria busca com filtros; evitamos dois campos concorrentes.
+  const showHeaderSearch = pathname !== "/products";
 
   return (
     <header
-      className="sticky top-0 z-50 border-b border-white/10 bg-[#171716] text-white shadow-sm"
+      className="bg-moto-brand-foreground sticky top-0 z-50 border-b border-white/10 text-white shadow-sm"
       onKeyDown={(event) => {
         if (event.key !== "Escape" || !menuOpen) return;
         setMenuOpen(false);
@@ -29,12 +47,12 @@ export function StorefrontNavigation() {
       <div className="mx-auto flex min-h-[68px] w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
         <MotoShopBrand />
 
-        <span className="hidden max-w-52 border-l border-white/20 pl-4 text-[0.62rem] leading-4 font-semibold tracking-[0.12em] text-white/65 uppercase xl:block">
+        <span className="hidden max-w-60 border-l border-white/20 pl-4 text-xs leading-4 font-semibold tracking-[0.12em] text-white/65 uppercase xl:block">
           O Marketplace de quem vive o <span className="text-moto-brand">OFF-ROAD!</span>
         </span>
 
         <nav
-          className="ml-6 hidden items-center gap-7 text-sm font-medium text-white/75 md:flex"
+          className="ml-4 hidden items-center gap-6 text-sm font-medium text-white/75 md:flex lg:ml-6"
           aria-label="Navegação principal"
         >
           <Link
@@ -45,12 +63,16 @@ export function StorefrontNavigation() {
             Catálogo
           </Link>
           <Link href="/seller" className="inline-flex min-h-11 items-center transition-colors hover:text-white">
-            Para lojistas
+            {sellerLinkLabel}
           </Link>
         </nav>
 
-        <div className="ml-auto flex items-center gap-1">
-          <AccountLink />
+        {showHeaderSearch ? (
+          <HeaderSearch id="storefront-search" className="ml-auto hidden max-w-xs flex-1 md:flex" />
+        ) : null}
+
+        <div className={`flex items-center gap-1 ${showHeaderSearch ? "ml-auto md:ml-0" : "ml-auto"}`}>
+          <AccountMenu />
           <CartPreview />
           <button
             ref={menuButton}
@@ -59,7 +81,7 @@ export function StorefrontNavigation() {
             aria-expanded={menuOpen}
             aria-controls="storefront-mobile-navigation"
             onClick={() => setMenuOpen((open) => !open)}
-            className="inline-flex size-11 items-center justify-center rounded-md text-white/85 transition-colors hover:bg-white/10 hover:text-white md:hidden"
+            className={`${iconButtonClassName} md:hidden`}
           >
             {menuOpen ? <X aria-hidden="true" className="size-5" /> : <Menu aria-hidden="true" className="size-5" />}
           </button>
@@ -69,9 +91,10 @@ export function StorefrontNavigation() {
       <nav
         id="storefront-mobile-navigation"
         aria-label="Navegação mobile"
-        className="border-t border-white/10 bg-[#171716] px-4 py-2 md:hidden"
+        className="bg-moto-brand-foreground border-t border-white/10 px-4 py-2 md:hidden"
         hidden={!menuOpen}
       >
+        {showHeaderSearch ? <HeaderSearch id="storefront-mobile-search" className="my-2 flex" /> : null}
         <Link
           href="/products"
           onClick={() => setMenuOpen(false)}
@@ -84,23 +107,112 @@ export function StorefrontNavigation() {
           onClick={() => setMenuOpen(false)}
           className="flex min-h-11 items-center text-sm font-medium"
         >
-          Para lojistas
+          {sellerLinkLabel}
         </Link>
       </nav>
     </header>
   );
 }
 
-function AccountLink() {
+function HeaderSearch({ id, className }: { id: string; className?: string }) {
+  return (
+    <form action="/products" method="get" role="search" className={`relative items-center ${className ?? ""}`}>
+      <label htmlFor={id} className="sr-only">
+        Buscar produtos
+      </label>
+      <input
+        id={id}
+        name="q"
+        type="search"
+        placeholder="Buscar peças, marcas ou lojas"
+        className="focus-visible:border-moto-brand focus-visible:ring-moto-brand/40 h-10 w-full rounded-md border border-white/20 bg-white/10 pr-11 pl-3 text-sm text-white placeholder:text-white/55 focus-visible:ring-3 focus-visible:outline-none"
+      />
+      <button
+        type="submit"
+        aria-label="Buscar"
+        className="focus-visible:ring-moto-brand/60 absolute right-0 inline-flex size-10 items-center justify-center rounded-md text-white/80 hover:text-white focus-visible:ring-3 focus-visible:outline-none"
+      >
+        <Search aria-hidden="true" className="size-4" />
+      </button>
+    </form>
+  );
+}
+
+function AccountMenu() {
   const { data: session } = authClient.useSession();
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(event: PointerEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [open]);
+
+  if (!session?.user) {
+    return (
+      <Link href="/login" aria-label="Entrar na minha conta" className={iconButtonClassName}>
+        <UserRound aria-hidden="true" className="size-5" />
+      </Link>
+    );
+  }
 
   return (
-    <Link
-      href={session?.user ? "/orders" : "/login"}
-      aria-label={session?.user ? "Minha conta e pedidos" : "Entrar na minha conta"}
-      className="inline-flex size-11 items-center justify-center rounded-md text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+    <div
+      ref={containerRef}
+      className="relative"
+      onKeyDown={(event) => {
+        if (event.key !== "Escape" || !open) return;
+        event.stopPropagation();
+        setOpen(false);
+        triggerRef.current?.focus();
+      }}
     >
-      <UserRound aria-hidden="true" className="size-5" />
-    </Link>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-label="Minha conta"
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={() => setOpen((value) => !value)}
+        className={`${iconButtonClassName} w-auto gap-0.5 px-2`}
+      >
+        <UserRound aria-hidden="true" className="size-5" />
+        <ChevronDown aria-hidden="true" className="size-3.5" />
+      </button>
+      <div
+        id={menuId}
+        hidden={!open}
+        className="bg-popover text-popover-foreground border-border absolute right-0 z-50 mt-2 w-56 rounded-xl border p-1.5 shadow-lg"
+      >
+        <p className="text-muted-foreground truncate px-3 pt-1.5 pb-2 text-xs">
+          {session.user.name ? `Olá, ${session.user.name}` : "Minha conta"}
+        </p>
+        <ul aria-label="Minha conta">
+          {accountLinks.map((link) => (
+            <li key={link.href}>
+              <Link
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className="hover:bg-muted focus-visible:bg-muted flex min-h-10 items-center rounded-md px-3 text-sm font-medium focus-visible:outline-none"
+              >
+                {link.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="border-border mt-1.5 border-t pt-1.5">
+          <SignOutButton
+            onSignedOut={() => setOpen(false)}
+            className="hover:bg-muted focus-visible:bg-muted w-full focus-visible:outline-none"
+          />
+        </div>
+      </div>
+    </div>
   );
 }
