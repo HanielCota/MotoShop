@@ -33,7 +33,11 @@ export function FavoriteButton({ productId, initialIsFavorite }: { productId: st
         disabled={isPending}
         onClick={handleToggle}
       >
-        <HeartIcon aria-hidden="true" fill={isFavorite ? "currentColor" : "none"} className={isFavorite ? "text-brand-strong" : undefined} />
+        <HeartIcon
+          aria-hidden="true"
+          fill={isFavorite ? "currentColor" : "none"}
+          className={isFavorite ? "text-brand-strong" : undefined}
+        />
         {isPending ? "Salvando…" : isFavorite ? "Favoritado" : "Favoritar"}
       </Button>
       {error ? (

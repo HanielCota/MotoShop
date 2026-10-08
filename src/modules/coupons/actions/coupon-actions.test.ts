@@ -116,8 +116,8 @@ describe("coupon creation audit", () => {
     const form = new FormData();
     form.set("code", "trilha10");
     form.set("discountType", "PERCENTAGE");
-    form.set("percentageBps", "1000");
-    form.set("minimumPurchaseInCents", "5000");
+    form.set("discountPercent", "10");
+    form.set("minimumPurchase", "50");
     return form;
   }
 
@@ -168,6 +168,27 @@ describe("coupon creation audit", () => {
 
   it("ignores malformed coupon ids before touching the database", async () => {
     await setSellerCouponActiveAction("not a cuid", true);
+    expect(mocks.transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("coupon creation bounds", () => {
+  function couponForm(fields: Record<string, string>) {
+    const form = new FormData();
+    for (const [name, value] of Object.entries({ code: "LIMITE10", discountType: "FIXED_AMOUNT", ...fields }))
+      form.set(name, value);
+    return form;
+  }
+
+  it.each([
+    [{ discountAmount: "99999999999" }, "desconto informado é maior"],
+    [{ discountAmount: "10", minimumPurchase: "99999999999" }, "compra mínima informada é maior"],
+    [{ discountAmount: "10", globalUsageLimit: "99999999999" }, "limite de uso informado é maior"],
+    [{ discountAmount: "10", perCustomerUsageLimit: "1.5" }, "número inteiro"],
+    [{ discountType: "FREE_SHIPPING", discountAmount: "10" }, "tipo de desconto"],
+  ])("rejects out-of-range values before the int4 database columns (%o)", async (fields, message) => {
+    const result = await createSellerCouponAction({}, couponForm(fields));
+    expect(result.error).toContain(message);
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
 });

@@ -9,7 +9,7 @@ export function FeaturedProducts({ products }: { products: ProductCardData[] }) 
   return (
     <section className="mx-auto w-full max-w-6xl px-4 pb-14 sm:px-6 sm:pb-20" aria-labelledby="featured-products-title">
       <SectionHeading
-        kicker="Seleção do Moto Shop"
+        kicker="Destaques"
         title="Produtos em destaque"
         titleId="featured-products-title"
         link={{ label: "Ver catálogo completo", href: "/products" }}

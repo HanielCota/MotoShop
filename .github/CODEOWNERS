@@ -1,0 +1,26 @@
+# CODEOWNERS — O Moto Shop
+#
+# Define quem precisa revisar cada parte do repositório. Com a proteção da branch `main`
+# configurada para exigir "Review from Code Owners", nenhum PR é mesclado sem a aprovação
+# do responsável pelo projeto (@HanielCota).
+#
+# A última regra que casar com um arquivo prevalece. As linhas explícitas abaixo marcam os
+# caminhos financeiros e críticos: mesmo que o padrão geral mude no futuro, eles continuam
+# exigindo a revisão do responsável.
+
+# Padrão: todo o repositório
+* @HanielCota
+
+# Banco de dados: schema e migrations
+/prisma/ @HanielCota
+
+# Pagamentos, checkout e adapters de pagamento
+/src/modules/payments/ @HanielCota
+/src/modules/checkout/ @HanielCota
+/src/lib/payment/ @HanielCota
+
+# Autenticação e sessões
+/src/modules/auth/ @HanielCota
+
+# Automação, templates e regras do GitHub
+/.github/ @HanielCota

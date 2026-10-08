@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db } from "@/lib/database";
+import { resolvePage } from "@/modules/products/domain/pagination";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 
 export async function getPublicCategoryBySlug(slug: string) {
@@ -46,36 +47,34 @@ export async function getPublicStoreBySlug(
 
   if (!store) return null;
   const pageSize = 6;
-  const requestedPage = Math.max(input.reviewPage ?? 1, 1);
-  const [reviewSummary, reviewCount, reviews] = await Promise.all([
-    db.sellerReview.aggregate({
-      where: { sellerId: store.sellerId, hiddenAt: null },
-      _avg: { rating: true },
-      _count: { _all: true },
-    }),
-    db.sellerReview.count({ where: { sellerId: store.sellerId, hiddenAt: null } }),
-    db.sellerReview.findMany({
-      where: { sellerId: store.sellerId, hiddenAt: null },
-      select: {
-        id: true,
-        rating: true,
-        comment: true,
-        createdAt: true,
-        user: { select: { name: true } },
-      },
-      orderBy: { createdAt: input.reviewSort === "oldest" ? "asc" : "desc" },
-      skip: (requestedPage - 1) * pageSize,
-      take: pageSize,
-    }),
-  ]);
+  const reviewSummary = await db.sellerReview.aggregate({
+    where: { sellerId: store.sellerId, hiddenAt: null },
+    _avg: { rating: true },
+    _count: { _all: true },
+  });
+  // Clamp before querying so a page past the end shows the last page instead of an empty list.
+  const reviewPagination = resolvePage(input.reviewPage, reviewSummary._count._all, pageSize);
+  const reviews = await db.sellerReview.findMany({
+    where: { sellerId: store.sellerId, hiddenAt: null },
+    select: {
+      id: true,
+      rating: true,
+      comment: true,
+      createdAt: true,
+      user: { select: { name: true } },
+    },
+    orderBy: { createdAt: input.reviewSort === "oldest" ? "asc" : "desc" },
+    skip: reviewPagination.skip,
+    take: pageSize,
+  });
 
   return {
     ...store,
     logoUrl: store.logoStorageKey ? getPublicStorageUrl(store.logoStorageKey) : null,
     bannerUrl: store.bannerStorageKey ? getPublicStorageUrl(store.bannerStorageKey) : null,
     reviewSummary: { average: reviewSummary._avg.rating, count: reviewSummary._count._all },
-    reviewPage: Math.min(requestedPage, Math.max(Math.ceil(reviewCount / pageSize), 1)),
-    reviewPageCount: Math.max(Math.ceil(reviewCount / pageSize), 1),
+    reviewPage: reviewPagination.page,
+    reviewPageCount: reviewPagination.pageCount,
     seller: { ...store.seller, sellerReviews: reviews },
   };
 }

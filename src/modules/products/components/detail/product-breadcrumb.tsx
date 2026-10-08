@@ -12,7 +12,10 @@ export function ProductBreadcrumb({
     <nav aria-label="Navegação estrutural" className="text-muted-foreground min-w-0 text-xs sm:text-sm">
       <ol className="flex min-w-0 items-center gap-2">
         <li className="shrink-0">
-          <Link href="/products" className="hover:text-foreground rounded-sm hover:underline focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none">
+          <Link
+            href="/products"
+            className="hover:text-foreground focus-visible:ring-ring/40 rounded-sm hover:underline focus-visible:ring-3 focus-visible:outline-none"
+          >
             Catálogo
           </Link>
         </li>
@@ -20,7 +23,7 @@ export function ProductBreadcrumb({
         <li className="shrink-0">
           <Link
             href={`/categoria/${category.slug}` as Route}
-            className="hover:text-foreground rounded-sm hover:underline focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none"
+            className="hover:text-foreground focus-visible:ring-ring/40 rounded-sm hover:underline focus-visible:ring-3 focus-visible:outline-none"
           >
             {category.label}
           </Link>

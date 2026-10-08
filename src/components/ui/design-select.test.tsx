@@ -52,10 +52,7 @@ describe("DesignSelect", () => {
     );
     selectOption("Motos compatíveis", "Honda CRF");
     selectOption("Motos compatíveis", "Yamaha YZ");
-    expect(new FormData(container.querySelector("form")!).getAll("motorcycleFitmentIds")).toEqual([
-      "honda",
-      "yamaha",
-    ]);
+    expect(new FormData(container.querySelector("form")!).getAll("motorcycleFitmentIds")).toEqual(["honda", "yamaha"]);
   });
 
   it("does not open when disabled", () => {

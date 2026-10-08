@@ -2,11 +2,7 @@ import { AlertTriangle, Check, Circle, Clock, Truck, X } from "lucide-react";
 import type { ComponentProps } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import {
-  getStatusPresentation,
-  type StatusDomain,
-  type StatusTone,
-} from "@/shared/presentation/status-labels";
+import { getStatusPresentation, type StatusDomain, type StatusTone } from "@/shared/presentation/status-labels";
 
 const toneVariant = {
   neutral: "neutral",

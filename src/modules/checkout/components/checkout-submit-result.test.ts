@@ -14,7 +14,9 @@ describe("isTerminalCheckoutFailure", () => {
   it("keeps the idempotency key for uncertain or validation failures", () => {
     expect(isTerminalCheckoutFailure({ orderNumber: "MS-1" })).toBe(false);
     expect(isTerminalCheckoutFailure({ error: "Informe um CPF válido." })).toBe(false);
-    expect(isTerminalCheckoutFailure({ error: "Não foi possível confirmar o pagamento. Consulte seu pedido." })).toBe(false);
+    expect(isTerminalCheckoutFailure({ error: "Não foi possível confirmar o pagamento. Consulte seu pedido." })).toBe(
+      false,
+    );
     expect(isTerminalCheckoutFailure({ orderNumber: "MS-1", paymentStatus: "PENDING" } as never)).toBe(false);
   });
 });

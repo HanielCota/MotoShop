@@ -7,7 +7,9 @@ const mocks = vi.hoisted(() => ({
   shipmentUpdate: vi.fn(),
   txSellerOrderFindUnique: vi.fn(),
   outboxUpsert: vi.fn(),
-  createShipment: vi.fn(),
+  addToCart: vi.fn(),
+  checkoutCart: vi.fn(),
+  quote: vi.fn(),
   generateShipment: vi.fn(),
   track: vi.fn(),
   txShipmentFindUnique: vi.fn(),
@@ -33,7 +35,9 @@ vi.mock("@/lib/inngest/client", () => ({ inngest: { send: mocks.send } }));
 vi.mock("@/lib/logger", () => ({ logger: { error: mocks.loggerError, warn: mocks.loggerWarn } }));
 vi.mock("@/lib/shipping/melhor-envio-provider", () => ({
   melhorEnvioProvider: {
-    createShipment: mocks.createShipment,
+    addToCart: mocks.addToCart,
+    checkoutCart: mocks.checkoutCart,
+    quote: mocks.quote,
     generateShipment: mocks.generateShipment,
     track: mocks.track,
   },
@@ -114,6 +118,19 @@ const pendingSellerOrder = {
   ],
 };
 
+function quotedService(overrides: Record<string, unknown> = {}) {
+  return {
+    provider: "MELHOR_ENVIO",
+    serviceCode: "1",
+    carrier: "Transportadora",
+    service: "Expresso",
+    priceInCents: 2500,
+    packages: [{ heightInCm: 12, widthInCm: 20, lengthInCm: 30, weightInKg: 1.2, insuranceValueInCents: 10_000 }],
+    raw: {},
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.findUnique.mockResolvedValue(pendingSellerOrder);
@@ -139,7 +156,9 @@ beforeEach(() => {
     }),
   );
   mocks.shipmentUpdate.mockResolvedValue({ ...pendingSellerOrder.shipment, externalShipmentId: "external-1" });
-  mocks.createShipment.mockResolvedValue({
+  mocks.quote.mockResolvedValue([quotedService()]);
+  mocks.addToCart.mockResolvedValue({ cartItemId: "external-1", providerMetadata: {} });
+  mocks.checkoutCart.mockResolvedValue({
     externalShipmentId: "external-1",
     status: "READY_TO_SHIP",
     providerMetadata: {},
@@ -161,11 +180,11 @@ describe("purchaseSellerOrderShipment retry safety", () => {
       where: { id: "shipment-1", externalShipmentId: null, purchaseState: null },
       data: { purchaseState: "IN_PROGRESS", purchaseError: null },
     });
-    expect(mocks.createShipment).toHaveBeenCalledOnce();
+    expect(mocks.addToCart).toHaveBeenCalledOnce();
     expect(mocks.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: "seller-order-1", sellerId: "seller-1" } }),
     );
-    expect(mocks.createShipment.mock.calls[0]?.[1]).toBe("seller-sandbox-token");
+    expect(mocks.addToCart.mock.calls[0]?.[1]).toBe("seller-sandbox-token");
     expect(mocks.getSellerAccessToken).toHaveBeenCalledWith("seller-1", ["cart-write", "shipping-checkout"]);
     expect(mocks.shipmentUpdate).toHaveBeenCalledWith({
       where: { id: "shipment-1" },
@@ -185,7 +204,7 @@ describe("purchaseSellerOrderShipment retry safety", () => {
 
   it("blocks another external purchase after an uncertain provider result", async () => {
     const timeout = new Error("request timed out");
-    mocks.createShipment.mockRejectedValueOnce(timeout);
+    mocks.addToCart.mockRejectedValueOnce(timeout);
     await expect(
       purchaseSellerOrderShipment({
         sellerOrderId: "seller-order-1",
@@ -213,7 +232,7 @@ describe("purchaseSellerOrderShipment retry safety", () => {
         actorUserId: "seller-user-1",
       }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
-    expect(mocks.createShipment).toHaveBeenCalledOnce();
+    expect(mocks.addToCart).toHaveBeenCalledOnce();
   });
 
   it("does not start a second purchase when another request already owns the claim", async () => {
@@ -227,7 +246,7 @@ describe("purchaseSellerOrderShipment retry safety", () => {
         actorUserId: "seller-user-1",
       }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
-    expect(mocks.createShipment).not.toHaveBeenCalled();
+    expect(mocks.addToCart).not.toHaveBeenCalled();
   });
 
   it("requires the shop's own OAuth token before claiming a paid shipping operation", async () => {
@@ -242,7 +261,7 @@ describe("purchaseSellerOrderShipment retry safety", () => {
     ).rejects.toMatchObject({ code: "CONFIGURATION_ERROR" });
 
     expect(mocks.updateMany).not.toHaveBeenCalled();
-    expect(mocks.createShipment).not.toHaveBeenCalled();
+    expect(mocks.addToCart).not.toHaveBeenCalled();
   });
 
   it("does not load or purchase another seller's order", async () => {
@@ -260,7 +279,7 @@ describe("purchaseSellerOrderShipment retry safety", () => {
       expect.objectContaining({ where: { id: "seller-order-1", sellerId: "seller-2" } }),
     );
     expect(mocks.getSellerAccessToken).not.toHaveBeenCalled();
-    expect(mocks.createShipment).not.toHaveBeenCalled();
+    expect(mocks.addToCart).not.toHaveBeenCalled();
   });
 });
 
@@ -400,7 +419,7 @@ describe("fulfillment after cancellation", () => {
       await expect(
         purchaseSellerOrderShipment({ sellerOrderId: "seller-order-1", sellerId: "seller-1", actorUserId: "u" }),
       ).rejects.toMatchObject({ code: "CONFLICT" });
-      expect(mocks.createShipment).not.toHaveBeenCalled();
+      expect(mocks.addToCart).not.toHaveBeenCalled();
     },
   );
 
@@ -534,7 +553,7 @@ describe("replacing a label cancelled at the provider", () => {
       where: { id: "shipment-1", externalShipmentId: null, purchaseState: null },
       data: { purchaseState: "IN_PROGRESS", purchaseError: null },
     });
-    expect(mocks.createShipment).toHaveBeenCalledOnce();
+    expect(mocks.addToCart).toHaveBeenCalledOnce();
   });
 
   it("does not replace a label that still awaits cancellation at the provider", async () => {
@@ -552,7 +571,7 @@ describe("replacing a label cancelled at the provider", () => {
       purchaseSellerOrderShipment({ sellerOrderId: "seller-order-1", sellerId: "seller-1", actorUserId: "u" }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
     expect(mocks.txShipmentUpdate).not.toHaveBeenCalled();
-    expect(mocks.createShipment).not.toHaveBeenCalled();
+    expect(mocks.addToCart).not.toHaveBeenCalled();
   });
 });
 
@@ -562,7 +581,7 @@ describe("definitive provider rejections", () => {
       message: "O Melhor Envio não conseguiu comprar a etiqueta.",
       providerStatus: 422,
     });
-    mocks.createShipment.mockRejectedValueOnce(rejection);
+    mocks.addToCart.mockRejectedValueOnce(rejection);
 
     await expect(
       purchaseSellerOrderShipment({ sellerOrderId: "seller-order-1", sellerId: "seller-1", actorUserId: "u" }),
@@ -574,7 +593,7 @@ describe("definitive provider rejections", () => {
   });
 
   it("keeps the outcome unknown for rate limiting", async () => {
-    mocks.createShipment.mockRejectedValueOnce(
+    mocks.addToCart.mockRejectedValueOnce(
       new ShippingProviderRequestError({
         message: "O Melhor Envio não conseguiu comprar a etiqueta.",
         providerStatus: 429,
@@ -593,7 +612,10 @@ describe("definitive provider rejections", () => {
       shipment: { ...pendingSellerOrder.shipment, externalShipmentId: "external-1" },
     });
     mocks.generateShipment.mockRejectedValueOnce(
-      new ShippingProviderRequestError({ message: "O Melhor Envio não conseguiu gerar a etiqueta.", providerStatus: 400 }),
+      new ShippingProviderRequestError({
+        message: "O Melhor Envio não conseguiu gerar a etiqueta.",
+        providerStatus: 400,
+      }),
     );
 
     await expect(generateSellerOrderShipment("seller-order-1", "seller-1", "u")).rejects.toMatchObject({
@@ -603,5 +625,195 @@ describe("definitive provider rejections", () => {
       where: { id: "shipment-1", generationState: "IN_PROGRESS" },
       data: { generationState: null, generationError: "O Melhor Envio não conseguiu gerar a etiqueta." },
     });
+  });
+});
+
+describe("two-step label purchase (cart insert + checkout)", () => {
+  const purchase = () =>
+    purchaseSellerOrderShipment({ sellerOrderId: "seller-order-1", sellerId: "seller-1", actorUserId: "u" });
+
+  it("buys with the volumes Melhor Envio packed for the same products quoted at checkout", async () => {
+    mocks.findUnique.mockResolvedValue({
+      ...pendingSellerOrder,
+      items: [{ ...pendingSellerOrder.items[0], quantity: 3 }],
+    });
+
+    await purchase();
+
+    expect(mocks.quote).toHaveBeenCalledWith(
+      {
+        fromPostalCode: "01001000",
+        toPostalCode: "01001000",
+        services: ["1"],
+        products: [expect.objectContaining({ id: "SKU-1", insuranceValueInCents: 10_000, quantity: 3, weightInKg: 1 })],
+      },
+      "seller-sandbox-token",
+    );
+    expect(mocks.addToCart).toHaveBeenCalledWith(
+      expect.objectContaining({
+        volumes: [{ heightInCm: 12, widthInCm: 20, lengthInCm: 30, weightInKg: 1.2 }],
+        insuranceValueInCents: 30_000,
+        products: [
+          expect.objectContaining({ unitaryValueInCents: 10_000, insuranceValueInCents: 10_000, quantity: 3 }),
+        ],
+      }),
+      "seller-sandbox-token",
+    );
+    expect(mocks.checkoutCart).toHaveBeenCalledWith("external-1", "seller-sandbox-token");
+  });
+
+  it("persists the cart item right after inserting it and never inserts a second one on retry", async () => {
+    const rejection = new ShippingProviderRequestError({
+      message: "O Melhor Envio não conseguiu comprar a etiqueta.",
+      providerStatus: 422,
+    });
+    mocks.addToCart.mockResolvedValueOnce({ cartItemId: "cart-1", providerMetadata: {} });
+    mocks.checkoutCart.mockRejectedValueOnce(rejection);
+
+    await expect(purchase()).rejects.toBe(rejection);
+
+    expect(mocks.updateMany).toHaveBeenNthCalledWith(2, {
+      where: { id: "shipment-1", purchaseState: "IN_PROGRESS", externalShipmentId: null },
+      data: {
+        providerMetadata: {
+          purchaseCart: expect.objectContaining({ step: "CART_CREATED", cartItemId: "cart-1", serviceCode: "1" }),
+        },
+      },
+    });
+    expect(mocks.updateMany).toHaveBeenNthCalledWith(3, {
+      where: { id: "shipment-1", purchaseState: "IN_PROGRESS", externalShipmentId: null },
+      data: { purchaseState: null, purchaseError: "O Melhor Envio não conseguiu comprar a etiqueta." },
+    });
+    const persistedMetadata = mocks.updateMany.mock.calls[1]?.[0]?.data.providerMetadata;
+
+    // Nova tentativa (ex.: depois de recarregar o saldo): somente o checkout do mesmo item.
+    mocks.findUnique.mockResolvedValue({
+      ...pendingSellerOrder,
+      shipment: { ...pendingSellerOrder.shipment, providerMetadata: persistedMetadata },
+    });
+    mocks.checkoutCart.mockResolvedValueOnce({
+      externalShipmentId: "cart-1",
+      status: "READY_TO_SHIP",
+      providerMetadata: { purchaseStatus: "paid" },
+    });
+
+    await purchase();
+
+    expect(mocks.addToCart).toHaveBeenCalledOnce();
+    expect(mocks.quote).toHaveBeenCalledOnce();
+    expect(mocks.checkoutCart).toHaveBeenNthCalledWith(2, "cart-1", "seller-sandbox-token");
+    expect(mocks.shipmentUpdate).toHaveBeenCalledWith({
+      where: { id: "shipment-1" },
+      data: expect.objectContaining({
+        externalShipmentId: "cart-1",
+        status: "READY_TO_SHIP",
+        providerMetadata: { purchaseStatus: "paid" },
+      }),
+    });
+  });
+
+  it("keeps the outcome unknown and names the cart item when checkout times out", async () => {
+    mocks.addToCart.mockResolvedValueOnce({ cartItemId: "cart-1", providerMetadata: {} });
+    mocks.checkoutCart.mockRejectedValueOnce(new Error("request timed out"));
+
+    await expect(purchase()).rejects.toThrow("request timed out");
+
+    expect(mocks.updateMany).toHaveBeenNthCalledWith(3, {
+      where: { id: "shipment-1", purchaseState: "IN_PROGRESS", externalShipmentId: null },
+      data: {
+        purchaseState: "OUTCOME_UNKNOWN",
+        purchaseError: expect.stringContaining("cart-1"),
+      },
+    });
+  });
+
+  it("drops a cart item the provider no longer finds so the next attempt creates a new one", async () => {
+    mocks.findUnique.mockResolvedValue({
+      ...pendingSellerOrder,
+      shipment: {
+        ...pendingSellerOrder.shipment,
+        providerMetadata: {
+          purchaseCart: {
+            step: "CART_CREATED",
+            cartItemId: "cart-gone",
+            serviceCode: "1",
+            createdAt: new Date().toISOString(),
+            volumeCount: 1,
+          },
+        },
+      },
+    });
+    mocks.checkoutCart.mockRejectedValueOnce(
+      new ShippingProviderRequestError({
+        message: "O Melhor Envio não conseguiu comprar a etiqueta.",
+        providerStatus: 404,
+      }),
+    );
+
+    await expect(purchase()).rejects.toMatchObject({ providerStatus: 404 });
+
+    expect(mocks.addToCart).not.toHaveBeenCalled();
+    expect(mocks.updateMany.mock.calls[1]?.[0]?.data).toMatchObject({
+      purchaseState: null,
+      providerMetadata: {
+        discardedPurchaseCarts: [expect.objectContaining({ cartItemId: "cart-gone", reason: "NOT_FOUND_AT_PROVIDER" })],
+      },
+    });
+    expect(mocks.updateMany.mock.calls[1]?.[0]?.data.providerMetadata).not.toHaveProperty("purchaseCart");
+  });
+
+  it("creates a new cart item when the stored one is past the provider's 7-day window", async () => {
+    mocks.findUnique.mockResolvedValue({
+      ...pendingSellerOrder,
+      shipment: {
+        ...pendingSellerOrder.shipment,
+        providerMetadata: {
+          purchaseCart: {
+            step: "CART_CREATED",
+            cartItemId: "cart-old",
+            serviceCode: "1",
+            createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+            volumeCount: 1,
+          },
+        },
+      },
+    });
+
+    await purchase();
+
+    expect(mocks.updateMany.mock.calls[0]?.[0]).toMatchObject({
+      where: { id: "shipment-1", externalShipmentId: null, purchaseState: null },
+      data: {
+        providerMetadata: {
+          discardedPurchaseCarts: [expect.objectContaining({ cartItemId: "cart-old", reason: "EXPIRED" })],
+        },
+      },
+    });
+    expect(mocks.addToCart).toHaveBeenCalledOnce();
+    expect(mocks.checkoutCart).toHaveBeenCalledWith("external-1", "seller-sandbox-token");
+  });
+
+  it("refuses multi-package Correios shipments before claiming or inserting anything", async () => {
+    mocks.quote.mockResolvedValueOnce([
+      quotedService({
+        carrier: "Correios",
+        packages: [
+          { heightInCm: 10, widthInCm: 10, lengthInCm: 10, weightInKg: 1 },
+          { heightInCm: 10, widthInCm: 10, lengthInCm: 10, weightInKg: 1 },
+        ],
+      }),
+    ]);
+
+    await expect(purchase()).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(mocks.updateMany).not.toHaveBeenCalled();
+    expect(mocks.addToCart).not.toHaveBeenCalled();
+  });
+
+  it("does not buy when the contracted service is missing from the new quote", async () => {
+    mocks.quote.mockResolvedValueOnce([quotedService({ serviceCode: "2" })]);
+
+    await expect(purchase()).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(mocks.updateMany).not.toHaveBeenCalled();
+    expect(mocks.addToCart).not.toHaveBeenCalled();
   });
 });

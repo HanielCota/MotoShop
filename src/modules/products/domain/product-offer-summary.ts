@@ -29,7 +29,10 @@ export function getVariantStock(variant: { inventory?: { availableQuantity: numb
 }
 
 /** Promoção ativa e efetivamente menor que o preço cheio. */
-export function isVariantOnSale(variant: Parameters<typeof hasActivePromotion>[0] & { priceInCents: number }, now = new Date()) {
+export function isVariantOnSale(
+  variant: Parameters<typeof hasActivePromotion>[0] & { priceInCents: number },
+  now = new Date(),
+) {
   return (
     hasActivePromotion(variant, now) &&
     variant.promotionalPriceInCents !== null &&

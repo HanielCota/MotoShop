@@ -30,13 +30,28 @@ export async function listCustomerOrders(
     input.shipmentStatus && input.shipmentStatus !== "ALL" ? (input.shipmentStatus as ShipmentStatus) : undefined;
   const from = parseDateFilter(input.from, false);
   const to = parseDateFilter(input.to, true);
-  const minTotal = typeof input.minTotalInCents === "number" && Number.isSafeInteger(input.minTotalInCents) && input.minTotalInCents >= 0 ? input.minTotalInCents : undefined;
-  const maxTotal = typeof input.maxTotalInCents === "number" && Number.isSafeInteger(input.maxTotalInCents) && input.maxTotalInCents >= 0 ? input.maxTotalInCents : undefined;
+  const minTotal =
+    typeof input.minTotalInCents === "number" &&
+    Number.isSafeInteger(input.minTotalInCents) &&
+    input.minTotalInCents >= 0
+      ? input.minTotalInCents
+      : undefined;
+  const maxTotal =
+    typeof input.maxTotalInCents === "number" &&
+    Number.isSafeInteger(input.maxTotalInCents) &&
+    input.maxTotalInCents >= 0
+      ? input.maxTotalInCents
+      : undefined;
   const where = {
     userId,
     ...(from || to ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) } } : {}),
     ...(minTotal !== undefined || maxTotal !== undefined
-      ? { totalAmountInCents: { ...(minTotal !== undefined ? { gte: minTotal } : {}), ...(maxTotal !== undefined ? { lte: maxTotal } : {}) } }
+      ? {
+          totalAmountInCents: {
+            ...(minTotal !== undefined ? { gte: minTotal } : {}),
+            ...(maxTotal !== undefined ? { lte: maxTotal } : {}),
+          },
+        }
       : {}),
     ...(status ? { status } : {}),
     ...(query
@@ -64,9 +79,7 @@ export async function listCustomerOrders(
       ? {
           sellerOrders: {
             some: {
-              ...(storeQuery
-                ? { storeNameSnapshot: { contains: storeQuery, mode: "insensitive" as const } }
-                : {}),
+              ...(storeQuery ? { storeNameSnapshot: { contains: storeQuery, mode: "insensitive" as const } } : {}),
               ...(shipmentStatus ? { shipment: { status: shipmentStatus } } : {}),
             },
           },

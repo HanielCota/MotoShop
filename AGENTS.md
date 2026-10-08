@@ -1985,6 +1985,16 @@ Decisões adicionais do MVP:
 - Suspensão e reativação de seller são transições administrativas explícitas, com `AuditLog` transacional e bloqueio de acesso enquanto o seller estiver suspenso.
 - Produto arquivado pode voltar a `DRAFT` somente por ação do seller dono, sempre com ownership server-side e auditoria.
 - Uso de cupom deve ser consultado por agregação/count do banco, sem serializar resgates completos para as páginas operacionais.
+- Formulários de cupom (lojista e Admin) recebem desconto em % e valores em R$; a conversão para basis points e centavos acontece no servidor (`coupons/domain/coupon-form-input.ts`, sem `float`). Unidades internas nunca aparecem na interface.
+- IDs determinísticos do seed de revisão usam o prefixo `czrvw` para passar na validação `z.cuid()` das Server Actions.
+- Decisões do responsável sobre o feedback do cliente (08/10/2026):
+  - Login social (Google, Apple, Facebook): fora do escopo por enquanto.
+  - Avaliações: cada avaliação tem nota inteira de 1 a 5; a casa decimal aparece apenas na média. Vídeo em avaliações está fora do escopo.
+  - "Quantidade vendida" é exibida no produto e calculada a partir de pedidos reais confirmados (na demonstração, reflete os pedidos fictícios).
+  - Estimativa de frete por localização automática e entregas por aplicativo (ex.: Uber): não serão implementadas.
+  - Rodapé definitivo (horário de atendimento, formas de pagamento, redes sociais, CNPJ e páginas legais) aguarda o conteúdo oficial do cliente.
+  - Link de WhatsApp na vitrine da loja: mantido, por decisão do cliente; o lojista não pode linkar uma loja própria fora da plataforma.
+  - "Minha moto" é seleção de peças compatíveis (não venda de motos): a escolha acontece na página do produto e no catálogo, sem aba própria no menu da conta.
 - O detalhe do pedido pode expor ao próprio cliente o histórico dos pagamentos e transações vinculados ao `Order`, sem revelar metadados sensíveis do provider.
 - Reconsulta manual de pagamento aceita somente pedidos autorizados por sessão ou token guest seguro, limita-se a pagamentos pendentes e reutiliza o reconciliador idempotente.
 - Cartão de crédito usa Secure Fields do MercadoPago.js (iframes) e token descartável; PAN, validade e CVV nunca passam pelo servidor do Moto Shop. A primeira versão aceita crédito em uma parcela, definida no servidor. A Public Key pertence à mesma aplicação/ambiente do Access Token; somente a Public Key chega ao navegador. A URL opcional `MERCADO_PAGO_NOTIFICATION_URL` é enviada por cobrança e exige assinatura secreta configurada, sem sobrescrever configurações globais de outras integrações. Cartões e webhook real permanecem sujeitos à homologação.
@@ -2100,7 +2110,14 @@ Decisões adicionais do MVP:
 - Cancelamento aprovado com etiqueta Melhor Envio já comprada marca o `Shipment` como `CANCELLED` com `providerMetadata.labelCancellationRequired`; o cancelamento da etiqueta no provider é manual e confirmado no Admin (`/admin/shipping-recovery`). Uma etiqueta cancelada pode ser substituída: o ID anterior vai para `providerMetadata.previousLabels`, com auditoria. Erros 4xx do Melhor Envio (exceto 408/409/429) são definitivos e liberam nova tentativa.
 - Vínculo de pedido guest exige, além do token e do mesmo e-mail, e-mail verificado na conta; o vínculo gera `AuditLog` `ORDER_GUEST_CLAIMED`.
 - A disponibilidade do pagamento exibida no carrinho e no checkout vem de `getCheckoutPaymentAvailability`, que reaproveita as mesmas verificações do serviço de checkout; nunca fixar o valor na página.
+- Runtime e ferramentas (revisado em 08/10/2026): Node **24** (Active LTS, manutenção até 30/04/2028), fixado em `engines` e `.nvmrc`; pnpm via Corepack na versão de `packageManager`. Node 26 vira LTS em 28/10/2026: reavaliar quando o Vercel suportar e o CI passar nele. Majors adiadas de propósito: **ESLint 10** (plugins `react`, `import` e `jsx-a11y` ainda não declaram suporte), **TypeScript 7** (compilador nativo; aguardar suporte do Next e do typescript-eslint) e **Prisma 8** (o `latest` do npm ainda é release candidate). O Dependabot ignora majors de TypeScript, Prisma e `@types/node`; atualizá-las exige PR dedicado com o guia de migração. A política de idade mínima de release do pnpm não deve ser contornada para atualizações de rotina.
+- CI (`.github/workflows`): todo PR roda typecheck (com `next typegen`), lint, `format:check`, testes unitários e `next build` sem banco; dependency review e título em Conventional Commits; CodeQL semanal. Integração e Playwright só rodam com os secrets `TEST_DATABASE_URL`/`TEST_DATABASE_DIRECT_URL` apontando para um branch Neon descartável — nunca para o banco de produção. Actions são fixadas por SHA.
+- O sitemap é renderizado por requisição (`dynamic = "force-dynamic"`): produtos aprovados aparecem sem novo deploy, e `next build` não depende de banco.
+- Headers de segurança globais ficam em `src/config/security-headers.ts`. A CSP está em `Content-Security-Policy-Report-Only` até a homologação do checkout com Secure Fields; ao passar sem violações, trocar para `Content-Security-Policy`.
 - UI: um único sistema de estilos (Tailwind + tokens de `globals.css`). Header (`StorefrontNavigation`), rodapé (`SiteFooter`) e card de produto (`ProductCard`) são compartilhados por todo o storefront; Central do Lojista e Admin usam `AppAreaHeader` com "Sair". Controles têm 44px (`h-11`) por padrão no mobile, `sm` (36px) apenas em tabelas operacionais densas; campos usam `text-base` no mobile para evitar zoom no iOS; formulários usam React Hook Form + Zod com `FormField` (erro por campo com `aria-describedby`). Não criar CSS modules paralelos para componentes que já existem em `components/ui`.
+- Ao entrar (ou criar conta) com carrinho de visitante ativo, o carrinho guest é mesclado no carrinho ativo do usuário na primeira leitura do carrinho (`getCartIdentity`): soma quantidades por variante limitadas ao estoque disponível e a 99 por item, ignora variantes não compráveis (demo/inativas/arquivadas/sem estoque), nunca reduz quantidades já existentes, trava os dois carrinhos na mesma transação, marca o guest como `ABANDONED` (idempotente) e remove o cookie do visitante.
+- O login por e-mail tem, além do limite por IP, um limite por conta (10 tentativas/15 min) com chave derivada do e-mail normalizado e persistida apenas como hash; a resposta é 429 com mensagem genérica em português, sem revelar se a conta existe.
+- Em produção, `/api/inngest` responde 503 (sem detalhes) se `INNGEST_DEV` estiver ativo ou `INNGEST_SIGNING_KEY` ausente. Erros inesperados exibidos ao usuário usam mensagem genérica em português; `ZodError` vira `VALIDATION_ERROR` com a mensagem do schema, ou "Confira os dados informados." quando a mensagem é a padrão (inglês) do Zod.
 
 ---
 
@@ -2108,7 +2125,7 @@ Decisões adicionais do MVP:
 
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 

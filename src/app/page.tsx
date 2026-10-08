@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
+import { BRAND_DESCRIPTION, BRAND_SLOGAN } from "@/config/brand";
 import { MarketingHome } from "@/modules/marketing/components/marketing-home";
 import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/motorcycles";
 import { listMarketingCategories } from "@/modules/marketing/queries/marketing-categories";
@@ -9,10 +10,11 @@ import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
 import { listFeaturedProducts } from "@/modules/marketing/queries/featured-products";
 
+// Home: a aba mostra apenas o slogan (sem o sufixo "| O Moto Shop" do template).
 export const metadata: Metadata = {
-  title: "O Marketplace de quem vive o OFF-ROAD!",
-  description:
-    "O Moto Shop Brasil é uma plataforma e-commerce no formato de marketplace voltada para o setor de motopeças, acessórios e equipamentos, com destaque para o segmento off-road. A plataforma atua como ponte tecnológica entre clientes finais e lojistas parceiros.",
+  title: { absolute: BRAND_SLOGAN },
+  description: BRAND_DESCRIPTION,
+  alternates: { canonical: "/" },
 };
 
 export default async function HomePage() {

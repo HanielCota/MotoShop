@@ -18,7 +18,13 @@ describe("buildProductJsonLd", () => {
   it("builds an aggregate offer in reais", () => {
     const jsonLd = buildProductJsonLd(
       product,
-      { lowestPriceInCents: 10000, highestPriceInCents: 15000, hasPriceRange: true, hasStock: false, hasPromotion: false },
+      {
+        lowestPriceInCents: 10000,
+        highestPriceInCents: 15000,
+        hasPriceRange: true,
+        hasStock: false,
+        hasPromotion: false,
+      },
       "https://loja.test",
     );
     expect(jsonLd.offers).toMatchObject({

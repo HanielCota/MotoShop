@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { PageHeader, SectionHeader } from "@/components/ui/page-header";
@@ -9,6 +10,11 @@ import { OrderSummary } from "@/modules/orders/components/order-detail/order-sum
 import { PaymentSection } from "@/modules/orders/components/order-detail/payment-section";
 import { SellerOrderSection } from "@/modules/orders/components/order-detail/seller-order-section";
 import { getCustomerOrder } from "@/modules/returns/queries/customer-orders";
+
+export const metadata: Metadata = {
+  title: "Acompanhar pedido",
+  robots: { index: false, follow: false },
+};
 
 export default async function CustomerOrderPage({
   params,

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { Route } from "next";
+import type { Metadata, Route } from "next";
 import { Bike, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,10 +26,15 @@ import {
   buildCatalogHref,
   clearCatalogFiltersHref,
   countActiveCatalogFilters,
+  normalizeCatalogPrice,
   removeCatalogFilterHref,
   type CatalogFilterKey,
   type CatalogQuery,
 } from "./catalog-query";
+
+export const metadata: Metadata = {
+  title: "Catálogo",
+};
 
 const sortOptions: { value: ProductSort; label: string }[] = [
   { value: "relevance", label: "Mais relevantes" },
@@ -74,7 +79,8 @@ export default async function ProductsPage({
   if (params.moto === null && primaryFitment) {
     const explicit = new URLSearchParams();
     for (const [key, value] of Object.entries(await searchParams)) {
-      for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value]) explicit.append(key, entry);
+      for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value])
+        explicit.append(key, entry);
     }
     explicit.set("moto", primaryFitment.id);
     redirect(`/products?${explicit.toString()}` as Route);
@@ -89,8 +95,8 @@ export default async function ProductsPage({
     seller: params.seller,
     sort: params.sort,
     availability: params.availability,
-    minPrice: params.minPrice ?? null,
-    maxPrice: params.maxPrice ?? null,
+    minPrice: normalizeCatalogPrice(params.minPrice),
+    maxPrice: normalizeCatalogPrice(params.maxPrice),
     promotion: params.promotion,
     page: params.page,
   };
@@ -120,12 +126,14 @@ export default async function ProductsPage({
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 sm:py-10">
       <PageHeader
         eyebrow="Catálogo"
-        title="Produtos para sua próxima sessão"
-        description="Encontre peças, equipamentos e acessórios aprovados pelo Moto Shop."
+        title="Peças, acessórios e equipamentos"
+        description="Produtos de lojistas parceiros do Moto Shop."
       />
 
       <PrimaryMotorcycleBanner
-        primary={primaryMotorcycle && primaryFitment ? { id: primaryFitment.id, label: fitmentLabel(primaryFitment) } : null}
+        primary={
+          primaryMotorcycle && primaryFitment ? { id: primaryFitment.id, label: fitmentLabel(primaryFitment) } : null
+        }
         activeMoto={activeMoto}
         signedIn={Boolean(session)}
         query={query}
@@ -229,7 +237,9 @@ function PrimaryMotorcycleBanner({
   if (!primary) {
     return (
       <Link
-        href={(signedIn ? "/account/motorcycles" : `/login?next=${encodeURIComponent("/account/motorcycles")}`) as Route}
+        href={
+          (signedIn ? "/account/motorcycles" : `/login?next=${encodeURIComponent("/account/motorcycles")}`) as Route
+        }
         className="text-brand-strong inline-flex min-h-10 w-fit items-center gap-2 text-sm font-medium underline underline-offset-4"
       >
         <Bike aria-hidden="true" className="size-4" />
@@ -249,7 +259,9 @@ function PrimaryMotorcycleBanner({
       </p>
       <div className="flex flex-wrap gap-x-4">
         <Link
-          href={applied ? removeCatalogFilterHref(query, "moto") : buildCatalogHref(query, { moto: primary.id, page: 1 })}
+          href={
+            applied ? removeCatalogFilterHref(query, "moto") : buildCatalogHref(query, { moto: primary.id, page: 1 })
+          }
           className="text-brand-strong inline-flex min-h-10 items-center font-semibold underline underline-offset-4"
         >
           {applied ? "Ver todas as motos" : "Ver peças para minha moto"}

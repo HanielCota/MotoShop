@@ -9,8 +9,8 @@ export function EssentialsSection({ categories }: { categories: { slug: string }
     <section className="bg-card py-14 sm:py-20" aria-labelledby="home-essentials-title">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
         <SectionHeading
-          kicker="Itens de recorrência"
-          title="O essencial para continuar rodando"
+          kicker="Manutenção"
+          title="Itens de manutenção"
           titleId="home-essentials-title"
           link={{ label: "Explorar catálogo", href: "/products" }}
         />

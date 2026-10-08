@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { DesignSelect } from "@/components/ui/design-select";
 import { FormMessage } from "@/components/ui/form-message";
-import { formatMoneyInCents } from "@/lib/format";
+import { formatMoneyInCents, formatCount } from "@/lib/format";
 import { formatCep, isCompleteCep } from "@/modules/customers/domain/brazilian-address";
 import { quoteProductShippingAction } from "../actions/shipping-actions";
 
@@ -36,18 +36,15 @@ export function ProductShippingQuote({ options }: { options: Option[] }) {
   if (!availableOptions.length) return null;
 
   return (
-    <section
-      aria-labelledby="product-shipping-title"
-      className="bg-surface-sunken mt-5 rounded-xl border p-4"
-    >
+    <section aria-labelledby="product-shipping-title" className="bg-surface-sunken mt-5 rounded-xl border p-4">
       <h2 id="product-shipping-title" className="text-foreground text-sm font-semibold">
         Calcule a entrega
       </h2>
-      <p className="mt-1 text-xs text-muted-foreground">
+      <p className="text-muted-foreground mt-1 text-xs">
         Informe seu CEP para consultar as opções disponíveis. O prazo final aparece no checkout.
       </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
-        <label className="text-xs font-medium text-foreground">
+        <label className="text-foreground text-xs font-medium">
           Opção do produto
           <DesignSelect
             aria-label="Opção para cálculo de frete"
@@ -67,7 +64,7 @@ export function ProductShippingQuote({ options }: { options: Option[] }) {
             ))}
           </DesignSelect>
         </label>
-        <label className="text-xs font-medium text-foreground">
+        <label className="text-foreground text-xs font-medium">
           CEP
           <input
             value={postalCode}
@@ -103,8 +100,8 @@ export function ProductShippingQuote({ options }: { options: Option[] }) {
               <span className="font-semibold">
                 {formatMoneyInCents(quote.priceInCents)}
                 {quote.estimatedDeliveryDays !== undefined ? (
-                  <span className="ml-2 font-normal text-muted-foreground">
-                    · {quote.estimatedDeliveryDays} dia(s) útil(eis)
+                  <span className="text-muted-foreground ml-2 font-normal">
+                    · {formatCount(quote.estimatedDeliveryDays, "dia útil", "dias úteis")}
                   </span>
                 ) : null}
               </span>

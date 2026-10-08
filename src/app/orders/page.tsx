@@ -4,7 +4,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { DesignSelect } from "@/components/ui/design-select";
 import { DateFilterInput } from "@/components/ui/date-filter-input";
 import Link from "next/link";
-import type { Route } from "next";
+import type { Metadata, Route } from "next";
 
 import { PackageSearch, ShoppingBag } from "lucide-react";
 
@@ -24,6 +24,11 @@ import {
 import { getStatusLabel, type StatusDomain } from "@/shared/presentation/status-labels";
 import { parseMoneyFilterToCents } from "@/modules/orders/domain/money-filter";
 import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
+
+export const metadata: Metadata = {
+  title: "Meus pedidos",
+  robots: { index: false, follow: false },
+};
 
 function statusOptions(domain: StatusDomain, values: readonly string[]) {
   return values.filter((value) => value !== "ALL").map((value) => ({ value, label: getStatusLabel(domain, value) }));
@@ -80,11 +85,11 @@ export default async function CustomerOrdersPage({
   }
 
   return (
-    <CustomerAccountShell pathname="/orders">
+    <CustomerAccountShell pathname="/orders" userName={session.user.name}>
       <PageHeader
         eyebrow="Minha conta"
         title="Meus pedidos"
-        description="Acompanhe compras, lojas e envios em um só lugar."
+        description="Acompanhe o pagamento e a entrega de cada compra."
       />
 
       <p className="text-muted-foreground text-sm" aria-live="polite">

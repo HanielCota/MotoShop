@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Route } from "next";
+import type { Metadata, Route } from "next";
 import { Plug, Truck } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -11,6 +11,11 @@ import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { listSellerShippingMethods } from "@/modules/sellers/queries/seller-shipping-methods";
 import { OwnShippingMethodForm, OwnShippingToggle } from "@/modules/shipping/components/own-shipping-forms";
 import { Badge } from "@/components/ui/badge";
+
+export const metadata: Metadata = {
+  title: "Frete · Central do Lojista",
+  robots: { index: false, follow: false },
+};
 
 export default async function SellerShippingPage() {
   const context = await requireSellerAccess("SELLER_MANAGE");

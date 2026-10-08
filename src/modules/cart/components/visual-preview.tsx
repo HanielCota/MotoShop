@@ -75,7 +75,10 @@ const shippingInCents = previewGroups.reduce((total, group) => total + group.shi
 
 function PreviewNotice() {
   return (
-    <div role="note" className="rounded-lg border-moto-brand/40 bg-moto-brand-surface border px-4 py-3 text-sm leading-6">
+    <div
+      role="note"
+      className="border-moto-brand/40 bg-moto-brand-surface rounded-lg border px-4 py-3 text-sm leading-6"
+    >
       <strong>Prévia visual.</strong> Produtos, quantidades e valores são exemplos. Nada é salvo no carrinho e não é
       possível criar pedidos ou pagamentos nesta tela.
     </div>
@@ -84,8 +87,8 @@ function PreviewNotice() {
 
 function PreviewItem({ item }: { item: PreviewItemData }) {
   return (
-    <div className="flex gap-4 border-border border-t py-4 first:border-t-0 first:pt-0 last:pb-0">
-      <div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-surface-sunken sm:size-24">
+    <div className="border-border flex gap-4 border-t py-4 first:border-t-0 first:pt-0 last:pb-0">
+      <div className="bg-surface-sunken relative size-20 shrink-0 overflow-hidden rounded-lg sm:size-24">
         <Image src={item.image} alt="" fill sizes="(max-width: 640px) 80px, 96px" className="object-cover" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col justify-between gap-2 sm:flex-row">
@@ -93,7 +96,8 @@ function PreviewItem({ item }: { item: PreviewItemData }) {
           <p className="leading-snug font-semibold">{item.name}</p>
           <p className="text-muted-foreground mt-1 text-xs">{item.variant}</p>
           <p className="text-muted-foreground mt-2 text-sm">
-            {item.quantity} × {formatMoneyInCents(item.priceInCents)} = {formatMoneyInCents(item.priceInCents * item.quantity)}
+            {item.quantity} × {formatMoneyInCents(item.priceInCents)} ={" "}
+            {formatMoneyInCents(item.priceInCents * item.quantity)}
           </p>
         </div>
         <strong className="shrink-0 tabular-nums">{formatMoneyInCents(item.priceInCents * item.quantity)}</strong>
@@ -110,7 +114,7 @@ export function VisualCartPreview() {
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="space-y-4">
           {previewGroups.map((group) => (
-            <section key={group.store} className="rounded-xl bg-card border p-4 sm:p-6">
+            <section key={group.store} className="bg-card rounded-xl border p-4 sm:p-6">
               <h2 className="text-lg font-semibold">{group.store}</h2>
               <p className="text-muted-foreground mb-5 text-sm">Envio calculado separadamente para esta loja.</p>
               {group.items.map((item) => (
@@ -119,7 +123,7 @@ export function VisualCartPreview() {
             </section>
           ))}
         </div>
-        <aside className="rounded-xl bg-card border p-4 sm:p-6">
+        <aside className="bg-card rounded-xl border p-4 sm:p-6">
           <h2 className="text-lg font-semibold">Resumo</h2>
           <div className="mt-5 flex justify-between gap-3 text-sm">
             <span>Itens ({itemCount})</span>
@@ -145,7 +149,7 @@ export function VisualCheckoutPreview() {
       <PreviewNotice />
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="min-w-0 space-y-6">
-          <section className="rounded-xl bg-card border p-4 sm:p-6">
+          <section className="bg-card rounded-xl border p-4 sm:p-6">
             <h2 className="text-lg font-semibold">Seus dados</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <PreviewField label="Nome completo" value="Comprador de demonstração" />
@@ -154,7 +158,7 @@ export function VisualCheckoutPreview() {
               <PreviewField label="CPF do comprador" value="Somente no pedido real" />
             </div>
           </section>
-          <section className="rounded-xl bg-card border p-4 sm:p-6">
+          <section className="bg-card rounded-xl border p-4 sm:p-6">
             <h2 className="text-lg font-semibold">Endereço de entrega</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <PreviewField label="CEP" value="00000-000" />
@@ -165,7 +169,7 @@ export function VisualCheckoutPreview() {
               <PreviewField label="UF" value="SP" />
             </div>
           </section>
-          <section className="rounded-xl bg-card border p-4 sm:p-6">
+          <section className="bg-card rounded-xl border p-4 sm:p-6">
             <h2 className="text-lg font-semibold">Frete por loja</h2>
             <p className="text-muted-foreground mt-1 text-sm">Opções e preços ilustrativos.</p>
             <div className="mt-4 space-y-3">
@@ -173,7 +177,9 @@ export function VisualCheckoutPreview() {
                 <div key={group.store} className="flex flex-wrap justify-between gap-2 rounded-lg border p-3 text-sm">
                   <span>
                     {group.store}
-                    <span className="text-muted-foreground block text-xs">Entrega padrão · estimativa ilustrativa: 3 a 6 dias úteis</span>
+                    <span className="text-muted-foreground block text-xs">
+                      Entrega padrão · estimativa ilustrativa: 3 a 6 dias úteis
+                    </span>
                   </span>
                   <strong>{formatMoneyInCents(group.shippingInCents)}</strong>
                 </div>
@@ -181,7 +187,7 @@ export function VisualCheckoutPreview() {
             </div>
           </section>
         </div>
-        <aside className="min-w-0 rounded-xl bg-card border p-4 sm:p-6">
+        <aside className="bg-card min-w-0 rounded-xl border p-4 sm:p-6">
           <h2 className="text-lg font-semibold">Resumo do pedido</h2>
           <p className="text-muted-foreground mt-1 text-xs">{itemCount} itens de 2 lojas</p>
           <div className="mt-5 space-y-3 border-b pb-5">
@@ -210,7 +216,7 @@ export function VisualCheckoutPreview() {
               <span>{formatMoneyInCents(subtotalInCents + shippingInCents)}</span>
             </div>
           </div>
-          <p className="text-muted-foreground mt-5 bg-surface-sunken rounded-lg p-3 text-sm">
+          <p className="text-muted-foreground bg-surface-sunken mt-5 rounded-lg p-3 text-sm">
             Pagamento desativado nesta prévia. Nenhum pedido será criado.
           </p>
           <Link href="/cart?preview=1" className="mt-5 block text-center text-sm underline underline-offset-4">

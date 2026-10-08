@@ -37,7 +37,8 @@ export type FitmentCascade = {
 };
 
 export function getFitmentCascade(fitments: FitmentOption[], selected: FitmentOption | undefined): FitmentCascade {
-  if (!selected) return { manufacturers: unique(fitments.map((fitment) => fitment.manufacturer)), models: [], variants: [] };
+  if (!selected)
+    return { manufacturers: unique(fitments.map((fitment) => fitment.manufacturer)), models: [], variants: [] };
   const manufacturerFitments = fitments.filter((fitment) => fitment.manufacturer === selected.manufacturer);
   return {
     manufacturers: unique(fitments.map((fitment) => fitment.manufacturer)),

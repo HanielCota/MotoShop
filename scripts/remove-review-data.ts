@@ -62,7 +62,9 @@ async function main() {
         where: { OR: [{ sellerId: { in: sellerIds } }, { slug: { startsWith: "review-" }, isDemo: true }] },
         select: { id: true, slug: true, isDemo: true, sellerId: true },
       });
-      const unsafe = products.find((product) => !product.isDemo || !product.slug.startsWith("review-") || !sellerIds.includes(product.sellerId));
+      const unsafe = products.find(
+        (product) => !product.isDemo || !product.slug.startsWith("review-") || !sellerIds.includes(product.sellerId),
+      );
       if (unsafe) throw new Error(`Unexpected product in review scope: ${unsafe.slug}. Aborting.`);
       const productIds = products.map((product) => product.id);
 
@@ -78,10 +80,14 @@ async function main() {
             order.sellerOrders.length === 0 ||
             order.sellerOrders.some((sellerOrder) => !sellerIds.includes(sellerOrder.sellerId))),
       );
-      if (unexpectedOrder) throw new Error(`Unexpected order in review scope: ${unexpectedOrder.orderNumber}. Aborting.`);
+      if (unexpectedOrder)
+        throw new Error(`Unexpected order in review scope: ${unexpectedOrder.orderNumber}. Aborting.`);
       const orderIds = orders.map((order) => order.id);
 
-      const coupons = await tx.coupon.findMany({ where: { code: { startsWith: "REVIEW-" } }, select: { id: true, sellerId: true } });
+      const coupons = await tx.coupon.findMany({
+        where: { code: { startsWith: "REVIEW-" } },
+        select: { id: true, sellerId: true },
+      });
       if (coupons.some((coupon) => coupon.sellerId && !sellerIds.includes(coupon.sellerId)))
         throw new Error("Unexpected coupon in review scope. Aborting.");
       const couponIds = coupons.map((coupon) => coupon.id);
@@ -89,7 +95,11 @@ async function main() {
       // Linhas criadas pelo seed para contas de visualização: o ID precisa bater com o ID determinístico recalculado.
       const viewerAddresses = (
         await tx.customerAddress.findMany({
-          where: { id: { startsWith: REVIEW_ID_PREFIX }, label: { endsWith: REVIEW_ADDRESS_LABEL_SUFFIX }, userId: { notIn: userIds } },
+          where: {
+            id: { startsWith: REVIEW_ID_PREFIX },
+            label: { endsWith: REVIEW_ADDRESS_LABEL_SUFFIX },
+            userId: { notIn: userIds },
+          },
           select: { id: true, userId: true },
         })
       ).filter((address) => [1, 2].some((index) => address.id === viewerAddressId(address.userId, index)));
@@ -106,92 +116,283 @@ async function main() {
         })
       )
         // Se a pessoa colocou itens reais no carrinho, o carrinho fica (só os itens de revisão saem).
-        .filter((cart) => cart.userId && cart.id === viewerCartId(cart.userId) && cart.items.every((item) => sellerIds.includes(item.variant.sellerId)));
+        .filter(
+          (cart) =>
+            cart.userId &&
+            cart.id === viewerCartId(cart.userId) &&
+            cart.items.every((item) => sellerIds.includes(item.variant.sellerId)),
+        );
 
       // AuditLog.actor é onDelete: Restrict — remover primeiro.
       const auditWhere = { actorUserId: { in: userIds } };
-      await apply("AuditLog", () => tx.auditLog.count({ where: auditWhere }), () => tx.auditLog.deleteMany({ where: auditWhere }));
-      const notificationWhere = { OR: [{ eventKey: { startsWith: "review-notification:" } }, { recipientEmail: { in: reviewEmails } }] };
-      await apply("NotificationDelivery", () => tx.notificationDelivery.count({ where: notificationWhere }), () => tx.notificationDelivery.deleteMany({ where: notificationWhere }));
+      await apply(
+        "AuditLog",
+        () => tx.auditLog.count({ where: auditWhere }),
+        () => tx.auditLog.deleteMany({ where: auditWhere }),
+      );
+      const notificationWhere = {
+        OR: [{ eventKey: { startsWith: "review-notification:" } }, { recipientEmail: { in: reviewEmails } }],
+      };
+      await apply(
+        "NotificationDelivery",
+        () => tx.notificationDelivery.count({ where: notificationWhere }),
+        () => tx.notificationDelivery.deleteMany({ where: notificationWhere }),
+      );
       const webhookWhere = { externalId: { startsWith: "review-webhook-" } };
-      await apply("WebhookEvent", () => tx.webhookEvent.count({ where: webhookWhere }), () => tx.webhookEvent.deleteMany({ where: webhookWhere }));
+      await apply(
+        "WebhookEvent",
+        () => tx.webhookEvent.count({ where: webhookWhere }),
+        () => tx.webhookEvent.deleteMany({ where: webhookWhere }),
+      );
       const outboxWhere = { eventKey: { startsWith: "review-outbox:" } };
-      await apply("OutboxEvent", () => tx.outboxEvent.count({ where: outboxWhere }), () => tx.outboxEvent.deleteMany({ where: outboxWhere }));
+      await apply(
+        "OutboxEvent",
+        () => tx.outboxEvent.count({ where: outboxWhere }),
+        () => tx.outboxEvent.deleteMany({ where: outboxWhere }),
+      );
 
       const orderScope = { OR: [{ orderId: { in: orderIds } }, { sellerId: { in: sellerIds } }] };
-      const productReviewWhere = { OR: [...orderScope.OR, { productId: { in: productIds } }, { userId: { in: userIds } }] };
-      await apply("ProductReview", () => tx.productReview.count({ where: productReviewWhere }), () => tx.productReview.deleteMany({ where: productReviewWhere }));
+      const productReviewWhere = {
+        OR: [...orderScope.OR, { productId: { in: productIds } }, { userId: { in: userIds } }],
+      };
+      await apply(
+        "ProductReview",
+        () => tx.productReview.count({ where: productReviewWhere }),
+        () => tx.productReview.deleteMany({ where: productReviewWhere }),
+      );
       const sellerReviewWhere = { OR: [...orderScope.OR, { userId: { in: userIds } }] };
-      await apply("SellerReview", () => tx.sellerReview.count({ where: sellerReviewWhere }), () => tx.sellerReview.deleteMany({ where: sellerReviewWhere }));
-      const questionWhere = { OR: [{ productId: { in: productIds } }, { sellerId: { in: sellerIds } }, { askedByUserId: { in: userIds } }] };
-      await apply("ProductQuestion", () => tx.productQuestion.count({ where: questionWhere }), () => tx.productQuestion.deleteMany({ where: questionWhere }));
+      await apply(
+        "SellerReview",
+        () => tx.sellerReview.count({ where: sellerReviewWhere }),
+        () => tx.sellerReview.deleteMany({ where: sellerReviewWhere }),
+      );
+      const questionWhere = {
+        OR: [{ productId: { in: productIds } }, { sellerId: { in: sellerIds } }, { askedByUserId: { in: userIds } }],
+      };
+      await apply(
+        "ProductQuestion",
+        () => tx.productQuestion.count({ where: questionWhere }),
+        () => tx.productQuestion.deleteMany({ where: questionWhere }),
+      );
       const returnItemWhere = { returnRequest: orderScope };
-      await apply("ReturnItem", () => tx.returnItem.count({ where: returnItemWhere }), () => tx.returnItem.deleteMany({ where: returnItemWhere }));
-      await apply("ReturnRequest", () => tx.returnRequest.count({ where: orderScope }), () => tx.returnRequest.deleteMany({ where: orderScope }));
-      await apply("CancellationRequest", () => tx.cancellationRequest.count({ where: orderScope }), () => tx.cancellationRequest.deleteMany({ where: orderScope }));
-      await apply("Dispute", () => tx.dispute.count({ where: orderScope }), () => tx.dispute.deleteMany({ where: orderScope }));
+      await apply(
+        "ReturnItem",
+        () => tx.returnItem.count({ where: returnItemWhere }),
+        () => tx.returnItem.deleteMany({ where: returnItemWhere }),
+      );
+      await apply(
+        "ReturnRequest",
+        () => tx.returnRequest.count({ where: orderScope }),
+        () => tx.returnRequest.deleteMany({ where: orderScope }),
+      );
+      await apply(
+        "CancellationRequest",
+        () => tx.cancellationRequest.count({ where: orderScope }),
+        () => tx.cancellationRequest.deleteMany({ where: orderScope }),
+      );
+      await apply(
+        "Dispute",
+        () => tx.dispute.count({ where: orderScope }),
+        () => tx.dispute.deleteMany({ where: orderScope }),
+      );
       const redemptionWhere = { OR: [{ orderId: { in: orderIds } }, { couponId: { in: couponIds } }] };
-      await apply("CouponRedemption", () => tx.couponRedemption.count({ where: redemptionWhere }), () => tx.couponRedemption.deleteMany({ where: redemptionWhere }));
+      await apply(
+        "CouponRedemption",
+        () => tx.couponRedemption.count({ where: redemptionWhere }),
+        () => tx.couponRedemption.deleteMany({ where: redemptionWhere }),
+      );
 
       const transactionWhere = { payment: { orderId: { in: orderIds } } };
-      await apply("PaymentTransaction", () => tx.paymentTransaction.count({ where: transactionWhere }), () => tx.paymentTransaction.deleteMany({ where: transactionWhere }));
+      await apply(
+        "PaymentTransaction",
+        () => tx.paymentTransaction.count({ where: transactionWhere }),
+        () => tx.paymentTransaction.deleteMany({ where: transactionWhere }),
+      );
       const paymentWhere = { orderId: { in: orderIds } };
-      await apply("Payment", () => tx.payment.count({ where: paymentWhere }), () => tx.payment.deleteMany({ where: paymentWhere }));
+      await apply(
+        "Payment",
+        () => tx.payment.count({ where: paymentWhere }),
+        () => tx.payment.deleteMany({ where: paymentWhere }),
+      );
       const sellerOrderScope = { OR: [{ orderId: { in: orderIds } }, { sellerId: { in: sellerIds } }] };
-      await apply("Shipment", () => tx.shipment.count({ where: { sellerOrder: sellerOrderScope } }), () => tx.shipment.deleteMany({ where: { sellerOrder: sellerOrderScope } }));
-      await apply("OrderItem", () => tx.orderItem.count({ where: { sellerOrder: sellerOrderScope } }), () => tx.orderItem.deleteMany({ where: { sellerOrder: sellerOrderScope } }));
-      await apply("SellerOrder", () => tx.sellerOrder.count({ where: sellerOrderScope }), () => tx.sellerOrder.deleteMany({ where: sellerOrderScope }));
-      await apply("OrderAddress", () => tx.orderAddress.count({ where: paymentWhere }), () => tx.orderAddress.deleteMany({ where: paymentWhere }));
+      await apply(
+        "Shipment",
+        () => tx.shipment.count({ where: { sellerOrder: sellerOrderScope } }),
+        () => tx.shipment.deleteMany({ where: { sellerOrder: sellerOrderScope } }),
+      );
+      await apply(
+        "OrderItem",
+        () => tx.orderItem.count({ where: { sellerOrder: sellerOrderScope } }),
+        () => tx.orderItem.deleteMany({ where: { sellerOrder: sellerOrderScope } }),
+      );
+      await apply(
+        "SellerOrder",
+        () => tx.sellerOrder.count({ where: sellerOrderScope }),
+        () => tx.sellerOrder.deleteMany({ where: sellerOrderScope }),
+      );
+      await apply(
+        "OrderAddress",
+        () => tx.orderAddress.count({ where: paymentWhere }),
+        () => tx.orderAddress.deleteMany({ where: paymentWhere }),
+      );
       const orderWhere = { id: { in: orderIds } };
-      await apply("Order", () => tx.order.count({ where: orderWhere }), () => tx.order.deleteMany({ where: orderWhere }));
+      await apply(
+        "Order",
+        () => tx.order.count({ where: orderWhere }),
+        () => tx.order.deleteMany({ where: orderWhere }),
+      );
 
       const cartItemWhere = {
-        OR: [{ variant: { sellerId: { in: sellerIds } } }, { cart: { userId: { in: userIds } } }, { cartId: { in: viewerCarts.map((cart) => cart.id) } }],
+        OR: [
+          { variant: { sellerId: { in: sellerIds } } },
+          { cart: { userId: { in: userIds } } },
+          { cartId: { in: viewerCarts.map((cart) => cart.id) } },
+        ],
       };
-      await apply("CartItem", () => tx.cartItem.count({ where: cartItemWhere }), () => tx.cartItem.deleteMany({ where: cartItemWhere }));
+      await apply(
+        "CartItem",
+        () => tx.cartItem.count({ where: cartItemWhere }),
+        () => tx.cartItem.deleteMany({ where: cartItemWhere }),
+      );
       const cartWhere = { OR: [{ userId: { in: userIds } }, { id: { in: viewerCarts.map((cart) => cart.id) } }] };
-      await apply("Cart", () => tx.cart.count({ where: cartWhere }), () => tx.cart.deleteMany({ where: cartWhere }));
+      await apply(
+        "Cart",
+        () => tx.cart.count({ where: cartWhere }),
+        () => tx.cart.deleteMany({ where: cartWhere }),
+      );
       const favoriteWhere = { OR: [{ productId: { in: productIds } }, { userId: { in: userIds } }] };
-      await apply("Favorite", () => tx.favorite.count({ where: favoriteWhere }), () => tx.favorite.deleteMany({ where: favoriteWhere }));
-      const savedWhere = { OR: [{ userId: { in: userIds } }, { id: { in: viewerMotorcycles.map((saved) => saved.id) } }] };
-      await apply("SavedMotorcycle", () => tx.savedMotorcycle.count({ where: savedWhere }), () => tx.savedMotorcycle.deleteMany({ where: savedWhere }));
-      const addressWhere = { OR: [{ userId: { in: userIds } }, { id: { in: viewerAddresses.map((address) => address.id) } }] };
-      await apply("CustomerAddress", () => tx.customerAddress.count({ where: addressWhere }), () => tx.customerAddress.deleteMany({ where: addressWhere }));
+      await apply(
+        "Favorite",
+        () => tx.favorite.count({ where: favoriteWhere }),
+        () => tx.favorite.deleteMany({ where: favoriteWhere }),
+      );
+      const savedWhere = {
+        OR: [{ userId: { in: userIds } }, { id: { in: viewerMotorcycles.map((saved) => saved.id) } }],
+      };
+      await apply(
+        "SavedMotorcycle",
+        () => tx.savedMotorcycle.count({ where: savedWhere }),
+        () => tx.savedMotorcycle.deleteMany({ where: savedWhere }),
+      );
+      const addressWhere = {
+        OR: [{ userId: { in: userIds } }, { id: { in: viewerAddresses.map((address) => address.id) } }],
+      };
+      await apply(
+        "CustomerAddress",
+        () => tx.customerAddress.count({ where: addressWhere }),
+        () => tx.customerAddress.deleteMany({ where: addressWhere }),
+      );
 
       const sellerScope = { sellerId: { in: sellerIds } };
-      await apply("InventoryMovement", () => tx.inventoryMovement.count({ where: sellerScope }), () => tx.inventoryMovement.deleteMany({ where: sellerScope }));
-      await apply("Inventory", () => tx.inventory.count({ where: sellerScope }), () => tx.inventory.deleteMany({ where: sellerScope }));
+      await apply(
+        "InventoryMovement",
+        () => tx.inventoryMovement.count({ where: sellerScope }),
+        () => tx.inventoryMovement.deleteMany({ where: sellerScope }),
+      );
+      await apply(
+        "Inventory",
+        () => tx.inventory.count({ where: sellerScope }),
+        () => tx.inventory.deleteMany({ where: sellerScope }),
+      );
       const productScope = { productId: { in: productIds } };
-      await apply("ProductCompatibility", () => tx.productCompatibility.count({ where: productScope }), () => tx.productCompatibility.deleteMany({ where: productScope }));
-      await apply("ProductImage", () => tx.productImage.count({ where: productScope }), () => tx.productImage.deleteMany({ where: productScope }));
-      await apply("ProductVariant", () => tx.productVariant.count({ where: productScope }), () => tx.productVariant.deleteMany({ where: productScope }));
+      await apply(
+        "ProductCompatibility",
+        () => tx.productCompatibility.count({ where: productScope }),
+        () => tx.productCompatibility.deleteMany({ where: productScope }),
+      );
+      await apply(
+        "ProductImage",
+        () => tx.productImage.count({ where: productScope }),
+        () => tx.productImage.deleteMany({ where: productScope }),
+      );
+      await apply(
+        "ProductVariant",
+        () => tx.productVariant.count({ where: productScope }),
+        () => tx.productVariant.deleteMany({ where: productScope }),
+      );
       const productWhere = { id: { in: productIds } };
-      await apply("Product", () => tx.product.count({ where: productWhere }), () => tx.product.deleteMany({ where: productWhere }));
+      await apply(
+        "Product",
+        () => tx.product.count({ where: productWhere }),
+        () => tx.product.deleteMany({ where: productWhere }),
+      );
       // Marcas de revisão só existem se o banco tinha menos de 5 marcas ativas; nunca apaga marca em uso.
-      const brandWhere = { slug: { startsWith: "review-marca-" }, name: { endsWith: "(demonstração)" }, products: { none: { id: { notIn: productIds } } } };
-      await apply("Brand", () => tx.brand.count({ where: brandWhere }), () => tx.brand.deleteMany({ where: brandWhere }));
+      const brandWhere = {
+        slug: { startsWith: "review-marca-" },
+        name: { endsWith: "(demonstração)" },
+        products: { none: { id: { notIn: productIds } } },
+      };
+      await apply(
+        "Brand",
+        () => tx.brand.count({ where: brandWhere }),
+        () => tx.brand.deleteMany({ where: brandWhere }),
+      );
       const couponWhere = { id: { in: couponIds } };
-      await apply("Coupon", () => tx.coupon.count({ where: couponWhere }), () => tx.coupon.deleteMany({ where: couponWhere }));
+      await apply(
+        "Coupon",
+        () => tx.coupon.count({ where: couponWhere }),
+        () => tx.coupon.deleteMany({ where: couponWhere }),
+      );
 
-      await apply("SellerSubscription", () => tx.sellerSubscription.count({ where: sellerScope }), () => tx.sellerSubscription.deleteMany({ where: sellerScope }));
-      await apply("SellerShippingMethod", () => tx.sellerShippingMethod.count({ where: sellerScope }), () => tx.sellerShippingMethod.deleteMany({ where: sellerScope }));
-      await apply("SellerShippingIntegration", () => tx.sellerShippingIntegration.count({ where: sellerScope }), () => tx.sellerShippingIntegration.deleteMany({ where: sellerScope }));
+      await apply(
+        "SellerSubscription",
+        () => tx.sellerSubscription.count({ where: sellerScope }),
+        () => tx.sellerSubscription.deleteMany({ where: sellerScope }),
+      );
+      await apply(
+        "SellerShippingMethod",
+        () => tx.sellerShippingMethod.count({ where: sellerScope }),
+        () => tx.sellerShippingMethod.deleteMany({ where: sellerScope }),
+      );
+      await apply(
+        "SellerShippingIntegration",
+        () => tx.sellerShippingIntegration.count({ where: sellerScope }),
+        () => tx.sellerShippingIntegration.deleteMany({ where: sellerScope }),
+      );
       const memberWhere = { OR: [{ sellerId: { in: sellerIds } }, { userId: { in: userIds } }] };
-      await apply("SellerMember", () => tx.sellerMember.count({ where: memberWhere }), () => tx.sellerMember.deleteMany({ where: memberWhere }));
-      await apply("Store", () => tx.store.count({ where: sellerScope }), () => tx.store.deleteMany({ where: sellerScope }));
+      await apply(
+        "SellerMember",
+        () => tx.sellerMember.count({ where: memberWhere }),
+        () => tx.sellerMember.deleteMany({ where: memberWhere }),
+      );
+      await apply(
+        "Store",
+        () => tx.store.count({ where: sellerScope }),
+        () => tx.store.deleteMany({ where: sellerScope }),
+      );
       const sellerWhere = { id: { in: sellerIds } };
-      await apply("Seller", () => tx.seller.count({ where: sellerWhere }), () => tx.seller.deleteMany({ where: sellerWhere }));
+      await apply(
+        "Seller",
+        () => tx.seller.count({ where: sellerWhere }),
+        () => tx.seller.deleteMany({ where: sellerWhere }),
+      );
 
       const userScope = { userId: { in: userIds } };
-      await apply("Session", () => tx.session.count({ where: userScope }), () => tx.session.deleteMany({ where: userScope }));
-      await apply("Account", () => tx.account.count({ where: userScope }), () => tx.account.deleteMany({ where: userScope }));
+      await apply(
+        "Session",
+        () => tx.session.count({ where: userScope }),
+        () => tx.session.deleteMany({ where: userScope }),
+      );
+      await apply(
+        "Account",
+        () => tx.account.count({ where: userScope }),
+        () => tx.account.deleteMany({ where: userScope }),
+      );
       const userWhere = { id: { in: userIds } };
-      await apply("User", () => tx.user.count({ where: userWhere }), () => tx.user.deleteMany({ where: userWhere }));
+      await apply(
+        "User",
+        () => tx.user.count({ where: userWhere }),
+        () => tx.user.deleteMany({ where: userWhere }),
+      );
 
       // Prova de segurança: nenhuma conta fora de `review.*@example.test` está no escopo de remoção.
-      const viewerEmails = parseEmailList(`${process.env.REVIEW_VIEWER_CUSTOMER_EMAILS ?? ""},${process.env.REVIEW_VIEWER_SELLER_EMAILS ?? ""}`);
+      const viewerEmails = parseEmailList(
+        `${process.env.REVIEW_VIEWER_CUSTOMER_EMAILS ?? ""},${process.env.REVIEW_VIEWER_SELLER_EMAILS ?? ""}`,
+      );
       result["UsersOutsideReviewDomain"] = users.filter((user) => !isReviewEmail(user.email)).length;
-      result["ViewerUsersInDeleteScope"] = users.filter((user) => viewerEmails.includes(user.email.toLowerCase())).length;
+      result["ViewerUsersInDeleteScope"] = users.filter((user) =>
+        viewerEmails.includes(user.email.toLowerCase()),
+      ).length;
       return result;
     },
     { timeout: 120_000 },

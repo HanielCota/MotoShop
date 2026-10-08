@@ -34,3 +34,16 @@ it("does not silently succeed on an invalid seller transition", async () => {
   await expect(approveSellerAction("seller")).rejects.toThrow("decisão");
   expect(mocks.update).not.toHaveBeenCalled();
 });
+it.each([
+  [approveSellerAction, "ACTIVE"],
+  [rejectSellerAction, "REJECTED"],
+  [suspendSellerAction, "SUSPENDED"],
+  [reactivateSellerAction, "ACTIVE"],
+] as const)("treats a repeated decision (double click) as a no-op instead of failing", async (execute, target) => {
+  mocks.find.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: "seller" });
+  await expect(execute("seller")).resolves.toBeUndefined();
+  expect(mocks.find).toHaveBeenLastCalledWith({ where: { id: "seller", status: target }, select: { id: true } });
+  expect(mocks.update).not.toHaveBeenCalled();
+  expect(mocks.audit).not.toHaveBeenCalled();
+  expect(mocks.transaction).not.toHaveBeenCalled();
+});

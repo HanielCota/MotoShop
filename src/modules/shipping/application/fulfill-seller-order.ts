@@ -13,7 +13,18 @@ import {
 import { syncFulfillmentStatuses } from "@/modules/orders/application/sync-fulfillment-status";
 import { ApplicationError } from "@/shared/errors/application-error";
 import { getSellerMelhorEnvioAccessTokenWithScopes } from "@/modules/shipping/infrastructure/melhor-envio-oauth";
-import { buildShipmentData } from "@/modules/shipping/domain/shipment-payload";
+import {
+  buildShipmentData,
+  carrierAcceptsMultipleVolumes,
+  volumesFromQuotedPackages,
+} from "@/modules/shipping/domain/shipment-payload";
+import {
+  getPurchaseCartDiscardReason,
+  readPurchaseCart,
+  withPurchaseCart,
+  withoutPurchaseCart,
+} from "@/modules/shipping/domain/purchase-cart";
+import type { ShippingProduct, ShippingVolume } from "@/shared/shipping/shipping-provider";
 
 import {
   STALE_GENERATION_MESSAGE,
@@ -39,17 +50,20 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
   if (!sellerOrder.shipment?.serviceCode) {
     throw new ApplicationError({ code: "CONFIGURATION_ERROR", message: "O serviço de frete não foi salvo no pedido." });
   }
+  const shipment = sellerOrder.shipment;
+  const serviceCode = sellerOrder.shipment.serviceCode;
   const accessToken = await requireSellerShippingToken(sellerOrder.sellerId, ["cart-write", "shipping-checkout"]);
-  if (sellerOrder.shipment.status === "CANCELLED") {
-    await resetCancelledShipmentForRepurchase(input, sellerOrder.shipment.id);
-  } else if (sellerOrder.shipment.externalShipmentId) {
-    return sellerOrder.shipment;
+  let metadata: unknown = shipment.providerMetadata;
+  if (shipment.status === "CANCELLED") {
+    metadata = await resetCancelledShipmentForRepurchase(input, shipment.id);
+  } else if (shipment.externalShipmentId) {
+    return shipment;
   }
-  if (sellerOrder.shipment.purchaseState) {
+  if (shipment.purchaseState) {
     throw new ApplicationError({
       code: "CONFLICT",
       message:
-        sellerOrder.shipment.purchaseState === "IN_PROGRESS"
+        shipment.purchaseState === "IN_PROGRESS"
           ? "A compra da etiqueta já foi iniciada. Aguarde ou solicite a conferência antes de tentar novamente."
           : "O resultado da compra da etiqueta é incerto. Confira os envios no Melhor Envio antes de tentar novamente.",
       statusCode: 409,
@@ -57,12 +71,58 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
   }
 
   const shipmentData = buildShipmentData(sellerOrder);
+
+  // Item de carrinho criado por uma tentativa anterior cujo pagamento foi recusado de forma
+  // definitiva: a nova tentativa paga o mesmo item em vez de inserir outro no carrinho.
+  let pendingCart = readPurchaseCart(metadata);
+  if (pendingCart) {
+    const discardReason = getPurchaseCartDiscardReason(pendingCart, serviceCode);
+    if (discardReason) {
+      metadata = withoutPurchaseCart(metadata, { reason: discardReason });
+      const discarded = await db.shipment.updateMany({
+        where: { id: shipment.id, externalShipmentId: null, purchaseState: null },
+        data: { providerMetadata: metadata as Prisma.InputJsonValue },
+      });
+      if (discarded.count !== 1) {
+        throw new ApplicationError({
+          code: "CONFLICT",
+          message: "A compra da etiqueta já está em andamento ou precisa de conferência manual.",
+          statusCode: 409,
+        });
+      }
+      logger.warn(
+        {
+          event: "shipment.purchase_cart_discarded",
+          sellerOrderId: input.sellerOrderId,
+          cartItemId: pendingCart.cartItemId,
+          reason: discardReason,
+        },
+        "Stored Melhor Envio cart item can no longer be paid; a new one will be created",
+      );
+      pendingCart = null;
+    }
+  }
+
+  // Cotação somente leitura, fora de transação, para obter os pacotes calculados pelo provedor.
+  const quotedVolumes = pendingCart
+    ? null
+    : await quotePurchaseVolumes({
+        sellerOrderId: input.sellerOrderId,
+        fromPostalCode: sellerOrder.store?.originPostalCode ?? "",
+        toPostalCode: sellerOrder.order.shippingAddress?.postalCode ?? "",
+        products: shipmentData.products,
+        serviceCode,
+        contractedCarrier: shipment.carrier,
+        contractedPriceInCents: shipment.priceInCents,
+        accessToken,
+      });
+
   const claim = await db.shipment.updateMany({
-    where: { id: sellerOrder.shipment.id, externalShipmentId: null, purchaseState: null },
+    where: { id: shipment.id, externalShipmentId: null, purchaseState: null },
     data: { purchaseState: "IN_PROGRESS", purchaseError: null },
   });
   if (claim.count !== 1) {
-    const current = await db.shipment.findUnique({ where: { id: sellerOrder.shipment.id } });
+    const current = await db.shipment.findUnique({ where: { id: shipment.id } });
     if (current?.externalShipmentId) return current;
     throw new ApplicationError({
       code: "CONFLICT",
@@ -71,62 +131,72 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
     });
   }
 
-  let result: Awaited<ReturnType<typeof melhorEnvioProvider.createShipment>>;
-  try {
-    result = await melhorEnvioProvider.createShipment(
-      {
-        sellerOrderId: input.sellerOrderId,
-        serviceCode: sellerOrder.shipment.serviceCode,
-        ...shipmentData,
-        ...(input.tags ? { tags: input.tags } : { tags: [{ tag: sellerOrder.order.orderNumber }] }),
-        quote: {
-          provider: sellerOrder.shipment.provider,
-          serviceCode: sellerOrder.shipment.serviceCode,
-          carrier: sellerOrder.shipment.carrier,
-          service: sellerOrder.shipment.service,
-          priceInCents: sellerOrder.shipment.priceInCents,
-          ...(sellerOrder.shipment.estimatedDeliveryDays !== null
-            ? { estimatedDeliveryDays: sellerOrder.shipment.estimatedDeliveryDays }
-            : {}),
-          raw: {},
-        },
-      },
-      accessToken,
-    );
-  } catch (error) {
-    if (isDefinitiveProviderRejection(error)) {
-      // Recusa explícita (4xx): a etiqueta não foi paga; libera nova tentativa após a correção.
-      await db.shipment.updateMany({
-        where: { id: sellerOrder.shipment.id, purchaseState: "IN_PROGRESS", externalShipmentId: null },
-        data: { purchaseState: null, purchaseError: error.message },
-      });
-      logger.warn(
+  // Passo 1: inserir no carrinho (não idempotente no provedor) e persistir o id imediatamente.
+  let cartItemId: string;
+  if (pendingCart) {
+    cartItemId = pendingCart.cartItemId;
+  } else {
+    const volumes = quotedVolumes!.volumes;
+    let cart: Awaited<ReturnType<typeof melhorEnvioProvider.addToCart>>;
+    try {
+      cart = await melhorEnvioProvider.addToCart(
         {
-          event: "shipment.purchase_rejected",
           sellerOrderId: input.sellerOrderId,
-          providerStatus: error.providerStatus,
+          serviceCode,
+          ...shipmentData,
+          volumes,
+          ...(input.tags ? { tags: input.tags } : { tags: [{ tag: sellerOrder.order.orderNumber }] }),
         },
-        "Shipping provider rejected the label purchase; retry released",
+        accessToken,
       );
+    } catch (error) {
+      await recordPurchaseFailure({ shipmentId: shipment.id, sellerOrderId: input.sellerOrderId, error, metadata });
       throw error;
     }
-    await db.shipment.updateMany({
-      where: { id: sellerOrder.shipment.id, purchaseState: "IN_PROGRESS", externalShipmentId: null },
-      data: {
-        purchaseState: "OUTCOME_UNKNOWN",
-        purchaseError: "O provedor não confirmou o resultado; confira antes de uma nova tentativa.",
-      },
+    cartItemId = cart.cartItemId;
+    metadata = withPurchaseCart(metadata, {
+      step: "CART_CREATED",
+      cartItemId,
+      serviceCode,
+      createdAt: new Date().toISOString(),
+      volumeCount: volumes.length,
+      quotedPriceInCents: quotedVolumes!.quotedPriceInCents,
     });
-    logger.error(
-      {
-        event: "shipment.purchase_outcome_unknown",
-        sellerOrderId: input.sellerOrderId,
-        errorName: error instanceof Error ? error.name : "UnknownError",
-      },
-      "Shipment purchase outcome is unknown; automatic retry is blocked",
-    );
+    const saved = await db.shipment.updateMany({
+      where: { id: shipment.id, purchaseState: "IN_PROGRESS", externalShipmentId: null },
+      data: { providerMetadata: metadata as Prisma.InputJsonValue },
+    });
+    if (saved.count !== 1) {
+      logger.error(
+        { event: "shipment.purchase_cart_not_persisted", sellerOrderId: input.sellerOrderId, cartItemId },
+        "Melhor Envio cart item was created but the shipment claim changed; manual reconciliation required",
+      );
+      throw new ApplicationError({
+        code: "CONFLICT",
+        message: "A compra da etiqueta precisa de conferência manual antes de uma nova tentativa.",
+        statusCode: 409,
+      });
+    }
+  }
+
+  // Passo 2: pagar o item de carrinho persistido.
+  let result: Awaited<ReturnType<typeof melhorEnvioProvider.checkoutCart>>;
+  try {
+    result = await melhorEnvioProvider.checkoutCart(cartItemId, accessToken);
+  } catch (error) {
+    await recordPurchaseFailure({
+      shipmentId: shipment.id,
+      sellerOrderId: input.sellerOrderId,
+      error,
+      metadata,
+      cartItemId,
+    });
     throw error;
   }
+  const purchasedMetadata: Record<string, unknown> = {
+    ...withoutPurchaseCart(metadata),
+    ...result.providerMetadata,
+  };
 
   // A chamada externa acontece fora da transação (AGENTS.md §36). O pedido pode ter sido
   // cancelado enquanto isso: revalida o status com o registro travado antes de avançar o envio.
@@ -136,8 +206,8 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
       // A etiqueta já foi paga no provedor: guarda o id externo para estorno/cancelamento,
       // sem marcar o envio como pronto nem alterar o status do pedido. Se o cancelamento já foi
       // concluído, sinaliza a etiqueta para a fila de conferência do Admin.
-      const shipment = await tx.shipment.update({
-        where: { id: sellerOrder.shipment!.id },
+      const updatedShipment = await tx.shipment.update({
+        where: { id: shipment.id },
         data: {
           externalShipmentId: result.externalShipmentId,
           purchaseState: null,
@@ -145,25 +215,25 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
           ...(currentStatus === "CANCELLED"
             ? {
                 status: "CANCELLED" as const,
-                providerMetadata: withLabelCancellationFlag(result.providerMetadata, "PURCHASED_AFTER_CANCELLATION"),
+                providerMetadata: withLabelCancellationFlag(purchasedMetadata, "PURCHASED_AFTER_CANCELLATION"),
               }
-            : { providerMetadata: result.providerMetadata as Prisma.InputJsonValue }),
+            : { providerMetadata: purchasedMetadata as Prisma.InputJsonValue }),
         },
       });
-      return { shipment, staleStatus: currentStatus };
+      return { shipment: updatedShipment, staleStatus: currentStatus };
     }
-    const shipment = await tx.shipment.update({
-      where: { id: sellerOrder.shipment!.id },
+    const updatedShipment = await tx.shipment.update({
+      where: { id: shipment.id },
       data: {
         externalShipmentId: result.externalShipmentId,
         status: "READY_TO_SHIP",
         purchaseState: null,
         purchaseError: null,
-        providerMetadata: result.providerMetadata as Prisma.InputJsonValue,
+        providerMetadata: purchasedMetadata as Prisma.InputJsonValue,
       },
     });
     await syncFulfillmentStatuses(tx, input.sellerOrderId, "READY_TO_SHIP", input.actorUserId);
-    return { shipment, staleStatus: null };
+    return { shipment: updatedShipment, staleStatus: null };
   });
   if (outcome.staleStatus) {
     logger.error(
@@ -180,11 +250,140 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
 }
 
 /**
+ * Cota novamente o serviço contratado com os mesmos produtos (medidas unitárias, valor unitário e
+ * quantidade) enviados na cotação do checkout e devolve os pacotes calculados pelo Melhor Envio,
+ * que a documentação manda usar como `volumes` ao inserir no carrinho.
+ */
+async function quotePurchaseVolumes(input: {
+  sellerOrderId: string;
+  fromPostalCode: string;
+  toPostalCode: string;
+  products: ShippingProduct[];
+  serviceCode: string;
+  contractedCarrier: string;
+  contractedPriceInCents: number;
+  accessToken: string;
+}): Promise<{ volumes: ShippingVolume[]; quotedPriceInCents: number }> {
+  const quotes = await melhorEnvioProvider.quote(
+    {
+      fromPostalCode: input.fromPostalCode,
+      toPostalCode: input.toPostalCode,
+      products: input.products,
+      services: [input.serviceCode],
+    },
+    input.accessToken,
+  );
+  const quote = quotes.find((candidate) => candidate.serviceCode === input.serviceCode);
+  if (!quote) {
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message:
+        "O Melhor Envio não ofereceu o serviço contratado para este envio na nova cotação. Tente novamente mais tarde.",
+      statusCode: 409,
+    });
+  }
+  if (!quote.packages?.length) {
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "O Melhor Envio não informou os volumes deste envio na cotação. Tente novamente mais tarde.",
+      statusCode: 502,
+    });
+  }
+  if (
+    quote.packages.length > 1 &&
+    !(carrierAcceptsMultipleVolumes(quote.carrier) && carrierAcceptsMultipleVolumes(input.contractedCarrier))
+  ) {
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: `Este envio precisa de ${quote.packages.length} volumes e a transportadora aceita apenas um volume por etiqueta. Compre as etiquetas diretamente no Melhor Envio.`,
+      statusCode: 409,
+    });
+  }
+  if (quote.priceInCents !== input.contractedPriceInCents) {
+    logger.warn(
+      {
+        event: "shipment.purchase_quote_price_changed",
+        sellerOrderId: input.sellerOrderId,
+        contractedPriceInCents: input.contractedPriceInCents,
+        quotedPriceInCents: quote.priceInCents,
+      },
+      "Label quote differs from the price charged at checkout",
+    );
+  }
+  return { volumes: volumesFromQuotedPackages(quote.packages), quotedPriceInCents: quote.priceInCents };
+}
+
+/**
+ * Recusa explícita (4xx exceto 408/409/429): nada foi cobrado; libera nova tentativa mantendo o item
+ * de carrinho já criado. Demais falhas deixam o resultado incerto e bloqueiam novas tentativas.
+ */
+async function recordPurchaseFailure(input: {
+  shipmentId: string;
+  sellerOrderId: string;
+  error: unknown;
+  metadata: unknown;
+  cartItemId?: string;
+}) {
+  const where = { id: input.shipmentId, purchaseState: "IN_PROGRESS" as const, externalShipmentId: null };
+  const step = input.cartItemId ? "CHECKOUT" : "CART";
+  if (isDefinitiveProviderRejection(input.error)) {
+    const cartMissing = step === "CHECKOUT" && input.error.providerStatus === 404;
+    await db.shipment.updateMany({
+      where,
+      data: {
+        purchaseState: null,
+        purchaseError: input.error.message,
+        ...(cartMissing
+          ? {
+              providerMetadata: withoutPurchaseCart(input.metadata, {
+                reason: "NOT_FOUND_AT_PROVIDER",
+              }) as Prisma.InputJsonValue,
+            }
+          : {}),
+      },
+    });
+    logger.warn(
+      {
+        event: "shipment.purchase_rejected",
+        sellerOrderId: input.sellerOrderId,
+        step,
+        providerStatus: input.error.providerStatus,
+        ...(input.cartItemId ? { cartItemId: input.cartItemId } : {}),
+      },
+      "Shipping provider rejected the label purchase; retry released",
+    );
+    return;
+  }
+  await db.shipment.updateMany({
+    where,
+    data: {
+      purchaseState: "OUTCOME_UNKNOWN",
+      purchaseError: input.cartItemId
+        ? `O provedor não confirmou o pagamento da etiqueta ${input.cartItemId}; confira antes de uma nova tentativa.`
+        : "O provedor não confirmou o resultado; confira antes de uma nova tentativa.",
+    },
+  });
+  logger.error(
+    {
+      event: "shipment.purchase_outcome_unknown",
+      sellerOrderId: input.sellerOrderId,
+      step,
+      ...(input.cartItemId ? { cartItemId: input.cartItemId } : {}),
+      errorName: input.error instanceof Error ? input.error.name : "UnknownError",
+    },
+    "Shipment purchase outcome is unknown; automatic retry is blocked",
+  );
+}
+
+/**
  * Uma etiqueta cancelada no Melhor Envio não pode ser reaproveitada: arquiva o id externo no
  * histórico do `providerMetadata` e devolve o envio a `PENDING` para permitir nova compra.
  */
-async function resetCancelledShipmentForRepurchase(input: FulfillSellerOrderInput, shipmentId: string) {
-  await db.$transaction(async (tx) => {
+async function resetCancelledShipmentForRepurchase(
+  input: FulfillSellerOrderInput,
+  shipmentId: string,
+): Promise<Record<string, unknown>> {
+  return db.$transaction(async (tx) => {
     const status = await lockSellerOrderStatus(tx, input.sellerOrderId);
     assertShipmentOperationAllowed(status, "PURCHASE");
     await tx.$queryRaw`SELECT id FROM "shipments" WHERE id = ${shipmentId} FOR UPDATE`;
@@ -221,6 +420,7 @@ async function resetCancelledShipmentForRepurchase(input: FulfillSellerOrderInpu
       trackingCode: current.trackingCode,
       archivedAt: new Date().toISOString(),
     };
+    const resetMetadata = { previousLabels: [...previousLabels, archivedLabel] };
     await tx.shipment.update({
       where: { id: shipmentId },
       data: {
@@ -235,7 +435,7 @@ async function resetCancelledShipmentForRepurchase(input: FulfillSellerOrderInpu
         trackingUrl: null,
         shippedAt: null,
         deliveredAt: null,
-        providerMetadata: { previousLabels: [...previousLabels, archivedLabel] } as Prisma.InputJsonValue,
+        providerMetadata: resetMetadata as Prisma.InputJsonValue,
       },
     });
     await tx.auditLog.create({
@@ -247,6 +447,7 @@ async function resetCancelledShipmentForRepurchase(input: FulfillSellerOrderInpu
         metadata: { sellerOrderId: input.sellerOrderId, previousExternalShipmentId: current.externalShipmentId },
       },
     });
+    return resetMetadata;
   });
 }
 
@@ -387,7 +588,8 @@ export async function refreshSellerOrderTracking(sellerOrderId: string, sellerId
       where: { id: shipment.id },
       select: { status: true, shippedAt: true, deliveredAt: true },
     });
-    if (!currentShipment) throw new ApplicationError({ code: "NOT_FOUND", message: "Envio do lojista não encontrado." });
+    if (!currentShipment)
+      throw new ApplicationError({ code: "NOT_FOUND", message: "Envio do lojista não encontrado." });
     const status = resolveShipmentStatus(currentShipment.status, reportedStatus);
     const updatedShipment = await tx.shipment.update({
       where: { id: shipment.id },

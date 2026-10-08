@@ -6,6 +6,7 @@ import { DesignRadio, DesignRadioGroup } from "@/components/ui/design-radio";
 import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { AddToCartButton } from "@/modules/cart/components/add-to-cart-button";
+import { getPublicStockStatus } from "@/modules/products/domain/stock-status";
 
 export type BuyBoxVariant = {
   id: string;
@@ -16,8 +17,6 @@ export type BuyBoxVariant = {
   onSale: boolean;
   stock: number;
 };
-
-const LOW_STOCK_THRESHOLD = 5;
 
 export function ProductBuyBox({
   variants,
@@ -34,6 +33,11 @@ export function ProductBuyBox({
   const initial = variants.find((variant) => variant.stock > 0) ?? variants[0];
   const [selectedId, setSelectedId] = useState(initial?.id ?? "");
   const selected = variants.find((variant) => variant.id === selectedId) ?? initial;
+  const stockStatus = selected ? getPublicStockStatus(selected.stock) : "out-of-stock";
+  const discountPercentage =
+    selected?.onSale && selected.priceInCents > 0
+      ? Math.round(((selected.priceInCents - selected.currentPriceInCents) / selected.priceInCents) * 100)
+      : 0;
 
   if (!selected) {
     return <p className="text-muted-foreground mt-6 text-sm">Este produto está sem opções disponíveis no momento.</p>;
@@ -52,7 +56,9 @@ export function ProductBuyBox({
           <p className="text-muted-foreground mt-1 text-sm">
             <span className="sr-only">Preço anterior: </span>
             <span className="mr-2 line-through">{formatMoneyInCents(selected.priceInCents)}</span>
-            <span className="text-brand-strong font-semibold">Preço promocional</span>
+            <span className="text-brand-strong font-semibold">
+              Oferta{discountPercentage > 0 ? ` · ${discountPercentage}% off` : ""}
+            </span>
           </p>
         ) : null}
         {isDemo ? <p className="text-brand-strong mt-1 text-xs font-medium">Valor ilustrativo</p> : null}
@@ -82,7 +88,9 @@ export function ProductBuyBox({
                   className={cn(
                     "flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border p-3 transition-[border-color,background-color]",
                     "has-[:focus-visible]:ring-ring/40 has-[:focus-visible]:ring-3",
-                    checked ? "border-moto-brand bg-moto-brand-surface" : "border-border bg-card hover:border-foreground/30",
+                    checked
+                      ? "border-moto-brand bg-moto-brand-surface"
+                      : "border-border bg-card hover:border-foreground/30",
                     unavailable && "opacity-70",
                   )}
                 >
@@ -91,7 +99,7 @@ export function ProductBuyBox({
                     <span className="text-foreground text-sm font-semibold">{variant.title}</span>
                     <span className="text-muted-foreground text-xs">
                       {formatMoneyInCents(variant.currentPriceInCents)}
-                      {unavailable ? " · Indisponível" : ""}
+                      {unavailable ? " · Esgotado" : ""}
                     </span>
                   </span>
                 </label>
@@ -106,17 +114,22 @@ export function ProductBuyBox({
         </p>
       )}
 
-      <div className="space-y-1 text-xs">
+      <div className="space-y-2 text-xs" aria-live="polite">
+        {stockStatus === "last-units" ? (
+          <p className="border-warning/40 bg-warning-surface text-warning-foreground inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-semibold">
+            Últimas unidades · {selected.stock === 1 ? "resta 1" : `restam ${selected.stock}`}
+          </p>
+        ) : null}
+        {stockStatus === "out-of-stock" ? (
+          <p className="border-border bg-surface-sunken text-foreground inline-flex rounded-full border px-3 py-1 text-sm font-semibold">
+            Esgotado
+          </p>
+        ) : null}
         <p className="text-muted-foreground">
           {isDemo
             ? `SKU ${selected.sku} · exemplo ilustrativo`
-            : `SKU ${selected.sku} · ${selected.stock > 0 ? `${selected.stock} em estoque` : "Indisponível"}`}
+            : `SKU ${selected.sku}${stockStatus === "in-stock" ? ` · ${selected.stock} em estoque` : ""}`}
         </p>
-        {!isDemo && selected.stock > 0 && selected.stock <= LOW_STOCK_THRESHOLD ? (
-          <p className="text-warning-foreground font-semibold">
-            Restam {selected.stock} {selected.stock === 1 ? "unidade" : "unidades"} desta opção
-          </p>
-        ) : null}
       </div>
 
       {!isDemo ? (

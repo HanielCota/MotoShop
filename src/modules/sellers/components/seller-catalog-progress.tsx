@@ -63,7 +63,10 @@ export function SellerCatalogProgress({ progress }: { progress: Progress }) {
             e envie um produto para aprovação.
           </p>
         ) : (
-          <Link href="/seller/products/new" className="text-brand-text text-sm font-medium underline underline-offset-4">
+          <Link
+            href="/seller/products/new"
+            className="text-brand-text text-sm font-medium underline underline-offset-4"
+          >
             Cadastrar meu primeiro produto
           </Link>
         )}

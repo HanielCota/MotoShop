@@ -1,12 +1,12 @@
 /**
- * Dados de REVISÃO VISUAL do O Moto Shop.
+ * Dados de REVISÃO VISUAL do Moto Shop.
  *
  * Cria contas, lojas, produtos, pedidos e pós-venda fictícios para revisar todas as telas
  * (storefront, conta do cliente, Central do Lojista e Admin). Tudo é isolado por:
  * - e-mails `review.*@example.test`;
  * - slugs `review-*`, SKUs/códigos `REVIEW-*` e pedidos `MS-REVIEW-*`;
  * - lojas com nome terminado em " · demonstração" e produtos `isDemo: true`;
- * - IDs determinísticos `rvw…` (scripts/review-seed-ids.ts) no conjunto ampliado.
+ * - IDs determinísticos `czrvw…` (scripts/review-seed-ids.ts) no conjunto ampliado.
  *
  * Idempotente: pode ser executado várias vezes. Nunca apaga nem altera dados que não
  * foram criados por este script. Para remover: `scripts/remove-review-data.ts`.
@@ -123,7 +123,12 @@ const storeDefinitions: Record<
     sellerStatus: "APPROVED",
     commissionBpsOverride: 1000,
     owner: "lojista2",
-    extra: { instagramUrl: "https://www.instagram.com/example", originPostalCode: "13010000", originCity: "Campinas", originState: "SP" },
+    extra: {
+      instagramUrl: "https://www.instagram.com/example",
+      originPostalCode: "13010000",
+      originCity: "Campinas",
+      originState: "SP",
+    },
   },
   pendente: {
     slug: "review-oficina-pendente",
@@ -162,22 +167,35 @@ const storeDefinitions: Record<
     sellerStatus: "APPROVED",
     commissionBpsOverride: 800,
     owner: "lojista4",
-    extra: { youtubeUrl: "https://www.youtube.com/@example", originPostalCode: "80010000", originCity: "Curitiba", originState: "PR" },
+    extra: {
+      youtubeUrl: "https://www.youtube.com/@example",
+      originPostalCode: "80010000",
+      originCity: "Curitiba",
+      originState: "PR",
+    },
   },
   areia: {
     slug: "review-areia-motos",
     name: "Areia Motos Off-Road · demonstração",
-    description: "Loja fictícia do Nordeste com acessórios, óculos e consumíveis para pistas de areia. Dados ilustrativos.",
+    description:
+      "Loja fictícia do Nordeste com acessórios, óculos e consumíveis para pistas de areia. Dados ilustrativos.",
     sellerType: "INDIVIDUAL",
     sellerStatus: "ACTIVE",
     commissionBpsOverride: null,
     owner: "lojista5",
-    extra: { instagramUrl: "https://www.instagram.com/example", whatsappUrl: "https://wa.me/5581900000000", originPostalCode: "50010000", originCity: "Recife", originState: "PE" },
+    extra: {
+      instagramUrl: "https://www.instagram.com/example",
+      whatsappUrl: "https://wa.me/5581900000000",
+      originPostalCode: "50010000",
+      originCity: "Recife",
+      originState: "PE",
+    },
   },
   cross: {
     slug: "review-cross-center",
     name: "Cross Center Campinas · demonstração",
-    description: "Loja fictícia de equipamentos de proteção: capacetes, botas, óculos e joelheiras. Dados ilustrativos.",
+    description:
+      "Loja fictícia de equipamentos de proteção: capacetes, botas, óculos e joelheiras. Dados ilustrativos.",
     sellerType: "COMPANY",
     sellerStatus: "APPROVED",
     commissionBpsOverride: null,
@@ -255,14 +273,16 @@ type ProductDefinition = {
   variants: VariantDefinition[];
 };
 
-const NOTICE = " Produto fictício criado para revisão visual do O Moto Shop; preço, estoque e compatibilidade são ilustrativos.";
+const NOTICE =
+  " Produto fictício criado para revisão visual do Moto Shop; preço, estoque e compatibilidade são ilustrativos.";
 
 const products: ProductDefinition[] = [
   {
     slug: "review-capacete-apex-pro",
     name: "Capacete off-road Apex Pro (demonstração)",
     description:
-      "Capacete off-road com casco em fibra composta, pala ajustável, forração removível e ventilação frontal ampla." + NOTICE,
+      "Capacete off-road com casco em fibra composta, pala ajustável, forração removível e ventilação frontal ampla." +
+      NOTICE,
     store: "garagem",
     status: "APPROVED",
     categorySlug: "equipment-helmets",
@@ -272,15 +292,37 @@ const products: ProductDefinition[] = [
     dimensions: [310, 270, 400],
     promotion: { startsAt: daysAgo(3), endsAt: daysAhead(12) },
     variants: [
-      { sku: "REVIEW-GMX-APEX-P", title: "Preto/laranja · P", attributes: { cor: "Preto/laranja", tamanho: "P" }, priceInCents: 89990, promotionalPriceInCents: 79990, stock: 4 },
-      { sku: "REVIEW-GMX-APEX-M", title: "Preto/laranja · M", attributes: { cor: "Preto/laranja", tamanho: "M" }, priceInCents: 89990, promotionalPriceInCents: 79990, stock: 8 },
-      { sku: "REVIEW-GMX-APEX-G", title: "Preto/laranja · G", attributes: { cor: "Preto/laranja", tamanho: "G" }, priceInCents: 89990, promotionalPriceInCents: 79990, stock: 2 },
+      {
+        sku: "REVIEW-GMX-APEX-P",
+        title: "Preto/laranja · P",
+        attributes: { cor: "Preto/laranja", tamanho: "P" },
+        priceInCents: 89990,
+        promotionalPriceInCents: 79990,
+        stock: 4,
+      },
+      {
+        sku: "REVIEW-GMX-APEX-M",
+        title: "Preto/laranja · M",
+        attributes: { cor: "Preto/laranja", tamanho: "M" },
+        priceInCents: 89990,
+        promotionalPriceInCents: 79990,
+        stock: 8,
+      },
+      {
+        sku: "REVIEW-GMX-APEX-G",
+        title: "Preto/laranja · G",
+        attributes: { cor: "Preto/laranja", tamanho: "G" },
+        priceInCents: 89990,
+        promotionalPriceInCents: 79990,
+        stock: 2,
+      },
     ],
   },
   {
     slug: "review-botas-terra-trail",
     name: "Botas off-road Terra Trail (demonstração)",
-    description: "Botas de cano alto com quatro fivelas, proteção de tornozelo articulada e sola de borracha tratorada." + NOTICE,
+    description:
+      "Botas de cano alto com quatro fivelas, proteção de tornozelo articulada e sola de borracha tratorada." + NOTICE,
     store: "garagem",
     status: "APPROVED",
     categorySlug: "equipment-boots",
@@ -289,15 +331,34 @@ const products: ProductDefinition[] = [
     weightInGrams: 4300,
     dimensions: [390, 330, 550],
     variants: [
-      { sku: "REVIEW-GMX-TRAIL-40", title: "Preto · 40", attributes: { cor: "Preto", tamanho: "40" }, priceInCents: 109990, stock: 3 },
-      { sku: "REVIEW-GMX-TRAIL-41", title: "Preto · 41", attributes: { cor: "Preto", tamanho: "41" }, priceInCents: 109990, stock: 0 },
-      { sku: "REVIEW-GMX-TRAIL-42", title: "Preto · 42", attributes: { cor: "Preto", tamanho: "42" }, priceInCents: 109990, stock: 6 },
+      {
+        sku: "REVIEW-GMX-TRAIL-40",
+        title: "Preto · 40",
+        attributes: { cor: "Preto", tamanho: "40" },
+        priceInCents: 109990,
+        stock: 3,
+      },
+      {
+        sku: "REVIEW-GMX-TRAIL-41",
+        title: "Preto · 41",
+        attributes: { cor: "Preto", tamanho: "41" },
+        priceInCents: 109990,
+        stock: 0,
+      },
+      {
+        sku: "REVIEW-GMX-TRAIL-42",
+        title: "Preto · 42",
+        attributes: { cor: "Preto", tamanho: "42" },
+        priceInCents: 109990,
+        stock: 6,
+      },
     ],
   },
   {
     slug: "review-oculos-vista-pro",
     name: "Óculos off-road Vista Pro (demonstração)",
-    description: "Óculos com armação flexível, espuma tripla e lente transparente antiembaçante com pinos para tear-off." + NOTICE,
+    description:
+      "Óculos com armação flexível, espuma tripla e lente transparente antiembaçante com pinos para tear-off." + NOTICE,
     store: "garagem",
     status: "APPROVED",
     categorySlug: "equipment-goggles",
@@ -306,7 +367,13 @@ const products: ProductDefinition[] = [
     weightInGrams: 420,
     dimensions: [120, 120, 260],
     variants: [
-      { sku: "REVIEW-GMX-VISTA-UN", title: "Preto/laranja · único", attributes: { cor: "Preto/laranja", tamanho: "Único" }, priceInCents: 24990, stock: 15 },
+      {
+        sku: "REVIEW-GMX-VISTA-UN",
+        title: "Preto/laranja · único",
+        attributes: { cor: "Preto/laranja", tamanho: "Único" },
+        priceInCents: 24990,
+        stock: 15,
+      },
     ],
   },
   {
@@ -325,7 +392,13 @@ const products: ProductDefinition[] = [
       { model: "CRF 250R", year: 2025 },
     ],
     variants: [
-      { sku: "REVIEW-GMX-ONDA-260", title: "Aço inox · 260 mm", attributes: { material: "Aço inox", diametro: "260 mm" }, priceInCents: 32990, stock: 1 },
+      {
+        sku: "REVIEW-GMX-ONDA-260",
+        title: "Aço inox · 260 mm",
+        attributes: { material: "Aço inox", diametro: "260 mm" },
+        priceInCents: 32990,
+        stock: 1,
+      },
     ],
   },
   {
@@ -343,8 +416,20 @@ const products: ProductDefinition[] = [
       { model: "CRF 250R", year: 2025 },
     ],
     variants: [
-      { sku: "REVIEW-GMX-KIT-1349-ACO", title: "Aço · 13/49", attributes: { material: "Aço", relacao: "13/49" }, priceInCents: 45990, stock: 5 },
-      { sku: "REVIEW-GMX-KIT-1350-ALU", title: "Alumínio · 13/50", attributes: { material: "Alumínio", relacao: "13/50" }, priceInCents: 52990, stock: 0 },
+      {
+        sku: "REVIEW-GMX-KIT-1349-ACO",
+        title: "Aço · 13/49",
+        attributes: { material: "Aço", relacao: "13/49" },
+        priceInCents: 45990,
+        stock: 5,
+      },
+      {
+        sku: "REVIEW-GMX-KIT-1350-ALU",
+        title: "Alumínio · 13/50",
+        attributes: { material: "Alumínio", relacao: "13/50" },
+        priceInCents: 52990,
+        stock: 0,
+      },
     ],
   },
   {
@@ -359,7 +444,13 @@ const products: ProductDefinition[] = [
     dimensions: [90, 150, 180],
     fitments: [{ model: "YZ250F", year: 2025 }],
     variants: [
-      { sku: "REVIEW-GMX-FILTRO-YZ", title: "Espuma dupla camada", attributes: { material: "Espuma" }, priceInCents: 8990, stock: 25 },
+      {
+        sku: "REVIEW-GMX-FILTRO-YZ",
+        title: "Espuma dupla camada",
+        attributes: { material: "Espuma" },
+        priceInCents: 8990,
+        stock: 25,
+      },
     ],
   },
   {
@@ -374,8 +465,20 @@ const products: ProductDefinition[] = [
     dimensions: [80, 80, 480],
     fitments: [{ model: "CRF 250R", year: 2025 }],
     variants: [
-      { sku: "REVIEW-GMX-MOLA-046", title: "0,46 kg/mm", attributes: { carga: "0,46 kg/mm" }, priceInCents: 64990, stock: 2 },
-      { sku: "REVIEW-GMX-MOLA-048", title: "0,48 kg/mm", attributes: { carga: "0,48 kg/mm" }, priceInCents: 64990, stock: 3 },
+      {
+        sku: "REVIEW-GMX-MOLA-046",
+        title: "0,46 kg/mm",
+        attributes: { carga: "0,46 kg/mm" },
+        priceInCents: 64990,
+        stock: 2,
+      },
+      {
+        sku: "REVIEW-GMX-MOLA-048",
+        title: "0,48 kg/mm",
+        attributes: { carga: "0,48 kg/mm" },
+        priceInCents: 64990,
+        stock: 3,
+      },
     ],
   },
   {
@@ -390,7 +493,13 @@ const products: ProductDefinition[] = [
     dimensions: [100, 180, 300],
     variants: [
       { sku: "REVIEW-GMX-PROT-PRETO", title: "Preto", attributes: { cor: "Preto" }, priceInCents: 15990, stock: 10 },
-      { sku: "REVIEW-GMX-PROT-LARANJA", title: "Laranja", attributes: { cor: "Laranja" }, priceInCents: 15990, stock: 4 },
+      {
+        sku: "REVIEW-GMX-PROT-LARANJA",
+        title: "Laranja",
+        attributes: { cor: "Laranja" },
+        priceInCents: 15990,
+        stock: 4,
+      },
     ],
   },
   {
@@ -404,7 +513,13 @@ const products: ProductDefinition[] = [
     weightInGrams: 250,
     dimensions: [30, 250, 300],
     variants: [
-      { sku: "REVIEW-GMX-CAMISA-M", title: "Laranja · M", attributes: { cor: "Laranja", tamanho: "M" }, priceInCents: 18990, stock: 0 },
+      {
+        sku: "REVIEW-GMX-CAMISA-M",
+        title: "Laranja · M",
+        attributes: { cor: "Laranja", tamanho: "M" },
+        priceInCents: 18990,
+        stock: 0,
+      },
     ],
   },
   {
@@ -418,8 +533,20 @@ const products: ProductDefinition[] = [
     weightInGrams: 700,
     dimensions: [50, 300, 350],
     variants: [
-      { sku: "REVIEW-GMX-CALCA-38", title: "Preto · 38", attributes: { cor: "Preto", tamanho: "38" }, priceInCents: 39990, stock: 4 },
-      { sku: "REVIEW-GMX-CALCA-40", title: "Preto · 40", attributes: { cor: "Preto", tamanho: "40" }, priceInCents: 39990, stock: 5 },
+      {
+        sku: "REVIEW-GMX-CALCA-38",
+        title: "Preto · 38",
+        attributes: { cor: "Preto", tamanho: "38" },
+        priceInCents: 39990,
+        stock: 4,
+      },
+      {
+        sku: "REVIEW-GMX-CALCA-40",
+        title: "Preto · 40",
+        attributes: { cor: "Preto", tamanho: "40" },
+        priceInCents: 39990,
+        stock: 5,
+      },
     ],
   },
   {
@@ -435,7 +562,13 @@ const products: ProductDefinition[] = [
     weightInGrams: 800,
     dimensions: [60, 120, 200],
     variants: [
-      { sku: "REVIEW-GMX-PEDAL-UN", title: "Titânio · único", attributes: { material: "Titânio" }, priceInCents: 74990, stock: 3 },
+      {
+        sku: "REVIEW-GMX-PEDAL-UN",
+        title: "Titânio · único",
+        attributes: { material: "Titânio" },
+        priceInCents: 74990,
+        stock: 3,
+      },
     ],
   },
   {
@@ -449,7 +582,13 @@ const products: ProductDefinition[] = [
     weightInGrams: 1100,
     dimensions: [60, 120, 820],
     variants: [
-      { sku: "REVIEW-GMX-GUIDAO-78", title: "Aço · 7/8", attributes: { material: "Aço" }, priceInCents: 19990, stock: 2 },
+      {
+        sku: "REVIEW-GMX-GUIDAO-78",
+        title: "Aço · 7/8",
+        attributes: { material: "Aço" },
+        priceInCents: 19990,
+        stock: 2,
+      },
     ],
   },
   {
@@ -463,8 +602,20 @@ const products: ProductDefinition[] = [
     weightInGrams: 150,
     dimensions: [30, 120, 250],
     variants: [
-      { sku: "REVIEW-B77-LUVA-M", title: "Preto · M", attributes: { cor: "Preto", tamanho: "M" }, priceInCents: 12990, stock: 6 },
-      { sku: "REVIEW-B77-LUVA-G", title: "Preto · G", attributes: { cor: "Preto", tamanho: "G" }, priceInCents: 12990, stock: 4 },
+      {
+        sku: "REVIEW-B77-LUVA-M",
+        title: "Preto · M",
+        attributes: { cor: "Preto", tamanho: "M" },
+        priceInCents: 12990,
+        stock: 6,
+      },
+      {
+        sku: "REVIEW-B77-LUVA-G",
+        title: "Preto · G",
+        attributes: { cor: "Preto", tamanho: "G" },
+        priceInCents: 12990,
+        stock: 4,
+      },
     ],
   },
   {
@@ -482,7 +633,13 @@ const products: ProductDefinition[] = [
       { model: "YZ250F", year: 2025 },
     ],
     variants: [
-      { sku: "REVIEW-B77-CORRENTE-520", title: "Dourada · 120 elos", attributes: { cor: "Dourada", elos: "120" }, priceInCents: 27990, stock: 7 },
+      {
+        sku: "REVIEW-B77-CORRENTE-520",
+        title: "Dourada · 120 elos",
+        attributes: { cor: "Dourada", elos: "120" },
+        priceInCents: 27990,
+        stock: 7,
+      },
     ],
   },
   {
@@ -497,7 +654,13 @@ const products: ProductDefinition[] = [
     dimensions: [20, 80, 100],
     fitments: [{ model: "YZ250F", year: 2025 }],
     variants: [
-      { sku: "REVIEW-B77-PASTILHA-DIANT", title: "Dianteira", attributes: { posicao: "Dianteira" }, priceInCents: 11990, stock: 9 },
+      {
+        sku: "REVIEW-B77-PASTILHA-DIANT",
+        title: "Dianteira",
+        attributes: { posicao: "Dianteira" },
+        priceInCents: 11990,
+        stock: 9,
+      },
     ],
   },
 ];
@@ -563,9 +726,15 @@ async function ensureStores(userIds: Record<UserKey, string>) {
   const configuration = await db.marketplaceConfiguration.findUnique({ where: { key: "default" } });
   const defaultBps = configuration?.defaultCommissionBps ?? 1200;
 
-  for (const [key, definition] of Object.entries(storeDefinitions) as Array<[StoreKey, (typeof storeDefinitions)[StoreKey]]>) {
-    let store = await db.store.findUnique({ where: { slug: definition.slug }, include: { seller: { select: { status: true } } } });
-    if (store && store.name !== definition.name) throw new Error(`Refusing to touch unrelated store ${definition.slug}`);
+  for (const [key, definition] of Object.entries(storeDefinitions) as Array<
+    [StoreKey, (typeof storeDefinitions)[StoreKey]]
+  >) {
+    let store = await db.store.findUnique({
+      where: { slug: definition.slug },
+      include: { seller: { select: { status: true } } },
+    });
+    if (store && store.name !== definition.name)
+      throw new Error(`Refusing to touch unrelated store ${definition.slug}`);
     if (!store) {
       const seller = await db.seller.create({
         data: {
@@ -573,11 +742,19 @@ async function ensureStores(userIds: Record<UserKey, string>) {
           // AGENTS.md: demo stores stay PENDING unless REVIEW_PUBLISH_STORES=true (explicit owner decision).
           status: initialSellerStatus(definition.sellerStatus),
           commissionBpsOverride: definition.commissionBpsOverride,
-          createdAt: ["pendente", "nova"].includes(key) ? daysAgo(key === "nova" ? 3 : 1) : daysAgo(key === "garagem" || key === "box77" ? 60 : 150),
+          createdAt: ["pendente", "nova"].includes(key)
+            ? daysAgo(key === "nova" ? 3 : 1)
+            : daysAgo(key === "garagem" || key === "box77" ? 60 : 150),
         },
       });
       store = await db.store.create({
-        data: { slug: definition.slug, name: definition.name, description: definition.description, sellerId: seller.id, ...definition.extra },
+        data: {
+          slug: definition.slug,
+          name: definition.name,
+          description: definition.description,
+          sellerId: seller.id,
+          ...definition.extra,
+        },
         include: { seller: { select: { status: true } } },
       });
       track("Seller", true);
@@ -601,7 +778,10 @@ async function ensureStores(userIds: Record<UserKey, string>) {
       await renderStoreBanner(bannerKey, definition.name);
       await db.store.update({
         where: { id: store.id },
-        data: { logoStorageKey: store.logoStorageKey ?? logoKey, bannerStorageKey: store.bannerStorageKey ?? bannerKey },
+        data: {
+          logoStorageKey: store.logoStorageKey ?? logoKey,
+          bannerStorageKey: store.bannerStorageKey ?? bannerKey,
+        },
       });
       track("StoreBranding", true);
     } else track("StoreBranding", false);
@@ -611,7 +791,8 @@ async function ensureStores(userIds: Record<UserKey, string>) {
     for (const [userKey, role] of members) {
       const where = { sellerId_userId: { sellerId: store.sellerId, userId: userIds[userKey] } };
       const existing = await db.sellerMember.findUnique({ where });
-      if (!existing) await db.sellerMember.create({ data: { sellerId: store.sellerId, userId: userIds[userKey], role } });
+      if (!existing)
+        await db.sellerMember.create({ data: { sellerId: store.sellerId, userId: userIds[userKey], role } });
       track("SellerMember", !existing);
     }
 
@@ -632,17 +813,105 @@ async function ensureStores(userIds: Record<UserKey, string>) {
     });
   track("SellerSubscription", !vip);
 
-  const methods: Array<{ store: StoreKey; name: string; start: string; end: string; price: number; days: number; active: boolean }> = [
-    { store: "garagem", name: "Entrega própria · Grande São Paulo", start: "01000000", end: "09999999", price: 1990, days: 3, active: true },
-    { store: "garagem", name: "Motoboy expresso · Centro (desativado)", start: "01000000", end: "01599999", price: 2990, days: 1, active: false },
-    { store: "box77", name: "Entrega própria · Sudeste", start: "01000000", end: "39999999", price: 2490, days: 5, active: true },
-    { store: "trilha", name: "Entrega própria · Minas Gerais", start: "30000000", end: "39999999", price: 1790, days: 2, active: true },
-    { store: "trilha", name: "Transportadora parceira · Brasil", start: "01000000", end: "99999999", price: 3490, days: 7, active: true },
-    { store: "racing", name: "Entrega própria · Sul", start: "80000000", end: "99999999", price: 2290, days: 4, active: true },
-    { store: "racing", name: "Retirada no box (desativada)", start: "80000000", end: "80999999", price: 0, days: 1, active: false },
-    { store: "areia", name: "Entrega própria · Nordeste", start: "40000000", end: "65999999", price: 2690, days: 6, active: true },
-    { store: "cross", name: "Entrega própria · Interior de SP", start: "11000000", end: "19999999", price: 1590, days: 3, active: true },
-    { store: "cross", name: "Entrega própria · Brasil", start: "01000000", end: "99999999", price: 2990, days: 8, active: true },
+  const methods: Array<{
+    store: StoreKey;
+    name: string;
+    start: string;
+    end: string;
+    price: number;
+    days: number;
+    active: boolean;
+  }> = [
+    {
+      store: "garagem",
+      name: "Entrega própria · Grande São Paulo",
+      start: "01000000",
+      end: "09999999",
+      price: 1990,
+      days: 3,
+      active: true,
+    },
+    {
+      store: "garagem",
+      name: "Motoboy expresso · Centro (desativado)",
+      start: "01000000",
+      end: "01599999",
+      price: 2990,
+      days: 1,
+      active: false,
+    },
+    {
+      store: "box77",
+      name: "Entrega própria · Sudeste",
+      start: "01000000",
+      end: "39999999",
+      price: 2490,
+      days: 5,
+      active: true,
+    },
+    {
+      store: "trilha",
+      name: "Entrega própria · Minas Gerais",
+      start: "30000000",
+      end: "39999999",
+      price: 1790,
+      days: 2,
+      active: true,
+    },
+    {
+      store: "trilha",
+      name: "Transportadora parceira · Brasil",
+      start: "01000000",
+      end: "99999999",
+      price: 3490,
+      days: 7,
+      active: true,
+    },
+    {
+      store: "racing",
+      name: "Entrega própria · Sul",
+      start: "80000000",
+      end: "99999999",
+      price: 2290,
+      days: 4,
+      active: true,
+    },
+    {
+      store: "racing",
+      name: "Retirada no box (desativada)",
+      start: "80000000",
+      end: "80999999",
+      price: 0,
+      days: 1,
+      active: false,
+    },
+    {
+      store: "areia",
+      name: "Entrega própria · Nordeste",
+      start: "40000000",
+      end: "65999999",
+      price: 2690,
+      days: 6,
+      active: true,
+    },
+    {
+      store: "cross",
+      name: "Entrega própria · Interior de SP",
+      start: "11000000",
+      end: "19999999",
+      price: 1590,
+      days: 3,
+      active: true,
+    },
+    {
+      store: "cross",
+      name: "Entrega própria · Brasil",
+      start: "01000000",
+      end: "99999999",
+      price: 2990,
+      days: 8,
+      active: true,
+    },
   ];
   for (const method of methods) {
     const sellerId = result[method.store].sellerId;
@@ -664,17 +933,31 @@ async function ensureStores(userIds: Record<UserKey, string>) {
   return result;
 }
 
-type VariantRef = { id: string; productId: string; sellerId: string; sku: string; title: string; attributes: Record<string, string>; priceInCents: number; productName: string; weightInGrams: number; dimensions: [number, number, number]; inventoryId: string };
+type VariantRef = {
+  id: string;
+  productId: string;
+  sellerId: string;
+  sku: string;
+  title: string;
+  attributes: Record<string, string>;
+  priceInCents: number;
+  productName: string;
+  weightInGrams: number;
+  dimensions: [number, number, number];
+  inventoryId: string;
+};
 
-async function ensureProducts(
-  stores: Awaited<ReturnType<typeof ensureStores>>,
-  userIds: Record<UserKey, string>,
-) {
+async function ensureProducts(stores: Awaited<ReturnType<typeof ensureStores>>, userIds: Record<UserKey, string>) {
   const categories = new Map(
-    (await db.category.findMany({ where: { slug: { in: [...new Set(products.map((p) => p.categorySlug))] } } })).map((c) => [c.slug, c.id]),
+    (await db.category.findMany({ where: { slug: { in: [...new Set(products.map((p) => p.categorySlug))] } } })).map(
+      (c) => [c.slug, c.id],
+    ),
   );
   const brands = new Map(
-    (await db.brand.findMany({ where: { slug: { in: [...new Set(products.map((p) => p.brandSlug))] } } })).map((b) => [b.slug, b.id]),
+    (await db.brand.findMany({ where: { slug: { in: [...new Set(products.map((p) => p.brandSlug))] } } })).map((b) => [
+      b.slug,
+      b.id,
+    ]),
   );
   const fitments = await db.motorcycleFitment.findMany({ include: { motorcycleModel: true } });
   const findFitment = (model: string, year: number) =>
@@ -684,12 +967,14 @@ async function ensureProducts(
   const productIds = new Map<string, string>();
 
   for (const definition of products) {
-    if (!definition.slug.startsWith("review-") || !definition.name.endsWith("(demonstração)")) throw new Error("Unsafe product");
+    if (!definition.slug.startsWith("review-") || !definition.name.endsWith("(demonstração)"))
+      throw new Error("Unsafe product");
     const store = stores[definition.store];
     const categoryId = categories.get(definition.categorySlug);
     const brandId = brands.get(definition.brandSlug);
     if (!categoryId) throw new Error(`Missing category ${definition.categorySlug}; run the regular seed first.`);
-    if (!brandId) throw new Error(`Missing brand ${definition.brandSlug}; run scripts/seed-demo-catalog.ts --apply first.`);
+    if (!brandId)
+      throw new Error(`Missing brand ${definition.brandSlug}; run scripts/seed-demo-catalog.ts --apply first.`);
 
     let product = await db.product.findUnique({ where: { slug: definition.slug } });
     const productExisted = Boolean(product);
@@ -736,7 +1021,9 @@ async function ensureProducts(
 
     for (const entry of definition.variants) {
       if (!entry.sku.startsWith("REVIEW-")) throw new Error("Unsafe SKU");
-      let variant = await db.productVariant.findUnique({ where: { sellerId_sku: { sellerId: store.sellerId, sku: entry.sku } } });
+      let variant = await db.productVariant.findUnique({
+        where: { sellerId_sku: { sellerId: store.sellerId, sku: entry.sku } },
+      });
       if (variant && variant.productId !== product.id) throw new Error(`SKU ${entry.sku} belongs to another product`);
       if (!variant) {
         variant = await db.productVariant.create({
@@ -839,8 +1126,30 @@ async function ensureCustomerData(
   findFitment: (model: string, year: number) => { id: string } | undefined,
 ) {
   const addresses = [
-    { label: "Casa", recipient: "Carla Mendes", postalCode: "01310100", street: "Avenida Paulista", number: "1000", complement: "Apto 52", neighborhood: "Bela Vista", city: "São Paulo", state: "SP", isDefault: true },
-    { label: "Trabalho", recipient: "Carla Mendes", postalCode: "04538133", street: "Avenida Brigadeiro Faria Lima", number: "3477", complement: "10º andar", neighborhood: "Itaim Bibi", city: "São Paulo", state: "SP", isDefault: false },
+    {
+      label: "Casa",
+      recipient: "Carla Mendes",
+      postalCode: "01310100",
+      street: "Avenida Paulista",
+      number: "1000",
+      complement: "Apto 52",
+      neighborhood: "Bela Vista",
+      city: "São Paulo",
+      state: "SP",
+      isDefault: true,
+    },
+    {
+      label: "Trabalho",
+      recipient: "Carla Mendes",
+      postalCode: "04538133",
+      street: "Avenida Brigadeiro Faria Lima",
+      number: "3477",
+      complement: "10º andar",
+      neighborhood: "Itaim Bibi",
+      city: "São Paulo",
+      state: "SP",
+      isDefault: false,
+    },
   ];
   for (const address of addresses) {
     const existing = await db.customerAddress.findFirst({ where: { userId: clienteId, label: address.label } });
@@ -857,7 +1166,8 @@ async function ensureCustomerData(
     if (!fitment) continue;
     const where = { userId_motorcycleFitmentId: { userId: clienteId, motorcycleFitmentId: fitment.id } };
     const existing = await db.savedMotorcycle.findUnique({ where });
-    if (!existing) await db.savedMotorcycle.create({ data: { userId: clienteId, motorcycleFitmentId: fitment.id, isPrimary } });
+    if (!existing)
+      await db.savedMotorcycle.create({ data: { userId: clienteId, motorcycleFitmentId: fitment.id, isPrimary } });
     track("SavedMotorcycle", !existing);
   }
 
@@ -922,14 +1232,28 @@ const orders: OrderSpec[] = [
     status: "PENDING_PAYMENT",
     placedDaysAgo: 0,
     payment: { status: "PENDING", method: "pix" },
-    parts: [{ store: "garagem", status: "PENDING_PAYMENT", shipment: { status: "PENDING" }, items: [{ sku: "REVIEW-GMX-FILTRO-YZ", quantity: 2 }] }],
+    parts: [
+      {
+        store: "garagem",
+        status: "PENDING_PAYMENT",
+        shipment: { status: "PENDING" },
+        items: [{ sku: "REVIEW-GMX-FILTRO-YZ", quantity: 2 }],
+      },
+    ],
   },
   {
     orderNumber: "MS-REVIEW-0002",
     status: "PAID",
     placedDaysAgo: 1,
     payment: { status: "APPROVED", method: "visa" },
-    parts: [{ store: "garagem", status: "CANCELLATION_REQUESTED", shipment: { status: "PENDING" }, items: [{ sku: "REVIEW-GMX-MOLA-046", quantity: 1 }] }],
+    parts: [
+      {
+        store: "garagem",
+        status: "CANCELLATION_REQUESTED",
+        shipment: { status: "PENDING" },
+        items: [{ sku: "REVIEW-GMX-MOLA-046", quantity: 1 }],
+      },
+    ],
   },
   {
     orderNumber: "MS-REVIEW-0003",
@@ -953,7 +1277,14 @@ const orders: OrderSpec[] = [
     status: "SHIPPED",
     placedDaysAgo: 6,
     payment: { status: "APPROVED", method: "master" },
-    parts: [{ store: "garagem", status: "SHIPPED", shipment: { status: "SHIPPED", trackingCode: "RV123456785BR" }, items: [{ sku: "REVIEW-GMX-TRAIL-42", quantity: 1 }] }],
+    parts: [
+      {
+        store: "garagem",
+        status: "SHIPPED",
+        shipment: { status: "SHIPPED", trackingCode: "RV123456785BR" },
+        items: [{ sku: "REVIEW-GMX-TRAIL-42", quantity: 1 }],
+      },
+    ],
   },
   {
     orderNumber: "MS-REVIEW-0005",
@@ -977,7 +1308,14 @@ const orders: OrderSpec[] = [
     status: "CANCELLED",
     placedDaysAgo: 15,
     payment: { status: "CANCELLED", method: "pix" },
-    parts: [{ store: "garagem", status: "CANCELLED", shipment: { status: "CANCELLED" }, items: [{ sku: "REVIEW-GMX-KIT-1349-ACO", quantity: 1 }] }],
+    parts: [
+      {
+        store: "garagem",
+        status: "CANCELLED",
+        shipment: { status: "CANCELLED" },
+        items: [{ sku: "REVIEW-GMX-KIT-1349-ACO", quantity: 1 }],
+      },
+    ],
   },
   {
     // Multi-seller com cupom do marketplace (R$ 20,00 rateado: 561 + 1439).
@@ -1012,23 +1350,135 @@ const orders: OrderSpec[] = [
     placedDaysAgo: 1,
     guest: { name: "Marcos Lima", email: "review.convidado@example.test", phone: "11955554444" },
     payment: { status: "APPROVED", method: "pix" },
-    parts: [{ store: "box77", status: "PAID", shipment: { status: "PENDING" }, items: [{ sku: "REVIEW-B77-PASTILHA-DIANT", quantity: 2 }] }],
+    parts: [
+      {
+        store: "box77",
+        status: "PAID",
+        shipment: { status: "PENDING" },
+        items: [{ sku: "REVIEW-B77-PASTILHA-DIANT", quantity: 2 }],
+      },
+    ],
   },
 ];
 
 async function ensureCoupons(stores: Awaited<ReturnType<typeof ensureStores>>) {
   const coupons: Prisma.CouponUncheckedCreateInput[] = [
-    { code: "REVIEW-PRIMEIRA20", ownerType: "MARKETPLACE", discountType: "FIXED_AMOUNT", fixedAmountInCents: 2000, minimumPurchaseInCents: 15000, startsAt: daysAgo(30), endsAt: daysAhead(60), globalUsageLimit: 500, perCustomerUsageLimit: 1, fundedBy: "MARKETPLACE" },
-    { code: "REVIEW-GARAGEM15", ownerType: "SELLER", discountType: "PERCENTAGE", percentageBps: 1500, minimumPurchaseInCents: 30000, startsAt: daysAgo(5), endsAt: daysAhead(25), globalUsageLimit: 100, perCustomerUsageLimit: 1, fundedBy: "SELLER", sellerId: stores.garagem.sellerId },
-    { code: "REVIEW-NATAL-GARAGEM", ownerType: "SELLER", discountType: "FIXED_AMOUNT", fixedAmountInCents: 5000, minimumPurchaseInCents: 40000, startsAt: daysAhead(30), endsAt: daysAhead(60), fundedBy: "SELLER", sellerId: stores.garagem.sellerId },
+    {
+      code: "REVIEW-PRIMEIRA20",
+      ownerType: "MARKETPLACE",
+      discountType: "FIXED_AMOUNT",
+      fixedAmountInCents: 2000,
+      minimumPurchaseInCents: 15000,
+      startsAt: daysAgo(30),
+      endsAt: daysAhead(60),
+      globalUsageLimit: 500,
+      perCustomerUsageLimit: 1,
+      fundedBy: "MARKETPLACE",
+    },
+    {
+      code: "REVIEW-GARAGEM15",
+      ownerType: "SELLER",
+      discountType: "PERCENTAGE",
+      percentageBps: 1500,
+      minimumPurchaseInCents: 30000,
+      startsAt: daysAgo(5),
+      endsAt: daysAhead(25),
+      globalUsageLimit: 100,
+      perCustomerUsageLimit: 1,
+      fundedBy: "SELLER",
+      sellerId: stores.garagem.sellerId,
+    },
+    {
+      code: "REVIEW-NATAL-GARAGEM",
+      ownerType: "SELLER",
+      discountType: "FIXED_AMOUNT",
+      fixedAmountInCents: 5000,
+      minimumPurchaseInCents: 40000,
+      startsAt: daysAhead(30),
+      endsAt: daysAhead(60),
+      fundedBy: "SELLER",
+      sellerId: stores.garagem.sellerId,
+    },
     // Conjunto ampliado: marketplace e lojas, ativos/futuros/expirados/inativos, % e valor fixo.
-    { code: "REVIEW-MX10", ownerType: "MARKETPLACE", discountType: "PERCENTAGE", percentageBps: 1000, minimumPurchaseInCents: 10000, startsAt: daysAgo(130), endsAt: daysAhead(45), globalUsageLimit: 1000, perCustomerUsageLimit: 1, fundedBy: "MARKETPLACE" },
-    { code: "REVIEW-FRETE15-EXPIRADO", ownerType: "MARKETPLACE", discountType: "FIXED_AMOUNT", fixedAmountInCents: 1500, minimumPurchaseInCents: 8000, startsAt: daysAgo(90), endsAt: daysAgo(10), globalUsageLimit: 300, perCustomerUsageLimit: 1, fundedBy: "MARKETPLACE" },
-    { code: "REVIEW-BLACKFRIDAY20", ownerType: "MARKETPLACE", discountType: "PERCENTAGE", percentageBps: 2000, minimumPurchaseInCents: 30000, startsAt: daysAhead(45), endsAt: daysAhead(50), globalUsageLimit: 2000, perCustomerUsageLimit: 1, fundedBy: "MARKETPLACE" },
-    { code: "REVIEW-BOASVINDAS-INATIVO", ownerType: "MARKETPLACE", discountType: "FIXED_AMOUNT", fixedAmountInCents: 3000, minimumPurchaseInCents: 20000, active: false, fundedBy: "MARKETPLACE" },
-    { code: "REVIEW-TRILHA10", ownerType: "SELLER", discountType: "PERCENTAGE", percentageBps: 1000, minimumPurchaseInCents: 0, startsAt: daysAgo(120), endsAt: daysAhead(30), globalUsageLimit: 200, perCustomerUsageLimit: 2, fundedBy: "SELLER", sellerId: stores.trilha.sellerId },
-    { code: "REVIEW-RACING50-EXPIRADO", ownerType: "SELLER", discountType: "FIXED_AMOUNT", fixedAmountInCents: 5000, minimumPurchaseInCents: 50000, startsAt: daysAgo(60), endsAt: daysAgo(20), fundedBy: "SELLER", sellerId: stores.racing.sellerId },
-    { code: "REVIEW-CROSS5-INATIVO", ownerType: "SELLER", discountType: "PERCENTAGE", percentageBps: 500, minimumPurchaseInCents: 0, active: false, fundedBy: "SELLER", sellerId: stores.cross.sellerId },
+    {
+      code: "REVIEW-MX10",
+      ownerType: "MARKETPLACE",
+      discountType: "PERCENTAGE",
+      percentageBps: 1000,
+      minimumPurchaseInCents: 10000,
+      startsAt: daysAgo(130),
+      endsAt: daysAhead(45),
+      globalUsageLimit: 1000,
+      perCustomerUsageLimit: 1,
+      fundedBy: "MARKETPLACE",
+    },
+    {
+      code: "REVIEW-FRETE15-EXPIRADO",
+      ownerType: "MARKETPLACE",
+      discountType: "FIXED_AMOUNT",
+      fixedAmountInCents: 1500,
+      minimumPurchaseInCents: 8000,
+      startsAt: daysAgo(90),
+      endsAt: daysAgo(10),
+      globalUsageLimit: 300,
+      perCustomerUsageLimit: 1,
+      fundedBy: "MARKETPLACE",
+    },
+    {
+      code: "REVIEW-BLACKFRIDAY20",
+      ownerType: "MARKETPLACE",
+      discountType: "PERCENTAGE",
+      percentageBps: 2000,
+      minimumPurchaseInCents: 30000,
+      startsAt: daysAhead(45),
+      endsAt: daysAhead(50),
+      globalUsageLimit: 2000,
+      perCustomerUsageLimit: 1,
+      fundedBy: "MARKETPLACE",
+    },
+    {
+      code: "REVIEW-BOASVINDAS-INATIVO",
+      ownerType: "MARKETPLACE",
+      discountType: "FIXED_AMOUNT",
+      fixedAmountInCents: 3000,
+      minimumPurchaseInCents: 20000,
+      active: false,
+      fundedBy: "MARKETPLACE",
+    },
+    {
+      code: "REVIEW-TRILHA10",
+      ownerType: "SELLER",
+      discountType: "PERCENTAGE",
+      percentageBps: 1000,
+      minimumPurchaseInCents: 0,
+      startsAt: daysAgo(120),
+      endsAt: daysAhead(30),
+      globalUsageLimit: 200,
+      perCustomerUsageLimit: 2,
+      fundedBy: "SELLER",
+      sellerId: stores.trilha.sellerId,
+    },
+    {
+      code: "REVIEW-RACING50-EXPIRADO",
+      ownerType: "SELLER",
+      discountType: "FIXED_AMOUNT",
+      fixedAmountInCents: 5000,
+      minimumPurchaseInCents: 50000,
+      startsAt: daysAgo(60),
+      endsAt: daysAgo(20),
+      fundedBy: "SELLER",
+      sellerId: stores.racing.sellerId,
+    },
+    {
+      code: "REVIEW-CROSS5-INATIVO",
+      ownerType: "SELLER",
+      discountType: "PERCENTAGE",
+      percentageBps: 500,
+      minimumPurchaseInCents: 0,
+      active: false,
+      fundedBy: "SELLER",
+      sellerId: stores.cross.sellerId,
+    },
   ];
   const ids = new Map<string, string>();
   for (const coupon of coupons) {
@@ -1047,7 +1497,10 @@ async function ensureOrders(
   couponIds: Map<string, string>,
 ) {
   const cliente = users.cliente;
-  const result = new Map<string, { orderId: string; sellerOrders: Map<StoreKey, { id: string; itemIds: Map<string, string>; amount: number }> }>();
+  const result = new Map<
+    string,
+    { orderId: string; sellerOrders: Map<StoreKey, { id: string; itemIds: Map<string, string>; amount: number }> }
+  >();
   let guestLink = "";
 
   for (const spec of orders) {
@@ -1062,7 +1515,9 @@ async function ensureOrders(
       track("Order", false);
       const sellerOrders = new Map<StoreKey, { id: string; itemIds: Map<string, string>; amount: number }>();
       for (const so of existing.sellerOrders) {
-        const key = (Object.keys(storeDefinitions) as StoreKey[]).find((k) => storeDefinitions[k].slug === so.store.slug)!;
+        const key = (Object.keys(storeDefinitions) as StoreKey[]).find(
+          (k) => storeDefinitions[k].slug === so.store.slug,
+        )!;
         sellerOrders.set(key, {
           id: so.id,
           itemIds: new Map(so.items.map((item) => [item.skuSnapshot, item.id])),
@@ -1090,7 +1545,8 @@ async function ensureOrders(
       });
       const subtotal = lines.reduce((sum, line) => sum + line.gross, 0);
       const discount = lines.reduce((sum, line) => sum + line.discount, 0);
-      if (discount !== (part.marketplaceDiscountInCents ?? 0)) throw new Error(`Discount mismatch in ${spec.orderNumber}`);
+      if (discount !== (part.marketplaceDiscountInCents ?? 0))
+        throw new Error(`Discount mismatch in ${spec.orderNumber}`);
       const shipping = shippingByStore[part.store];
       const bps = stores[part.store].commissionBps;
       const commissionInCents = commission(subtotal, bps);
@@ -1121,8 +1577,25 @@ async function ensureOrders(
             createdAt: placedAt,
             shippingAddress: {
               create: spec.guest
-                ? { recipient: spec.guest.name, postalCode: "13015100", street: "Rua Barão de Jaguara", number: "900", neighborhood: "Centro", city: "Campinas", state: "SP" }
-                : { recipient: cliente.name, postalCode: "01310100", street: "Avenida Paulista", number: "1000", complement: "Apto 52", neighborhood: "Bela Vista", city: "São Paulo", state: "SP" },
+                ? {
+                    recipient: spec.guest.name,
+                    postalCode: "13015100",
+                    street: "Rua Barão de Jaguara",
+                    number: "900",
+                    neighborhood: "Centro",
+                    city: "Campinas",
+                    state: "SP",
+                  }
+                : {
+                    recipient: cliente.name,
+                    postalCode: "01310100",
+                    street: "Avenida Paulista",
+                    number: "1000",
+                    complement: "Apto 52",
+                    neighborhood: "Bela Vista",
+                    city: "São Paulo",
+                    state: "SP",
+                  },
             },
           },
         });
@@ -1212,10 +1685,15 @@ async function ensureOrders(
             transactions: {
               create: {
                 type: "AUTHORIZATION",
-                status: spec.payment.status === "PENDING" ? "PENDING" : spec.payment.status === "APPROVED" ? "SUCCEEDED" : "FAILED",
+                status:
+                  spec.payment.status === "PENDING"
+                    ? "PENDING"
+                    : spec.payment.status === "APPROVED"
+                      ? "SUCCEEDED"
+                      : "FAILED",
                 idempotencyKey: `review-tx-${spec.orderNumber}`,
                 amountInCents: total,
-                processedAt: spec.payment.status === "PENDING" ? null : paidAt ?? new Date(placedAt.getTime() + DAY),
+                processedAt: spec.payment.status === "PENDING" ? null : (paidAt ?? new Date(placedAt.getTime() + DAY)),
                 createdAt: placedAt,
               },
             },
@@ -1241,7 +1719,11 @@ async function ensureOrders(
           for (const line of partTotals.flatMap((p) => p.lines)) {
             const inventory = await tx.inventory.update({
               where: { id: line.variant.inventoryId },
-              data: { availableQuantity: { decrement: line.item.quantity }, reservedQuantity: { increment: line.item.quantity }, version: { increment: 1 } },
+              data: {
+                availableQuantity: { decrement: line.item.quantity },
+                reservedQuantity: { increment: line.item.quantity },
+                version: { increment: 1 },
+              },
             });
             await tx.inventoryMovement.create({
               data: {
@@ -1303,7 +1785,9 @@ async function ensurePostSale(
         sellerId: garagem.sellerId,
         requesterUserId: clienteId,
         createdAt: daysAgo(2),
-        items: { create: { orderItemId: discoItemId, quantity: 1, sellerOrderId: deliveredSo.id, sellerId: garagem.sellerId } },
+        items: {
+          create: { orderItemId: discoItemId, quantity: 1, sellerOrderId: deliveredSo.id, sellerId: garagem.sellerId },
+        },
       },
     });
   track("ReturnRequest", !existingReturn);
@@ -1367,7 +1851,9 @@ async function ensurePostSale(
     });
   track("ProductReview", !existingProductReview);
 
-  const sellerReviewWhere = { orderId_sellerId_userId: { orderId: delivered.orderId, sellerId: garagem.sellerId, userId: clienteId } };
+  const sellerReviewWhere = {
+    orderId_sellerId_userId: { orderId: delivered.orderId, sellerId: garagem.sellerId, userId: clienteId },
+  };
   const existingSellerReview = await db.sellerReview.findUnique({ where: sellerReviewWhere });
   if (!existingSellerReview)
     await db.sellerReview.create({
@@ -1387,13 +1873,20 @@ async function ensurePostSale(
     {
       slug: "review-capacete-apex-pro",
       question: "Dá para usar óculos de grau por baixo dos óculos de motocross com esse capacete?",
-      answer: "Oi, Carla! A abertura frontal é ampla e funciona com a maioria dos óculos OTG. Recomendamos o tamanho exato da tabela.",
+      answer:
+        "Oi, Carla! A abertura frontal é ampla e funciona com a maioria dos óculos OTG. Recomendamos o tamanho exato da tabela.",
     },
-    { slug: "review-kit-relacao-crf-250r", question: "Serve na CRF 250R 2023? Não aparece na compatibilidade.", answer: null },
+    {
+      slug: "review-kit-relacao-crf-250r",
+      question: "Serve na CRF 250R 2023? Não aparece na compatibilidade.",
+      answer: null,
+    },
   ];
   for (const entry of questions) {
     const productId = productIds.get(entry.slug)!;
-    const existing = await db.productQuestion.findFirst({ where: { productId, askedByUserId: clienteId, question: entry.question } });
+    const existing = await db.productQuestion.findFirst({
+      where: { productId, askedByUserId: clienteId, question: entry.question },
+    });
     if (!existing)
       await db.productQuestion.create({
         data: {
@@ -1411,31 +1904,127 @@ async function ensurePostSale(
   }
 
   // Auditoria administrativa e operacional.
-  const audits: Array<{ actor: UserKey; action: string; entityType: string; entityId: string; metadata: Prisma.InputJsonValue; daysAgo: number }> = [
-    { actor: "admin", action: "SELLER_APPROVED", entityType: "Seller", entityId: garagem.sellerId, metadata: { source: "review-seed", previousStatus: "PENDING", status: "ACTIVE" }, daysAgo: 59 },
-    { actor: "admin", action: "SELLER_APPROVED", entityType: "Seller", entityId: stores.box77.sellerId, metadata: { source: "review-seed", previousStatus: "PENDING", status: "APPROVED" }, daysAgo: 58 },
-    { actor: "admin", action: "SELLER_COMMISSION_UPDATED", entityType: "Seller", entityId: stores.box77.sellerId, metadata: { source: "review-seed", previousCommissionBps: null, commissionBps: 1000 }, daysAgo: 57 },
-    { actor: "admin", action: "SELLER_VIP_ACTIVATED", entityType: "Seller", entityId: garagem.sellerId, metadata: { source: "review-seed", plan: "VIP" }, daysAgo: 10 },
-    { actor: "admin", action: "PRODUCT_APPROVED", entityType: "Product", entityId: productIds.get("review-capacete-apex-pro")!, metadata: { source: "review-seed" }, daysAgo: 38 },
-    { actor: "admin", action: "PRODUCT_REJECTED", entityType: "Product", entityId: productIds.get("review-pedaleira-rejeitada")!, metadata: { source: "review-seed", reason: "Fotos insuficientes" }, daysAgo: 38 },
-    { actor: "lojista", action: "PRODUCT_ARCHIVED", entityType: "Product", entityId: productIds.get("review-guidao-arquivado")!, metadata: { source: "review-seed" }, daysAgo: 20 },
-    { actor: "lojista", action: "SELLER_ORDER_STATUS_CHANGED", entityType: "SellerOrder", entityId: shippedSo.id, metadata: { source: "review-seed", from: "PAID", to: "SHIPPED" }, daysAgo: 4 },
-    { actor: "lojista", action: "SELLER_MEMBER_ADDED", entityType: "SellerMember", entityId: userIds.catalogo, metadata: { source: "review-seed", role: "CATALOG" }, daysAgo: 30 },
+  const audits: Array<{
+    actor: UserKey;
+    action: string;
+    entityType: string;
+    entityId: string;
+    metadata: Prisma.InputJsonValue;
+    daysAgo: number;
+  }> = [
+    {
+      actor: "admin",
+      action: "SELLER_APPROVED",
+      entityType: "Seller",
+      entityId: garagem.sellerId,
+      metadata: { source: "review-seed", previousStatus: "PENDING", status: "ACTIVE" },
+      daysAgo: 59,
+    },
+    {
+      actor: "admin",
+      action: "SELLER_APPROVED",
+      entityType: "Seller",
+      entityId: stores.box77.sellerId,
+      metadata: { source: "review-seed", previousStatus: "PENDING", status: "APPROVED" },
+      daysAgo: 58,
+    },
+    {
+      actor: "admin",
+      action: "SELLER_COMMISSION_UPDATED",
+      entityType: "Seller",
+      entityId: stores.box77.sellerId,
+      metadata: { source: "review-seed", previousCommissionBps: null, commissionBps: 1000 },
+      daysAgo: 57,
+    },
+    {
+      actor: "admin",
+      action: "SELLER_VIP_ACTIVATED",
+      entityType: "Seller",
+      entityId: garagem.sellerId,
+      metadata: { source: "review-seed", plan: "VIP" },
+      daysAgo: 10,
+    },
+    {
+      actor: "admin",
+      action: "PRODUCT_APPROVED",
+      entityType: "Product",
+      entityId: productIds.get("review-capacete-apex-pro")!,
+      metadata: { source: "review-seed" },
+      daysAgo: 38,
+    },
+    {
+      actor: "admin",
+      action: "PRODUCT_REJECTED",
+      entityType: "Product",
+      entityId: productIds.get("review-pedaleira-rejeitada")!,
+      metadata: { source: "review-seed", reason: "Fotos insuficientes" },
+      daysAgo: 38,
+    },
+    {
+      actor: "lojista",
+      action: "PRODUCT_ARCHIVED",
+      entityType: "Product",
+      entityId: productIds.get("review-guidao-arquivado")!,
+      metadata: { source: "review-seed" },
+      daysAgo: 20,
+    },
+    {
+      actor: "lojista",
+      action: "SELLER_ORDER_STATUS_CHANGED",
+      entityType: "SellerOrder",
+      entityId: shippedSo.id,
+      metadata: { source: "review-seed", from: "PAID", to: "SHIPPED" },
+      daysAgo: 4,
+    },
+    {
+      actor: "lojista",
+      action: "SELLER_MEMBER_ADDED",
+      entityType: "SellerMember",
+      entityId: userIds.catalogo,
+      metadata: { source: "review-seed", role: "CATALOG" },
+      daysAgo: 30,
+    },
   ];
   for (const audit of audits) {
     const actorUserId = userIds[audit.actor];
-    const existing = await db.auditLog.findFirst({ where: { actorUserId, action: audit.action, entityId: audit.entityId } });
+    const existing = await db.auditLog.findFirst({
+      where: { actorUserId, action: audit.action, entityId: audit.entityId },
+    });
     if (!existing)
       await db.auditLog.create({
-        data: { actorUserId, action: audit.action, entityType: audit.entityType, entityId: audit.entityId, metadata: audit.metadata, createdAt: daysAgo(audit.daysAgo) },
+        data: {
+          actorUserId,
+          action: audit.action,
+          entityType: audit.entityType,
+          entityId: audit.entityId,
+          metadata: audit.metadata,
+          createdAt: daysAgo(audit.daysAgo),
+        },
       });
     track("AuditLog", !existing);
   }
 
   // Notificações (uma enviada, uma com falha) e webhook com falha (somente metadados).
   const notifications: Prisma.NotificationDeliveryCreateInput[] = [
-    { eventKey: `review-notification:${shippedSo.id}:SHIPPED`, kind: "SELLER_ORDER_SHIPPED", recipientEmail: users.cliente.email, subject: "Seu pedido MS-REVIEW-0004 foi enviado", status: "FAILED", error: "Provider de e-mail não configurado (dados de revisão).", createdAt: daysAgo(4) },
-    { eventKey: `review-notification:${delivered.orderId}:PAYMENT_APPROVED`, kind: "ORDER_PAYMENT_APPROVED", recipientEmail: users.cliente.email, subject: "Pagamento aprovado · MS-REVIEW-0005", status: "SENT", providerId: "review-email-0005", sentAt: daysAgo(12), createdAt: daysAgo(12) },
+    {
+      eventKey: `review-notification:${shippedSo.id}:SHIPPED`,
+      kind: "SELLER_ORDER_SHIPPED",
+      recipientEmail: users.cliente.email,
+      subject: "Seu pedido MS-REVIEW-0004 foi enviado",
+      status: "FAILED",
+      error: "Provider de e-mail não configurado (dados de revisão).",
+      createdAt: daysAgo(4),
+    },
+    {
+      eventKey: `review-notification:${delivered.orderId}:PAYMENT_APPROVED`,
+      kind: "ORDER_PAYMENT_APPROVED",
+      recipientEmail: users.cliente.email,
+      subject: "Pagamento aprovado · MS-REVIEW-0005",
+      status: "SENT",
+      providerId: "review-email-0005",
+      sentAt: daysAgo(12),
+      createdAt: daysAgo(12),
+    },
   ];
   for (const notification of notifications) {
     const existing = await db.notificationDelivery.findUnique({ where: { eventKey: notification.eventKey } });
@@ -1474,7 +2063,14 @@ async function main() {
   const expanded = await seedExpandedData({
     db,
     now,
-    stores: { garagem: stores.garagem, box77: stores.box77, trilha: stores.trilha, racing: stores.racing, areia: stores.areia, cross: stores.cross },
+    stores: {
+      garagem: stores.garagem,
+      box77: stores.box77,
+      trilha: stores.trilha,
+      racing: stores.racing,
+      areia: stores.areia,
+      cross: stores.cross,
+    },
     storeOwnerIds: {
       garagem: userIds.lojista,
       box77: userIds.lojista2,
@@ -1496,10 +2092,16 @@ async function main() {
 
   const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((email) => email.trim().toLowerCase());
   console.log(JSON.stringify(counts, null, 2));
-  console.log(`\nContas: ${Object.values(users).map((user) => user.email).join(", ")}`);
+  console.log(
+    `\nContas: ${Object.values(users)
+      .map((user) => user.email)
+      .join(", ")}`,
+  );
   console.log("Senha: constante REVIEW_ACCOUNTS_PASSWORD em scripts/seed-review-data.ts");
   if (!adminEmails.includes(users.admin.email))
-    console.log(`Admin: adicione ${users.admin.email} em ADMIN_EMAILS (.env.local) e reinicie o servidor para acessar /admin.`);
+    console.log(
+      `Admin: adicione ${users.admin.email} em ADMIN_EMAILS (.env.local) e reinicie o servidor para acessar /admin.`,
+    );
   console.log(`\nAcompanhamento do pedido convidado (token renovado a cada execução):\n${guestLink}`);
   console.log(
     `\nConjunto ampliado: ${expanded.approvedProducts} produtos aprovados novos, ${expanded.orders} pedidos planejados, ` +

@@ -151,7 +151,7 @@ describe("admin catalog status transitions", () => {
   it.each(cases)(
     "changes %s only from its observed state and audits in the transaction",
     async (_name, action, update, auditAction) => {
-      await action("reference-a");
+      await action("reference-a", false);
 
       expect(mocks.transaction).toHaveBeenCalledOnce();
       expect(update).toHaveBeenCalledWith({
@@ -167,9 +167,20 @@ describe("admin catalog status transitions", () => {
   it.each(cases)("rejects a stale %s decision without writing an audit record", async (_name, action, update) => {
     update.mockResolvedValue({ count: 0 });
 
-    await expect(action("reference-a")).rejects.toMatchObject({ code: "CONFLICT", statusCode: 409 });
+    await expect(action("reference-a", false)).rejects.toMatchObject({ code: "CONFLICT", statusCode: 409 });
     expect(mocks.auditCreate).not.toHaveBeenCalled();
   });
+
+  it.each(cases)(
+    "treats a repeated %s decision (double click) as a no-op instead of flipping it back",
+    async (_name, action, update) => {
+      // The entry is already inactive, which is exactly what the admin asked for again.
+      await action("reference-a", true);
+
+      expect(update).not.toHaveBeenCalled();
+      expect(mocks.auditCreate).not.toHaveBeenCalled();
+    },
+  );
 
   const missingCases = [
     ["category", toggleCategoryAction, mocks.findCategory, mocks.updateCategory],
@@ -181,7 +192,7 @@ describe("admin catalog status transitions", () => {
   it.each(missingCases)("rejects a missing %s without reporting success", async (_name, action, find, update) => {
     find.mockResolvedValue(null);
 
-    await expect(action("reference-a")).rejects.toMatchObject({ code: "NOT_FOUND", statusCode: 404 });
+    await expect(action("reference-a", false)).rejects.toMatchObject({ code: "NOT_FOUND", statusCode: 404 });
     expect(update).not.toHaveBeenCalled();
     expect(mocks.auditCreate).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
@@ -190,7 +201,20 @@ describe("admin catalog status transitions", () => {
   it("denies mutation before reading the catalog when admin authorization fails", async () => {
     mocks.adminAccess.mockRejectedValue(new Error("FORBIDDEN"));
 
-    await expect(toggleCategoryAction("reference-a")).rejects.toThrow("FORBIDDEN");
+    await expect(toggleCategoryAction("reference-a", false)).rejects.toThrow("FORBIDDEN");
+    expect(mocks.transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("admin catalog names", () => {
+  it.each([
+    ["category", createCategoryAction],
+    ["brand", createBrandAction],
+    ["manufacturer", createMotorcycleManufacturerAction],
+  ] as const)("refuses a %s name that would produce an empty public slug", async (_name, action) => {
+    const result = await action({}, creationForm({ name: "!!!" }));
+
+    expect(result.error).toBe("O nome precisa conter letras ou números.");
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
 });

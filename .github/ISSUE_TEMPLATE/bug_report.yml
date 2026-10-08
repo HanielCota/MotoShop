@@ -1,0 +1,61 @@
+name: Relatar problema
+description: Algo não funciona como deveria em uma tela do O Moto Shop.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Falhas de segurança não devem ser abertas aqui**: siga o SECURITY.md.
+        Não cole senhas, tokens, dados de cartão ou dados pessoais de clientes.
+  - type: input
+    id: url
+    attributes:
+      label: Tela ou URL
+      description: Onde o problema aconteceu.
+      placeholder: "/checkout ou https://..."
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Aparelho
+      options:
+        - Celular
+        - Desktop
+        - Ambos
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: O que você viu
+      description: Descreva o que aconteceu. Prints ajudam.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: O que você esperava
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Como reproduzir
+      placeholder: |
+        1. Entrar como ...
+        2. Abrir ...
+        3. Clicar em ...
+    validations:
+      required: false
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Prioridade
+      options:
+        - Alta — impede compra, pagamento ou operação do lojista
+        - Média — atrapalha, mas existe alternativa
+        - Baixa — visual ou texto
+    validations:
+      required: true

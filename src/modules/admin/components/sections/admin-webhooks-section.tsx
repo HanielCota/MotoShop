@@ -3,7 +3,7 @@ import { Webhook } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatCount } from "@/lib/format";
 import { getStatusOptions } from "@/shared/presentation/status-labels";
 
 import { retryWebhookEventAction } from "../../actions/webhook-actions";
@@ -85,7 +85,10 @@ export async function AdminWebhooksSection({ searchParams }: AdminSectionProps) 
                   {event.error ? <p className="text-destructive max-w-sm text-xs break-words">{event.error}</p> : null}
                   {event.status === "FAILED" ? (
                     <form action={retryWebhookEventAction.bind(null, event.id)}>
-                      <button type="submit" className="text-brand-text text-xs font-medium underline underline-offset-4">
+                      <button
+                        type="submit"
+                        className="text-brand-text text-xs font-medium underline underline-offset-4"
+                      >
                         Reprocessar
                       </button>
                     </form>
@@ -106,7 +109,7 @@ export async function AdminWebhooksSection({ searchParams }: AdminSectionProps) 
           pageCount={result.pageCount}
           previousHref={pageHref(result.page - 1)}
           nextHref={pageHref(result.page + 1)}
-          summary={<>{result.total} evento(s)</>}
+          summary={<>{formatCount(result.total, "evento", "eventos")}</>}
         />
       ) : null}
     </AdminCard>

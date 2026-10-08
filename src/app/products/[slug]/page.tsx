@@ -12,6 +12,8 @@ import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { ProductShippingQuote } from "@/modules/checkout/components/product-shipping-quote";
 import { FavoriteButton } from "@/modules/favorites/components/favorite-button";
 import { isProductFavorited } from "@/modules/favorites/queries/favorites";
+import { ProductMotorcyclePicker } from "@/modules/motorcycles/components/product-motorcycle-picker";
+import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/motorcycles";
 import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
 import { buildProductJsonLd, serializeJsonLd } from "@/modules/products/application/build-product-json-ld";
 import { ProductBreadcrumb } from "@/modules/products/components/detail/product-breadcrumb";
@@ -28,6 +30,8 @@ import {
   getVariantStock,
   isVariantOnSale,
 } from "@/modules/products/domain/product-offer-summary";
+import { buildProductInteractionHref } from "@/modules/products/domain/product-interaction-href";
+import { formatUnitsSold } from "@/modules/products/domain/units-sold";
 import { loadProductInteractionSearchParams } from "@/modules/products/interaction-search-params";
 import { getApprovedProductBySlug, getApprovedProductSeoBySlug } from "@/modules/products/queries/products";
 import { ProductQuestionsSection } from "@/modules/questions/components/product-questions-section";
@@ -64,8 +68,15 @@ export default async function ProductPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { slug } = await params;
-  const interactionParams = await loadProductInteractionSearchParams(searchParams);
-  const [product, session] = await Promise.all([getApprovedProductBySlug(slug, interactionParams), getCurrentSession()]);
+  const [loadedInteractionParams, rawSearchParams] = await Promise.all([
+    loadProductInteractionSearchParams(searchParams),
+    searchParams,
+  ]);
+  const [product, session, fitments] = await Promise.all([
+    getApprovedProductBySlug(slug, loadedInteractionParams),
+    getCurrentSession(),
+    listActiveMotorcycleFitments(),
+  ]);
   if (!product) notFound();
 
   const [isFavorite, primaryMotorcycle] = session
@@ -73,6 +84,12 @@ export default async function ProductPage({
     : [false, null];
 
   const productPath = `/products/${product.slug}`;
+  // Moto escolhida na página (?moto=, apenas ids da base ativa) tem prioridade sobre a principal salva.
+  const urlFitment = fitments.find((fitment) => fitment.id === rawSearchParams.moto);
+  const selectedFitment =
+    urlFitment ?? fitments.find((fitment) => fitment.id === primaryMotorcycle?.motorcycleFitmentId);
+  const interactionParams = { ...loadedInteractionParams, moto: urlFitment?.id ?? null };
+  const unitsSoldLabel = formatUnitsSold(product.unitsSold);
   const offer = getProductOfferSummary(product.variants);
   const productRating = product.productReviewAverage;
   const sellerRating = averageRating(product.seller.sellerReviews);
@@ -96,19 +113,17 @@ export default async function ProductPage({
     offer,
     getApplicationBaseUrl(),
   );
-  const fitmentStatus: FitmentStatus = primaryMotorcycle
+  const fitmentStatus: FitmentStatus = selectedFitment
     ? {
         kind:
           product.compatibilities.length === 0
             ? "unknown"
-            : product.compatibilities.some(
-                  (compatibility) => compatibility.motorcycleFitmentId === primaryMotorcycle.motorcycleFitmentId,
-                )
+            : product.compatibilities.some((compatibility) => compatibility.motorcycleFitmentId === selectedFitment.id)
               ? "fits"
               : "does-not-fit",
-        motorcycleLabel: formatFitmentLabel(primaryMotorcycle.motorcycleFitment),
+        motorcycleLabel: formatFitmentLabel(selectedFitment),
       }
-    : { kind: "no-motorcycle", signedIn: Boolean(session), productPath };
+    : { kind: "no-motorcycle" };
   const buyBoxVariants = product.variants.map((variant) => ({
     id: variant.id,
     title: variant.title,
@@ -127,17 +142,25 @@ export default async function ProductPage({
       ) : null}
       <ProductBreadcrumb category={{ slug: product.category.slug, label: categoryLabel }} productName={product.name} />
 
-      <div className="grid min-w-0 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-start lg:gap-8">
-        <ProductGallery images={galleryImages} productName={product.name} isDemo={product.isDemo} />
+      {/*
+        Mobile: galeria → compra → descrição. Desktop: galeria e "Sobre este produto" na coluna
+        esquerda, área de compra na direita; a linha 1fr absorve a altura extra da área de compra.
+      */}
+      <div className="grid min-w-0 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:grid-rows-[auto_1fr] md:items-start lg:gap-x-8">
+        <div className="min-w-0 md:col-start-1 md:row-start-1">
+          <ProductGallery images={galleryImages} productName={product.name} isDemo={product.isDemo} />
+        </div>
 
         <section
-          className="border-border bg-card min-w-0 rounded-3xl border p-5 shadow-[0_16px_50px_-36px_rgba(0,0,0,0.4)] sm:p-7"
+          className="border-border bg-card min-w-0 rounded-3xl border p-5 shadow-[0_16px_50px_-36px_rgba(0,0,0,0.4)] sm:p-7 md:col-start-2 md:row-span-2 md:row-start-1"
           aria-labelledby="product-title"
         >
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline">{categoryLabel}</Badge>
             <Badge variant="neutral">{product.brand.name}</Badge>
-            {offer.hasPromotion ? <Badge className="bg-moto-brand text-moto-brand-foreground border-0">Oferta</Badge> : null}
+            {offer.hasPromotion ? (
+              <Badge className="bg-moto-brand text-moto-brand-foreground border-0">Oferta</Badge>
+            ) : null}
             {product.seller.subscriptions.length > 0 ? <Badge variant="brand">Patrocinado · Loja VIP</Badge> : null}
           </div>
           <h1 id="product-title" className="text-foreground mt-5 text-3xl leading-tight sm:text-4xl">
@@ -156,7 +179,7 @@ export default async function ProductPage({
               <span>loja parceira</span>
             )}
           </p>
-          {productRating || sellerRating || (!product.isDemo && product.unitsSold > 0) ? (
+          {productRating || sellerRating || unitsSoldLabel ? (
             <p className="text-muted-foreground mt-2 flex flex-wrap gap-x-2 text-xs">
               {productRating ? (
                 <a href="#avaliacoes" className="hover:text-foreground underline-offset-4 hover:underline">
@@ -164,11 +187,7 @@ export default async function ProductPage({
                 </a>
               ) : null}
               {sellerRating ? <span>Loja {formatRating(sellerRating)}/5</span> : null}
-              {!product.isDemo && product.unitsSold > 0 ? (
-                <span>
-                  {product.unitsSold} {product.unitsSold === 1 ? "unidade vendida" : "unidades vendidas"}
-                </span>
-              ) : null}
+              {unitsSoldLabel ? <span className="text-foreground font-semibold">{unitsSoldLabel}</span> : null}
             </p>
           ) : null}
 
@@ -206,10 +225,8 @@ export default async function ProductPage({
             )}
           </div>
         </section>
-      </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <Card>
+        <Card className="min-w-0 md:col-start-1 md:row-start-2">
           <CardHeader>
             <CardTitle>
               <h2 className="text-xl">Sobre este produto</h2>
@@ -220,33 +237,51 @@ export default async function ProductPage({
             <p className="leading-7 whitespace-pre-line">{product.description}</p>
           </CardContent>
         </Card>
-        <ProductCompatibilityCard
-          compatibilities={product.compatibilities}
-          primaryFitmentId={primaryMotorcycle?.motorcycleFitmentId ?? null}
-        />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-        <ProductReviewsSection
-          slug={product.slug}
-          params={interactionParams}
-          reviews={product.productReviews}
-          average={productRating}
-          reviewCount={product.productReviewCount}
-          page={product.reviewPage}
-          pageCount={product.reviewPageCount}
-        />
-        <ProductQuestionsSection
-          slug={product.slug}
-          productId={product.id}
-          params={interactionParams}
-          questions={product.questions}
-          questionCount={product.questionCount}
-          page={product.questionPage}
-          pageCount={product.questionPageCount}
-          signedIn={Boolean(session)}
-        />
-      </div>
+      <ProductCompatibilityCard
+        compatibilities={product.compatibilities}
+        selectedFitmentId={selectedFitment?.id ?? null}
+        status={selectedFitment ? <ProductFitmentBanner status={fitmentStatus} /> : null}
+        picker={
+          <ProductMotorcyclePicker
+            key={selectedFitment?.id ?? "none"}
+            fitments={fitments.map((fitment) => ({
+              id: fitment.id,
+              manufacturer: fitment.motorcycleModel.manufacturer.name,
+              model: fitment.motorcycleModel.name,
+              version: fitment.version,
+              displacementCc: fitment.displacementCc,
+              year: fitment.year,
+            }))}
+            selectedFitmentId={selectedFitment?.id ?? null}
+            savedFitmentId={primaryMotorcycle?.motorcycleFitmentId ?? null}
+            signedIn={Boolean(session)}
+            productHref={buildProductInteractionHref(product.slug, interactionParams)}
+          />
+        }
+      />
+
+      <ProductReviewsSection
+        slug={product.slug}
+        params={interactionParams}
+        reviews={product.productReviews}
+        average={productRating}
+        reviewCount={product.productReviewCount}
+        distribution={product.reviewDistribution}
+        page={product.reviewPage}
+        pageCount={product.reviewPageCount}
+      />
+      <ProductQuestionsSection
+        slug={product.slug}
+        productId={product.id}
+        params={interactionParams}
+        questions={product.questions}
+        questionCount={product.questionCount}
+        page={product.questionPage}
+        pageCount={product.questionPageCount}
+        signedIn={Boolean(session)}
+      />
     </main>
   );
 }

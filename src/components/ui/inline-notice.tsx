@@ -12,11 +12,9 @@ export function InlineNotice({ className, tone = "info", role, ...props }: Inlin
       className={cn(
         "rounded-lg border p-3 text-sm",
         tone === "info" && "border-border bg-muted/50 text-foreground",
-        tone === "warning" &&
-          "border-warning/40 bg-warning-surface text-warning-foreground",
+        tone === "warning" && "border-warning/40 bg-warning-surface text-warning-foreground",
         tone === "error" && "border-destructive/30 bg-destructive/10 text-destructive",
-        tone === "success" &&
-          "border-success/30 bg-success-surface text-success-foreground",
+        tone === "success" && "border-success/30 bg-success-surface text-success-foreground",
         className,
       )}
       {...props}

@@ -8,3 +8,5 @@ test-results
 .windsurf
 AGENTS.md
 pnpm-lock.yaml
+playwright-report-demo
+test-results-demo

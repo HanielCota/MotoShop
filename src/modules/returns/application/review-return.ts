@@ -23,7 +23,8 @@ export async function reviewReturnRequest(input: ReviewReturnInput): Promise<Rev
       where: { id: input.returnRequestId },
       include: { items: { include: { orderItem: true } } },
     });
-    if (!request) throw new ApplicationError({ code: "NOT_FOUND", message: "Solicitação de devolução não encontrada." });
+    if (!request)
+      throw new ApplicationError({ code: "NOT_FOUND", message: "Solicitação de devolução não encontrada." });
 
     const nextStatus = getNextReturnStatus(request.status, input.decision);
     if (input.decision === "RECEIVE") {

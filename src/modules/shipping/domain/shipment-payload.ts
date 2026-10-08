@@ -71,6 +71,8 @@ export function buildShipmentData(sellerOrder: ShipmentPayloadSource) {
     state_abbr: address.state,
   };
 
+  // Mesma forma da cotação do checkout: medidas unitárias, valor segurado UNITÁRIO e quantidade.
+  // Os volumes da etiqueta vêm dos `packages` que o Melhor Envio calcula para esses produtos.
   const products: ShippingProduct[] = sellerOrder.items.map((item) => {
     const dimensions = getItemDimensions(item);
     return {
@@ -78,22 +80,40 @@ export function buildShipmentData(sellerOrder: ShipmentPayloadSource) {
       name: item.productNameSnapshot,
       unitaryValueInCents: item.unitPriceInCents,
       ...dimensions,
-      insuranceValueInCents: item.unitPriceInCents * item.quantity,
+      insuranceValueInCents: item.unitPriceInCents,
       quantity: item.quantity,
     };
-  });
-  const volumes: ShippingVolume[] = sellerOrder.items.map((item) => {
-    const dimensions = getItemDimensions(item);
-    return { ...dimensions, weightInKg: dimensions.weightInKg * item.quantity };
   });
 
   return {
     from,
     to,
     products,
-    volumes,
-    insuranceValueInCents: products.reduce((total, product) => total + product.insuranceValueInCents, 0),
+    // Valor TOTAL segurado do envio (soma de valor unitário × quantidade).
+    insuranceValueInCents: products.reduce(
+      (total, product) => total + product.insuranceValueInCents * product.quantity,
+      0,
+    ),
   };
+}
+
+/**
+ * "As transportadoras Correios, J&T e Loggi não aceitam múltiplos volumes em uma única requisição"
+ * (docs Melhor Envio, inserir fretes no carrinho). Para elas, cada pacote exige outra etiqueta.
+ */
+export function carrierAcceptsMultipleVolumes(carrier: string): boolean {
+  const normalized = carrier.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  return !/correios|j\s*&\s*t|\bjt\b|loggi/.test(normalized);
+}
+
+/** Converte os pacotes da cotação nos volumes da etiqueta, sem recalcular medidas. */
+export function volumesFromQuotedPackages(packages: readonly ShippingVolume[]): ShippingVolume[] {
+  return packages.map(({ heightInCm, widthInCm, lengthInCm, weightInKg }) => ({
+    heightInCm,
+    widthInCm,
+    lengthInCm,
+    weightInKg,
+  }));
 }
 
 export function buildOriginAddress(store: ShipmentOriginStore, sellerType: "INDIVIDUAL" | "COMPANY"): ShippingAddress {

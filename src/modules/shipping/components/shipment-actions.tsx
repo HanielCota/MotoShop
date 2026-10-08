@@ -75,7 +75,7 @@ export function ShipmentActions({
               type="submit"
               variant="outline"
               size="sm"
-             
+
               disabled={hasShipment || purchasePending}
             >
               {purchasePending ? "Comprando..." : hasShipment ? "Frete comprado" : "Comprar frete"}
@@ -101,7 +101,7 @@ export function ShipmentActions({
               type="submit"
               variant="ghost"
               size="sm"
-             
+
               disabled={trackingPending}
             >
               {trackingPending ? "Atualizando..." : "Atualizar rastreio"}

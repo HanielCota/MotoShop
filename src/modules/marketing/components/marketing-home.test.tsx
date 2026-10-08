@@ -115,7 +115,7 @@ describe("marketing homepage", () => {
     fireEvent.pointerDown(previousYear, { pointerType: "mouse" });
     fireEvent.click(previousYear);
     fireEvent.click(screen.getByRole("button", { name: "Buscar produto" }));
-    fireEvent.click(screen.getByRole("button", { name: "Comprar por moto" }));
+    fireEvent.click(screen.getByRole("button", { name: "Peças por moto" }));
     expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveTextContent("2024 · R · 250 cc");
     fireEvent.click(screen.getByRole("button", { name: "Ver peças" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/products?moto=honda-2024"));

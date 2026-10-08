@@ -9,7 +9,15 @@ import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { slugify } from "@/lib/utils";
 import { ApplicationError, asApplicationError } from "@/shared/errors/application-error";
 
-const nameSchema = z.object({ name: z.string().trim().min(2).max(120) });
+// O slug público deriva do nome: um nome só com símbolos ("!!!") geraria slug vazio.
+const nameSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Informe um nome com pelo menos 2 caracteres.")
+    .max(120, "Use no máximo 120 caracteres.")
+    .refine((name) => slugify(name).length > 0, "O nome precisa conter letras ou números."),
+});
 const categorySchema = nameSchema.extend({
   parentId: z.string().cuid().optional(),
   sortOrder: z.coerce.number().int().min(0).max(100_000),
@@ -216,23 +224,28 @@ export async function createMotorcycleFitmentAction(
   }
 }
 
-export async function toggleCategoryAction(categoryId: string): Promise<void> {
+/**
+ * Sets the entry to `nextActive` (the state the admin clicked for). Repeating the same request — a
+ * double click or two admins at once — is a no-op instead of flipping the entry back.
+ */
+export async function toggleCategoryAction(categoryId: string, nextActive: boolean): Promise<void> {
   const session = await requireAdminAccess();
   await db.$transaction(async (tx) => {
     const category = await tx.category.findUnique({ where: { id: categoryId } });
     if (!category) throw missingCatalogEntry();
+    if (category.active === nextActive) return;
     const updated = await tx.category.updateMany({
-      where: { id: category.id, active: category.active },
-      data: { active: !category.active },
+      where: { id: category.id, active: !nextActive },
+      data: { active: nextActive },
     });
     if (updated.count !== 1) throw staleCatalogDecision();
     await tx.auditLog.create({
       data: {
-        action: category.active ? "CATEGORY_DEACTIVATED" : "CATEGORY_ACTIVATED",
+        action: !nextActive ? "CATEGORY_DEACTIVATED" : "CATEGORY_ACTIVATED",
         entityType: "CATEGORY",
         entityId: category.id,
         actorUserId: session.user.id,
-        metadata: { active: !category.active } as Prisma.InputJsonValue,
+        metadata: { active: nextActive } as Prisma.InputJsonValue,
       },
     });
   });
@@ -240,23 +253,28 @@ export async function toggleCategoryAction(categoryId: string): Promise<void> {
   revalidatePath("/seller/products/new");
 }
 
-export async function toggleBrandAction(brandId: string): Promise<void> {
+/**
+ * Sets the entry to `nextActive` (the state the admin clicked for). Repeating the same request — a
+ * double click or two admins at once — is a no-op instead of flipping the entry back.
+ */
+export async function toggleBrandAction(brandId: string, nextActive: boolean): Promise<void> {
   const session = await requireAdminAccess();
   await db.$transaction(async (tx) => {
     const brand = await tx.brand.findUnique({ where: { id: brandId } });
     if (!brand) throw missingCatalogEntry();
+    if (brand.active === nextActive) return;
     const updated = await tx.brand.updateMany({
-      where: { id: brand.id, active: brand.active },
-      data: { active: !brand.active },
+      where: { id: brand.id, active: !nextActive },
+      data: { active: nextActive },
     });
     if (updated.count !== 1) throw staleCatalogDecision();
     await tx.auditLog.create({
       data: {
-        action: brand.active ? "BRAND_DEACTIVATED" : "BRAND_ACTIVATED",
+        action: !nextActive ? "BRAND_DEACTIVATED" : "BRAND_ACTIVATED",
         entityType: "BRAND",
         entityId: brand.id,
         actorUserId: session.user.id,
-        metadata: { active: !brand.active } as Prisma.InputJsonValue,
+        metadata: { active: nextActive } as Prisma.InputJsonValue,
       },
     });
   });
@@ -264,23 +282,28 @@ export async function toggleBrandAction(brandId: string): Promise<void> {
   revalidatePath("/seller/products/new");
 }
 
-export async function toggleMotorcycleManufacturerAction(manufacturerId: string): Promise<void> {
+/**
+ * Sets the entry to `nextActive` (the state the admin clicked for). Repeating the same request — a
+ * double click or two admins at once — is a no-op instead of flipping the entry back.
+ */
+export async function toggleMotorcycleManufacturerAction(manufacturerId: string, nextActive: boolean): Promise<void> {
   const session = await requireAdminAccess();
   await db.$transaction(async (tx) => {
     const manufacturer = await tx.motorcycleManufacturer.findUnique({ where: { id: manufacturerId } });
     if (!manufacturer) throw missingCatalogEntry();
+    if (manufacturer.active === nextActive) return;
     const updated = await tx.motorcycleManufacturer.updateMany({
-      where: { id: manufacturer.id, active: manufacturer.active },
-      data: { active: !manufacturer.active },
+      where: { id: manufacturer.id, active: !nextActive },
+      data: { active: nextActive },
     });
     if (updated.count !== 1) throw staleCatalogDecision();
     await tx.auditLog.create({
       data: {
-        action: manufacturer.active ? "MOTORCYCLE_MANUFACTURER_DEACTIVATED" : "MOTORCYCLE_MANUFACTURER_ACTIVATED",
+        action: !nextActive ? "MOTORCYCLE_MANUFACTURER_DEACTIVATED" : "MOTORCYCLE_MANUFACTURER_ACTIVATED",
         entityType: "MOTORCYCLE_MANUFACTURER",
         entityId: manufacturer.id,
         actorUserId: session.user.id,
-        metadata: { active: !manufacturer.active } as Prisma.InputJsonValue,
+        metadata: { active: nextActive } as Prisma.InputJsonValue,
       },
     });
   });
@@ -288,23 +311,28 @@ export async function toggleMotorcycleManufacturerAction(manufacturerId: string)
   revalidatePath("/products");
 }
 
-export async function toggleMotorcycleModelAction(modelId: string): Promise<void> {
+/**
+ * Sets the entry to `nextActive` (the state the admin clicked for). Repeating the same request — a
+ * double click or two admins at once — is a no-op instead of flipping the entry back.
+ */
+export async function toggleMotorcycleModelAction(modelId: string, nextActive: boolean): Promise<void> {
   const session = await requireAdminAccess();
   await db.$transaction(async (tx) => {
     const model = await tx.motorcycleModel.findUnique({ where: { id: modelId } });
     if (!model) throw missingCatalogEntry();
+    if (model.active === nextActive) return;
     const updated = await tx.motorcycleModel.updateMany({
-      where: { id: model.id, active: model.active },
-      data: { active: !model.active },
+      where: { id: model.id, active: !nextActive },
+      data: { active: nextActive },
     });
     if (updated.count !== 1) throw staleCatalogDecision();
     await tx.auditLog.create({
       data: {
-        action: model.active ? "MOTORCYCLE_MODEL_DEACTIVATED" : "MOTORCYCLE_MODEL_ACTIVATED",
+        action: !nextActive ? "MOTORCYCLE_MODEL_DEACTIVATED" : "MOTORCYCLE_MODEL_ACTIVATED",
         entityType: "MOTORCYCLE_MODEL",
         entityId: model.id,
         actorUserId: session.user.id,
-        metadata: { active: !model.active } as Prisma.InputJsonValue,
+        metadata: { active: nextActive } as Prisma.InputJsonValue,
       },
     });
   });

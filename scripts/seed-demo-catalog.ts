@@ -214,26 +214,40 @@ async function main() {
       });
       if (
         demoStores.length !== stores.length ||
-        demoStores.some((store) =>
-          store.name !== stores.find((definition) => definition.slug === store.slug)?.name ||
-          store.seller.status !== "PENDING",
+        demoStores.some(
+          (store) =>
+            store.name !== stores.find((definition) => definition.slug === store.slug)?.name ||
+            store.seller.status !== "PENDING",
         )
       ) {
         throw new Error("Demo stores are missing or not pending; refusing to publish.");
       }
       const demoProducts = await tx.product.findMany({
         where: { slug: { in: products.map((product) => product.slug) } },
-        select: { slug: true, isDemo: true, sellerId: true, status: true, images: true, variants: { include: { inventory: true } } },
+        select: {
+          slug: true,
+          isDemo: true,
+          sellerId: true,
+          status: true,
+          images: true,
+          variants: { include: { inventory: true } },
+        },
       });
       if (
         demoProducts.length !== products.length ||
         demoProducts.some((product) => {
           const definition = products.find((entry) => entry.slug === product.slug);
           const store = demoStores.find((entry) => entry.slug === definition?.storeSlug);
-          return !definition || !store || !product.isDemo || product.sellerId !== store.sellerId ||
-            product.status !== "APPROVED" || product.images[0]?.storageKey !== definition.image ||
+          return (
+            !definition ||
+            !store ||
+            !product.isDemo ||
+            product.sellerId !== store.sellerId ||
+            product.status !== "APPROVED" ||
+            product.images[0]?.storageKey !== definition.image ||
             product.variants.length !== definition.variants.length ||
-            product.variants.some((variant) => !variant.inventory);
+            product.variants.some((variant) => !variant.inventory)
+          );
         })
       ) {
         throw new Error("Demo products are incomplete; refusing to publish.");

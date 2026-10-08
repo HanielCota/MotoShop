@@ -4,6 +4,10 @@ import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { db } from "@/lib/database";
 import { ProductStatus } from "@/generated/prisma/enums";
 
+// Rendered per request: a build-time sitemap would miss every product approved after the deploy
+// (and would make `next build` require a database).
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getApplicationBaseUrl();
   const [products, categories, brands, stores, fitments] = await Promise.all([

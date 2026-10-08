@@ -50,7 +50,10 @@ export function CatalogFiltersPanel({
         </span>
         <ChevronDown aria-hidden="true" className={cn("size-4 transition-transform", open && "rotate-180")} />
       </button>
-      <div id={panelId} className={cn("border-border border-t p-4 md:block md:border-0 md:p-0", !open && "max-md:hidden")}>
+      <div
+        id={panelId}
+        className={cn("border-border border-t p-4 md:block md:border-0 md:p-0", !open && "max-md:hidden")}
+      >
         {children}
       </div>
     </aside>

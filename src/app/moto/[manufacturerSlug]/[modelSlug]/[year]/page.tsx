@@ -6,14 +6,21 @@ import { getPublicMotorcycleByYear } from "@/modules/catalog/queries/public-cata
 import { loadPublicCatalogSearchParams } from "@/modules/catalog/search-params";
 import { listApprovedProducts } from "@/modules/products/queries/products";
 
+/** Only canonical four-digit years reach the database (`99999999999999999999` overflowed the INT column). */
+function parseMotorcycleYear(value: string) {
+  if (!/^\d{4}$/.test(value)) return null;
+  const year = Number(value);
+  return year >= 1900 && year <= 2100 ? year : null;
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ manufacturerSlug: string; modelSlug: string; year: string }>;
 }): Promise<Metadata> {
   const { manufacturerSlug, modelSlug, year: yearParam } = await params;
-  const year = Number(yearParam);
-  if (!Number.isInteger(year)) return { title: "Moto não encontrada" };
+  const year = parseMotorcycleYear(yearParam);
+  if (year === null) return { title: "Moto não encontrada" };
   const motorcycle = await getPublicMotorcycleByYear(manufacturerSlug, modelSlug, year);
   if (!motorcycle) return { title: "Moto não encontrada" };
   const title = `${motorcycle.manufacturer.name} ${motorcycle.name} ${year}`;
@@ -33,14 +40,21 @@ export default async function MotorcyclePage({
 }) {
   const { manufacturerSlug, modelSlug, year: yearParam } = await params;
   const catalogParams = await loadPublicCatalogSearchParams(searchParams);
-  const year = Number(yearParam);
-  if (!Number.isInteger(year) || year < 1900 || year > 2100) notFound();
+  const year = parseMotorcycleYear(yearParam);
+  if (year === null) notFound();
 
   const motorcycle = await getPublicMotorcycleByYear(manufacturerSlug, modelSlug, year);
   if (!motorcycle || motorcycle.fitments.length === 0) notFound();
 
   const fitmentIds = motorcycle.fitments.map((fitment) => fitment.id);
-  const result = await listApprovedProducts({ motorcycleFitmentIds: fitmentIds, sort: catalogParams.sort, availability: catalogParams.availability, promotion: catalogParams.promotion, page: catalogParams.page, pageSize: 12 });
+  const result = await listApprovedProducts({
+    motorcycleFitmentIds: fitmentIds,
+    sort: catalogParams.sort,
+    availability: catalogParams.availability,
+    promotion: catalogParams.promotion,
+    page: catalogParams.page,
+    pageSize: 12,
+  });
   const fitmentDetails = motorcycle.fitments
     .map((fitment) => `${fitment.version || "padrão"} · ${fitment.displacementCc}cc`)
     .join(", ");
