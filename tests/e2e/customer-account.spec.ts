@@ -63,7 +63,9 @@ test("cliente mantém endereço principal, notificações, favoritos e consulta 
     await expect(page.getByRole("checkbox", { name: "Usar como endereço padrão" })).not.toBeChecked();
     const addressCards = page.getByRole("region", { name: "Endereços cadastrados" }).locator("[data-slot='card']");
     await expect(addressCards).toHaveCount(1);
-    await expect(addressCards.first().getByText("Padrão", { exact: true })).toHaveCount(2);
+    // The default address shows the badge once and hides "Usar como padrão".
+    await expect(addressCards.first().getByText("Padrão", { exact: true })).toHaveCount(1);
+    await expect(addressCards.first().getByRole("button", { name: "Usar como padrão" })).toHaveCount(0);
 
     await fillAddress(page, {
       label: `Oficina ${run}`,
@@ -86,10 +88,10 @@ test("cliente mantém endereço principal, notificações, favoritos e consulta 
         async () => (await testDb.customerAddress.findFirst({ where: { userId, label: `Oficina ${run}` } }))?.isDefault,
       )
       .toBe(true);
-    await expect(secondAddress.getByText("Padrão", { exact: true })).toHaveCount(2);
+    await expect(secondAddress.getByText("Padrão", { exact: true })).toHaveCount(1);
     await secondAddress.getByRole("button", { name: "Remover" }).click();
     await expect(addressCards).toHaveCount(1);
-    await expect(addressCards.first().getByText("Padrão", { exact: true })).toHaveCount(2);
+    await expect(addressCards.first().getByText("Padrão", { exact: true })).toHaveCount(1);
     await addressCards.first().getByRole("button", { name: "Remover" }).click();
     await expect(page.getByRole("region", { name: "Endereços cadastrados" })).toHaveCount(0);
 
@@ -120,7 +122,7 @@ test("cliente mantém endereço principal, notificações, favoritos e consulta 
     await page.goto("/favorites");
     await expectNoHorizontalOverflow(page);
     await expect(page.getByRole("heading", { name: "Meus favoritos" })).toBeVisible();
-    const favoriteCard = page.locator("[data-slot='card']").filter({ hasText: product.name });
+    const favoriteCard = page.locator("[data-slot='product-card']").filter({ hasText: product.name });
     await expect(favoriteCard).toHaveCount(1);
     await favoriteCard.getByRole("button", { name: "Favoritado", exact: true }).click();
     await expect(page.getByText("Você ainda não favoritou nenhum produto.")).toBeVisible();
@@ -128,7 +130,7 @@ test("cliente mantém endereço principal, notificações, favoritos e consulta 
     await page.goto("/orders");
     await expectNoHorizontalOverflow(page);
     await expect(page.getByRole("heading", { name: "Meus pedidos" })).toBeVisible();
-    await expect(page.getByText("Você ainda não fez nenhum pedido.")).toBeVisible();
+    await expect(page.getByText(/Você ainda não fez nenhum pedido/)).toBeVisible();
   } finally {
     const user = await testDb.user.findUnique({ where: { email }, select: { id: true } });
     if (user) await testDb.user.delete({ where: { id: user.id } });
