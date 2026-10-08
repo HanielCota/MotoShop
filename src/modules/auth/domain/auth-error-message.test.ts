@@ -12,4 +12,9 @@ describe("getAuthErrorMessage", () => {
       "Não foi possível concluir a autenticação. Confira os dados e tente novamente.",
     );
   });
+
+  it("explains rate limits in Portuguese for per-IP (no code) and per-account 429s", () => {
+    expect(getAuthErrorMessage(undefined, 429)).toMatch(/Muitas tentativas/);
+    expect(getAuthErrorMessage("TOO_MANY_REQUESTS", 429)).toMatch(/Muitas tentativas/);
+  });
 });

@@ -9,7 +9,14 @@ export const metadata: Metadata = {
 
 export default function ForgotPasswordPage() {
   return (
-    <AuthPageShell title="Recuperar acesso" description="Enviaremos um link para o e-mail cadastrado no Moto Shop.">
+    <AuthPageShell
+      title="Recuperar acesso"
+      description={
+        authEmailConfigured
+          ? "Enviaremos um link para o e-mail cadastrado no Moto Shop."
+          : "A redefinição de senha por e-mail ainda não está disponível."
+      }
+    >
       {authEmailConfigured ? (
         <PasswordRecoveryForm />
       ) : (
