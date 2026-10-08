@@ -3,7 +3,7 @@ import { TicketPercent } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
-import { formatDate, formatMoneyInCents } from "@/lib/format";
+import { formatDate, formatMoneyInCents, formatCount } from "@/lib/format";
 import { setMarketplaceCouponActiveAction } from "@/modules/coupons/actions/coupon-actions";
 import { CouponForm } from "@/modules/coupons/components/coupon-form";
 import { listMarketplaceCoupons } from "@/modules/coupons/queries/coupons";
@@ -106,7 +106,7 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
           pageCount={result.pageCount}
           previousHref={pageHref(result.page - 1)}
           nextHref={pageHref(result.page + 1)}
-          summary={<>{result.total} cupom(ns)</>}
+          summary={<>{formatCount(result.total, "cupom", "cupons")}</>}
         />
       ) : null}
     </AdminCard>

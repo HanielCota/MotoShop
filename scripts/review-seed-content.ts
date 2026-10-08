@@ -1,7 +1,7 @@
 /**
  * Conteúdo fictício (catálogo, clientes, textos) do conjunto AMPLIADO de dados de revisão visual.
  * Usado por scripts/seed-review-data.ts. Nada aqui é dado real: lojas, produtos, preços, avaliações
- * e perguntas existem só para revisar as telas do O Moto Shop antes do lançamento.
+ * e perguntas existem só para revisar as telas do Moto Shop antes do lançamento.
  */
 
 /** Lojas do conjunto ampliado (as chaves "garagem" e "box77" já existem no seed original). */

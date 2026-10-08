@@ -19,6 +19,7 @@ import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { getAdminCatalogData } from "@/modules/catalog/queries/admin-catalog";
 
 import { AdminCard } from "../admin-ui";
+import { formatCount } from "@/lib/format";
 
 function CatalogColumn({ title, form, children }: { title: string; form: ReactNode; children: ReactNode }) {
   return (
@@ -104,7 +105,7 @@ export async function AdminCatalogSection() {
                 <CatalogRow
                   key={category.id}
                   label={categoryOptions.find((option) => option.id === category.id)?.label}
-                  count={`${category._count.products} produto(s)`}
+                  count={formatCount(category._count.products, "produto", "produtos")}
                   active={category.active}
                   toggle={toggleCategoryAction.bind(null, category.id, !category.active)}
                 />
@@ -121,7 +122,7 @@ export async function AdminCatalogSection() {
                 <CatalogRow
                   key={brand.id}
                   label={brand.name}
-                  count={`${brand._count.products} produto(s)`}
+                  count={formatCount(brand._count.products, "produto", "produtos")}
                   active={brand.active}
                   toggle={toggleBrandAction.bind(null, brand.id, !brand.active)}
                 />
@@ -156,7 +157,7 @@ export async function AdminCatalogSection() {
                 <CatalogRow
                   key={model.id}
                   label={`${manufacturer.name} ${model.name}`}
-                  count={`${model._count.fitments} compatibilidade(s)`}
+                  count={formatCount(model._count.fitments, "compatibilidade", "compatibilidades")}
                   active={model.active}
                   toggle={toggleMotorcycleModelAction.bind(null, model.id, !model.active)}
                 />

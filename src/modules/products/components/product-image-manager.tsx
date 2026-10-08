@@ -18,6 +18,7 @@ import {
   type ProductImageResult,
 } from "@/modules/products/actions/product-image-actions";
 import { uploadImageToImageKit } from "@/shared/storage/upload-image";
+import { formatCount } from "@/lib/format";
 
 type ProductImage = { id: string; storageKey: string; altText: string | null; url: string | null };
 
@@ -43,7 +44,9 @@ export function ProductImageManager({
     setError(undefined);
     setSuccess(undefined);
     if (images.length + files.length > 8) {
-      setError(`Você pode adicionar mais ${Math.max(0, 8 - images.length)} imagem(ns) a este produto.`);
+      setError(
+        `Você pode adicionar mais ${formatCount(Math.max(0, 8 - images.length), "imagem", "imagens")} a este produto.`,
+      );
       return;
     }
     setUploading(true);
@@ -93,7 +96,11 @@ export function ProductImageManager({
           throw attachError;
         }
       }
-      setSuccess("Imagem(ns) adicionada(s). Salve o produto e envie para aprovação quando terminar.");
+      setSuccess(
+        files.length === 1
+          ? "Imagem adicionada. Salve o produto e envie para aprovação quando terminar."
+          : "Imagens adicionadas. Salve o produto e envie para aprovação quando terminar.",
+      );
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Não foi possível enviar a imagem.");
     } finally {

@@ -2,7 +2,7 @@ import { History } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatCount } from "@/lib/format";
 
 import { adminHref } from "../../admin-href";
 import { listAuditLogsForAdmin } from "../../queries/audit-logs";
@@ -98,7 +98,7 @@ export async function AdminAuditSection({ searchParams }: AdminSectionProps) {
           pageCount={result.pageCount}
           previousHref={pageHref(result.page - 1)}
           nextHref={pageHref(result.page + 1)}
-          summary={<>{result.total} registro(s)</>}
+          summary={<>{formatCount(result.total, "registro", "registros")}</>}
         />
       ) : null}
     </AdminCard>

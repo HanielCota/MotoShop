@@ -30,7 +30,9 @@ describe("inventory reservations", () => {
   });
 
   it("rejects reservations larger than available inventory", () => {
-    expect(() => reserveInventory({ availableQuantity: 2, reservedQuantity: 0 }, 3)).toThrow("enough available");
+    expect(() => reserveInventory({ availableQuantity: 2, reservedQuantity: 0 }, 3)).toThrow(
+      "estoque disponível suficiente",
+    );
   });
 });
 

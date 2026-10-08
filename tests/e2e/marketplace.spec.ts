@@ -129,7 +129,7 @@ test("store registration → approval → product → publication → catalog �
     await staffPage.getByLabel("Senha", { exact: true }).fill(staffPassword);
     await staffPage.getByRole("button", { name: "Entrar", exact: true }).click();
     await expect(staffPage).toHaveURL(/\/seller\/orders$/);
-    await expect(staffPage.getByRole("heading", { name: "Fulfillment e envios" })).toBeVisible();
+    await expect(staffPage.getByRole("heading", { name: "Preparação e envio" })).toBeVisible();
     await staffPage.goto("/seller");
     await expect(staffPage.getByRole("heading", { name: "Equipe da loja" })).toHaveCount(0);
     await expect(staffPage.getByRole("heading", { name: "Resumo financeiro" })).toHaveCount(0);
@@ -137,7 +137,7 @@ test("store registration → approval → product → publication → catalog �
     await expect(staffPage).toHaveURL(/\/seller\?error=permission$/);
 
     await page.goto("/seller/orders");
-    await expect(page.getByRole("heading", { name: "Fulfillment e envios" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Preparação e envio" })).toBeVisible();
     await expect(page.getByText("Ainda não há pedidos para processar.")).toBeVisible();
     await page.goto("/seller/questions");
     await expect(page.getByRole("heading", { name: "Perguntas dos clientes" })).toBeVisible();
