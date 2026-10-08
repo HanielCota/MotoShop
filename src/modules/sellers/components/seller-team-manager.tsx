@@ -1,4 +1,9 @@
 "use client";
+import { FormMessage } from "@/components/ui/form-message";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+import { DesignSelect } from "@/components/ui/design-select";
 
 import { useActionState } from "react";
 
@@ -28,32 +33,21 @@ export function SellerTeamManager({ members }: { members: Member[] }) {
       <form action={formAction} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-[1fr_180px_auto] sm:items-end">
         <label className="flex flex-col gap-2 text-sm font-medium">
           E-mail de uma conta existente
-          <input
-            name="email"
-            type="email"
-            required
-            placeholder="pessoa@empresa.com"
-            className="h-10 rounded-md border px-3 text-sm"
-          />
+          <Input name="email" type="email" required placeholder="pessoa@empresa.com" />
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
           Perfil
-          <select name="role" defaultValue="CATALOG" className="h-10 rounded-md border px-3 text-sm">
+          <DesignSelect aria-label="Perfil" name="role" defaultValue="CATALOG">
             <option value="ADMIN">Administrador</option>
             <option value="CATALOG">Catálogo</option>
             <option value="ORDERS">Pedidos</option>
             <option value="FINANCE">Financeiro</option>
-          </select>
+          </DesignSelect>
         </label>
-        <button
-          type="submit"
-          disabled={pending}
-          className="bg-primary text-primary-foreground h-10 rounded-md px-3 text-sm font-semibold disabled:opacity-60"
-        >
+        <Button type="submit" disabled={pending} className="rounded-md font-semibold">
           {pending ? "Adicionando..." : "Adicionar membro"}
-        </button>
-        {state.error ? <p className="text-destructive text-sm sm:col-span-3">{state.error}</p> : null}
-        {state.success ? <p className="text-sm text-emerald-700 sm:col-span-3">{state.success}</p> : null}
+        </Button>
+        <FormMessage error={state.error ?? null} success={state.success ?? null} className="sm:col-span-3" />
       </form>
 
       <div className="divide-border divide-y">
@@ -70,16 +64,25 @@ export function SellerTeamManager({ members }: { members: Member[] }) {
             ) : (
               <div className="flex flex-wrap gap-2">
                 <form action={updateSellerMemberRoleAction.bind(null, member.id)} className="flex gap-2">
-                  <select name="role" defaultValue={member.role} className="h-9 rounded-md border px-2 text-xs">
+                  <DesignSelect
+                    aria-label={`Perfil de ${member.name || member.email}`}
+                    name="role"
+                    defaultValue={member.role}
+                    className="h-9"
+                  >
                     <option value="ADMIN">Administrador</option>
                     <option value="CATALOG">Catálogo</option>
                     <option value="ORDERS">Pedidos</option>
                     <option value="FINANCE">Financeiro</option>
-                  </select>
-                  <button className="h-9 rounded-md border px-3 text-xs font-medium">Salvar perfil</button>
+                  </DesignSelect>
+                  <Button type="submit" variant="outline" size="sm">
+                    Salvar perfil
+                  </Button>
                 </form>
                 <form action={removeSellerMemberAction.bind(null, member.id)}>
-                  <button className="text-destructive h-9 rounded-md border px-3 text-xs font-medium">Remover</button>
+                  <Button type="submit" variant="outline" size="sm" className="text-destructive">
+                    Remover
+                  </Button>
                 </form>
               </div>
             )}

@@ -1,21 +1,24 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
+import { Input } from "@/components/ui/input";
 
 import { FormEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
-import { adjustInventoryAction } from "@/modules/products/actions/product-actions";
+import { adjustInventoryAction, type ProductActionState } from "@/modules/products/actions/product-actions";
 
 export function InventoryAdjustForm({ variantId }: { variantId: string }) {
   const router = useRouter();
   const [quantityChange, setQuantityChange] = useState("");
-  const [message, setMessage] = useState<string>();
+  const [result, setResult] = useState<ProductActionState>({});
   const [pending, startTransition] = useTransition();
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     startTransition(async () => {
       const result = await adjustInventoryAction(variantId, Number(quantityChange));
-      setMessage(result.error ?? result.success);
+      setResult(result);
       if (result.success) {
         setQuantityChange("");
         router.refresh();
@@ -28,9 +31,9 @@ export function InventoryAdjustForm({ variantId }: { variantId: string }) {
       <label className="sr-only" htmlFor={`inventory-${variantId}`}>
         Ajuste de estoque
       </label>
-      <input
+      <Input
         id={`inventory-${variantId}`}
-        className="border-input bg-background h-8 w-28 rounded-md border px-2 text-xs"
+        className="h-9 w-32 text-sm"
         type="number"
         step="1"
         value={quantityChange}
@@ -38,17 +41,10 @@ export function InventoryAdjustForm({ variantId }: { variantId: string }) {
         placeholder="+/- quantidade"
         required
       />
-      <button
-        className="border-border hover:bg-muted h-8 rounded-md border px-2 text-xs font-medium disabled:opacity-50"
-        disabled={pending}
-      >
+      <Button type="submit" variant="outline" size="sm" disabled={pending}>
         {pending ? "..." : "Ajustar"}
-      </button>
-      {message ? (
-        <span className="text-muted-foreground text-xs" role="status">
-          {message}
-        </span>
-      ) : null}
+      </Button>
+      <FormMessage error={result.error ?? null} success={result.success ?? null} className="basis-full p-2 text-xs" />
     </form>
   );
 }

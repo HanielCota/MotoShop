@@ -7,9 +7,17 @@ import { z } from "zod";
 import { db } from "@/lib/database";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { slugify } from "@/lib/utils";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError, asApplicationError } from "@/shared/errors/application-error";
 
-const nameSchema = z.object({ name: z.string().trim().min(2).max(120) });
+// O slug público deriva do nome: um nome só com símbolos ("!!!") geraria slug vazio.
+const nameSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Informe um nome com pelo menos 2 caracteres.")
+    .max(120, "Use no máximo 120 caracteres.")
+    .refine((name) => slugify(name).length > 0, "O nome precisa conter letras ou números."),
+});
 const categorySchema = nameSchema.extend({
   parentId: z.string().cuid().optional(),
   sortOrder: z.coerce.number().int().min(0).max(100_000),
@@ -50,24 +58,26 @@ export async function createCategoryAction(
       const parent = await db.category.findFirst({ where: { id: parsed.data.parentId, active: true } });
       if (!parent) return { error: "A categoria pai não está disponível." };
     }
-    const category = await db.category.create({
-      data: {
-        name: parsed.data.name,
-        slug: slugify(parsed.data.name),
-        sortOrder: parsed.data.sortOrder,
-        ...(parsed.data.parentId ? { parentId: parsed.data.parentId } : {}),
-      },
+    await db.$transaction(async (tx) => {
+      const category = await tx.category.create({
+        data: {
+          name: parsed.data.name,
+          slug: slugify(parsed.data.name),
+          sortOrder: parsed.data.sortOrder,
+          ...(parsed.data.parentId ? { parentId: parsed.data.parentId } : {}),
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          action: "CATEGORY_CREATED",
+          entityType: "CATEGORY",
+          entityId: category.id,
+          actorUserId: session.user.id,
+          metadata: { name: category.name, parentId: category.parentId } as Prisma.InputJsonValue,
+        },
+      });
     });
-    await db.auditLog.create({
-      data: {
-        action: "CATEGORY_CREATED",
-        entityType: "CATEGORY",
-        entityId: category.id,
-        actorUserId: session.user.id,
-        metadata: { name: category.name, parentId: category.parentId } as Prisma.InputJsonValue,
-      },
-    });
-    revalidatePath("/admin");
+    revalidatePath("/admin", "layout");
     revalidatePath("/seller/products/new");
     return { success: "Categoria criada." };
   } catch (error) {
@@ -84,17 +94,19 @@ export async function createBrandAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Marca inválida." };
 
   try {
-    const brand = await db.brand.create({ data: { name: parsed.data.name, slug: slugify(parsed.data.name) } });
-    await db.auditLog.create({
-      data: {
-        action: "BRAND_CREATED",
-        entityType: "BRAND",
-        entityId: brand.id,
-        actorUserId: session.user.id,
-        metadata: { name: brand.name } as Prisma.InputJsonValue,
-      },
+    await db.$transaction(async (tx) => {
+      const brand = await tx.brand.create({ data: { name: parsed.data.name, slug: slugify(parsed.data.name) } });
+      await tx.auditLog.create({
+        data: {
+          action: "BRAND_CREATED",
+          entityType: "BRAND",
+          entityId: brand.id,
+          actorUserId: session.user.id,
+          metadata: { name: brand.name } as Prisma.InputJsonValue,
+        },
+      });
     });
-    revalidatePath("/admin");
+    revalidatePath("/admin", "layout");
     revalidatePath("/seller/products/new");
     return { success: "Marca criada." };
   } catch (error) {
@@ -111,19 +123,21 @@ export async function createMotorcycleManufacturerAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Fabricante inválido." };
 
   try {
-    const manufacturer = await db.motorcycleManufacturer.create({
-      data: { name: parsed.data.name, slug: slugify(parsed.data.name) },
+    await db.$transaction(async (tx) => {
+      const manufacturer = await tx.motorcycleManufacturer.create({
+        data: { name: parsed.data.name, slug: slugify(parsed.data.name) },
+      });
+      await tx.auditLog.create({
+        data: {
+          action: "MOTORCYCLE_MANUFACTURER_CREATED",
+          entityType: "MOTORCYCLE_MANUFACTURER",
+          entityId: manufacturer.id,
+          actorUserId: session.user.id,
+          metadata: { name: manufacturer.name } as Prisma.InputJsonValue,
+        },
+      });
     });
-    await db.auditLog.create({
-      data: {
-        action: "MOTORCYCLE_MANUFACTURER_CREATED",
-        entityType: "MOTORCYCLE_MANUFACTURER",
-        entityId: manufacturer.id,
-        actorUserId: session.user.id,
-        metadata: { name: manufacturer.name } as Prisma.InputJsonValue,
-      },
-    });
-    revalidatePath("/admin");
+    revalidatePath("/admin", "layout");
     return { success: "Fabricante criado." };
   } catch (error) {
     return { error: duplicateMessage(error, "Já existe um fabricante com este nome ou slug.") };
@@ -146,23 +160,25 @@ export async function createMotorcycleModelAction(
       where: { id: parsed.data.manufacturerId, active: true },
     });
     if (!manufacturer) return { error: "O fabricante não está disponível." };
-    const model = await db.motorcycleModel.create({
-      data: {
-        name: parsed.data.name,
-        slug: slugify(parsed.data.name),
-        manufacturerId: parsed.data.manufacturerId,
-      },
+    await db.$transaction(async (tx) => {
+      const model = await tx.motorcycleModel.create({
+        data: {
+          name: parsed.data.name,
+          slug: slugify(parsed.data.name),
+          manufacturerId: parsed.data.manufacturerId,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          action: "MOTORCYCLE_MODEL_CREATED",
+          entityType: "MOTORCYCLE_MODEL",
+          entityId: model.id,
+          actorUserId: session.user.id,
+          metadata: { name: model.name, manufacturerId: model.manufacturerId } as Prisma.InputJsonValue,
+        },
+      });
     });
-    await db.auditLog.create({
-      data: {
-        action: "MOTORCYCLE_MODEL_CREATED",
-        entityType: "MOTORCYCLE_MODEL",
-        entityId: model.id,
-        actorUserId: session.user.id,
-        metadata: { name: model.name, manufacturerId: model.manufacturerId } as Prisma.InputJsonValue,
-      },
-    });
-    revalidatePath("/admin");
+    revalidatePath("/admin", "layout");
     return { success: "Modelo criado." };
   } catch (error) {
     return { error: duplicateMessage(error, "Já existe este modelo para o fabricante selecionado.") };
@@ -187,17 +203,19 @@ export async function createMotorcycleFitmentAction(
       where: { id: parsed.data.motorcycleModelId, active: true, manufacturer: { active: true } },
     });
     if (!model) return { error: "O modelo não está disponível." };
-    const fitment = await db.motorcycleFitment.create({ data: parsed.data });
-    await db.auditLog.create({
-      data: {
-        action: "MOTORCYCLE_FITMENT_CREATED",
-        entityType: "MOTORCYCLE_FITMENT",
-        entityId: fitment.id,
-        actorUserId: session.user.id,
-        metadata: parsed.data as Prisma.InputJsonValue,
-      },
+    await db.$transaction(async (tx) => {
+      const fitment = await tx.motorcycleFitment.create({ data: parsed.data });
+      await tx.auditLog.create({
+        data: {
+          action: "MOTORCYCLE_FITMENT_CREATED",
+          entityType: "MOTORCYCLE_FITMENT",
+          entityId: fitment.id,
+          actorUserId: session.user.id,
+          metadata: parsed.data as Prisma.InputJsonValue,
+        },
+      });
     });
-    revalidatePath("/admin");
+    revalidatePath("/admin", "layout");
     revalidatePath("/products");
     revalidatePath("/seller/products/new");
     return { success: "Fitment criado." };
@@ -206,74 +224,134 @@ export async function createMotorcycleFitmentAction(
   }
 }
 
-export async function toggleCategoryAction(categoryId: string): Promise<void> {
+/**
+ * Sets the entry to `nextActive` (the state the admin clicked for). Repeating the same request — a
+ * double click or two admins at once — is a no-op instead of flipping the entry back.
+ */
+export async function toggleCategoryAction(categoryId: string, nextActive: boolean): Promise<void> {
   const session = await requireAdminAccess();
-  const category = await db.category.findUnique({ where: { id: categoryId } });
-  if (!category) return;
-  await db.category.update({ where: { id: category.id }, data: { active: !category.active } });
-  await db.auditLog.create({
-    data: {
-      action: category.active ? "CATEGORY_DEACTIVATED" : "CATEGORY_ACTIVATED",
-      entityType: "CATEGORY",
-      entityId: category.id,
-      actorUserId: session.user.id,
-      metadata: { active: !category.active } as Prisma.InputJsonValue,
-    },
+  await db.$transaction(async (tx) => {
+    const category = await tx.category.findUnique({ where: { id: categoryId } });
+    if (!category) throw missingCatalogEntry();
+    if (category.active === nextActive) return;
+    const updated = await tx.category.updateMany({
+      where: { id: category.id, active: !nextActive },
+      data: { active: nextActive },
+    });
+    if (updated.count !== 1) throw staleCatalogDecision();
+    await tx.auditLog.create({
+      data: {
+        action: !nextActive ? "CATEGORY_DEACTIVATED" : "CATEGORY_ACTIVATED",
+        entityType: "CATEGORY",
+        entityId: category.id,
+        actorUserId: session.user.id,
+        metadata: { active: nextActive } as Prisma.InputJsonValue,
+      },
+    });
   });
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   revalidatePath("/seller/products/new");
 }
 
-export async function toggleBrandAction(brandId: string): Promise<void> {
+/**
+ * Sets the entry to `nextActive` (the state the admin clicked for). Repeating the same request — a
+ * double click or two admins at once — is a no-op instead of flipping the entry back.
+ */
+export async function toggleBrandAction(brandId: string, nextActive: boolean): Promise<void> {
   const session = await requireAdminAccess();
-  const brand = await db.brand.findUnique({ where: { id: brandId } });
-  if (!brand) return;
-  await db.brand.update({ where: { id: brand.id }, data: { active: !brand.active } });
-  await db.auditLog.create({
-    data: {
-      action: brand.active ? "BRAND_DEACTIVATED" : "BRAND_ACTIVATED",
-      entityType: "BRAND",
-      entityId: brand.id,
-      actorUserId: session.user.id,
-      metadata: { active: !brand.active } as Prisma.InputJsonValue,
-    },
+  await db.$transaction(async (tx) => {
+    const brand = await tx.brand.findUnique({ where: { id: brandId } });
+    if (!brand) throw missingCatalogEntry();
+    if (brand.active === nextActive) return;
+    const updated = await tx.brand.updateMany({
+      where: { id: brand.id, active: !nextActive },
+      data: { active: nextActive },
+    });
+    if (updated.count !== 1) throw staleCatalogDecision();
+    await tx.auditLog.create({
+      data: {
+        action: !nextActive ? "BRAND_DEACTIVATED" : "BRAND_ACTIVATED",
+        entityType: "BRAND",
+        entityId: brand.id,
+        actorUserId: session.user.id,
+        metadata: { active: nextActive } as Prisma.InputJsonValue,
+      },
+    });
   });
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   revalidatePath("/seller/products/new");
 }
 
-export async function toggleMotorcycleManufacturerAction(manufacturerId: string): Promise<void> {
+/**
+ * Sets the entry to `nextActive` (the state the admin clicked for). Repeating the same request — a
+ * double click or two admins at once — is a no-op instead of flipping the entry back.
+ */
+export async function toggleMotorcycleManufacturerAction(manufacturerId: string, nextActive: boolean): Promise<void> {
   const session = await requireAdminAccess();
-  const manufacturer = await db.motorcycleManufacturer.findUnique({ where: { id: manufacturerId } });
-  if (!manufacturer) return;
-  await db.motorcycleManufacturer.update({ where: { id: manufacturer.id }, data: { active: !manufacturer.active } });
-  await db.auditLog.create({
-    data: {
-      action: manufacturer.active ? "MOTORCYCLE_MANUFACTURER_DEACTIVATED" : "MOTORCYCLE_MANUFACTURER_ACTIVATED",
-      entityType: "MOTORCYCLE_MANUFACTURER",
-      entityId: manufacturer.id,
-      actorUserId: session.user.id,
-      metadata: { active: !manufacturer.active } as Prisma.InputJsonValue,
-    },
+  await db.$transaction(async (tx) => {
+    const manufacturer = await tx.motorcycleManufacturer.findUnique({ where: { id: manufacturerId } });
+    if (!manufacturer) throw missingCatalogEntry();
+    if (manufacturer.active === nextActive) return;
+    const updated = await tx.motorcycleManufacturer.updateMany({
+      where: { id: manufacturer.id, active: !nextActive },
+      data: { active: nextActive },
+    });
+    if (updated.count !== 1) throw staleCatalogDecision();
+    await tx.auditLog.create({
+      data: {
+        action: !nextActive ? "MOTORCYCLE_MANUFACTURER_DEACTIVATED" : "MOTORCYCLE_MANUFACTURER_ACTIVATED",
+        entityType: "MOTORCYCLE_MANUFACTURER",
+        entityId: manufacturer.id,
+        actorUserId: session.user.id,
+        metadata: { active: nextActive } as Prisma.InputJsonValue,
+      },
+    });
   });
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   revalidatePath("/products");
 }
 
-export async function toggleMotorcycleModelAction(modelId: string): Promise<void> {
+/**
+ * Sets the entry to `nextActive` (the state the admin clicked for). Repeating the same request — a
+ * double click or two admins at once — is a no-op instead of flipping the entry back.
+ */
+export async function toggleMotorcycleModelAction(modelId: string, nextActive: boolean): Promise<void> {
   const session = await requireAdminAccess();
-  const model = await db.motorcycleModel.findUnique({ where: { id: modelId } });
-  if (!model) return;
-  await db.motorcycleModel.update({ where: { id: model.id }, data: { active: !model.active } });
-  await db.auditLog.create({
-    data: {
-      action: model.active ? "MOTORCYCLE_MODEL_DEACTIVATED" : "MOTORCYCLE_MODEL_ACTIVATED",
-      entityType: "MOTORCYCLE_MODEL",
-      entityId: model.id,
-      actorUserId: session.user.id,
-      metadata: { active: !model.active } as Prisma.InputJsonValue,
-    },
+  await db.$transaction(async (tx) => {
+    const model = await tx.motorcycleModel.findUnique({ where: { id: modelId } });
+    if (!model) throw missingCatalogEntry();
+    if (model.active === nextActive) return;
+    const updated = await tx.motorcycleModel.updateMany({
+      where: { id: model.id, active: !nextActive },
+      data: { active: nextActive },
+    });
+    if (updated.count !== 1) throw staleCatalogDecision();
+    await tx.auditLog.create({
+      data: {
+        action: !nextActive ? "MOTORCYCLE_MODEL_DEACTIVATED" : "MOTORCYCLE_MODEL_ACTIVATED",
+        entityType: "MOTORCYCLE_MODEL",
+        entityId: model.id,
+        actorUserId: session.user.id,
+        metadata: { active: nextActive } as Prisma.InputJsonValue,
+      },
+    });
   });
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   revalidatePath("/products");
+}
+
+function staleCatalogDecision() {
+  return new ApplicationError({
+    code: "CONFLICT",
+    message: "Este cadastro mudou enquanto você o editava. Atualize a página e tente novamente.",
+    statusCode: 409,
+  });
+}
+
+function missingCatalogEntry() {
+  return new ApplicationError({
+    code: "NOT_FOUND",
+    message: "Este cadastro não foi encontrado. Atualize a página e tente novamente.",
+    statusCode: 404,
+  });
 }

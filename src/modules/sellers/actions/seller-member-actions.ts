@@ -13,6 +13,7 @@ const addMemberSchema = z.object({
   role: z.enum(["ADMIN", "CATALOG", "ORDERS", "FINANCE"]),
 });
 
+const memberIdSchema = z.string().cuid();
 const updateRoleSchema = z.object({
   role: z.enum(["ADMIN", "CATALOG", "ORDERS", "FINANCE"]),
 });
@@ -28,27 +29,40 @@ export async function addSellerMemberAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os dados do membro." };
 
   try {
-    const user = await db.user.findUnique({ where: { email: parsed.data.email } });
-    if (!user) return { error: "O usuário precisa criar uma conta na Moto Shop antes de ser adicionado." };
-    if (user.id === context.session.user.id) return { error: "O responsável atual já faz parte da equipe." };
+    const result = await db.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { email: parsed.data.email } });
+      if (!user) return { error: "O usuário precisa criar uma conta no Moto Shop antes de ser adicionado." };
+      if (user.id === context.session.user.id) return { error: "O responsável atual já faz parte da equipe." };
+      // TODO(convite): adicionar membros sem consentimento não é o fluxo final. Substituir por um
+      // convite: criar SellerMemberInvite (sellerId, email, role, tokenHash, expiresAt, status),
+      // enviar e-mail com link de aceite, criar o SellerMember apenas quando o usuário convidado
+      // (logado com o mesmo e-mail verificado) aceitar, e permitir revogar/expirar convites.
+      // Até lá, exigimos pelo menos que o e-mail do usuário de destino esteja verificado.
+      if (!user.emailVerified) {
+        return { error: "O usuário precisa confirmar o e-mail da conta no Moto Shop antes de ser adicionado." };
+      }
 
-    const existingMembership = await db.sellerMember.findFirst({ where: { userId: user.id } });
-    if (existingMembership) return { error: "Este usuário já está vinculado a uma loja." };
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${user.id} FOR UPDATE`;
+      const existingMembership = await tx.sellerMember.findFirst({ where: { userId: user.id } });
+      if (existingMembership) return { error: "Este usuário já está vinculado a uma loja." };
 
-    const member = await db.sellerMember.create({
-      data: { sellerId: context.seller.id, userId: user.id, role: parsed.data.role },
+      const member = await tx.sellerMember.create({
+        data: { sellerId: context.seller.id, userId: user.id, role: parsed.data.role },
+      });
+      await tx.auditLog.create({
+        data: {
+          action: "SELLER_MEMBER_ADDED",
+          entityType: "SELLER_MEMBER",
+          entityId: member.id,
+          actorUserId: context.session.user.id,
+          metadata: { sellerId: context.seller.id, userId: user.id, role: parsed.data.role } as Prisma.InputJsonValue,
+        },
+      });
+      return { success: `${user.email} foi adicionado à equipe.` };
     });
-    await db.auditLog.create({
-      data: {
-        action: "SELLER_MEMBER_ADDED",
-        entityType: "SELLER_MEMBER",
-        entityId: member.id,
-        actorUserId: context.session.user.id,
-        metadata: { sellerId: context.seller.id, userId: user.id, role: parsed.data.role } as Prisma.InputJsonValue,
-      },
-    });
-    revalidatePath("/seller");
-    return { success: `${user.email} foi adicionado à equipe.` };
+    if ("error" in result) return result;
+    revalidatePath("/seller", "layout");
+    return result;
   } catch (error) {
     return { error: asApplicationError(error).message };
   }
@@ -57,32 +71,38 @@ export async function addSellerMemberAction(
 export async function updateSellerMemberRoleAction(memberId: string, formData: FormData): Promise<void> {
   const context = await requireSellerAccess("SELLER_MANAGE");
   const parsed = updateRoleSchema.safeParse({ role: formData.get("role") });
-  if (!parsed.success) return;
+  const parsedMemberId = memberIdSchema.safeParse(memberId);
+  if (!parsed.success || !parsedMemberId.success) return;
+  memberId = parsedMemberId.data;
 
   try {
-    const member = await db.sellerMember.findFirst({
-      where: { id: memberId, sellerId: context.seller.id },
-      include: { user: true },
-    });
-    if (!member) return;
-    if (member.role === "OWNER") return;
+    const updated = await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "seller_members" WHERE id = ${memberId} AND "sellerId" = ${context.seller.id} FOR UPDATE`;
+      const member = await tx.sellerMember.findFirst({ where: { id: memberId, sellerId: context.seller.id } });
+      if (!member || member.role === "OWNER") return false;
 
-    await db.sellerMember.update({ where: { id: member.id }, data: { role: parsed.data.role } });
-    await db.auditLog.create({
-      data: {
-        action: "SELLER_MEMBER_ROLE_UPDATED",
-        entityType: "SELLER_MEMBER",
-        entityId: member.id,
-        actorUserId: context.session.user.id,
-        metadata: {
-          sellerId: context.seller.id,
-          userId: member.userId,
-          previousRole: member.role,
-          nextRole: parsed.data.role,
-        } as Prisma.InputJsonValue,
-      },
+      const result = await tx.sellerMember.updateMany({
+        where: { id: member.id, sellerId: context.seller.id, role: member.role },
+        data: { role: parsed.data.role },
+      });
+      if (result.count !== 1) return false;
+      await tx.auditLog.create({
+        data: {
+          action: "SELLER_MEMBER_ROLE_UPDATED",
+          entityType: "SELLER_MEMBER",
+          entityId: member.id,
+          actorUserId: context.session.user.id,
+          metadata: {
+            sellerId: context.seller.id,
+            userId: member.userId,
+            previousRole: member.role,
+            nextRole: parsed.data.role,
+          } as Prisma.InputJsonValue,
+        },
+      });
+      return true;
     });
-    revalidatePath("/seller");
+    if (updated) revalidatePath("/seller", "layout");
   } catch (error) {
     throw asApplicationError(error);
   }
@@ -90,26 +110,32 @@ export async function updateSellerMemberRoleAction(memberId: string, formData: F
 
 export async function removeSellerMemberAction(memberId: string): Promise<void> {
   const context = await requireSellerAccess("SELLER_MANAGE");
+  const parsedMemberId = memberIdSchema.safeParse(memberId);
+  if (!parsedMemberId.success) return;
+  memberId = parsedMemberId.data;
 
   try {
-    const member = await db.sellerMember.findFirst({
-      where: { id: memberId, sellerId: context.seller.id },
-      include: { user: true },
-    });
-    if (!member) return;
-    if (member.role === "OWNER") return;
+    const removed = await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "seller_members" WHERE id = ${memberId} AND "sellerId" = ${context.seller.id} FOR UPDATE`;
+      const member = await tx.sellerMember.findFirst({ where: { id: memberId, sellerId: context.seller.id } });
+      if (!member || member.role === "OWNER") return false;
 
-    await db.sellerMember.delete({ where: { id: member.id } });
-    await db.auditLog.create({
-      data: {
-        action: "SELLER_MEMBER_REMOVED",
-        entityType: "SELLER_MEMBER",
-        entityId: member.id,
-        actorUserId: context.session.user.id,
-        metadata: { sellerId: context.seller.id, userId: member.userId, role: member.role } as Prisma.InputJsonValue,
-      },
+      const result = await tx.sellerMember.deleteMany({
+        where: { id: member.id, sellerId: context.seller.id, role: member.role },
+      });
+      if (result.count !== 1) return false;
+      await tx.auditLog.create({
+        data: {
+          action: "SELLER_MEMBER_REMOVED",
+          entityType: "SELLER_MEMBER",
+          entityId: member.id,
+          actorUserId: context.session.user.id,
+          metadata: { sellerId: context.seller.id, userId: member.userId, role: member.role } as Prisma.InputJsonValue,
+        },
+      });
+      return true;
     });
-    revalidatePath("/seller");
+    if (removed) revalidatePath("/seller", "layout");
   } catch (error) {
     throw asApplicationError(error);
   }

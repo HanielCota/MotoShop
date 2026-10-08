@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+
+export const metadata: Metadata = {
+  title: "Pedido recebido",
+  robots: { index: false, follow: false },
+};
 
 export default async function CheckoutSuccessPage({
   searchParams,
@@ -9,23 +15,30 @@ export default async function CheckoutSuccessPage({
   searchParams: Promise<{ orderNumber?: string; accessToken?: string }>;
 }) {
   const params = await searchParams;
+  const orderNumber = params.orderNumber?.trim();
   return (
     <main className="mx-auto flex w-full max-w-2xl px-4 py-16 sm:px-6">
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Pedido criado</CardTitle>
+          <h1 className="text-xl leading-snug font-medium">
+            {orderNumber ? "Acompanhe seu pedido" : "Não foi possível identificar o pedido"}
+          </h1>
           <CardDescription>
-            O pagamento será confirmado pelo servidor e o pedido seguirá para processamento.
+            {orderNumber
+              ? "Consulte o status atualizado na página do pedido. A confirmação do pagamento é feita pelo servidor."
+              : "Não encontramos o número do pedido nesta página. Se você concluiu o checkout, confira seus pedidos ou entre em contato com o Moto Shop."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p>
-            Pedido: <strong>{params.orderNumber ?? "não informado"}</strong>
-          </p>
-          {params.orderNumber ? (
+          {orderNumber ? (
+            <p>
+              Pedido: <strong>{orderNumber}</strong>
+            </p>
+          ) : null}
+          {orderNumber ? (
             <Link
               className={buttonVariants({ variant: "outline" })}
-              href={`/orders/${encodeURIComponent(params.orderNumber)}${params.accessToken ? `?accessToken=${encodeURIComponent(params.accessToken)}` : ""}`}
+              href={`/orders/${encodeURIComponent(orderNumber)}${params.accessToken ? `?accessToken=${encodeURIComponent(params.accessToken)}` : ""}`}
             >
               Ver pagamento e acompanhar pedido
             </Link>

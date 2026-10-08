@@ -1,0 +1,63 @@
+name: Decisão de produto
+description: Registrar uma decisão de negócio ou de produto que precisa do responsável.
+title: "[Decisão] "
+labels: ["decisão"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use este formulário quando uma regra não está definida no AGENTS.md nem no código (AGENTS.md §61).
+        Depois de decidida, a regra deve ser registrada no AGENTS.md.
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexto
+      description: Qual problema ou situação exige a decisão? Em qual tela ou fluxo?
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Opções
+      description: Alternativas consideradas, com prós e contras.
+      placeholder: |
+        A) ...
+        B) ...
+    validations:
+      required: true
+  - type: textarea
+    id: recommendation
+    attributes:
+      label: Recomendação
+      description: Qual opção você sugere e por quê (preferir a mais simples e reversível).
+    validations:
+      required: true
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: Impacto
+      description: Marque o que a decisão afeta (AGENTS.md §59).
+      options:
+        - label: Multi-seller / SellerOrder
+        - label: Comissão, pagamento ou valores financeiros
+        - label: Estoque
+        - label: Frete
+        - label: Permissões ou isolamento entre sellers
+        - label: Cliente convidado (guest)
+        - label: Schema do banco (migration)
+  - type: textarea
+    id: impact-details
+    attributes:
+      label: Detalhes do impacto
+    validations:
+      required: false
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Prioridade
+      options:
+        - Alta — bloqueia o lançamento ou uma entrega
+        - Média
+        - Baixa
+    validations:
+      required: true

@@ -1,7 +1,16 @@
 "use client";
+import { Button } from "@/components/ui/button";
+
+import { DesignCheckbox } from "@/components/ui/design-checkbox";
+
+import { DesignSelect } from "@/components/ui/design-select";
 
 import Link from "next/link";
 import { Bike, CheckCircle2, Plus, Star } from "lucide-react";
+
+import { buttonVariants } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { FormMessage } from "@/components/ui/form-message";
 import { useActionState, useState } from "react";
 
 import {
@@ -22,15 +31,10 @@ type SavedMotorcycle = {
 };
 
 const initialState: SavedMotorcycleActionState = {};
-const inputClassName = "border-input bg-background h-11 w-full min-w-0 rounded-md border px-3 text-sm";
+const inputClassName = "h-11";
 
 function ActionMessage({ state }: { state: SavedMotorcycleActionState }) {
-  if (!state.error && !state.success) return null;
-  return (
-    <p role="status" className={state.error ? "text-destructive text-sm" : "text-sm text-emerald-700"}>
-      {state.error ?? state.success}
-    </p>
-  );
+  return <FormMessage error={state.error ?? null} success={state.success ?? null} />;
 }
 
 function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitments: FitmentOption[] }) {
@@ -49,22 +53,22 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
   );
 
   return (
-    <article className="rounded-2xl border bg-white p-5 shadow-sm sm:p-6">
+    <article className="border-border bg-card rounded-2xl border p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start gap-4">
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-[#fff0e7] text-[#cf4c12]">
+        <div className="bg-moto-brand-surface text-brand-strong flex size-12 shrink-0 items-center justify-center rounded-xl">
           <Bike aria-hidden="true" className="size-6" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-semibold">{saved.label}</h2>
+            <h2 className="font-sans text-lg font-semibold tracking-normal">{saved.label}</h2>
             {saved.isPrimary ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#fff0e7] px-2.5 py-1 text-xs font-semibold text-[#a63a0b]">
+              <span className="bg-moto-brand-surface text-brand-strong inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold">
                 <Star aria-hidden="true" className="size-3.5" /> Principal
               </span>
             ) : null}
           </div>
           <p className="text-muted-foreground mt-1 text-sm">
-            {saved.available ? "Configuração cadastrada pela Moto Shop" : "Configuração indisponível para novas buscas"}
+            {saved.available ? "Configuração cadastrada pelo Moto Shop" : "Configuração indisponível para novas buscas"}
           </p>
         </div>
       </div>
@@ -73,38 +77,37 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
         {saved.available ? (
           <Link
             href={`/products?moto=${encodeURIComponent(saved.motorcycleFitmentId)}`}
-            className="inline-flex min-h-10 items-center rounded-md bg-[#1d1d1b] px-4 text-sm font-semibold text-white hover:bg-[#383835]"
+            className={buttonVariants({ className: "px-4 font-semibold" })}
           >
             Ver peças compatíveis
           </Link>
         ) : null}
         {!saved.isPrimary && saved.available ? (
           <form action={primaryAction}>
-            <button
-              type="submit"
-              disabled={primaryPending}
-              className="min-h-10 rounded-md border px-4 text-sm font-medium hover:bg-slate-50 disabled:opacity-60"
-            >
+            <Button type="submit" variant="outline" disabled={primaryPending} className="px-4">
               {primaryPending ? "Atualizando..." : "Definir como principal"}
-            </button>
+            </Button>
           </form>
         ) : null}
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={() => setEditing((current) => !current)}
           aria-expanded={editing}
-          className="min-h-10 rounded-md border px-4 text-sm font-medium hover:bg-slate-50"
+          className="px-4"
         >
           {editing ? "Cancelar edição" : "Editar"}
-        </button>
+        </Button>
         <form action={removeAction}>
-          <button
+          <Button
             type="submit"
+            variant="outline"
             disabled={removePending}
-            className="text-destructive min-h-10 rounded-md border px-4 text-sm font-medium hover:bg-red-50 disabled:opacity-60"
+            aria-label={`Remover ${saved.label}`}
+            className="text-destructive hover:bg-destructive/10 px-4"
           >
             {removePending ? "Removendo..." : "Remover"}
-          </button>
+          </Button>
         </form>
       </div>
 
@@ -112,7 +115,9 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
         <form action={editAction} className="mt-5 grid gap-3 border-t pt-5 sm:grid-cols-[1fr_auto] sm:items-end">
           <label className="min-w-0 space-y-2 text-sm font-medium">
             Nova configuração
-            <select
+            <DesignSelect
+              key={`${saved.id}-${saved.available}-${saved.motorcycleFitmentId}`}
+              aria-label="Nova configuração"
               className={inputClassName}
               name="motorcycleFitmentId"
               defaultValue={saved.available ? saved.motorcycleFitmentId : ""}
@@ -124,15 +129,11 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
                   {fitment.label}
                 </option>
               ))}
-            </select>
+            </DesignSelect>
           </label>
-          <button
-            type="submit"
-            disabled={editPending}
-            className="bg-primary text-primary-foreground min-h-11 rounded-md px-5 text-sm font-semibold disabled:opacity-60"
-          >
+          <Button size="lg" type="submit" disabled={editPending} className="min-h-11 rounded-md px-5 font-semibold">
             {editPending ? "Salvando..." : "Salvar alteração"}
-          </button>
+          </Button>
           <ActionMessage state={editState} />
         </form>
       ) : null}
@@ -159,20 +160,23 @@ export function MotorcycleGarage({
         {savedMotorcycles.length ? (
           savedMotorcycles.map((saved) => <SavedMotorcycleCard key={saved.id} saved={saved} fitments={fitments} />)
         ) : (
-          <div className="rounded-2xl border border-dashed bg-white px-6 py-10 text-center">
-            <Bike aria-hidden="true" className="mx-auto size-10 text-[#cf4c12]" />
-            <h2 className="mt-4 text-lg font-semibold">Sua garagem está vazia</h2>
-            <p className="text-muted-foreground mx-auto mt-2 max-w-sm text-sm">
-              Salve sua moto para voltar às peças com compatibilidade cadastrada sempre que quiser.
-            </p>
-          </div>
+          <EmptyState
+            icon={Bike}
+            title="Sua garagem está vazia"
+            description="Salve sua moto para voltar às peças com compatibilidade cadastrada sempre que quiser."
+          />
         )}
       </section>
 
-      <section className="rounded-2xl border bg-white p-5 shadow-sm sm:p-6" aria-label="Adicionar moto">
-        <div className="flex items-center gap-2 text-[#bd4814]">
-          <Plus aria-hidden="true" className="size-5" />
-          <h2 className="text-lg font-semibold text-slate-900">Adicionar moto</h2>
+      <section
+        className="border-border bg-card rounded-2xl border p-5 shadow-sm sm:p-6"
+        aria-labelledby="add-motorcycle-title"
+      >
+        <div className="flex items-center gap-2">
+          <Plus aria-hidden="true" className="text-brand-strong size-5" />
+          <h2 id="add-motorcycle-title" className="text-foreground text-lg font-semibold">
+            Adicionar moto
+          </h2>
         </div>
         <p className="text-muted-foreground mt-2 text-sm">
           Escolha uma configuração da base oficial. A primeira moto salva vira a principal.
@@ -180,27 +184,34 @@ export function MotorcycleGarage({
         <form action={formAction} className="mt-5 space-y-4">
           <label className="block space-y-2 text-sm font-medium">
             Fabricante, modelo, versão e ano
-            <select className={inputClassName} name="motorcycleFitmentId" defaultValue="" required>
+            <DesignSelect
+              aria-label="Fabricante, modelo, versão e ano"
+              className={inputClassName}
+              name="motorcycleFitmentId"
+              defaultValue=""
+              required
+            >
               <option value="">Selecione sua moto</option>
               {fitments.map((fitment) => (
                 <option key={fitment.id} value={fitment.id}>
                   {fitment.label}
                 </option>
               ))}
-            </select>
+            </DesignSelect>
           </label>
           <label className="flex items-start gap-2 text-sm">
-            <input className="mt-1" type="checkbox" name="makePrimary" />
+            <DesignCheckbox className="mt-1" name="makePrimary" />
             Definir como minha moto principal
           </label>
-          <button
+          <Button
+            size="lg"
             type="submit"
             disabled={pending || fitments.length === 0}
-            className="bg-primary text-primary-foreground flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold disabled:opacity-60"
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-4 font-semibold"
           >
             <CheckCircle2 aria-hidden="true" className="size-4" />
             {pending ? "Salvando..." : "Salvar moto"}
-          </button>
+          </Button>
           {fitments.length === 0 ? (
             <p className="text-muted-foreground text-sm">A base de motos ainda não tem configurações disponíveis.</p>
           ) : null}

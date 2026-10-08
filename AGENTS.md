@@ -1,6 +1,6 @@
-# AGENTS.md — MotoShop
+# AGENTS.md — O Moto Shop
 
-> Este arquivo é a fonte principal de contexto técnico e de produto do MotoShop.
+> Este arquivo é a fonte principal de contexto técnico e de produto do Moto Shop.
 > Antes de criar, alterar, refatorar ou remover qualquer funcionalidade, leia este documento por completo.
 > Em caso de conflito entre uma sugestão técnica genérica e este documento, este documento tem prioridade, salvo instrução explícita do responsável pelo projeto.
 
@@ -8,11 +8,11 @@
 
 # 1. Visão do produto
 
-**MotoShop** é um marketplace vertical focado exclusivamente no ecossistema de motocross.
+**O Moto Shop** é um marketplace vertical focado exclusivamente no ecossistema de motocross.
 
 O produto nasce como **marketplace multi-lojista**, não como e-commerce de loja única.
 
-O MotoShop terá três experiências principais:
+O Moto Shop terá três experiências principais:
 
 1. **Marketplace / Storefront**
    - Navegação pública.
@@ -41,7 +41,7 @@ O MotoShop terá três experiências principais:
    - Perfil da loja.
    - Gestão de usuários e permissões.
 
-3. **Admin MotoShop**
+3. **Admin do Moto Shop**
    - Aprovação de lojistas.
    - Aprovação de produtos.
    - Gestão de categorias.
@@ -79,7 +79,7 @@ Não otimizar antecipadamente para milhões de usuários.
 
 # 3. Stack oficial
 
-A stack principal do MotoShop é:
+A stack principal do Moto Shop é:
 
 ## Aplicação
 
@@ -127,7 +127,7 @@ Nunca usar Redis como fonte da verdade para:
 
 Usar autenticação centralizada e sessões seguras.
 
-A autorização de negócio deve continuar pertencendo ao MotoShop.
+A autorização de negócio deve continuar pertencendo ao Moto Shop.
 
 Não espalhar verificações como:
 
@@ -146,7 +146,7 @@ Centralizar permissões.
 - **Tailwind CSS**
 - **shadcn/ui**
 - **Lucide**
-- componentes próprios do MotoShop
+- componentes próprios do Moto Shop
 
 Não adicionar outra biblioteca visual pesada sem necessidade.
 
@@ -258,26 +258,20 @@ Não executar processos longos dentro de uma request HTTP.
 
 ## Storage
 
-- **Cloudflare R2**
-- SDK compatível com S3.
+- **ImageKit Forever Free** para imagens de produto e identidade da loja. Decisão do responsável: não ativar R2 nem plano com cobrança de excedentes.
 
-Usar preferencialmente:
-
-- `@aws-sdk/client-s3`
-- `@aws-sdk/s3-request-presigner`
-
-Uploads devem, quando possível, ser feitos diretamente do cliente para o R2 através de URL assinada.
+Uploads devem, quando possível, ser feitos diretamente do cliente com autenticação temporária gerada no servidor. Após o upload, o servidor deve confirmar caminho, tipo e tamanho do asset antes de associá-lo ao produto ou à loja.
 
 Evitar:
 
 ```text
-Browser -> Next.js -> arquivo grande -> R2
+Browser -> Next.js -> arquivo grande -> ImageKit
 ```
 
 Preferir:
 
 ```text
-Browser -> Signed URL -> R2
+Browser -> autenticação temporária -> ImageKit
 ```
 
 ---
@@ -312,7 +306,7 @@ Gateway inicial:
 
 - **Mercado Pago**
 
-O checkout deve permanecer dentro do MotoShop.
+O checkout deve permanecer dentro do Moto Shop.
 
 Nunca redirecionar o cliente para uma experiência externa do Mercado Pago se houver alternativa compatível com o requisito de Checkout Transparente.
 
@@ -417,7 +411,7 @@ Prioridade alta para testes de:
 
 # 4. Arquitetura obrigatória
 
-O MotoShop é um **monólito modular**.
+O Moto Shop é um **monólito modular**.
 
 Organizar código por domínio, não apenas por tipo técnico.
 
@@ -517,7 +511,7 @@ Regra de negócio fica na camada de aplicação/domínio.
 
 # 6. Domínio multi-lojista
 
-O MotoShop nasce com múltiplos sellers.
+O Moto Shop nasce com múltiplos sellers.
 
 Um carrinho pode conter produtos de vários lojistas.
 
@@ -583,7 +577,7 @@ Não assumir que todo o Order muda de estado junto.
 
 # 8. Estoque
 
-O seller controla o estoque através do MotoShop.
+O seller controla o estoque através do Moto Shop.
 
 O sistema deve atualizar automaticamente o estoque após vendas e ajustes.
 
@@ -638,7 +632,7 @@ Produtos podem ter:
 - estoque;
 - compatibilidade com motos.
 
-Produtos novos precisam de **aprovação do MotoShop inicialmente**.
+Produtos novos precisam de **aprovação do Moto Shop inicialmente**.
 
 Fluxo sugerido:
 
@@ -660,7 +654,7 @@ Não implementar isso agora sem necessidade.
 
 # 10. Categorias e marcas
 
-Categorias e marcas são controladas pelo MotoShop.
+Categorias e marcas são controladas pelo Moto Shop.
 
 Sellers não criam categorias livremente.
 
@@ -706,7 +700,7 @@ ProductCompatibility
 MotorcycleFitment
 ```
 
-A base de motos é controlada pelo MotoShop.
+A base de motos é controlada pelo Moto Shop.
 
 Sellers podem sugerir novos modelos, mas não criar livremente.
 
@@ -802,7 +796,7 @@ Cálculos financeiros devem ter testes.
 
 # 15. Comissão
 
-O MotoShop monetiza através de comissão sobre vendas.
+O Moto Shop monetiza através de comissão sobre vendas.
 
 Existe uma comissão global padrão.
 
@@ -867,7 +861,7 @@ Conteúdo patrocinado deve ser identificável como patrocinado quando aplicável
 
 Gateway inicial: Mercado Pago.
 
-O cliente permanece dentro do MotoShop.
+O cliente permanece dentro do Moto Shop.
 
 O sistema precisa estar preparado para split de marketplace.
 
@@ -978,7 +972,7 @@ Existem dois tipos principais:
 
 ## Marketplace coupon
 
-Criado pelo MotoShop.
+Criado pelo Moto Shop.
 
 ## Seller coupon
 
@@ -1002,7 +996,7 @@ Nunca perder a informação de quem subsidiou o desconto.
 Pode ser financiado por:
 
 - seller;
-- MotoShop;
+- O Moto Shop;
 - ambos.
 
 Registrar valores separados.
@@ -1035,7 +1029,7 @@ Promoção deve ser validada server-side.
 
 # 24. Devoluções
 
-Cliente pode solicitar devolução dentro do MotoShop.
+Cliente pode solicitar devolução dentro do Moto Shop.
 
 Devolução pode ser por item.
 
@@ -1076,7 +1070,7 @@ Se já enviado, normalmente tratar como devolução.
 
 # 26. Disputas
 
-MotoShop faz mediação entre cliente e seller.
+O Moto Shop faz mediação entre cliente e seller.
 
 Admin deve ter dados suficientes para analisar:
 
@@ -1167,7 +1161,7 @@ Seller pode ser:
 - CPF;
 - CNPJ.
 
-Cadastro precisa de aprovação do MotoShop.
+Cadastro precisa de aprovação do Moto Shop.
 
 Status sugeridos:
 
@@ -1689,7 +1683,7 @@ Jobs:
 Inngest
 
 Storage:
-Cloudflare R2
+ImageKit Forever Free
 
 Email:
 Resend
@@ -1780,7 +1774,7 @@ Verificar:
 - exige tenant isolation?
 - precisa funcionar para guest?
 
-Essas perguntas evitam grande parte dos bugs arquiteturais do MotoShop.
+Essas perguntas evitam grande parte dos bugs arquiteturais do Moto Shop.
 
 ---
 
@@ -1816,7 +1810,7 @@ Não criar features extras por iniciativa própria.
 
 # 62. Preservar simplicidade
 
-MotoShop deve ser sofisticado no domínio, não na infraestrutura.
+O Moto Shop deve ser sofisticado no domínio, não na infraestrutura.
 
 Preferir:
 
@@ -1889,7 +1883,7 @@ Antes de considerar uma tarefa concluída:
 Se houver pouco tempo para ler este arquivo, nunca esquecer:
 
 ```text
-MotoShop = marketplace multi-seller de motocross.
+O Moto Shop = marketplace multi-seller de motocross.
 
 Stack:
 Next.js + TypeScript
@@ -1900,7 +1894,7 @@ Zod + React Hook Form
 Zustand + nuqs
 Upstash Redis
 Inngest
-Cloudflare R2
+ImageKit Forever Free
 Resend
 Mercado Pago
 Melhor Envio
@@ -1919,7 +1913,7 @@ Regras:
 - Dinheiro sempre em centavos.
 - Comissão configurável.
 - Produto novo exige aprovação inicialmente.
-- Categories/brands/motorcycles são controlados pelo MotoShop.
+- Categories/brands/motorcycles são controlados pelo Moto Shop.
 - Pagamentos e webhooks precisam ser idempotentes.
 - Next.js pode ser fullstack.
 - Jobs complexos ficam no Inngest.
@@ -1951,7 +1945,7 @@ Decisões adicionais do MVP:
 - O VIP é um sinal pequeno de ranking, depois de relevância, disponibilidade e reputação; não garante o primeiro resultado.
 - Categorias, marcas, fabricantes, modelos e fitments são governados pelo Admin; sellers apenas selecionam referências ativas.
 - A compatibilidade do produto é persistida por relacionamento estruturado e pode conter múltiplos fitments.
-- Imagens de produto usam upload direto para o R2 por URL assinada; a persistência de `ProductImage` exige ownership server-side e o R2 público é opcional via `R2_PUBLIC_URL`.
+- Imagens de produto usam upload direto para ImageKit com autenticação temporária; a persistência de `ProductImage` exige ownership e conferência do asset no servidor. A URL pública depende de `IMAGEKIT_URL_ENDPOINT`.
 - A gestão inicial da equipe adiciona apenas usuários já cadastrados; convites externos e transferência de ownership ficam fora do MVP.
 - Busca, filtros, ordenação e paginação do storefront são estado da URL e devem ser carregados, filtrados e paginados no servidor; o ranking de relevância continua considerando disponibilidade, reputação e o sinal comercial limitado do VIP.
 - Favoritos são persistidos em `Favorite`, com unicidade por usuário e produto; somente produtos aprovados podem ser salvos e a lista exige autenticação.
@@ -1962,10 +1956,10 @@ Decisões adicionais do MVP:
 - SEO público usa `generateMetadata`, canonical URLs, `sitemap.ts`, `robots.ts` e JSON-LD sanitizado; somente produtos aprovados e referências ativas entram no sitemap.
 - Vitrines públicas só podem expor sellers com status `APPROVED` ou `ACTIVE` e devem listar exclusivamente produtos `APPROVED` pertencentes ao `sellerId` da loja.
 - O perfil público da loja (`name`, `slug` e `description`) pode ser alterado apenas com `SELLER_MANAGE`, sempre validando `sellerId` no servidor e registrando `AuditLog`; dados de origem e frete continuam privados.
-- Logo e banner da loja usam chaves explícitas no `Store`, upload direto para o R2 e associação server-side com prefixo do seller; a vitrine só deriva URLs públicas dos assets associados.
+- Logo e banner da loja usam chaves explícitas no `Store`, upload direto para ImageKit e associação server-side com prefixo do seller e conferência do asset; a vitrine só deriva URLs públicas dos assets associados.
 - Cards públicos de produto podem exibir apenas a primeira `ProductImage` associada; a URL é derivada no servidor e o card sempre mantém fallback textual quando não houver imagem pública.
 - A vitrine pública agrega a nota do seller no servidor e serializa no máximo seis avaliações recentes, sempre filtradas pelo `sellerId` da loja e originadas de compras verificadas.
-- A galeria de `ProductImage` só pode ser reordenada ou removida pelo seller dono de produto `DRAFT`/`REJECTED`; a primeira posição é a capa pública e a limpeza do R2 não fica dentro de transação de banco.
+- A galeria de `ProductImage` só pode ser reordenada ou removida pelo seller dono de produto `DRAFT`/`REJECTED`; a primeira posição é a capa pública e a limpeza do ImageKit não fica dentro de transação de banco.
 - O fulfillment sincroniza o status do `SellerOrder` a partir do envio dentro de transação; depois recalcula o `Order` global, permitindo estados parciais e sem regredir cancelamentos.
 - Notificações de fulfillment são eventos do Inngest e usam `NotificationDelivery` com chave `sellerOrderId + status`; falha de enfileiramento não desfaz a mudança operacional do pedido.
 - Preferências de e-mail de atualização pertencem ao `User` e são verificadas no workflow antes do envio; não expor preferências de outro usuário.
@@ -1991,9 +1985,19 @@ Decisões adicionais do MVP:
 - Suspensão e reativação de seller são transições administrativas explícitas, com `AuditLog` transacional e bloqueio de acesso enquanto o seller estiver suspenso.
 - Produto arquivado pode voltar a `DRAFT` somente por ação do seller dono, sempre com ownership server-side e auditoria.
 - Uso de cupom deve ser consultado por agregação/count do banco, sem serializar resgates completos para as páginas operacionais.
+- Formulários de cupom (lojista e Admin) recebem desconto em % e valores em R$; a conversão para basis points e centavos acontece no servidor (`coupons/domain/coupon-form-input.ts`, sem `float`). Unidades internas nunca aparecem na interface.
+- IDs determinísticos do seed de revisão usam o prefixo `czrvw` para passar na validação `z.cuid()` das Server Actions.
+- Decisões do responsável sobre o feedback do cliente (08/10/2026):
+  - Login social (Google, Apple, Facebook): fora do escopo por enquanto.
+  - Avaliações: cada avaliação tem nota inteira de 1 a 5; a casa decimal aparece apenas na média. Vídeo em avaliações está fora do escopo.
+  - "Quantidade vendida" é exibida no produto e calculada a partir de pedidos reais confirmados (na demonstração, reflete os pedidos fictícios).
+  - Estimativa de frete por localização automática e entregas por aplicativo (ex.: Uber): não serão implementadas.
+  - Rodapé definitivo (horário de atendimento, formas de pagamento, redes sociais, CNPJ e páginas legais) aguarda o conteúdo oficial do cliente.
+  - Link de WhatsApp na vitrine da loja: mantido, por decisão do cliente; o lojista não pode linkar uma loja própria fora da plataforma.
+  - "Minha moto" é seleção de peças compatíveis (não venda de motos): a escolha acontece na página do produto e no catálogo, sem aba própria no menu da conta.
 - O detalhe do pedido pode expor ao próprio cliente o histórico dos pagamentos e transações vinculados ao `Order`, sem revelar metadados sensíveis do provider.
 - Reconsulta manual de pagamento aceita somente pedidos autorizados por sessão ou token guest seguro, limita-se a pagamentos pendentes e reutiliza o reconciliador idempotente.
-- Cartão de crédito usa Secure Fields do MercadoPago.js (iframes) e token descartável; PAN, validade e CVV nunca passam pelo servidor da Moto Shop. A primeira versão aceita crédito em uma parcela, definida no servidor. A Public Key pertence à mesma aplicação/ambiente do Access Token; somente a Public Key chega ao navegador. A URL opcional `MERCADO_PAGO_NOTIFICATION_URL` é enviada por cobrança e exige assinatura secreta configurada, sem sobrescrever configurações globais de outras integrações. Cartões e webhook real permanecem sujeitos à homologação.
+- Cartão de crédito usa Secure Fields do MercadoPago.js (iframes) e token descartável; PAN, validade e CVV nunca passam pelo servidor do Moto Shop. A primeira versão aceita crédito em uma parcela, definida no servidor. A Public Key pertence à mesma aplicação/ambiente do Access Token; somente a Public Key chega ao navegador. A URL opcional `MERCADO_PAGO_NOTIFICATION_URL` é enviada por cobrança e exige assinatura secreta configurada, sem sobrescrever configurações globais de outras integrações. Cartões e webhook real permanecem sujeitos à homologação.
 - Recuperação de pagamento sem ID externo consulta por referência do pedido e exige resultado único, com validação de ID, referência, valor, moeda e método. Nunca cria nova cobrança. Busca vazia, timeout ou ambiguidade preservam reservas. O Inngest agenda recuperação paginada a cada dez minutos para pendências com mais de dois minutos; depende do serviço ativo. Expiração local de QR/idade do pedido não autoriza liberar estoque: é necessária recusa/cancelamento confirmado pelo provider.
 - Filas administrativas devem combinar busca textual, status e paginação no `where` do banco, limitando o payload serializado.
 - A busca de seller deve considerar loja e membros, mas nunca remover o filtro de status ou a proteção administrativa.
@@ -2022,7 +2026,7 @@ Decisões adicionais do MVP:
 - A faixa de preço do storefront deve considerar o preço vigente de variantes ativas e usar centavos, sem confiar em cálculo do cliente.
 - Cupons futuros são identificados por `startsAt > now`; a vigência final continua sendo validada no checkout.
 - O histórico do cliente pode filtrar por status de `Shipment`, sempre combinado com `userId` e sem expor pedidos de terceiros.
-- O catálogo do seller pode filtrar por categoria, mantendo `sellerId` no `where` e opções de categorias controladas pelo MotoShop.
+- O catálogo do seller pode filtrar por categoria, mantendo `sellerId` no `where` e opções de categorias controladas pelo Moto Shop.
 - O storefront deve listar apenas sellers aprovados ou ativos ao oferecer filtro público de loja.
 - Monitoramento de webhook pode filtrar `provider` no banco sem serializar o payload bruto.
 - Entregas de notificação podem filtrar `kind` no banco, preservando status, paginação e dados operacionais mínimos.
@@ -2092,7 +2096,28 @@ Decisões adicionais do MVP:
 - A vitrine pública da loja pode filtrar promoções usando a mesma semântica de promoção ativa do storefront.
 - A busca da vitrine pública deve consultar nome, marca, categoria e SKU dentro do seller selecionado, preservando filtros na URL.
 - A homepage pública (`/`) é uma landing comercial server-rendered. Antes do lançamento, pode exibir uma vitrine de demonstração solicitada pelo responsável, desde que produtos, preços e condições estejam claramente marcados como ilustrativos, não criem registros no catálogo e não ofereçam compra direta. Na versão de lançamento, os destaques devem vir apenas de produtos aprovados e categorias/marcas ativas; remover a vitrine mock ao ativar a vitrine real.
-- A marca pública é **Moto Shop**. Em textos de interface, SEO, e-mails e mensagens para pessoas, usar o artigo feminino: **a Moto Shop**, **da Moto Shop**, **na Moto Shop**, **pela Moto Shop**. Não usar "o MotoShop". Identificadores técnicos internos e nomes de arquivos não precisam ser renomeados.
+- A vitrine mock foi removida: a homepage mostra até quatro produtos aprovados, de sellers ativos/aprovados e com estoque disponível; sem elegíveis, usa estado vazio. Não apresentar preço ou disponibilidade inventados.
+- Exceção explícita aprovada para apresentação antes do catálogo oficial: produtos marcados `isDemo` podem existir no banco com fotos locais geradas e valores/estoque ilustrativos. Devem ser identificados como demonstração no storefront, nunca entrar no carrinho/checkout (checagem server-side), não emitir Product JSON-LD nem entrar no sitemap. O seed é isolado por slugs `demo-*` e deve permanecer idempotente; nenhuma loja ou produto real pode ser sobrescrito. As lojas demo ficam `PENDING` até o código de bloqueio estar publicado.
+- Recuperação de senha e verificação de e-mail usam os tokens nativos do Better Auth e envio pelo provider de e-mail do projeto. Sem Resend configurado, não oferecer recuperação funcional; exigir verificação de e-mail apenas com `AUTH_REQUIRE_EMAIL_VERIFICATION=true` e envio configurado, para evitar bloquear contas existentes acidentalmente.
+- Vínculo posterior de pedido guest exige token de acesso não previsível, sessão autenticada e mesmo e-mail do pedido; a atualização é condicional e revoga o token no mesmo passo para impedir dupla vinculação.
+- Rate limiting de autenticação e mutations sensíveis usa contador atômico no PostgreSQL como solução de MVP enquanto Upstash não está configurado; chaves persistidas são hashes e nunca contêm token ou e-mail em claro. Monitorar crescimento da tabela e migrar o armazenamento para Upstash se o volume justificar.
+- Perguntas e avaliações públicas podem ser ocultadas/restauradas pelo Admin sem exclusão física. Consultas públicas ignoram itens ocultos, e cada alteração gera AuditLog. O histórico pessoal do pedido permanece acessível ao próprio cliente.
+- A marca pública é **O Moto Shop**. Em textos de interface, SEO, e-mails e mensagens para pessoas, usar o artigo masculino e manter as duas palavras separadas. Identificadores técnicos internos, nomes de arquivos e chaves de integração não precisam ser renomeados.
+- A transação AUTHORIZATION registra em `providerMetadata.paymentRequestState` o ciclo da cobrança: `PREPARED` (pedido criado, nada enviado), `SENT` (`requestSentAt` gravado sob lock do pedido imediatamente antes de chamar o provider) e `REJECTED` (recusa definitiva: 400/401/403/422/429). A recuperação pode cancelar o pedido e liberar estoque/cupom sem resposta do provider somente para `REJECTED` ou para `PREPARED` após 2 minutos; `SENT`, registros sem marcador ou pagamentos com ID externo continuam dependendo de confirmação do provider.
+- Chargeback, mediação ou reembolso não explicado por transações REFUND internas em pedido pago não são espelhados: o webhook fica `FAILED` para revisão financeira. Webhooks de cobranças sem `external_reference` do Moto Shop (`MS-`) são marcados como processados e ignorados.
+- A taxa do marketplace nunca pode exceder o total cobrado de um seller; o checkout recusa o cupom antes de criar o pedido. Reembolso cujo valor confirmado pelo provider difere do solicitado permanece `PENDING` para revisão financeira.
+- Reembolsos de cancelamento/devolução usam uma chave de idempotência por tentativa (`<base>` e depois `<base>:retry-<n>`, no máximo 5). Nova tentativa só é criada quando todas as anteriores estão `FAILED`; `PENDING`/`SUCCEEDED` são sempre reaproveitadas. Se o pagamento já foi integralmente reembolsado no provider, a solicitação é encerrada com auditoria `upstreamRefund`.
+- Cancelamento aprovado com etiqueta Melhor Envio já comprada marca o `Shipment` como `CANCELLED` com `providerMetadata.labelCancellationRequired`; o cancelamento da etiqueta no provider é manual e confirmado no Admin (`/admin/shipping-recovery`). Uma etiqueta cancelada pode ser substituída: o ID anterior vai para `providerMetadata.previousLabels`, com auditoria. Erros 4xx do Melhor Envio (exceto 408/409/429) são definitivos e liberam nova tentativa.
+- Vínculo de pedido guest exige, além do token e do mesmo e-mail, e-mail verificado na conta; o vínculo gera `AuditLog` `ORDER_GUEST_CLAIMED`.
+- A disponibilidade do pagamento exibida no carrinho e no checkout vem de `getCheckoutPaymentAvailability`, que reaproveita as mesmas verificações do serviço de checkout; nunca fixar o valor na página.
+- Runtime e ferramentas (revisado em 08/10/2026): Node **24** (Active LTS, manutenção até 30/04/2028), fixado em `engines` e `.nvmrc`; pnpm via Corepack na versão de `packageManager`. Node 26 vira LTS em 28/10/2026: reavaliar quando o Vercel suportar e o CI passar nele. Majors adiadas de propósito: **ESLint 10** (plugins `react`, `import` e `jsx-a11y` ainda não declaram suporte), **TypeScript 7** (compilador nativo; aguardar suporte do Next e do typescript-eslint) e **Prisma 8** (o `latest` do npm ainda é release candidate). O Dependabot ignora majors de TypeScript, Prisma e `@types/node`; atualizá-las exige PR dedicado com o guia de migração. A política de idade mínima de release do pnpm não deve ser contornada para atualizações de rotina.
+- CI (`.github/workflows`): todo PR roda typecheck (com `next typegen`), lint, `format:check`, testes unitários e `next build` sem banco; dependency review e título em Conventional Commits; CodeQL semanal. Integração e Playwright só rodam com os secrets `TEST_DATABASE_URL`/`TEST_DATABASE_DIRECT_URL` apontando para um branch Neon descartável — nunca para o banco de produção. Actions são fixadas por SHA.
+- O sitemap é renderizado por requisição (`dynamic = "force-dynamic"`): produtos aprovados aparecem sem novo deploy, e `next build` não depende de banco.
+- Headers de segurança globais ficam em `src/config/security-headers.ts`. A CSP está em `Content-Security-Policy-Report-Only` até a homologação do checkout com Secure Fields; ao passar sem violações, trocar para `Content-Security-Policy`.
+- UI: um único sistema de estilos (Tailwind + tokens de `globals.css`). Header (`StorefrontNavigation`), rodapé (`SiteFooter`) e card de produto (`ProductCard`) são compartilhados por todo o storefront; Central do Lojista e Admin usam `AppAreaHeader` com "Sair". Controles têm 44px (`h-11`) por padrão no mobile, `sm` (36px) apenas em tabelas operacionais densas; campos usam `text-base` no mobile para evitar zoom no iOS; formulários usam React Hook Form + Zod com `FormField` (erro por campo com `aria-describedby`). Não criar CSS modules paralelos para componentes que já existem em `components/ui`.
+- Ao entrar (ou criar conta) com carrinho de visitante ativo, o carrinho guest é mesclado no carrinho ativo do usuário na primeira leitura do carrinho (`getCartIdentity`): soma quantidades por variante limitadas ao estoque disponível e a 99 por item, ignora variantes não compráveis (demo/inativas/arquivadas/sem estoque), nunca reduz quantidades já existentes, trava os dois carrinhos na mesma transação, marca o guest como `ABANDONED` (idempotente) e remove o cookie do visitante.
+- O login por e-mail tem, além do limite por IP, um limite por conta (10 tentativas/15 min) com chave derivada do e-mail normalizado e persistida apenas como hash; a resposta é 429 com mensagem genérica em português, sem revelar se a conta existe.
+- Em produção, `/api/inngest` responde 503 (sem detalhes) se `INNGEST_DEV` estiver ativo ou `INNGEST_SIGNING_KEY` ausente. Erros inesperados exibidos ao usuário usam mensagem genérica em português; `ZodError` vira `VALIDATION_ERROR` com a mensagem do schema, ou "Confira os dados informados." quando a mensagem é a padrão (inglês) do Zod.
 
 ---
 
@@ -2100,7 +2125,7 @@ Decisões adicionais do MVP:
 
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 

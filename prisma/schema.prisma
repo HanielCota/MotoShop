@@ -109,6 +109,17 @@ enum ShipmentStatus {
   CANCELLED
 }
 
+enum ShipmentPurchaseState {
+  IN_PROGRESS
+  OUTCOME_UNKNOWN
+}
+
+enum ShipmentGenerationState {
+  IN_PROGRESS
+  OUTCOME_UNKNOWN
+  GENERATED
+}
+
 enum ReturnStatus {
   REQUESTED
   UNDER_REVIEW
@@ -143,6 +154,13 @@ enum WebhookEventStatus {
 enum NotificationDeliveryStatus {
   PROCESSING
   SENT
+  FAILED
+}
+
+enum OutboxEventStatus {
+  PENDING
+  PROCESSING
+  DISPATCHED
   FAILED
 }
 
@@ -222,7 +240,7 @@ model Session {
 
 model Account {
   id                    String    @id @default(cuid())
-  accountId             String
+  accountId             String?
   providerId            String
   accessToken           String?
   refreshToken          String?
@@ -253,6 +271,15 @@ model Verification {
   @@map("verifications")
 }
 
+model RateLimitCounter {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+  @@map("rate_limit_counters")
+}
+
 model Seller {
   id                     String                 @id @default(cuid())
   type                   SellerType
@@ -278,9 +305,28 @@ model Seller {
   disputes               Dispute[]
   subscriptions          SellerSubscription[]
   shippingMethods        SellerShippingMethod[]
+  shippingIntegration    SellerShippingIntegration?
 
   @@index([status])
   @@map("sellers")
+}
+
+model SellerShippingIntegration {
+  id                    String   @id @default(cuid())
+  sellerId              String   @unique
+  provider              String   @default("MELHOR_ENVIO")
+  accountId             String?
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String
+  scopes                String
+  accessTokenExpiresAt  DateTime
+  refreshTokenExpiresAt DateTime
+  refreshLeaseUntil     DateTime?
+  connectedAt           DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  seller                Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@map("seller_shipping_integrations")
 }
 
 model SellerShippingMethod {
@@ -322,6 +368,10 @@ model Store {
   description         String?
   logoStorageKey      String?
   bannerStorageKey    String?
+  instagramUrl        String?
+  youtubeUrl          String?
+  whatsappUrl         String?
+  facebookUrl         String?
   originPostalCode    String?
   originName          String?
   originEmail         String?
@@ -381,6 +431,7 @@ model Product {
   name                String
   slug                String                 @unique
   description         String
+  isDemo              Boolean                @default(false)
   status              ProductStatus          @default(DRAFT)
   rejectionReason     String?
   submittedAt         DateTime?
@@ -630,7 +681,7 @@ model ProductCompatibility {
 model Cart {
   id                   String     @id @default(cuid())
   status               CartStatus @default(ACTIVE)
-  guestAccessTokenHash String?    @unique
+  guestAccessTokenHash String?
   expiresAt            DateTime?
   userId               String?
   createdAt            DateTime   @default(now())
@@ -639,6 +690,7 @@ model Cart {
   items                CartItem[]
 
   @@index([userId, status])
+  @@index([guestAccessTokenHash, status])
   @@index([status, expiresAt])
   @@map("carts")
 }
@@ -838,6 +890,11 @@ model Shipment {
   trackingCode          String?
   trackingUrl           String?
   status                ShipmentStatus @default(PENDING)
+  purchaseState         ShipmentPurchaseState?
+  purchaseError         String?
+  generationState       ShipmentGenerationState?
+  generationError       String?
+  generatedAt           DateTime?
   shippedAt             DateTime?
   deliveredAt           DateTime?
   sellerOrderId         String         @unique
@@ -962,22 +1019,24 @@ model AuditLog {
 }
 
 model ProductReview {
-  id          String    @id @default(cuid())
-  rating      Int
-  title       String?
-  comment     String?
-  productId   String
-  sellerId    String
-  orderId     String
-  orderItemId String    @unique
-  userId      String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  product     Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
-  seller      Seller    @relation(fields: [sellerId], references: [id], onDelete: Restrict)
-  order       Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  id           String               @id @default(cuid())
+  ratingTenths Int
+  title        String?
+  comment      String?
+  productId    String
+  sellerId     String
+  orderId      String
+  orderItemId  String               @unique
+  userId       String
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  hiddenAt     DateTime?
+  product      Product              @relation(fields: [productId], references: [id], onDelete: Restrict)
+  seller       Seller               @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  order        Order                @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  orderItem    OrderItem            @relation(fields: [orderItemId], references: [id], onDelete: Restrict)
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
+  media        ProductReviewMedia[]
 
   @@index([productId, createdAt])
   @@index([sellerId, createdAt])
@@ -985,18 +1044,34 @@ model ProductReview {
   @@map("product_reviews")
 }
 
+model ProductReviewMedia {
+  id              String        @id @default(cuid())
+  productReviewId String
+  storageKey      String        @unique
+  mediaType       String
+  contentType     String
+  sizeInBytes     Int
+  sortOrder       Int
+  createdAt       DateTime      @default(now())
+  productReview   ProductReview @relation(fields: [productReviewId], references: [id], onDelete: Cascade)
+
+  @@index([productReviewId, sortOrder])
+  @@map("product_review_media")
+}
+
 model SellerReview {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   rating    Int
   comment   String?
   sellerId  String
   orderId   String
   userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  seller    Seller   @relation(fields: [sellerId], references: [id], onDelete: Restrict)
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  hiddenAt  DateTime?
+  seller    Seller    @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@unique([orderId, sellerId, userId])
   @@index([sellerId, createdAt])
@@ -1014,6 +1089,7 @@ model ProductQuestion {
   answeredByUserId String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  hiddenAt         DateTime?
   product          Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
   seller           Seller    @relation(fields: [sellerId], references: [id], onDelete: Restrict)
   askedBy          User      @relation("QuestionAsker", fields: [askedByUserId], references: [id], onDelete: Restrict)
@@ -1126,4 +1202,25 @@ model NotificationDelivery {
   @@index([recipientEmail, createdAt])
   @@index([status, updatedAt])
   @@map("notification_deliveries")
+}
+
+model OutboxEvent {
+  id            String            @id @default(cuid())
+  eventKey      String            @unique
+  eventName     String
+  aggregateType String
+  aggregateId   String
+  payload       Json
+  status        OutboxEventStatus @default(PENDING)
+  attempts      Int               @default(0)
+  availableAt   DateTime          @default(now())
+  claimedAt     DateTime?
+  dispatchedAt  DateTime?
+  lastError     String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@index([status, availableAt, createdAt])
+  @@index([aggregateType, aggregateId])
+  @@map("outbox_events")
 }

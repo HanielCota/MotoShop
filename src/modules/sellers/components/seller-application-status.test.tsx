@@ -11,7 +11,7 @@ describe("SellerApplicationStatus", () => {
 
     expect(screen.getByText("Loja Teste")).toBeInTheDocument();
     expect(screen.getByText("Status: Em análise")).toBeInTheDocument();
-    expect(screen.getByText(/aguardando análise da Moto Shop/i)).toBeInTheDocument();
+    expect(screen.getByText(/aguardando análise pelo Moto Shop/i)).toBeInTheDocument();
   });
 
   it("does not tell a rejected seller to wait for approval", () => {

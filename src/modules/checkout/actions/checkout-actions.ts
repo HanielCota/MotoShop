@@ -5,11 +5,22 @@ import { revalidatePath } from "next/cache";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getCartIdentity } from "@/modules/cart/infrastructure/cart-access";
 import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 import { executeCheckout, type CheckoutResult } from "../application/checkout-service";
 import { checkoutSchema } from "../schemas/checkout";
 
-export type CheckoutActionState = { error?: string; orderNumber?: string; guestAccessToken?: string };
+/**
+ * `paymentDeclined: true` comes with `error`: the provider refused the payment, the order
+ * was cancelled and the cart restored. The attempt's idempotency key is spent, so the form
+ * must discard it (and the card token) before the next submit.
+ */
+export type CheckoutActionState = {
+  error?: string;
+  orderNumber?: string;
+  guestAccessToken?: string;
+  paymentDeclined?: true;
+};
 
 export async function createCheckoutAction(
   _previousState: CheckoutActionState,
@@ -39,10 +50,21 @@ export async function createCheckoutAction(
   try {
     const identity = await getCartIdentity();
     if (!identity) throw new ApplicationError({ code: "NOT_FOUND", message: "Seu carrinho expirou." });
+    await assertRateLimit({
+      key: `checkout:${"userId" in identity ? `user:${identity.userId}` : `guest:${identity.guestAccessTokenHash}`}`,
+      windowSeconds: 60,
+      max: 10,
+    });
     const session = await getCurrentSession();
     const result: CheckoutResult = await executeCheckout({ data: parsed.data, identity, session });
     revalidatePath("/cart");
     revalidatePath("/checkout");
+    if (result.paymentDeclined)
+      return {
+        error:
+          "O pagamento foi recusado e o pedido foi cancelado. Seu carrinho foi mantido: revise os dados do cartão ou escolha outra forma de pagamento.",
+        paymentDeclined: true,
+      };
     return result;
   } catch (error) {
     return { error: asApplicationError(error).message };

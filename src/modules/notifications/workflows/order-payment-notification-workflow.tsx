@@ -21,6 +21,8 @@ export const sendOrderPaymentNotification = inngest.createFunction(
   async ({ event, step }) => {
     const parsed = paymentStatusEventSchema.safeParse(event.data);
     if (!parsed.success) throw new NonRetriableError("Invalid order payment notification event.");
+    // Authorization is not capture: do not announce a confirmed payment yet.
+    if (parsed.data.status === "AUTHORIZED") return { status: "SKIPPED" };
 
     const order = await step.run("load-order-for-payment-notification", () =>
       db.order.findUnique({
@@ -30,7 +32,7 @@ export const sendOrderPaymentNotification = inngest.createFunction(
     );
     if (!order) throw new NonRetriableError("Order not found for payment notification.");
 
-    const status = parsed.data.status === "AUTHORIZED" ? "APPROVED" : parsed.data.status;
+    const status = parsed.data.status;
     const isApproved = status === "APPROVED";
     const kind = isApproved ? "ORDER_PAYMENT_APPROVED" : "ORDER_PAYMENT_FAILED";
     const subject = isApproved

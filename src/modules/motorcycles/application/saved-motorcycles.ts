@@ -37,6 +37,27 @@ export async function addSavedMotorcycle(userId: string, fitmentId: string, make
   }, transactionOptions);
 }
 
+/**
+ * Seleção feita na página do produto: a moto escolhida vira a principal do usuário.
+ * Reaproveita a configuração já salva (sem duplicar) ou cria uma nova como principal.
+ */
+export async function saveMotorcycleAsPrimary(userId: string, fitmentId: string) {
+  await requireActiveFitment(fitmentId);
+  await db.$transaction(async (tx) => {
+    const existing = await tx.savedMotorcycle.findUnique({
+      where: { userId_motorcycleFitmentId: { userId, motorcycleFitmentId: fitmentId } },
+      select: { id: true, isPrimary: true },
+    });
+    if (existing?.isPrimary) return;
+    await tx.savedMotorcycle.updateMany({ where: { userId, isPrimary: true }, data: { isPrimary: false } });
+    if (existing) {
+      await tx.savedMotorcycle.updateMany({ where: { id: existing.id, userId }, data: { isPrimary: true } });
+      return;
+    }
+    await tx.savedMotorcycle.create({ data: { userId, motorcycleFitmentId: fitmentId, isPrimary: true } });
+  }, transactionOptions);
+}
+
 export async function changeSavedMotorcycle(userId: string, savedId: string, fitmentId: string) {
   await requireActiveFitment(fitmentId);
   const changed = await db.savedMotorcycle.updateMany({

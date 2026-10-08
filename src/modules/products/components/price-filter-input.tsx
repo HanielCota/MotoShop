@@ -1,4 +1,5 @@
 "use client";
+import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { formatPriceInputFromCents, parsePriceInputToCents } from "../domain/price-input";
 export function PriceFilterInput({ name, cents }: { name: string; cents: number | null }) {
@@ -6,8 +7,8 @@ export function PriceFilterInput({ name, cents }: { name: string; cents: number 
   const parsed = parsePriceInputToCents(value);
   return (
     <>
-      <input
-        className="border-input bg-background h-11 min-w-0 rounded-md border px-3 text-sm"
+      <Input
+        className="sm:h-11"
         inputMode="decimal"
         pattern="[0-9]+([,.][0-9]{1,2})?"
         value={value}

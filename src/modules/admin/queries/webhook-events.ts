@@ -5,15 +5,17 @@ import { db } from "@/lib/database";
 
 import { parseDateBoundary } from "./date-boundary";
 
-export async function listWebhookEventsForAdmin(input: {
-  status?: string | null;
-  q?: string | null;
-  provider?: string | null;
-  from?: string | null;
-  to?: string | null;
-  sort?: "newest" | "oldest";
-  page?: number;
-} = {}) {
+export async function listWebhookEventsForAdmin(
+  input: {
+    status?: string | null;
+    q?: string | null;
+    provider?: string | null;
+    from?: string | null;
+    to?: string | null;
+    sort?: "newest" | "oldest";
+    page?: number;
+  } = {},
+) {
   const pageSize = 20;
   const requestedPage = Math.max(input.page ?? 1, 1);
   const status = input.status && input.status !== "ALL" ? (input.status as WebhookEventStatus) : undefined;
@@ -39,7 +41,16 @@ export async function listWebhookEventsForAdmin(input: {
     db.webhookEvent.count({ where }),
     db.webhookEvent.findMany({
       where,
-      select: { id: true, provider: true, externalId: true, type: true, status: true, receivedAt: true, processedAt: true, error: true },
+      select: {
+        id: true,
+        provider: true,
+        externalId: true,
+        type: true,
+        status: true,
+        receivedAt: true,
+        processedAt: true,
+        error: true,
+      },
       orderBy: { receivedAt: input.sort === "oldest" ? "asc" : "desc" },
       skip: (requestedPage - 1) * pageSize,
       take: pageSize,

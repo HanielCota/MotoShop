@@ -6,6 +6,7 @@ const categoryLabels: Record<string, string> = {
   "parts-transmission": "Transmissão",
   "parts-suspension": "Suspensão",
   "parts-brakes": "Freios",
+  "parts-accessories": "Acessórios",
   "equipment-helmets": "Capacetes",
   "equipment-boots": "Botas",
   "equipment-goggles": "Óculos",

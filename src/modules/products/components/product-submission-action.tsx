@@ -1,18 +1,30 @@
 "use client";
 
+import type { Route } from "next";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
-import { submitProductAction } from "@/modules/products/actions/product-actions";
+import { FormMessage } from "@/components/ui/form-message";
+import { submitProductAction, type ProductActionState } from "@/modules/products/actions/product-actions";
 
-export function ProductSubmissionAction({ productId }: { productId: string }) {
+export function ProductSubmissionAction({
+  productId,
+  redirectTo,
+}: {
+  productId: string;
+  /** Where to go after a successful submission (the edit page stops accepting the product). */
+  redirectTo?: Route;
+}) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [result, setResult] = useState<{ message: string; error: boolean }>();
+  const [result, setResult] = useState<ProductActionState>({});
 
   function submit() {
     startTransition(async () => {
-      const result = await submitProductAction(productId);
-      setResult({ message: result.error ?? result.success ?? "", error: Boolean(result.error) });
+      const next = await submitProductAction(productId);
+      setResult(next);
+      if (next.success && redirectTo) router.push(redirectTo);
     });
   }
 
@@ -21,11 +33,7 @@ export function ProductSubmissionAction({ productId }: { productId: string }) {
       <Button type="button" size="sm" disabled={pending} onClick={submit}>
         {pending ? "Enviando..." : "Enviar para aprovação"}
       </Button>
-      {result?.message ? (
-        <span role={result.error ? "alert" : "status"} className="max-w-52 text-xs">
-          {result.message}
-        </span>
-      ) : null}
+      <FormMessage error={result.error ?? null} success={result.success ?? null} className="max-w-64 p-2 text-xs" />
     </div>
   );
 }

@@ -1,6 +1,9 @@
 "use client";
+import { Button } from "@/components/ui/button";
 
-import { useActionState } from "react";
+import { DesignCheckbox } from "@/components/ui/design-checkbox";
+
+import { useActionState, useState } from "react";
 
 import {
   updateNotificationPreferencesAction,
@@ -10,16 +13,24 @@ import {
 const initialState: NotificationPreferenceActionState = {};
 
 export function NotificationPreferencesForm({ emailOrderUpdatesEnabled }: { emailOrderUpdatesEnabled: boolean }) {
-  const [state, action, pending] = useActionState(updateNotificationPreferencesAction, initialState);
+  const [enabled, setEnabled] = useState(emailOrderUpdatesEnabled);
+  const [state, action, pending] = useActionState(
+    async (previousState: NotificationPreferenceActionState, formData: FormData) => {
+      const result = await updateNotificationPreferencesAction(previousState, formData);
+      if (result.success) setEnabled(formData.get("emailOrderUpdatesEnabled") === "on");
+      return result;
+    },
+    initialState,
+  );
 
   return (
     <form action={action} className="space-y-4">
       <label className="flex items-start gap-3 text-sm">
-        <input
-          type="checkbox"
+        <DesignCheckbox
           name="emailOrderUpdatesEnabled"
-          defaultChecked={emailOrderUpdatesEnabled}
-          className="mt-1 size-4 rounded border"
+          checked={enabled}
+          onCheckedChange={setEnabled}
+          className="mt-1"
         />
         <span>
           <span className="font-medium">Atualizações dos meus pedidos</span>
@@ -34,16 +45,13 @@ export function NotificationPreferencesForm({ emailOrderUpdatesEnabled }: { emai
         </p>
       ) : null}
       {state.success ? (
-        <p className="text-sm text-emerald-700" role="status">
+        <p className="text-success-foreground text-sm" role="status">
           {state.success}
         </p>
       ) : null}
-      <button
-        className="bg-primary text-primary-foreground hover:bg-primary/80 h-10 rounded-md px-4 text-sm font-medium disabled:opacity-50"
-        disabled={pending}
-      >
+      <Button type="submit" className="rounded-md px-4" disabled={pending}>
         {pending ? "Salvando..." : "Salvar preferências"}
-      </button>
+      </Button>
     </form>
   );
 }

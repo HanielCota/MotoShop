@@ -1,14 +1,13 @@
 "use server";
 
-import { Prisma } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { db } from "@/lib/database";
+import { logger } from "@/lib/logger";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
-import { cancelCommittedInventory } from "@/modules/inventory/application/settle-order-inventory";
-import { refundPayment } from "@/modules/payments/application/refund-payment";
-import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
+
+import { reviewCancellationRequest } from "../application/review-cancellation";
 
 const reviewSchema = z.object({
   decision: z.enum(["APPROVE", "REJECT"]),
@@ -16,6 +15,29 @@ const reviewSchema = z.object({
 });
 
 export type CancellationAdminActionState = { error?: string; success?: string };
+
+/**
+ * Erros de domínio têm mensagem própria. Falhas inesperadas (provedor de pagamento indisponível,
+ * timeout, rede) não podem chegar ao Admin como texto genérico em inglês: registra o erro e
+ * informa que a solicitação continua no mesmo estado e pode ser reprocessada.
+ */
+function toActionError(error: unknown, cancellationRequestId: string): { error: string } {
+  if (error instanceof ApplicationError && error.code !== "INTERNAL_ERROR") return { error: error.message };
+  logger.error({
+    event: "cancellation.admin_action_failed",
+    cancellationRequestId,
+    error: error instanceof Error ? error.message : "unknown",
+  });
+  return {
+    error: "Não foi possível concluir agora. A solicitação permanece pendente e pode ser reprocessada em instantes.",
+  };
+}
+
+const successMessages = {
+  REFUNDED: "Cancelamento aprovado, estoque restaurado e reembolso processado.",
+  ALREADY_REFUNDED: "Este cancelamento já foi concluído.",
+  REJECTED: "Solicitação de cancelamento rejeitada.",
+} as const;
 
 export async function reviewCancellationRequestAction(
   cancellationRequestId: string,
@@ -29,157 +51,18 @@ export async function reviewCancellationRequestAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Decisão inválida." };
 
   try {
-    const request = await db.cancellationRequest.findUnique({
-      where: { id: cancellationRequestId },
-      include: { sellerOrder: { include: { shipment: true, items: true } }, order: true },
+    const result = await reviewCancellationRequest({
+      cancellationRequestId,
+      decision: parsed.data.decision,
+      ...(parsed.data.note !== undefined ? { note: parsed.data.note } : {}),
+      actorUserId: session.user.id,
     });
-    if (!request)
-      throw new ApplicationError({ code: "NOT_FOUND", message: "Solicitação de cancelamento não encontrada." });
-    if (request.status === "REFUNDED") return { success: "Este cancelamento já foi concluído." };
-    if (request.status === "REJECTED") return { error: "Esta solicitação já foi rejeitada." };
-
-    if (parsed.data.decision === "REJECT") {
-      await rejectCancellation(
-        request.id,
-        request.sellerOrderId,
-        request.previousSellerOrderStatus,
-        parsed.data.note,
-        session.user.id,
-      );
-      revalidateCancellationPaths(request.order.orderNumber);
-      return { success: "Solicitação de cancelamento rejeitada." };
+    if (result.outcome !== "ALREADY_REFUNDED") {
+      revalidatePath("/admin", "layout");
+      revalidatePath(`/orders/${result.orderNumber}`);
     }
-
-    if (!["REQUESTED", "APPROVED"].includes(request.status)) {
-      throw new ApplicationError({
-        code: "CONFLICT",
-        message: "Esta solicitação já está em processamento.",
-        statusCode: 409,
-      });
-    }
-    if (request.sellerOrder.status !== "CANCELLATION_REQUESTED") {
-      throw new ApplicationError({
-        code: "CONFLICT",
-        message: "O status do pedido não permite este cancelamento.",
-        statusCode: 409,
-      });
-    }
-    if (
-      request.sellerOrder.shipment &&
-      ["SHIPPED", "IN_TRANSIT", "DELIVERED"].includes(request.sellerOrder.shipment.status)
-    ) {
-      throw new ApplicationError({
-        code: "CONFLICT",
-        message: "O pedido já foi postado e deve seguir o fluxo de devolução.",
-        statusCode: 409,
-      });
-    }
-
-    if (request.status === "REQUESTED") {
-      await db.$transaction(async (tx) => {
-        await tx.cancellationRequest.update({
-          where: { id: request.id },
-          data: { status: "APPROVED", ...(parsed.data.note !== undefined ? { adminNote: parsed.data.note } : {}) },
-        });
-        await tx.auditLog.create({
-          data: {
-            action: "CANCELLATION_APPROVED",
-            entityType: "CANCELLATION_REQUEST",
-            entityId: request.id,
-            actorUserId: session.user.id,
-            metadata: { previousStatus: request.status } as Prisma.InputJsonValue,
-          },
-        });
-      });
-    }
-
-    if (request.amountInCents > 0) {
-      await refundPayment({
-        orderId: request.orderId,
-        amountInCents: request.amountInCents,
-        idempotencyKey: `cancellation-refund:${request.id}`,
-        reason: `Cancelamento do seller order ${request.sellerOrderId}`,
-      });
-    }
-
-    await db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM "cancellation_requests" WHERE id = ${request.id} FOR UPDATE`;
-      const current = await tx.cancellationRequest.findUnique({
-        where: { id: request.id },
-        include: { sellerOrder: { include: { items: true } } },
-      });
-      if (!current || current.status !== "APPROVED") {
-        throw new ApplicationError({ code: "CONFLICT", message: "O cancelamento já foi finalizado.", statusCode: 409 });
-      }
-
-      await cancelCommittedInventory(
-        tx,
-        [{ sellerId: current.sellerId, items: current.sellerOrder.items }],
-        current.id,
-      );
-      await tx.sellerOrder.update({ where: { id: current.sellerOrderId }, data: { status: "CANCELLED" } });
-      await tx.cancellationRequest.update({ where: { id: current.id }, data: { status: "REFUNDED" } });
-
-      const sellerOrders = await tx.sellerOrder.findMany({
-        where: { orderId: current.orderId },
-        select: { status: true },
-      });
-      const nextOrderStatus = sellerOrders.every((sellerOrder) => sellerOrder.status === "CANCELLED")
-        ? "CANCELLED"
-        : sellerOrders.some((sellerOrder) => sellerOrder.status === "CANCELLED")
-          ? "PARTIALLY_CANCELLED"
-          : undefined;
-      if (nextOrderStatus) await tx.order.update({ where: { id: current.orderId }, data: { status: nextOrderStatus } });
-      await tx.auditLog.create({
-        data: {
-          action: "CANCELLATION_REFUNDED",
-          entityType: "CANCELLATION_REQUEST",
-          entityId: current.id,
-          actorUserId: session.user.id,
-          metadata: { amountInCents: current.amountInCents } as Prisma.InputJsonValue,
-        },
-      });
-    });
-    revalidateCancellationPaths(request.order.orderNumber);
-    return { success: "Cancelamento aprovado, estoque restaurado e reembolso processado." };
+    return { success: successMessages[result.outcome] };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return toActionError(error, cancellationRequestId);
   }
-}
-
-async function rejectCancellation(
-  id: string,
-  sellerOrderId: string,
-  previousStatus:
-    "PENDING_PAYMENT" | "PAID" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLATION_REQUESTED" | "CANCELLED",
-  note: string | undefined,
-  actorUserId: string,
-) {
-  await db.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM "cancellation_requests" WHERE id = ${id} FOR UPDATE`;
-    const updated = await tx.cancellationRequest.updateMany({
-      where: { id, status: "REQUESTED" },
-      data: { status: "REJECTED", ...(note !== undefined ? { adminNote: note } : {}) },
-    });
-    if (updated.count !== 1)
-      throw new ApplicationError({ code: "CONFLICT", message: "Esta solicitação já foi decidida.", statusCode: 409 });
-    await tx.sellerOrder.updateMany({
-      where: { id: sellerOrderId, status: "CANCELLATION_REQUESTED" },
-      data: { status: previousStatus === "CANCELLATION_REQUESTED" ? "PROCESSING" : previousStatus },
-    });
-    await tx.auditLog.create({
-      data: {
-        action: "CANCELLATION_REJECTED",
-        entityType: "CANCELLATION_REQUEST",
-        entityId: id,
-        actorUserId,
-        metadata: { note: note ?? null } as Prisma.InputJsonValue,
-      },
-    });
-  });
-}
-
-function revalidateCancellationPaths(orderNumber: string) {
-  revalidatePath("/admin");
-  revalidatePath(`/orders/${orderNumber}`);
 }

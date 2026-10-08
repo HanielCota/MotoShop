@@ -1,0 +1,43 @@
+"use client";
+
+import { Checkbox } from "@base-ui/react/checkbox";
+import { Check } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+
+type DesignCheckboxProps = {
+  name?: string;
+  defaultChecked?: boolean;
+  checked?: boolean;
+  onCheckedChange?: (checked: boolean) => void;
+  disabled?: boolean;
+  className?: string;
+};
+
+export function DesignCheckbox({
+  name,
+  defaultChecked,
+  checked,
+  onCheckedChange,
+  disabled,
+  className,
+}: DesignCheckboxProps) {
+  return (
+    <Checkbox.Root
+      name={name}
+      defaultChecked={defaultChecked}
+      checked={checked}
+      onCheckedChange={onCheckedChange}
+      disabled={disabled}
+      className={cn(
+        "border-input bg-background data-checked:bg-primary data-checked:text-primary-foreground flex size-4 shrink-0 items-center justify-center rounded border",
+        "focus-visible:ring-ring/40 focus-visible:ring-3 focus-visible:outline-none data-disabled:cursor-not-allowed data-disabled:opacity-50",
+        className,
+      )}
+    >
+      <Checkbox.Indicator className="data-unchecked:hidden">
+        <Check aria-hidden="true" className="size-3" />
+      </Checkbox.Indicator>
+    </Checkbox.Root>
+  );
+}

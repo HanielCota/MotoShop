@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 import Image from "next/image";
 import { useId, useState } from "react";
@@ -42,20 +44,16 @@ export function PixPaymentInstructions({ copyAndPasteCode, qrImageDataUrl }: Pix
           <label htmlFor={codeInputId} className="block text-sm font-medium">
             Pix Copia e Cola
           </label>
-          <textarea
+          <Textarea
             id={codeInputId}
             readOnly
             value={copyAndPasteCode}
             onFocus={(event) => event.currentTarget.select()}
             className="border-input bg-background h-24 w-full resize-none rounded-md border p-3 text-xs break-all"
           />
-          <button
-            type="button"
-            onClick={copyCode}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2 text-sm font-medium"
-          >
+          <Button type="button" onClick={copyCode} className="px-4">
             Copiar código Pix
-          </button>
+          </Button>
           {copyMessage ? (
             <p className="text-sm" role="status">
               {copyMessage}

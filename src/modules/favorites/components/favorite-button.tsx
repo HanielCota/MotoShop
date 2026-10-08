@@ -33,10 +33,18 @@ export function FavoriteButton({ productId, initialIsFavorite }: { productId: st
         disabled={isPending}
         onClick={handleToggle}
       >
-        <HeartIcon fill={isFavorite ? "currentColor" : "none"} />
+        <HeartIcon
+          aria-hidden="true"
+          fill={isFavorite ? "currentColor" : "none"}
+          className={isFavorite ? "text-brand-strong" : undefined}
+        />
         {isPending ? "Salvando…" : isFavorite ? "Favoritado" : "Favoritar"}
       </Button>
-      {error ? <p className="text-destructive text-xs">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="text-destructive text-xs">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

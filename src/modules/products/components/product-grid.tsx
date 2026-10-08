@@ -1,110 +1,91 @@
-import Link from "next/link";
-import Image from "next/image";
 import type { Route } from "next";
+import { PackageSearch } from "lucide-react";
+import type { ReactNode } from "react";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatMoneyInCents } from "@/lib/utils";
+import { ProductCard, type ProductCardData } from "@/components/storefront/product-card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { getProductOffer } from "@/modules/products/domain/product-offer";
+import { getCurrentPriceInCents, hasActivePromotion } from "@/modules/products/domain/pricing";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 import type { listApprovedProducts } from "@/modules/products/queries/products";
 
 type ApprovedProduct = Awaited<ReturnType<typeof listApprovedProducts>>["products"][number];
 
+type CardSourceVariant = Parameters<typeof getProductOffer>[0][number] &
+  Parameters<typeof hasActivePromotion>[0] & { priceInCents: number };
+
+type CardSourceProduct = {
+  id: string;
+  slug: string;
+  name: string;
+  isDemo: boolean;
+  isVip?: boolean;
+  category: Parameters<typeof getCategoryLabel>[0] & { slug: string };
+  brand: { name: string; slug: string };
+  seller: { store: { name: string; slug: string } | null };
+  images: { storageKey: string; altText: string | null }[];
+  variants: CardSourceVariant[];
+};
+
+/** Converte um produto aprovado no modelo de apresentação do card, sempre no servidor. */
+export function toProductCardData(product: CardSourceProduct, now = new Date()): ProductCardData {
+  const offer = getProductOffer(product.variants, now);
+  const cheapest = product.variants
+    .filter((variant) => variant.active !== false)
+    .find((variant) => getCurrentPriceInCents(variant, now) === offer.priceInCents);
+  const compareAt =
+    cheapest && hasActivePromotion(cheapest, now) && cheapest.priceInCents > (offer.priceInCents ?? 0)
+      ? cheapest.priceInCents
+      : null;
+  const image = product.images[0];
+  return {
+    id: product.id,
+    name: product.name,
+    href: `/products/${product.slug}`,
+    imageUrl: image ? getPublicStorageUrl(image.storageKey) : null,
+    imageAlt: image?.altText ?? product.name,
+    category: { label: getCategoryLabel(product.category), href: `/categoria/${product.category.slug}` as Route },
+    brand: { name: product.brand.name, href: `/marca/${product.brand.slug}` as Route },
+    seller: product.seller.store
+      ? { name: product.seller.store.name, href: `/loja/${product.seller.store.slug}` as Route }
+      : undefined,
+    priceInCents: offer.priceInCents,
+    compareAtPriceInCents: compareAt,
+    hasPriceRange: offer.hasPriceRange,
+    availableQuantity: offer.availableQuantity,
+    isDemo: product.isDemo,
+    sponsored: Boolean(product.isVip),
+  };
+}
+
 export function ProductGrid({
   products,
   emptyMessage = "Nenhum produto aprovado corresponde aos filtros.",
+  emptyTitle = "Nenhum produto encontrado",
+  emptyAction,
 }: {
   products: ApprovedProduct[];
   emptyMessage?: string;
+  emptyTitle?: string;
+  emptyAction?: { label: string; href: Route } | ReactNode;
 }) {
   if (products.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-10 text-center">
-          <p className="text-muted-foreground">{emptyMessage}</p>
-        </CardContent>
-      </Card>
+      <div role="status">
+        <EmptyState icon={PackageSearch} title={emptyTitle} description={emptyMessage} action={emptyAction} />
+      </div>
     );
   }
 
+  const now = new Date();
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {products.map((product) => {
-        const offer = getProductOffer(product.variants);
-        const inStock = offer.availableQuantity > 0;
-        const imageUrl = product.images[0] ? getPublicStorageUrl(product.images[0].storageKey) : null;
-        return (
-          <Card key={product.id}>
-            <Link
-              href={`/products/${product.slug}`}
-              aria-label={`Ver ${product.name}`}
-              className="bg-muted block overflow-hidden rounded-t-xl"
-            >
-              {imageUrl ? (
-                <Image
-                  src={imageUrl}
-                  alt={product.images[0]?.altText ?? product.name}
-                  width={640}
-                  height={640}
-                  unoptimized
-                  className="aspect-square w-full object-cover transition-transform duration-200 hover:scale-[1.02]"
-                />
-              ) : (
-                <div className="text-muted-foreground flex aspect-square items-center justify-center p-6 text-center text-sm">
-                  Imagem não disponível
-                </div>
-              )}
-            </Link>
-            <CardHeader>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <Link
-                  href={`/categoria/${product.category.slug}` as Route}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <Badge variant="outline">{getCategoryLabel(product.category)}</Badge>
-                </Link>
-                <div className="flex items-center gap-2">
-                  {product.isVip ? <Badge variant="secondary">Patrocinado · VIP</Badge> : null}
-                  {product.seller.store ? (
-                    <Link
-                      className="text-muted-foreground hover:text-foreground text-xs"
-                      href={`/loja/${product.seller.store.slug}` as Route}
-                    >
-                      {product.seller.store.name}
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
-              <CardTitle className="mt-2">
-                <Link className="hover:underline" href={`/products/${product.slug}`}>
-                  {product.name}
-                </Link>
-              </CardTitle>
-              <CardDescription>
-                <Link href={`/marca/${product.brand.slug}` as Route} className="hover:underline">
-                  {product.brand.name}
-                </Link>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-end justify-between gap-3">
-              <div>
-                <p className="text-lg font-semibold">
-                  {offer.hasPriceRange ? <span className="block text-xs font-normal">A partir de</span> : null}
-                  {offer.priceInCents !== null ? formatMoneyInCents(offer.priceInCents) : "Sob consulta"}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  {inStock ? "Em estoque · confira as variações" : "Indisponível"}
-                </p>
-              </div>
-              <Link className="text-sm font-medium underline underline-offset-4" href={`/products/${product.slug}`}>
-                Detalhes
-              </Link>
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+    <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+      {products.map((product, index) => (
+        <li key={product.id} className="flex min-w-0">
+          <ProductCard product={toProductCardData(product, now)} eager={index === 0} />
+        </li>
+      ))}
+    </ul>
   );
 }

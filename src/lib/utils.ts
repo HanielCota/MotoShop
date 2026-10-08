@@ -10,6 +10,4 @@ export function slugify(value: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-export function formatMoneyInCents(amountInCents: number): string {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(amountInCents / 100);
-}
+export { formatDate, formatDateTime, formatLongDate, formatMoneyInCents } from "@/lib/format";

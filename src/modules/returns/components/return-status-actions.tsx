@@ -1,12 +1,17 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
+import { Input } from "@/components/ui/input";
 
 import { useState, useTransition } from "react";
 
 import { refundReturnRequestAction, reviewReturnRequestAction } from "../actions/admin-return-actions";
 
+type Feedback = { error?: string; success?: string };
+
 export function ReturnStatusActions({ returnRequestId, status }: { returnRequestId: string; status: string }) {
   const [pending, startTransition] = useTransition();
-  const [message, setMessage] = useState<string>();
+  const [feedback, setFeedback] = useState<Feedback>({});
   const canReview = status === "REQUESTED" || status === "UNDER_REVIEW";
   const canReceive = status === "APPROVED";
   const canRefund = status === "RETURNED";
@@ -17,7 +22,7 @@ export function ReturnStatusActions({ returnRequestId, status }: { returnRequest
     if (note) formData.set("note", note);
     startTransition(async () => {
       const result = await reviewReturnRequestAction(returnRequestId, formData);
-      setMessage(result.error ?? result.success);
+      setFeedback(result);
     });
   }
 
@@ -25,67 +30,45 @@ export function ReturnStatusActions({ returnRequestId, status }: { returnRequest
     <div className="flex flex-col gap-2">
       {canReview ? (
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => review("APPROVE")}
-            disabled={pending}
-            className="bg-primary text-primary-foreground hover:bg-primary/80 h-8 rounded-md px-3 text-xs font-medium disabled:opacity-50"
-          >
+          <Button size="sm" type="button" onClick={() => review("APPROVE")} disabled={pending}>
             {pending ? "Salvando..." : "Aprovar"}
-          </button>
+          </Button>
           <form
             action={async (formData) => {
               const result = await reviewReturnRequestAction(returnRequestId, formData);
-              setMessage(result.error ?? result.success);
+              setFeedback(result);
             }}
             className="flex min-w-0 flex-1 gap-2"
           >
             <input type="hidden" name="decision" value="REJECT" />
-            <input
-              name="note"
-              placeholder="Motivo da recusa"
-              required
-              className="border-input bg-background h-8 min-w-0 flex-1 rounded-md border px-2.5 text-xs"
-            />
-            <button
-              disabled={pending}
-              className="border-border hover:bg-muted h-8 rounded-md border px-3 text-xs font-medium disabled:opacity-50"
-            >
+            <Input name="note" placeholder="Motivo da recusa" required className="min-w-0 flex-1" />
+            <Button type="submit" variant="outline" size="sm" disabled={pending}>
               Recusar
-            </button>
+            </Button>
           </form>
         </div>
       ) : null}
       {canReceive ? (
-        <button
-          type="button"
-          onClick={() => review("RECEIVE")}
-          disabled={pending}
-          className="border-border hover:bg-muted h-8 rounded-md border px-3 text-xs font-medium disabled:opacity-50"
-        >
+        <Button variant="outline" size="sm" type="button" onClick={() => review("RECEIVE")} disabled={pending}>
           {pending ? "Registrando..." : "Registrar recebimento"}
-        </button>
+        </Button>
       ) : null}
       {canRefund ? (
-        <button
+        <Button
+          size="sm"
           type="button"
           onClick={() =>
             startTransition(async () => {
               const result = await refundReturnRequestAction(returnRequestId);
-              setMessage(result.error ?? result.success);
+              setFeedback(result);
             })
           }
           disabled={pending}
-          className="bg-primary text-primary-foreground hover:bg-primary/80 h-8 rounded-md px-3 text-xs font-medium disabled:opacity-50"
         >
           {pending ? "Reembolsando..." : "Processar reembolso"}
-        </button>
+        </Button>
       ) : null}
-      {message ? (
-        <p className="text-muted-foreground text-xs" role="status">
-          {message}
-        </p>
-      ) : null}
+      <FormMessage error={feedback.error ?? null} success={feedback.success ?? null} className="text-xs" />
     </div>
   );
 }

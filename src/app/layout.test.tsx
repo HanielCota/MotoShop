@@ -3,8 +3,12 @@ import { hydrateRoot, type Root } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { expect, it, vi } from "vitest";
 
-vi.mock("next/font/google", () => ({ Geist: () => ({ variable: "font-test" }) }));
+vi.mock("next/font/google", () => ({
+  Barlow_Condensed: () => ({ variable: "font-display-test" }),
+  Geist: () => ({ variable: "font-test" }),
+}));
 vi.mock("@/config/env", () => ({ env: { BETTER_AUTH_URL: "http://localhost:3000" } }));
+vi.mock("@/config/get-application-base-url", () => ({ getApplicationBaseUrl: () => "http://localhost:3000" }));
 vi.mock("@/components/storefront/storefront-navigation", () => ({ StorefrontNavigation: () => <nav>Menu</nav> }));
 
 import RootLayout from "./layout";

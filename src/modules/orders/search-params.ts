@@ -43,8 +43,8 @@ export const customerOrderSearchParams = {
   paymentStatus: parseAsStringLiteral(customerPaymentStatusValues).withDefault("ALL"),
   orderFrom: parseAsString,
   orderTo: parseAsString,
-  orderMinTotal: parseAsInteger,
-  orderMaxTotal: parseAsInteger,
+  orderMinTotal: parseAsString,
+  orderMaxTotal: parseAsString,
   orderSort: parseAsStringLiteral(customerOrderSortValues).withDefault("newest"),
   orderPage: parseAsInteger.withDefault(1),
 };

@@ -1,4 +1,4 @@
-import { createLoader, parseAsInteger, parseAsString, parseAsStringLiteral } from "nuqs/server";
+import { createLoader, createSerializer, parseAsInteger, parseAsString, parseAsStringLiteral } from "nuqs/server";
 
 export const couponActiveValues = ["ALL", "ACTIVE", "INACTIVE"] as const;
 export type CouponActiveFilter = (typeof couponActiveValues)[number];
@@ -16,3 +16,6 @@ export const couponSearchParams = {
 };
 
 export const loadCouponSearchParams = createLoader(couponSearchParams);
+
+/** Gera URLs da listagem de cupons omitindo valores padrão. */
+export const serializeCouponSearchParams = createSerializer(couponSearchParams);

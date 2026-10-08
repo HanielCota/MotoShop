@@ -1,8 +1,10 @@
-import "dotenv/config";
+import { config } from "dotenv";
 
 import { PrismaNeon } from "@prisma/adapter-neon";
 
 import { PrismaClient } from "../src/generated/prisma/client";
+
+config({ path: ".env.local", quiet: true });
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -22,19 +24,20 @@ async function seed() {
   });
 
   const [parts, equipment] = await Promise.all([
-    upsertCategory({ name: "Parts", slug: "parts", sortOrder: 10 }),
-    upsertCategory({ name: "Equipment", slug: "equipment", sortOrder: 20 }),
-    upsertCategory({ name: "Apparel", slug: "apparel", sortOrder: 30 }),
+    upsertCategory({ name: "Peças", slug: "parts", sortOrder: 10 }),
+    upsertCategory({ name: "Equipamentos", slug: "equipment", sortOrder: 20 }),
+    upsertCategory({ name: "Vestuário", slug: "apparel", sortOrder: 30 }),
   ]);
 
   await Promise.all([
-    upsertCategory({ name: "Engine", slug: "parts-engine", sortOrder: 10, parentId: parts.id }),
-    upsertCategory({ name: "Transmission", slug: "parts-transmission", sortOrder: 20, parentId: parts.id }),
-    upsertCategory({ name: "Suspension", slug: "parts-suspension", sortOrder: 30, parentId: parts.id }),
-    upsertCategory({ name: "Brakes", slug: "parts-brakes", sortOrder: 40, parentId: parts.id }),
-    upsertCategory({ name: "Helmets", slug: "equipment-helmets", sortOrder: 10, parentId: equipment.id }),
-    upsertCategory({ name: "Boots", slug: "equipment-boots", sortOrder: 20, parentId: equipment.id }),
-    upsertCategory({ name: "Goggles", slug: "equipment-goggles", sortOrder: 30, parentId: equipment.id }),
+    upsertCategory({ name: "Motor", slug: "parts-engine", sortOrder: 10, parentId: parts.id }),
+    upsertCategory({ name: "Transmissão", slug: "parts-transmission", sortOrder: 20, parentId: parts.id }),
+    upsertCategory({ name: "Suspensão", slug: "parts-suspension", sortOrder: 30, parentId: parts.id }),
+    upsertCategory({ name: "Freios", slug: "parts-brakes", sortOrder: 40, parentId: parts.id }),
+    upsertCategory({ name: "Acessórios", slug: "parts-accessories", sortOrder: 50, parentId: parts.id }),
+    upsertCategory({ name: "Capacetes", slug: "equipment-helmets", sortOrder: 10, parentId: equipment.id }),
+    upsertCategory({ name: "Botas", slug: "equipment-boots", sortOrder: 20, parentId: equipment.id }),
+    upsertCategory({ name: "Óculos", slug: "equipment-goggles", sortOrder: 30, parentId: equipment.id }),
   ]);
 
   await Promise.all([

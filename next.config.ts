@@ -1,24 +1,31 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
-const storagePublicUrl = process.env.R2_PUBLIC_URL ? new URL(process.env.R2_PUBLIC_URL) : undefined;
+import { buildSecurityHeaders } from "./src/config/security-headers";
+
+const imageKitPublicUrl = process.env.IMAGEKIT_URL_ENDPOINT ? new URL(process.env.IMAGEKIT_URL_ENDPOINT) : undefined;
 
 const nextConfig: NextConfig = {
   ...(process.env.NEXT_TEST_DIST_DIR ? { distDir: process.env.NEXT_TEST_DIST_DIR } : {}),
   typedRoutes: true,
+  async headers() {
+    return [
+      { source: "/:path*", headers: buildSecurityHeaders({ development: process.env.NODE_ENV !== "production" }) },
+    ];
+  },
   images: {
     remotePatterns: [
       {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
-      ...(storagePublicUrl
+      ...(imageKitPublicUrl
         ? [
             {
-              protocol: storagePublicUrl.protocol.replace(":", "") as "http" | "https",
-              hostname: storagePublicUrl.hostname,
-              port: storagePublicUrl.port,
-              pathname: `${storagePublicUrl.pathname.replace(/\/$/, "")}/**`,
+              protocol: imageKitPublicUrl.protocol.replace(":", "") as "http" | "https",
+              hostname: imageKitPublicUrl.hostname,
+              port: imageKitPublicUrl.port,
+              pathname: `${imageKitPublicUrl.pathname.replace(/\/$/, "")}/**`,
             },
           ]
         : []),

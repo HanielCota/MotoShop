@@ -7,6 +7,8 @@ import { db } from "@/lib/database";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
 import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
 
+import { isBrazilianStateCode } from "../domain/brazilian-address";
+
 const addressSchema = z.object({
   label: z.string().trim().min(2, "Informe um nome para o endereço.").max(40),
   recipient: z.string().trim().min(2, "Informe o destinatário.").max(120),
@@ -19,7 +21,7 @@ const addressSchema = z.object({
   complement: z.string().trim().max(80).optional(),
   neighborhood: z.string().trim().min(2, "Informe o bairro.").max(100),
   city: z.string().trim().min(2, "Informe a cidade.").max(100),
-  state: z.string().trim().length(2, "Informe a UF.").toUpperCase(),
+  state: z.string().trim().toUpperCase().refine(isBrazilianStateCode, "Informe uma UF válida, como SP ou RJ."),
   isDefault: z.boolean().default(false),
 });
 
@@ -49,10 +51,10 @@ export async function createCustomerAddressAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira o endereço." };
 
   try {
-    const addressCount = await db.customerAddress.count({ where: { userId: session.user.id } });
-    const shouldBeDefault = parsed.data.isDefault || addressCount === 0;
-
     await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${session.user.id} FOR UPDATE`;
+      const addressCount = await tx.customerAddress.count({ where: { userId: session.user.id } });
+      const shouldBeDefault = parsed.data.isDefault || addressCount === 0;
       if (shouldBeDefault) {
         await tx.customerAddress.updateMany({ where: { userId: session.user.id }, data: { isDefault: false } });
       }
@@ -78,12 +80,13 @@ export async function setDefaultCustomerAddressAction(addressId: string): Promis
   if (!z.cuid().safeParse(addressId).success) return { error: "Endereço inválido." };
 
   try {
-    const address = await db.customerAddress.findFirst({ where: { id: addressId, userId: session.user.id } });
-    if (!address) throw new ApplicationError({ code: "NOT_FOUND", message: "Endereço não encontrado." });
-    await db.$transaction([
-      db.customerAddress.updateMany({ where: { userId: session.user.id }, data: { isDefault: false } }),
-      db.customerAddress.update({ where: { id: address.id }, data: { isDefault: true } }),
-    ]);
+    await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${session.user.id} FOR UPDATE`;
+      const address = await tx.customerAddress.findFirst({ where: { id: addressId, userId: session.user.id } });
+      if (!address) throw new ApplicationError({ code: "NOT_FOUND", message: "Endereço não encontrado." });
+      await tx.customerAddress.updateMany({ where: { userId: session.user.id }, data: { isDefault: false } });
+      await tx.customerAddress.update({ where: { id: address.id }, data: { isDefault: true } });
+    });
     revalidatePath("/account/addresses");
     revalidatePath("/checkout");
     return { success: "Endereço padrão atualizado." };
@@ -97,10 +100,10 @@ export async function deleteCustomerAddressAction(addressId: string): Promise<Cu
   if (!z.cuid().safeParse(addressId).success) return { error: "Endereço inválido." };
 
   try {
-    const address = await db.customerAddress.findFirst({ where: { id: addressId, userId: session.user.id } });
-    if (!address) throw new ApplicationError({ code: "NOT_FOUND", message: "Endereço não encontrado." });
-
     await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${session.user.id} FOR UPDATE`;
+      const address = await tx.customerAddress.findFirst({ where: { id: addressId, userId: session.user.id } });
+      if (!address) throw new ApplicationError({ code: "NOT_FOUND", message: "Endereço não encontrado." });
       await tx.customerAddress.delete({ where: { id: address.id } });
       if (address.isDefault) {
         const nextAddress = await tx.customerAddress.findFirst({

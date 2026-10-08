@@ -1,4 +1,7 @@
 "use client";
+import { Button } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
+import { Input } from "@/components/ui/input";
 
 import { startTransition, useActionState } from "react";
 import { formatPriceInputFromCents } from "@/modules/products/domain/price-input";
@@ -34,7 +37,7 @@ export function SellerCommissionForm({
       />
       <label className="flex flex-col gap-1 text-sm font-medium">
         Comissão individual (%)
-        <input
+        <Input
           name="commissionPercent"
           inputMode="decimal"
           placeholder="Usar comissão padrão"
@@ -45,22 +48,10 @@ export function SellerCommissionForm({
       <p className="text-muted-foreground text-xs">
         Em branco usa a comissão padrão. Zero define 0%. Aplica-se somente a novos pedidos.
       </p>
-      <button
-        disabled={pending}
-        className="bg-primary text-primary-foreground rounded-md px-3 py-2 text-sm disabled:opacity-50"
-      >
+      <Button type="submit" disabled={pending} className="rounded-md">
         {pending ? "Salvando..." : "Salvar comissão da loja"}
-      </button>
-      {state.error ? (
-        <p role="alert" className="text-destructive text-xs">
-          {state.error}
-        </p>
-      ) : null}
-      {state.success ? (
-        <p role="status" className="text-xs text-emerald-700">
-          {state.success}
-        </p>
-      ) : null}
+      </Button>
+      <FormMessage error={state.error ?? null} success={state.success ?? null} />
     </form>
   );
 }

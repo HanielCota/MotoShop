@@ -37,7 +37,7 @@ export function FulfillmentStatusEmail({
       <h1>{copy.title}</h1>
       <p>Olá, {customerName}.</p>
       <p>
-        {copy.description} Seller: <strong>{storeName}</strong>.
+        {copy.description} Loja: <strong>{storeName}</strong>.
       </p>
       <p>Pedido: {orderNumber}</p>
       {trackingCode ? (
@@ -50,7 +50,7 @@ export function FulfillmentStatusEmail({
           <a href={trackingUrl}>Acompanhar entrega</a>
         </p>
       ) : null}
-      <p>Você também pode acompanhar todos os detalhes acessando o pedido na Moto Shop.</p>
+      <p>Você também pode acompanhar todos os detalhes acessando o pedido no Moto Shop.</p>
     </div>
   );
 }

@@ -18,6 +18,7 @@ const serverEnvSchema = z
     DATABASE_URL: z.string().min(1),
     BETTER_AUTH_SECRET: z.string().min(32),
     BETTER_AUTH_URL: z.url().default("http://localhost:3000"),
+    AUTH_REQUIRE_EMAIL_VERIFICATION: optionalBoolean,
     ADMIN_EMAILS: optionalString,
     MERCADO_PAGO_ACCESS_TOKEN: optionalString,
     MERCADO_PAGO_PUBLIC_KEY: z.preprocess(
@@ -40,7 +41,10 @@ const serverEnvSchema = z
     MERCADO_PAGO_API_URL: optionalUrl,
     MERCADO_PAGO_MULTI_SELLER_ENABLED: optionalBoolean,
     MERCADO_PAGO_WEBHOOK_SECRET: optionalString,
-    MELHOR_ENVIO_TOKEN: optionalString,
+    MELHOR_ENVIO_CLIENT_ID: optionalString,
+    MELHOR_ENVIO_CLIENT_SECRET: optionalString,
+    MELHOR_ENVIO_REDIRECT_URI: optionalUrl,
+    MELHOR_ENVIO_TOKEN_ENCRYPTION_KEY: optionalString,
     MELHOR_ENVIO_API_URL: optionalUrl,
     MELHOR_ENVIO_ORIGIN_POSTAL_CODE: optionalString,
     MELHOR_ENVIO_USER_AGENT: optionalString,
@@ -50,21 +54,23 @@ const serverEnvSchema = z
     INNGEST_SIGNING_KEY: optionalString,
     UPSTASH_REDIS_REST_URL: optionalUrl,
     UPSTASH_REDIS_REST_TOKEN: optionalString,
-    R2_ACCOUNT_ID: optionalString,
-    R2_ACCESS_KEY_ID: optionalString,
-    R2_SECRET_ACCESS_KEY: optionalString,
-    R2_BUCKET_NAME: optionalString,
-    R2_PUBLIC_URL: optionalUrl,
+    IMAGEKIT_PUBLIC_KEY: optionalString,
+    IMAGEKIT_PRIVATE_KEY: optionalString,
+    IMAGEKIT_URL_ENDPOINT: optionalUrl,
     RESEND_API_KEY: optionalString,
     EMAIL_FROM: optionalString,
   })
   .superRefine((value, context) => {
+    if (value.AUTH_REQUIRE_EMAIL_VERIFICATION && (!value.RESEND_API_KEY || !value.EMAIL_FROM)) {
+      context.addIssue({
+        code: "custom",
+        message: "Email verification requires Resend and a sender",
+        path: ["AUTH_REQUIRE_EMAIL_VERIFICATION"],
+      });
+    }
     const groups = [
       { label: "Upstash Redis", keys: ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"] as const },
-      {
-        label: "Cloudflare R2",
-        keys: ["R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET_NAME"] as const,
-      },
+      { label: "ImageKit", keys: ["IMAGEKIT_PUBLIC_KEY", "IMAGEKIT_PRIVATE_KEY", "IMAGEKIT_URL_ENDPOINT"] as const },
       { label: "Resend", keys: ["RESEND_API_KEY", "EMAIL_FROM"] as const },
     ];
 
@@ -77,6 +83,31 @@ const serverEnvSchema = z
           path: [group.keys[0]],
         });
       }
+    }
+
+    const melhorEnvioOAuthValues = [
+      value.MELHOR_ENVIO_CLIENT_ID,
+      value.MELHOR_ENVIO_CLIENT_SECRET,
+      value.MELHOR_ENVIO_REDIRECT_URI,
+    ];
+    const configuredOAuthValues = melhorEnvioOAuthValues.filter(Boolean).length;
+    if (configuredOAuthValues > 0 && configuredOAuthValues < melhorEnvioOAuthValues.length) {
+      context.addIssue({
+        code: "custom",
+        message: "Melhor Envio OAuth variables must be configured together",
+        path: ["MELHOR_ENVIO_CLIENT_ID"],
+      });
+    }
+    if (
+      value.MELHOR_ENVIO_TOKEN_ENCRYPTION_KEY &&
+      (!/^[A-Za-z0-9+/]{43}=$/.test(value.MELHOR_ENVIO_TOKEN_ENCRYPTION_KEY) ||
+        Buffer.from(value.MELHOR_ENVIO_TOKEN_ENCRYPTION_KEY, "base64").length !== 32)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "MELHOR_ENVIO_TOKEN_ENCRYPTION_KEY must be a base64-encoded 32-byte key",
+        path: ["MELHOR_ENVIO_TOKEN_ENCRYPTION_KEY"],
+      });
     }
   });
 

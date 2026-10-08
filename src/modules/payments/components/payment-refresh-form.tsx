@@ -1,4 +1,5 @@
 "use client";
+import { Button } from "@/components/ui/button";
 
 import { useActionState } from "react";
 
@@ -13,15 +14,19 @@ export function PaymentRefreshForm({ orderNumber, accessToken }: { orderNumber: 
     <form action={formAction} className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
       <input type="hidden" name="orderNumber" value={orderNumber} />
       {accessToken ? <input type="hidden" name="accessToken" value={accessToken} /> : null}
-      <button
-        type="submit"
-        disabled={pending}
-        className="border-border hover:bg-muted rounded-md border px-3 py-2 text-sm font-medium disabled:opacity-60"
-      >
+      <Button variant="outline" type="submit" disabled={pending}>
         {pending ? "Consultando..." : "Atualizar status"}
-      </button>
-      {state.error ? <p className="text-destructive text-xs">{state.error}</p> : null}
-      {state.success ? <p className="text-emerald-700 text-xs">{state.success}</p> : null}
+      </Button>
+      {state.error ? (
+        <p role="alert" className="text-destructive text-xs">
+          {state.error}
+        </p>
+      ) : null}
+      {state.success ? (
+        <p role="status" className="text-success-foreground text-xs">
+          {state.success}
+        </p>
+      ) : null}
     </form>
   );
 }

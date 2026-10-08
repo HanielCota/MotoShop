@@ -3,6 +3,8 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/database", () => ({ db: { payment: { findUnique: vi.fn() } } }));
 vi.mock("@/lib/payment/mercado-pago-provider", () => ({ mercadoPagoProvider: {} }));
 vi.mock("./reconcile-payment", () => ({ reconcileMercadoPagoPayment: vi.fn() }));
+vi.mock("./release-unsent-payment", () => ({ releaseUnsentPayment: vi.fn() }));
+import { releaseUnsentPayment } from "./release-unsent-payment";
 import { db } from "@/lib/database";
 import { reconcileMercadoPagoPayment } from "./reconcile-payment";
 import { recoverPayment } from "./recover-payment";
@@ -83,4 +85,25 @@ it("does not interpret an expired QR date as a cancelled payment", async () => {
   expect(reconcileMercadoPagoPayment).toHaveBeenCalledWith(
     expect.objectContaining({ result: expect.objectContaining({ status: "PENDING" }) }),
   );
+});
+
+const pendingLocal = { ...payment, status: "PENDING", order: { orderNumber: "MS-123", status: "PENDING_PAYMENT" } };
+it("releases a charge that never reached the provider without searching it", async () => {
+  vi.mocked(db.payment.findUnique).mockResolvedValue(pendingLocal as never);
+  vi.mocked(releaseUnsentPayment).mockResolvedValue({ decision: "RELEASE_NEVER_SENT", released: true });
+  expect(await recoverPayment("local", provider)).toEqual({ outcome: "RELEASED" });
+  expect(provider.findPaymentByOrderNumber).not.toHaveBeenCalled();
+});
+it("waits while the checkout may still be sending the request", async () => {
+  vi.mocked(db.payment.findUnique).mockResolvedValue(pendingLocal as never);
+  vi.mocked(releaseUnsentPayment).mockResolvedValue({ decision: "WAIT", released: false });
+  expect(await recoverPayment("local", provider)).toEqual({ outcome: "UNRESOLVED" });
+  expect(provider.findPaymentByOrderNumber).not.toHaveBeenCalled();
+});
+it("keeps asking the provider when the request was sent and its outcome is unknown", async () => {
+  vi.mocked(db.payment.findUnique).mockResolvedValue(pendingLocal as never);
+  vi.mocked(releaseUnsentPayment).mockResolvedValue({ decision: "ASK_PROVIDER", released: false });
+  provider.findPaymentByOrderNumber.mockResolvedValue(null);
+  expect(await recoverPayment("local", provider)).toEqual({ outcome: "UNRESOLVED" });
+  expect(provider.findPaymentByOrderNumber).toHaveBeenCalledWith("MS-123");
 });

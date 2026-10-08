@@ -1,4 +1,8 @@
 "use client";
+import { FormMessage } from "@/components/ui/form-message";
+import { Button } from "@/components/ui/button";
+
+import { DesignSelect } from "@/components/ui/design-select";
 
 import { useActionState } from "react";
 
@@ -16,34 +20,29 @@ export function VipSubscriptionForm({
   return (
     <form action={formAction} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-[1fr_180px_auto] sm:items-end">
       <label className="flex flex-col gap-2 text-sm font-medium">
-        Seller
-        <select name="sellerId" required className="h-10 rounded-md border px-3 text-sm">
+        Lojista
+        <DesignSelect aria-label="Lojista" name="sellerId" required>
           <option value="">Selecione uma loja</option>
           {sellers.map((seller) => (
             <option key={seller.id} value={seller.id}>
               {seller.name} {seller.hasActiveVip ? "· VIP ativo" : ""}
             </option>
           ))}
-        </select>
+        </DesignSelect>
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium">
         Duração
-        <select name="months" defaultValue="1" className="h-10 rounded-md border px-3 text-sm">
+        <DesignSelect aria-label="Duração" name="months" defaultValue="1">
           <option value="1">1 mês</option>
           <option value="3">3 meses</option>
           <option value="6">6 meses</option>
           <option value="12">12 meses</option>
-        </select>
+        </DesignSelect>
       </label>
-      <button
-        type="submit"
-        disabled={pending}
-        className="bg-primary text-primary-foreground h-10 rounded-md px-3 text-sm font-semibold disabled:opacity-60"
-      >
+      <Button type="submit" disabled={pending} className="rounded-md font-semibold">
         {pending ? "Salvando..." : "Ativar VIP"}
-      </button>
-      {state.error ? <p className="text-destructive text-sm sm:col-span-3">{state.error}</p> : null}
-      {state.success ? <p className="text-sm text-emerald-700 sm:col-span-3">{state.success}</p> : null}
+      </Button>
+      <FormMessage error={state.error ?? null} success={state.success ?? null} className="sm:col-span-3" />
     </form>
   );
 }

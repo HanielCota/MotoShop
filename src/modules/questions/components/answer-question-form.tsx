@@ -1,4 +1,7 @@
 "use client";
+import { FormMessage } from "@/components/ui/form-message";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 import { useActionState } from "react";
 
@@ -16,8 +19,12 @@ export function AnswerQuestionForm({
   const [state, formAction, pending] = useActionState(answerProductQuestionAction.bind(null, questionId), initialState);
 
   return (
-    <form action={formAction} className="mt-3 space-y-2">
-      <textarea
+    <form action={formAction} noValidate className="mt-3 space-y-2">
+      <label htmlFor={`answer-${questionId}`} className="block text-sm font-medium">
+        Resposta pública
+      </label>
+      <Textarea
+        id={`answer-${questionId}`}
         name="answer"
         required
         minLength={2}
@@ -25,17 +32,11 @@ export function AnswerQuestionForm({
         rows={3}
         defaultValue={currentAnswer ?? ""}
         placeholder="Escreva uma resposta pública"
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
       />
-      {state.error ? <p className="text-sm text-red-600">{state.error}</p> : null}
-      {state.success ? <p className="text-sm text-emerald-700">{state.success}</p> : null}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
-      >
+      <FormMessage error={state.error ?? null} success={state.success ?? null} />
+      <Button type="submit" disabled={pending}>
         {pending ? "Publicando..." : currentAnswer ? "Atualizar resposta" : "Responder"}
-      </button>
+      </Button>
     </form>
   );
 }

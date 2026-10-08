@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -25,7 +26,7 @@ export function SellerCatalogProgress({ progress }: { progress: Progress }) {
           {steps.map((step, index) => (
             <li key={step.label} className="flex items-start gap-2 rounded-lg border p-3 text-sm">
               <span
-                className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${step.complete ? "bg-emerald-100 text-emerald-800" : "bg-muted text-muted-foreground"}`}
+                className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${step.complete ? "bg-success-surface text-success-foreground" : "bg-muted text-muted-foreground"}`}
                 aria-hidden="true"
               >
                 {step.complete ? "✓" : index + 1}
@@ -35,17 +36,37 @@ export function SellerCatalogProgress({ progress }: { progress: Progress }) {
           ))}
         </ol>
         {progress.approved > 0 ? (
-          <p className="text-muted-foreground text-sm">Sua loja já tem {progress.approved} produto(s) publicado(s).</p>
+          <p className="text-muted-foreground text-sm">
+            Sua loja já tem {progress.approved} {progress.approved === 1 ? "produto publicado" : "produtos publicados"}.
+          </p>
         ) : progress.submitted > 0 ? (
           <p className="text-muted-foreground text-sm">
-            {progress.submitted} produto(s) aguardando análise da Moto Shop. Você pode acompanhar o status abaixo.
+            {progress.submitted} {progress.submitted === 1 ? "produto" : "produtos"} aguardando análise pelo Moto Shop.
+            Acompanhe o status em{" "}
+            <Link
+              href={"/seller/products" as Route}
+              className="text-brand-strong font-medium underline underline-offset-4"
+            >
+              Produtos
+            </Link>
+            .
           </p>
         ) : progress.editable > 0 ? (
           <p className="text-muted-foreground text-sm">
-            Revise os rascunhos ou produtos rejeitados abaixo e envie um produto para aprovação.
+            Revise os rascunhos ou produtos rejeitados em{" "}
+            <Link
+              href={"/seller/products" as Route}
+              className="text-brand-strong font-medium underline underline-offset-4"
+            >
+              Produtos
+            </Link>{" "}
+            e envie um produto para aprovação.
           </p>
         ) : (
-          <Link href="/seller/products/new" className="text-primary text-sm font-medium underline underline-offset-4">
+          <Link
+            href="/seller/products/new"
+            className="text-brand-text text-sm font-medium underline underline-offset-4"
+          >
             Cadastrar meu primeiro produto
           </Link>
         )}

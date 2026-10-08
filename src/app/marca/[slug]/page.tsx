@@ -12,18 +12,31 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!brand) return { title: "Marca não encontrada" };
   return {
     title: `Produtos ${brand.name}`,
-    description: `Encontre produtos ${brand.name} para motocross na Moto Shop.`,
+    description: `Encontre produtos ${brand.name} para motocross no Moto Shop.`,
     alternates: { canonical: `/marca/${brand.slug}` },
   };
 }
 
-export default async function BrandPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function BrandPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { slug } = await params;
   const catalogParams = await loadPublicCatalogSearchParams(searchParams);
   const brand = await getPublicBrandBySlug(slug);
   if (!brand) notFound();
 
-  const result = await listApprovedProducts({ brandId: brand.id, sort: catalogParams.sort, availability: catalogParams.availability, promotion: catalogParams.promotion, page: catalogParams.page, pageSize: 12 });
+  const result = await listApprovedProducts({
+    brandId: brand.id,
+    sort: catalogParams.sort,
+    availability: catalogParams.availability,
+    promotion: catalogParams.promotion,
+    page: catalogParams.page,
+    pageSize: 12,
+  });
 
   return (
     <PublicCatalogLanding

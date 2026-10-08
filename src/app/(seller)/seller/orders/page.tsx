@@ -1,36 +1,44 @@
-import Link from "next/link";
-import type { Route } from "next";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
+import { DesignSelect } from "@/components/ui/design-select";
+import { DateFilterInput } from "@/components/ui/date-filter-input";
+import type { Metadata, Route } from "next";
+import { createSerializer } from "nuqs/server";
+import { ClipboardList } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatMoneyInCents } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { formatDate, formatMoneyInCents } from "@/lib/format";
+import { getStatusOptions } from "@/shared/presentation/status-labels";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { ShipmentActions } from "@/modules/shipping/components/shipment-actions";
 import { OwnShipmentActions } from "@/modules/shipping/components/own-shipping-forms";
 import { hasSellerPermission } from "@/modules/auth/domain/seller-permissions";
 import { canAdvanceOwnShipment } from "@/modules/shipping/domain/own-shipping";
 import { listSellerOrders } from "@/modules/shipping/queries/seller-orders";
-import { loadSellerOrdersSearchParams } from "@/modules/shipping/search-params";
+import {
+  loadSellerOrdersSearchParams,
+  sellerOrderStatusValues,
+  sellerOrdersSearchParams,
+  shipmentStatusValues,
+} from "@/modules/shipping/search-params";
 
-const statusLabels: Record<string, string> = {
-  PENDING_PAYMENT: "Aguardando pagamento",
-  PAID: "Pago",
-  PROCESSING: "Em processamento",
-  SHIPPED: "Enviado",
-  DELIVERED: "Entregue",
-  CANCELLATION_REQUESTED: "Cancelamento em análise",
-  CANCELLED: "Cancelado",
+export const metadata: Metadata = {
+  title: "Pedidos · Central do Lojista",
+  robots: { index: false, follow: false },
 };
 
-const shipmentStatusLabels: Record<string, string> = {
-  PENDING: "Pendente",
-  READY_TO_SHIP: "Pronto para envio",
-  SHIPPED: "Postado",
-  IN_TRANSIT: "Em trânsito",
-  DELIVERED: "Entregue",
-  EXCEPTION: "Exceção",
-  CANCELLED: "Cancelado",
-};
+const serializeSellerOrdersSearchParams = createSerializer(sellerOrdersSearchParams);
+const basePath = "/seller/orders";
+const orderStatusOptions = getStatusOptions("sellerOrder").filter(({ value }) =>
+  (sellerOrderStatusValues as readonly string[]).includes(value),
+);
+const shipmentStatusOptions = getStatusOptions("shipment").filter(({ value }) =>
+  (shipmentStatusValues as readonly string[]).includes(value),
+);
 
 export default async function SellerOrdersPage({
   searchParams,
@@ -40,112 +48,98 @@ export default async function SellerOrdersPage({
   const context = await requireSellerAccess("ORDER_READ");
   const params = await loadSellerOrdersSearchParams(searchParams);
   const result = await listSellerOrders(context.seller.id, params);
+  const hasFilters = Boolean(
+    params.q || params.from || params.to || params.status !== "ALL" || params.shipmentStatus !== "ALL",
+  );
 
-  function pageHref(page: number): Route {
-    const query = new URLSearchParams();
-    if (params.q) query.set("q", params.q);
-    if (params.from) query.set("from", params.from);
-    if (params.to) query.set("to", params.to);
-    if (params.status !== "ALL") query.set("status", params.status);
-    if (params.shipmentStatus !== "ALL") query.set("shipmentStatus", params.shipmentStatus);
-    if (params.sort !== "newest") query.set("sort", params.sort);
-    if (page > 1) query.set("page", String(page));
-    const serialized = query.toString();
-    return (serialized ? `/seller/orders?${serialized}` : "/seller/orders") as Route;
-  }
+  const pageHref = (page: number) => serializeSellerOrdersSearchParams(basePath, { ...params, page }) as Route;
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <Badge variant="secondary">Pedidos</Badge>
-        <h2 className="mt-2 text-2xl font-semibold">Fulfillment e envios</h2>
-        <p className="text-muted-foreground text-sm">
-          Compre etiquetas, gere documentos e acompanhe o rastreamento dos pedidos da sua loja.
-        </p>
-      </div>
+    <>
+      <PageHeader
+        eyebrow="Pedidos"
+        title="Preparação e envio"
+        description="Compre etiquetas, gere documentos e acompanhe o rastreamento dos pedidos da sua loja."
+      />
 
       <Card>
         <CardHeader>
-          <CardTitle>Pedidos da loja</CardTitle>
-          <CardDescription>{result.total} pedido(s) encontrados.</CardDescription>
+          <CardTitle>
+            <h2 className="text-lg">Pedidos da loja</h2>
+          </CardTitle>
+          <CardDescription>
+            {result.total} {result.total === 1 ? "pedido encontrado" : "pedidos encontrados"}.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="mb-5 grid gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-6" method="get">
-            <label className="flex flex-col gap-2 text-sm font-medium">
-              Buscar pedido
-              <input
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="q"
-                defaultValue={params.q ?? ""}
-                placeholder="Número, cliente ou e-mail"
-              />
-            </label>
-            <label className="flex flex-col gap-2 text-sm font-medium">
-              Status
-              <select
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="status"
-                defaultValue={params.status}
-              >
-                <option value="ALL">Todos</option>
-                {Object.entries(statusLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-2 text-sm font-medium">
-              Status do envio
-              <select
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="shipmentStatus"
-                defaultValue={params.shipmentStatus}
-              >
-                <option value="ALL">Todos</option>
-                {Object.entries(shipmentStatusLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-2 text-sm font-medium">
-              Ordenação
-              <select
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="sort"
-                defaultValue={params.sort}
-              >
-                <option value="newest">Mais recentes</option>
-                <option value="oldest">Mais antigos</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-2 text-sm font-medium">
-              De
-              <input
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="from"
-                type="date"
-                defaultValue={params.from ?? ""}
-              />
-            </label>
-            <label className="flex flex-col gap-2 text-sm font-medium">
-              Até
-              <input
-                className="border-input bg-background h-10 rounded-md border px-3 text-sm"
-                name="to"
-                type="date"
-                defaultValue={params.to ?? ""}
-              />
-            </label>
-            <button className="bg-primary text-primary-foreground h-10 rounded-md px-4 text-sm font-medium">
-              Filtrar
-            </button>
-          </form>
+          <details className="mb-5 rounded-lg border p-3" open={hasFilters}>
+            <summary className="flex min-h-11 cursor-pointer list-none items-center font-semibold [&::-webkit-details-marker]:hidden">
+              Filtros de pedidos
+            </summary>
+            <form className="mt-4 grid gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-6" method="get" action={basePath}>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Buscar pedido
+                <Input name="q" defaultValue={params.q ?? ""} placeholder="Número, cliente ou e-mail" />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Status
+                <DesignSelect aria-label="Status" name="status" defaultValue={params.status}>
+                  <option value="ALL">Todos</option>
+                  {orderStatusOptions.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </DesignSelect>
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Status do envio
+                <DesignSelect aria-label="Status do envio" name="shipmentStatus" defaultValue={params.shipmentStatus}>
+                  <option value="ALL">Todos</option>
+                  {shipmentStatusOptions.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </DesignSelect>
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Ordenação
+                <DesignSelect aria-label="Ordenação" name="sort" defaultValue={params.sort}>
+                  <option value="newest">Mais recentes</option>
+                  <option value="oldest">Mais antigos</option>
+                </DesignSelect>
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                De
+                <DateFilterInput name="from" value={params.from} />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Até
+                <DateFilterInput name="to" value={params.to} />
+              </label>
+              <Button type="submit" className="rounded-md px-4">
+                Filtrar
+              </Button>
+            </form>
+          </details>
 
           {result.orders.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Ainda não há pedidos para processar.</p>
+            <EmptyState
+              variant="inline"
+              icon={ClipboardList}
+              title={
+                hasFilters
+                  ? "Nenhum pedido corresponde aos filtros selecionados."
+                  : "Ainda não há pedidos para processar."
+              }
+              description={
+                hasFilters
+                  ? "Ajuste ou limpe os filtros para ver outros pedidos."
+                  : "Novos pedidos pagos aparecerão aqui."
+              }
+              action={hasFilters ? { label: "Limpar filtros", href: basePath } : undefined}
+            />
           ) : (
             <div className="flex flex-col gap-4">
               {result.orders.map((order) => {
@@ -156,22 +150,18 @@ export default async function SellerOrdersPage({
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="font-medium">{order.order.orderNumber}</h3>
-                          <Badge variant="outline">{statusLabels[order.status] ?? order.status}</Badge>
+                          <StatusBadge domain="sellerOrder" status={order.status} />
                         </div>
                         <p className="text-muted-foreground mt-1 text-sm">
                           {order.order.customerName} · {formatMoneyInCents(order.customerShippingAmountInCents)} em
                           frete
                         </p>
                         <p className="text-muted-foreground text-xs">
-                          Criado em {new Intl.DateTimeFormat("pt-BR").format(order.createdAt)} · {order.items.length}{" "}
-                          item(ns)
+                          Criado em <time dateTime={order.createdAt.toISOString()}>{formatDate(order.createdAt)}</time>{" "}
+                          · {order.items.length} {order.items.length === 1 ? "item" : "itens"}
                         </p>
                       </div>
-                      {shipment ? (
-                        <Badge variant={shipment.status === "EXCEPTION" ? "destructive" : "secondary"}>
-                          {shipmentStatusLabels[shipment.status] ?? shipment.status}
-                        </Badge>
-                      ) : null}
+                      {shipment ? <StatusBadge domain="shipment" status={shipment.status} /> : null}
                     </div>
 
                     <div className="text-muted-foreground grid gap-1 text-sm sm:grid-cols-2">
@@ -181,7 +171,7 @@ export default async function SellerOrdersPage({
                       <p>Rastreio: {shipment?.trackingCode ?? "Ainda não disponível"}</p>
                       {shipment?.trackingUrl ? (
                         <a
-                          className="text-primary underline"
+                          className="text-brand-strong underline"
                           href={shipment.trackingUrl}
                           target="_blank"
                           rel="noreferrer"
@@ -231,6 +221,7 @@ export default async function SellerOrdersPage({
                           canPurchase={order.status === "PAID" || order.status === "PROCESSING"}
                           hasShipment={Boolean(shipment?.externalShipmentId)}
                           hasTrackingCode={Boolean(shipment?.trackingCode)}
+                          generationState={shipment?.generationState ?? null}
                         />
                       ))}
                   </article>
@@ -240,28 +231,17 @@ export default async function SellerOrdersPage({
           )}
 
           {result.pageCount > 1 ? (
-            <nav className="mt-6 flex items-center justify-between gap-3" aria-label="Paginação de pedidos do seller">
-              {result.page > 1 ? (
-                <Link href={pageHref(result.page - 1)} className="rounded-md border px-3 py-2 text-sm">
-                  Anterior
-                </Link>
-              ) : (
-                <span />
-              )}
-              <span className="text-muted-foreground text-sm">
-                Página {result.page} de {result.pageCount}
-              </span>
-              {result.page < result.pageCount ? (
-                <Link href={pageHref(result.page + 1)} className="rounded-md border px-3 py-2 text-sm">
-                  Próxima
-                </Link>
-              ) : (
-                <span />
-              )}
-            </nav>
+            <Pagination
+              ariaLabel="Paginação de pedidos da loja"
+              page={result.page}
+              pageCount={result.pageCount}
+              previousHref={pageHref(result.page - 1)}
+              nextHref={pageHref(result.page + 1)}
+              className="mt-6"
+            />
           ) : null}
         </CardContent>
       </Card>
-    </div>
+    </>
   );
 }
