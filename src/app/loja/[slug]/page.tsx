@@ -239,7 +239,7 @@ export default async function PublicStorePage({
                   <input type="hidden" name="storeProductSort" value={storeParams.storeProductSort} />
                 ) : null}
                 <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
-                  Buscar produto
+                  Buscar nesta loja
                   <Input
                     type="search"
                     className="h-11"

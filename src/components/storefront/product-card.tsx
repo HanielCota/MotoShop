@@ -52,7 +52,10 @@ export function ProductCard({
     product.compareAtPriceInCents > product.priceInCents;
 
   return (
-    <article className="group/card border-border bg-card text-card-foreground relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl border transition-shadow hover:shadow-md">
+    <article
+      data-slot="product-card"
+      className="group/card border-border bg-card text-card-foreground relative flex w-full min-w-0 flex-col overflow-hidden rounded-xl border transition-shadow hover:shadow-md"
+    >
       <Link
         href={product.href}
         aria-label={`Ver ${product.name}`}
