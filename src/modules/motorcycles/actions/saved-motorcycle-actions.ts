@@ -9,6 +9,7 @@ import {
   addSavedMotorcycle,
   changeSavedMotorcycle,
   removeSavedMotorcycle,
+  saveMotorcycleAsPrimary,
   setPrimarySavedMotorcycle,
 } from "@/modules/motorcycles/application/saved-motorcycles";
 import { ApplicationError } from "@/shared/errors/application-error";
@@ -98,6 +99,30 @@ export async function removeSavedMotorcycleAction(
     await removeSavedMotorcycle(session.user.id, parsedId.data);
     revalidateMotorcyclePages();
     return { success: "Moto removida." };
+  } catch (error) {
+    return actionError(error);
+  }
+}
+
+const productPathSchema = z.string().regex(/^\/products\/[a-z0-9-]+$/);
+
+/**
+ * Seleção "Sua moto" na página do produto: salva a moto como principal na conta do
+ * usuário autenticado (userId da sessão) e revalida a página do produto.
+ */
+export async function savePrimaryMotorcycleFromProductAction(
+  motorcycleFitmentId: string,
+  productPath: string,
+): Promise<SavedMotorcycleActionState> {
+  const path = productPathSchema.safeParse(productPath);
+  const session = await requireAuthenticatedUser(path.success ? path.data : "/products");
+  const parsed = fitmentSchema.safeParse({ motorcycleFitmentId });
+  if (!parsed.success) return { error: "Selecione uma moto válida." };
+  try {
+    await saveMotorcycleAsPrimary(session.user.id, parsed.data.motorcycleFitmentId);
+    revalidateMotorcyclePages();
+    if (path.success) revalidatePath(path.data);
+    return { success: "Sua moto foi salva na sua conta." };
   } catch (error) {
     return actionError(error);
   }
