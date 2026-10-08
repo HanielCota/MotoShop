@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { getPublicStockStatus, publicStockStatusLabel } from "@/modules/products/domain/stock-status";
 
 /** Dados de apresentação do card; derivados no servidor a partir de produtos aprovados. */
 export type ProductCardData = {
@@ -44,9 +45,8 @@ export function ProductCard({
   action?: ReactNode;
 }) {
   const Heading = headingLevel;
-  const inStock = product.availableQuantity > 0;
+  const stockStatus = getPublicStockStatus(product.availableQuantity);
   const onSale =
-    !product.isDemo &&
     product.compareAtPriceInCents != null &&
     product.priceInCents !== null &&
     product.compareAtPriceInCents > product.priceInCents;
@@ -152,10 +152,15 @@ export function ProductCard({
           <p
             className={cn(
               "text-xs",
-              inStock || product.isDemo ? "text-muted-foreground" : "text-warning-foreground font-medium",
+              stockStatus === "in-stock"
+                ? "text-muted-foreground"
+                : stockStatus === "last-units"
+                  ? "text-warning-foreground font-semibold"
+                  : "text-foreground font-medium",
             )}
           >
-            {product.isDemo ? "Exemplo ilustrativo · compra indisponível" : inStock ? "Em estoque" : "Indisponível"}
+            {publicStockStatusLabel[stockStatus]}
+            {product.isDemo ? " · demonstração" : ""}
           </p>
         </div>
         {action ? <div className="pt-2 [&_button]:w-full">{action}</div> : null}

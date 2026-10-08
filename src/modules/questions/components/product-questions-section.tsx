@@ -67,6 +67,7 @@ export function ProductQuestionsSection({
               <input type="hidden" name="reviewSort" value={params.reviewSort} />
             ) : null}
             {params.reviewPage > 1 ? <input type="hidden" name="reviewPage" value={params.reviewPage} /> : null}
+            {params.moto ? <input type="hidden" name="moto" value={params.moto} /> : null}
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenar perguntas
               <DesignSelect

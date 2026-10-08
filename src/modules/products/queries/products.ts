@@ -1,7 +1,12 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { Prisma, ProductStatus } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
+
+import { buildRatingDistribution } from "../domain/review-distribution";
+import { netUnitsSold, SALE_REVERSING_RETURN_STATUSES, SOLD_SELLER_ORDER_STATUSES } from "../domain/units-sold";
 
 import { findPublicProductPage, type PublicProductFilter } from "./public-product-page";
 import type { SellerProductSort, SellerProductStatus, SellerProductStock } from "../seller-search-params";
@@ -303,30 +308,17 @@ export async function getApprovedProductBySlug(
 
   if (!product) return null;
 
-  const [reviewSummary, reviewCount, unitsSoldResult] = await Promise.all([
-    db.productReview.aggregate({
-      where: {
-        productId: product.id,
-        hiddenAt: null,
-        ...(reviewRating ? { ratingTenths: { gte: reviewRating * 10 } } : {}),
-      },
-      _avg: { ratingTenths: true },
-    }),
-    db.productReview.count({
-      where: {
-        productId: product.id,
-        hiddenAt: null,
-        ...(reviewRating ? { ratingTenths: { gte: reviewRating * 10 } } : {}),
-      },
-    }),
-    db.orderItem.aggregate({
-      where: {
-        productId: product.id,
-        sellerOrder: { status: { in: ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"] } },
-      },
-      _sum: { quantity: true },
-    }),
+  const reviewWhere: Prisma.ProductReviewWhereInput = {
+    productId: product.id,
+    hiddenAt: null,
+    ...(reviewRating ? { ratingTenths: { gte: reviewRating * 10 } } : {}),
+  };
+  const [reviewSummary, reviewGroups, unitsSold] = await Promise.all([
+    db.productReview.aggregate({ where: reviewWhere, _avg: { ratingTenths: true }, _count: { _all: true } }),
+    db.productReview.groupBy({ by: ["ratingTenths"], where: reviewWhere, _count: { _all: true } }),
+    getProductUnitsSold(product.id),
   ]);
+  const reviewCount = reviewSummary._count._all;
   const reviewPageCount = Math.max(Math.ceil(reviewCount / pageSize), 1);
   const questionPageCount = Math.max(Math.ceil(product._count.questions / pageSize), 1);
 
@@ -334,7 +326,10 @@ export async function getApprovedProductBySlug(
     ...product,
     productReviewAverage: reviewSummary._avg.ratingTenths === null ? null : reviewSummary._avg.ratingTenths / 10,
     productReviewCount: reviewCount,
-    unitsSold: unitsSoldResult._sum.quantity ?? 0,
+    reviewDistribution: buildRatingDistribution(
+      reviewGroups.map((group) => ({ ratingTenths: group.ratingTenths, count: group._count._all })),
+    ),
+    unitsSold,
     questionCount: product._count.questions,
     reviewPage: Math.min(requestedReviewPage, reviewPageCount),
     reviewPageCount,
@@ -342,6 +337,25 @@ export async function getApprovedProductBySlug(
     questionPageCount,
   };
 }
+
+/**
+ * Unidades vendidas de um produto (regra em `domain/units-sold.ts`): itens de `SellerOrder`
+ * com venda confirmada menos unidades de devoluções reembolsadas. Memoizado por request.
+ */
+export const getProductUnitsSold = cache(async (productId: string) => {
+  const soldOrderItem = { productId, sellerOrder: { status: { in: [...SOLD_SELLER_ORDER_STATUSES] } } };
+  const [sold, refunded] = await Promise.all([
+    db.orderItem.aggregate({ where: soldOrderItem, _sum: { quantity: true } }),
+    db.returnItem.aggregate({
+      where: {
+        orderItem: soldOrderItem,
+        returnRequest: { status: { in: [...SALE_REVERSING_RETURN_STATUSES] } },
+      },
+      _sum: { quantity: true },
+    }),
+  ]);
+  return netUnitsSold(sold._sum.quantity, refunded._sum.quantity);
+});
 
 export async function getApprovedProductSeoBySlug(slug: string) {
   return db.product.findFirst({
