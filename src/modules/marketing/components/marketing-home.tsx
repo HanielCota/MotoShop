@@ -3,6 +3,8 @@ import Image from "next/image";
 import type { ProductCardData } from "@/components/storefront/product-card";
 import type { FitmentOption } from "@/modules/motorcycles/domain/fitment-options";
 
+import { BRAND_SLOGAN } from "@/config/brand";
+
 import { CategoryShowcase, type MarketingCategory } from "./category-showcase";
 import { EssentialsSection } from "./essentials-section";
 import { FeaturedProducts } from "./featured-products";
@@ -18,6 +20,11 @@ type MarketingHomeProps = {
   primaryFitmentId?: string | null;
 };
 
+// O slogan quebra antes da última palavra ("OFF-ROAD!"), mantendo a direção de arte do hero.
+const sloganBreak = BRAND_SLOGAN.lastIndexOf(" ");
+const sloganLead = BRAND_SLOGAN.slice(0, sloganBreak);
+const sloganEnd = BRAND_SLOGAN.slice(sloganBreak + 1);
+
 /**
  * Página inicial: composição de seções server-rendered; apenas o seletor de moto é client component.
  * Cabeçalho e rodapé vêm do layout raiz (StorefrontNavigation/SiteFooter).
@@ -25,7 +32,7 @@ type MarketingHomeProps = {
 export function MarketingHome({ fitments, categories, featuredProducts, primaryFitmentId }: MarketingHomeProps) {
   return (
     <main className="bg-surface-sunken overflow-x-clip">
-      <section className="relative isolate text-white" aria-labelledby="home-title">
+      <section className="bg-moto-brand-foreground relative isolate text-white" aria-labelledby="home-title">
         <Image
           className={styles.heroImage}
           src="/2016_JS7_MEC_PR_JK14.jpg"
@@ -42,14 +49,14 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
           </p>
           <h1
             id="home-title"
-            className="mt-4 mb-4 max-w-5xl text-5xl leading-[0.88] tracking-[-0.04em] text-balance uppercase sm:text-7xl lg:text-8xl"
+            className="mt-4 mb-4 max-w-5xl text-5xl leading-[0.88] tracking-[-0.04em] text-balance uppercase sm:text-7xl lg:max-w-3xl lg:text-8xl"
           >
-            O Marketplace de quem vive o
+            {sloganLead}
             <br />
-            OFF-ROAD!
+            {sloganEnd}
           </h1>
           <p className="mb-7 max-w-xl text-sm leading-6 text-white/75 sm:text-base sm:leading-7">
-            Encontre produtos de lojistas parceiros e confira a compatibilidade com a sua moto antes de comprar.
+            Peças, acessórios e equipamentos de lojistas parceiros. Escolha a sua moto e veja as peças compatíveis.
           </p>
           <MotorcycleFinder fitments={fitments} primaryFitmentId={primaryFitmentId} />
         </div>

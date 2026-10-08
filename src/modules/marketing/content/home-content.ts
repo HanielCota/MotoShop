@@ -58,10 +58,10 @@ export const essentials: { title: string; description: string; href: Route; icon
 ];
 
 export const trustItems: { title: string; text: string; icon: LucideIcon }[] = [
-  { icon: BadgeCheck, title: "Lojas verificadas", text: "Lojistas aprovados pelo Moto Shop" },
-  { icon: ShieldCheck, title: "Pedido acompanhado", text: "Consulte seu pedido na plataforma" },
-  { icon: PackageCheck, title: "Compatibilidade clara", text: "Saiba se a peça serve antes de comprar" },
-  { icon: MapPin, title: "Frete por loja", text: "Consulte opções e prazos no checkout" },
+  { icon: BadgeCheck, title: "Lojistas parceiros", text: "Lojas aprovadas pelo Moto Shop" },
+  { icon: PackageCheck, title: "Peças compatíveis", text: "Confira se a peça serve na sua moto" },
+  { icon: MapPin, title: "Frete por loja", text: "Opções e prazos no checkout" },
+  { icon: ShieldCheck, title: "Pedido acompanhado", text: "Acompanhe tudo na plataforma" },
 ];
 
 /** Links de categoria só aparecem quando a categoria existe e está ativa. */

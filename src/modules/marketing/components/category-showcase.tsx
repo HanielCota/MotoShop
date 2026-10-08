@@ -27,8 +27,8 @@ export function CategoryShowcase({ categories }: { categories: MarketingCategory
       aria-labelledby="home-categories-title"
     >
       <SectionHeading
-        kicker="Comece por aqui"
-        title="O que você procura?"
+        kicker="Catálogo"
+        title="Categorias"
         titleId="home-categories-title"
         link={{ label: "Ver todas as categorias", href: "/products" }}
       />

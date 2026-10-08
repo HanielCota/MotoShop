@@ -21,7 +21,6 @@ type DesignSelectProps = {
   defaultValue?: string | string[] | number;
   value?: string | string[] | number;
   onValueChange?: (value: string | string[]) => void;
-  tone?: "default" | "marketing";
   "aria-label"?: string;
   /** Liga o gatilho a um <label htmlFor> (ex.: `FormField`). */
   id?: string;
@@ -40,7 +39,6 @@ export function DesignSelect({
   defaultValue,
   value,
   onValueChange,
-  tone = "default",
   "aria-label": ariaLabel,
   id,
   "aria-invalid": ariaInvalid,
@@ -92,7 +90,6 @@ export function DesignSelect({
           <Select.Popup
             className={cn(
               "border-border bg-popover text-popover-foreground max-w-[min(90vw,40rem)] min-w-[var(--anchor-width)] overflow-hidden rounded-md border shadow-lg outline-none",
-              tone === "marketing" && "border-moto-brand/30",
               "origin-[var(--transform-origin)] transition-[opacity,transform] duration-100 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
             )}
           >
@@ -103,9 +100,7 @@ export function DesignSelect({
                   value={item.value}
                   className={cn(
                     "grid cursor-default grid-cols-[1rem_minmax(0,1fr)] items-center gap-2 rounded-sm px-2 py-2 text-sm outline-none select-none data-selected:font-medium",
-                    tone === "marketing"
-                      ? "data-highlighted:bg-moto-brand data-highlighted:text-moto-brand-foreground"
-                      : "data-highlighted:bg-accent data-highlighted:text-accent-foreground",
+                    "data-highlighted:bg-accent data-highlighted:text-accent-foreground",
                   )}
                 >
                   <Select.ItemIndicator className="col-start-1">
