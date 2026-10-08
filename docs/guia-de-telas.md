@@ -74,6 +74,14 @@ Todas usam a mesma senha: o valor de `REVIEW_ACCOUNTS_PASSWORD`, no início de `
 
 **Pedido de convidado** (sem conta): o seed imprime no final um link `http://localhost:3001/orders/MS-REVIEW-0008?accessToken=…`. Abra-o numa janela anônima para ver o acompanhamento sem login. O token muda a cada execução do seed.
 
+**Verificação automática antes de apresentar:** com o servidor rodando (`pnpm dev:review`), o comando abaixo percorre todas as telas da loja, do cliente, da Central do Lojista e do Admin, no celular e no desktop. Ele confere se cada página abre sem erro, sem erro no console do navegador, sem rolagem lateral e com o conteúdo esperado. É **somente leitura**: só entra nas contas e navega, sem criar ou alterar dados.
+
+```bash
+DEMO_ADMIN_EMAIL=<conta em ADMIN_EMAILS> DEMO_ADMIN_PASSWORD=<senha> pnpm test:demo
+```
+
+Sem as duas variáveis, a parte do Admin é pulada. O relatório fica em `playwright-report-demo/index.html`.
+
 ---
 
 ## 3. Loja (sem entrar na conta)
