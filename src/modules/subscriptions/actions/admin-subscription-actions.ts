@@ -10,8 +10,12 @@ import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
 
 const subscriptionSchema = z.object({
-  sellerId: z.string().min(1),
-  months: z.coerce.number().int().min(1).max(12),
+  sellerId: z.string().min(1, "Selecione a loja."),
+  months: z.coerce
+    .number({ error: "Informe a duração em meses, de 1 a 12." })
+    .int("Informe a duração em meses, de 1 a 12.")
+    .min(1, "Informe a duração em meses, de 1 a 12.")
+    .max(12, "Informe a duração em meses, de 1 a 12."),
 });
 
 export type SubscriptionActionState = { error?: string; success?: string };

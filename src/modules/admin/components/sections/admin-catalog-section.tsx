@@ -106,7 +106,7 @@ export async function AdminCatalogSection() {
                   label={categoryOptions.find((option) => option.id === category.id)?.label}
                   count={`${category._count.products} produto(s)`}
                   active={category.active}
-                  toggle={toggleCategoryAction.bind(null, category.id)}
+                  toggle={toggleCategoryAction.bind(null, category.id, !category.active)}
                 />
               ))}
             </ul>
@@ -123,7 +123,7 @@ export async function AdminCatalogSection() {
                   label={brand.name}
                   count={`${brand._count.products} produto(s)`}
                   active={brand.active}
-                  toggle={toggleBrandAction.bind(null, brand.id)}
+                  toggle={toggleBrandAction.bind(null, brand.id, !brand.active)}
                 />
               ))}
             </ul>
@@ -139,7 +139,7 @@ export async function AdminCatalogSection() {
                   key={manufacturer.id}
                   label={manufacturer.name}
                   active={manufacturer.active}
-                  toggle={toggleMotorcycleManufacturerAction.bind(null, manufacturer.id)}
+                  toggle={toggleMotorcycleManufacturerAction.bind(null, manufacturer.id, !manufacturer.active)}
                 />
               ))}
             </ul>
@@ -158,7 +158,7 @@ export async function AdminCatalogSection() {
                   label={`${manufacturer.name} ${model.name}`}
                   count={`${model._count.fitments} compatibilidade(s)`}
                   active={model.active}
-                  toggle={toggleMotorcycleModelAction.bind(null, model.id)}
+                  toggle={toggleMotorcycleModelAction.bind(null, model.id, !model.active)}
                 />
               ))}
             </ul>

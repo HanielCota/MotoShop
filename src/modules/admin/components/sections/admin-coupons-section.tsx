@@ -10,6 +10,7 @@ import { listMarketplaceCoupons } from "@/modules/coupons/queries/coupons";
 import { loadCouponSearchParams } from "@/modules/coupons/search-params";
 
 import { adminHref } from "../../admin-href";
+import { clampAdminPage } from "../../search-params";
 import { AdminCard, AdminFilterForm, AdminTable, cellClassName, FilterSelect, FilterText } from "../admin-ui";
 import type { AdminSectionProps } from "./types";
 
@@ -36,11 +37,12 @@ const sortOptions = [
 export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
   const params = await loadCouponSearchParams(searchParams);
   const result = await listMarketplaceCoupons({
-    query: params.couponQ,
+    // Os parâmetros de cupom são compartilhados com a Central do Lojista; o Admin limita página e NUL aqui.
+    query: params.couponQ?.replaceAll(String.fromCharCode(0), "") ?? null,
     active: params.couponActive,
     validity: params.couponValidity,
     sort: params.couponSort,
-    page: params.couponPage,
+    page: clampAdminPage(params.couponPage),
   });
   const pageHref = (page: number) => adminHref("coupons", { ...params, couponPage: page }, { couponSort: "newest" });
 

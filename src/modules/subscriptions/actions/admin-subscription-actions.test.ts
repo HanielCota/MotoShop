@@ -24,3 +24,11 @@ it("locks the seller before checking VIP state and rejects an unavailable seller
   expect(mocks.lock.mock.invocationCallOrder[0]).toBeLessThan(mocks.seller.mock.invocationCallOrder[0]!);
   expect(mocks.subscription).not.toHaveBeenCalled();
 });
+it.each(["0", "13", "1.5", "abc"])("refuses %s months with a Portuguese message before locking", async (months) => {
+  mocks.lock.mockClear();
+  const form = new FormData();
+  form.set("sellerId", "seller");
+  form.set("months", months);
+  expect((await activateVipSubscriptionAction({}, form)).error).toBe("Informe a duração em meses, de 1 a 12.");
+  expect(mocks.lock).not.toHaveBeenCalled();
+});
