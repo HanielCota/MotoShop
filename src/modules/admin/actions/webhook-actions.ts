@@ -5,15 +5,19 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/database";
 import { inngest } from "@/lib/inngest/client";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
+import { retryableWebhookEventWhere } from "@/modules/payments/domain/webhook-retry";
 
 export async function retryWebhookEventAction(webhookEventId: string): Promise<void> {
   const session = await requireAdminAccess();
-  const event = await db.webhookEvent.findFirst({ where: { id: webhookEventId, status: "FAILED" } });
+  // FAILED events, or PROCESSING events stuck for more than 15 minutes (worker crash
+  // before the onFailure handler could run).
+  const now = new Date();
+  const event = await db.webhookEvent.findFirst({ where: { id: webhookEventId, ...retryableWebhookEventWhere(now) } });
   if (!event) return;
 
   const claimed = await db.$transaction(async (tx) => {
     const updated = await tx.webhookEvent.updateMany({
-      where: { id: event.id, status: "FAILED" },
+      where: { id: event.id, ...retryableWebhookEventWhere(now) },
       data: { status: "RECEIVED", error: null, processedAt: null },
     });
     if (updated.count !== 1) return false;
@@ -22,7 +26,12 @@ export async function retryWebhookEventAction(webhookEventId: string): Promise<v
         action: "WEBHOOK_RETRY_REQUESTED",
         entityType: "WebhookEvent",
         entityId: event.id,
-        metadata: { provider: event.provider, externalId: event.externalId, type: event.type },
+        metadata: {
+          provider: event.provider,
+          externalId: event.externalId,
+          type: event.type,
+          previousStatus: event.status,
+        },
         actorUserId: session.user.id,
       },
     });
@@ -43,5 +52,5 @@ export async function retryWebhookEventAction(webhookEventId: string): Promise<v
     throw error;
   }
 
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
 }

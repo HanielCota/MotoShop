@@ -26,8 +26,8 @@ export async function updateSellerCommissionAction(
     };
   try {
     await updateSellerCommission(session.user.id, parsed.data);
-    revalidatePath("/admin");
-    revalidatePath("/seller");
+    revalidatePath("/admin", "layout");
+    revalidatePath("/seller", "layout");
     return {
       success: "Comissão salva. Pedidos anteriores não foram alterados.",
       savedValue: parsed.data.commissionBpsOverride,

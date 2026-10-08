@@ -1,5 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
 
 import { startTransition, useActionState } from "react";
@@ -50,16 +51,7 @@ export function SellerCommissionForm({
       <Button type="submit" disabled={pending} className="rounded-md">
         {pending ? "Salvando..." : "Salvar comissão da loja"}
       </Button>
-      {state.error ? (
-        <p role="alert" className="text-destructive text-xs">
-          {state.error}
-        </p>
-      ) : null}
-      {state.success ? (
-        <p role="status" className="text-xs text-emerald-700">
-          {state.success}
-        </p>
-      ) : null}
+      <FormMessage error={state.error ?? null} success={state.success ?? null} />
     </form>
   );
 }

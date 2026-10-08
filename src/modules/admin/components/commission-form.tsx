@@ -1,5 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
 
 import { useActionState } from "react";
@@ -11,7 +12,7 @@ import {
 
 const initialState: CommissionActionState = {};
 
-export function CommissionForm({ defaultCommissionBps }: { defaultCommissionBps: number }) {
+export function CommissionForm({ defaultCommissionBps }: { defaultCommissionBps: number | null }) {
   const [state, formAction, pending] = useActionState(updateMarketplaceCommissionAction, initialState);
   return (
     <form action={formAction} className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -22,15 +23,15 @@ export function CommissionForm({ defaultCommissionBps }: { defaultCommissionBps:
           type="number"
           min="0"
           max="10000"
-          defaultValue={defaultCommissionBps}
+          required
+          defaultValue={defaultCommissionBps ?? ""}
           className="h-9"
         />
       </label>
       <Button type="submit" size="sm" disabled={pending} className="rounded-md px-4">
         {pending ? "Salvando..." : "Salvar comissão"}
       </Button>
-      {state.error ? <p className="text-destructive text-xs">{state.error}</p> : null}
-      {state.success ? <p className="text-xs text-emerald-700">{state.success}</p> : null}
+      <FormMessage error={state.error ?? null} success={state.success ?? null} />
     </form>
   );
 }

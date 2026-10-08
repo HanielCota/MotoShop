@@ -1,0 +1,184 @@
+import type { ReactNode } from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  BrandForm,
+  CategoryForm,
+  MotorcycleFitmentForm,
+  MotorcycleManufacturerForm,
+  MotorcycleModelForm,
+} from "@/modules/catalog/components/catalog-admin-forms";
+import {
+  toggleBrandAction,
+  toggleCategoryAction,
+  toggleMotorcycleManufacturerAction,
+  toggleMotorcycleModelAction,
+} from "@/modules/catalog/actions/admin-catalog-actions";
+import { getCategoryLabel } from "@/modules/catalog/category-labels";
+import { getAdminCatalogData } from "@/modules/catalog/queries/admin-catalog";
+
+import { AdminCard } from "../admin-ui";
+
+function CatalogColumn({ title, form, children }: { title: string; form: ReactNode; children: ReactNode }) {
+  return (
+    <section className="min-w-0 space-y-3" aria-label={title}>
+      <h3 className="font-semibold">{title}</h3>
+      {form}
+      {children}
+    </section>
+  );
+}
+
+function CatalogRow({
+  label,
+  count,
+  active,
+  toggle,
+}: {
+  label: ReactNode;
+  count?: string;
+  active: boolean;
+  toggle: () => Promise<void>;
+}) {
+  return (
+    <li className="flex items-center justify-between gap-2 py-2 text-sm">
+      <span className="min-w-0 break-words">
+        {label} {count ? <span className="text-muted-foreground">({count})</span> : null}
+        {!active ? (
+          <Badge variant="neutral" className="ml-2">
+            Inativo
+          </Badge>
+        ) : null}
+      </span>
+      <form action={toggle}>
+        <button type="submit" className="text-brand-text shrink-0 text-xs font-medium underline underline-offset-4">
+          {active ? "Desativar" : "Ativar"}
+        </button>
+      </form>
+    </li>
+  );
+}
+
+function EmptyCatalogList({ title }: { title: string }) {
+  return <EmptyState variant="inline" title={title} />;
+}
+
+export async function AdminCatalogSection() {
+  const catalog = await getAdminCatalogData();
+
+  const categoryOptions = catalog.categories.map((category) => ({
+    id: category.id,
+    label: category.parent
+      ? `${getCategoryLabel(category.parent)} / ${getCategoryLabel(category)}`
+      : getCategoryLabel(category),
+  }));
+  const manufacturerOptions = catalog.manufacturers.map((manufacturer) => ({
+    id: manufacturer.id,
+    label: manufacturer.name,
+  }));
+  const modelOptions = catalog.manufacturers.flatMap((manufacturer) =>
+    manufacturer.models.map((model) => ({ id: model.id, label: `${manufacturer.name} ${model.name}` })),
+  );
+  const models = catalog.manufacturers.flatMap((manufacturer) =>
+    manufacturer.models.map((model) => ({ manufacturer, model })),
+  );
+  const fitments = models.flatMap(({ manufacturer, model }) =>
+    model.fitments.slice(0, 8).map((fitment) => ({ manufacturer, model, fitment })),
+  );
+
+  return (
+    <AdminCard
+      id="admin-catalog"
+      title="Catálogo controlado pelo Moto Shop"
+      description="Lojistas usam estas categorias, marcas e motos aprovadas. Desativar preserva o histórico e impede novos usos."
+      contentClassName="space-y-8"
+    >
+      <div className="grid gap-6 lg:grid-cols-3">
+        <CatalogColumn title="Categorias" form={<CategoryForm categories={categoryOptions} />}>
+          {catalog.categories.length === 0 ? (
+            <EmptyCatalogList title="Nenhuma categoria cadastrada" />
+          ) : (
+            <ul className="divide-border divide-y">
+              {catalog.categories.map((category) => (
+                <CatalogRow
+                  key={category.id}
+                  label={categoryOptions.find((option) => option.id === category.id)?.label}
+                  count={`${category._count.products} produto(s)`}
+                  active={category.active}
+                  toggle={toggleCategoryAction.bind(null, category.id)}
+                />
+              ))}
+            </ul>
+          )}
+        </CatalogColumn>
+        <CatalogColumn title="Marcas" form={<BrandForm />}>
+          {catalog.brands.length === 0 ? (
+            <EmptyCatalogList title="Nenhuma marca cadastrada" />
+          ) : (
+            <ul className="divide-border divide-y">
+              {catalog.brands.map((brand) => (
+                <CatalogRow
+                  key={brand.id}
+                  label={brand.name}
+                  count={`${brand._count.products} produto(s)`}
+                  active={brand.active}
+                  toggle={toggleBrandAction.bind(null, brand.id)}
+                />
+              ))}
+            </ul>
+          )}
+        </CatalogColumn>
+        <CatalogColumn title="Fabricantes" form={<MotorcycleManufacturerForm />}>
+          {catalog.manufacturers.length === 0 ? (
+            <EmptyCatalogList title="Nenhum fabricante cadastrado" />
+          ) : (
+            <ul className="divide-border divide-y">
+              {catalog.manufacturers.map((manufacturer) => (
+                <CatalogRow
+                  key={manufacturer.id}
+                  label={manufacturer.name}
+                  active={manufacturer.active}
+                  toggle={toggleMotorcycleManufacturerAction.bind(null, manufacturer.id)}
+                />
+              ))}
+            </ul>
+          )}
+        </CatalogColumn>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <CatalogColumn title="Modelos" form={<MotorcycleModelForm manufacturers={manufacturerOptions} />}>
+          {models.length === 0 ? (
+            <EmptyCatalogList title="Nenhum modelo cadastrado" />
+          ) : (
+            <ul className="divide-border divide-y">
+              {models.map(({ manufacturer, model }) => (
+                <CatalogRow
+                  key={model.id}
+                  label={`${manufacturer.name} ${model.name}`}
+                  count={`${model._count.fitments} compatibilidade(s)`}
+                  active={model.active}
+                  toggle={toggleMotorcycleModelAction.bind(null, model.id)}
+                />
+              ))}
+            </ul>
+          )}
+        </CatalogColumn>
+        <CatalogColumn title="Compatibilidades de motos" form={<MotorcycleFitmentForm models={modelOptions} />}>
+          {fitments.length === 0 ? (
+            <EmptyCatalogList title="Nenhuma compatibilidade cadastrada" />
+          ) : (
+            <ul className="divide-border divide-y">
+              {fitments.map(({ manufacturer, model, fitment }) => (
+                <li key={fitment.id} className="py-2 text-sm">
+                  {manufacturer.name} {model.name} · {fitment.version || "padrão"} · {fitment.displacementCc}cc ·{" "}
+                  {fitment.year}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CatalogColumn>
+      </div>
+    </AdminCard>
+  );
+}

@@ -2,6 +2,7 @@ import "server-only";
 
 import { NotificationDeliveryStatus } from "@/generated/prisma/enums";
 import { db } from "@/lib/database";
+import { isNotificationDeliveryRetryable } from "@/modules/notifications/domain/notification-delivery-lease";
 
 import { parseDateBoundary } from "./date-boundary";
 
@@ -41,12 +42,18 @@ export async function listNotificationDeliveriesForAdmin(input: {
     db.notificationDelivery.count({ where }),
     db.notificationDelivery.findMany({
       where,
-      select: { id: true, eventKey: true, kind: true, recipientEmail: true, subject: true, status: true, providerId: true, error: true, sentAt: true, createdAt: true },
+      select: { id: true, eventKey: true, kind: true, recipientEmail: true, subject: true, status: true, providerId: true, error: true, sentAt: true, createdAt: true, updatedAt: true },
       orderBy: { createdAt: input.sort === "oldest" ? "asc" : "desc" },
       skip: (requestedPage - 1) * pageSize,
       take: pageSize,
     }),
   ]);
   const pageCount = Math.max(Math.ceil(total / pageSize), 1);
-  return { deliveries, total, page: Math.min(requestedPage, pageCount), pageCount };
+  const now = new Date();
+  return {
+    deliveries: deliveries.map((delivery) => ({ ...delivery, retryable: isNotificationDeliveryRetryable(delivery, now) })),
+    total,
+    page: Math.min(requestedPage, pageCount),
+    pageCount,
+  };
 }

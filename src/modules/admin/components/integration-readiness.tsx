@@ -1,7 +1,7 @@
 import "server-only";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { env } from "@/config/env";
 
 type IntegrationStatus = {
@@ -30,9 +30,9 @@ export function IntegrationReadiness() {
       description: "OAuth de lojistas para consulta de fretes no sandbox.",
       configured: Boolean(
         env.MELHOR_ENVIO_CLIENT_ID &&
-          env.MELHOR_ENVIO_CLIENT_SECRET &&
-          env.MELHOR_ENVIO_REDIRECT_URI &&
-          env.MELHOR_ENVIO_TOKEN_ENCRYPTION_KEY,
+        env.MELHOR_ENVIO_CLIENT_SECRET &&
+        env.MELHOR_ENVIO_REDIRECT_URI &&
+        env.MELHOR_ENVIO_TOKEN_ENCRYPTION_KEY,
       ),
       missing: "Client ID, Client Secret, callback local e chave de criptografia",
     },
@@ -73,7 +73,7 @@ export function IntegrationReadiness() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Integrações</CardTitle>
+        <h2 className="text-base leading-snug font-semibold">Estado das integrações</h2>
         <CardDescription>
           {configuredCount} de {integrations.length} configurações presentes. Este painel verifica apenas se os campos
           foram preenchidos; não confirma que as credenciais funcionam.
@@ -84,7 +84,7 @@ export function IntegrationReadiness() {
           <div key={integration.name} className="flex flex-col gap-2 rounded-lg border p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-medium">{integration.name}</h3>
-              <Badge variant={integration.configured ? "secondary" : "outline"}>
+              <Badge variant={integration.configured ? "success" : "warning"}>
                 {integration.configured ? "Configuração presente" : "Pendente"}
               </Badge>
             </div>
