@@ -6,7 +6,7 @@
  * - e-mails `review.*@example.test`;
  * - slugs `review-*`, SKUs/códigos `REVIEW-*` e pedidos `MS-REVIEW-*`;
  * - lojas com nome terminado em " · demonstração" e produtos `isDemo: true`;
- * - IDs determinísticos `rvw…` (scripts/review-seed-ids.ts) no conjunto ampliado.
+ * - IDs determinísticos `czrvw…` (scripts/review-seed-ids.ts) no conjunto ampliado.
  *
  * Idempotente: pode ser executado várias vezes. Nunca apaga nem altera dados que não
  * foram criados por este script. Para remover: `scripts/remove-review-data.ts`.
