@@ -102,7 +102,7 @@ export function QuantityStepper({
           pattern="[0-9]*"
           autoComplete="off"
           maxLength={String(max).length}
-          className="h-11 w-12 border-x bg-transparent text-center text-sm tabular-nums outline-none focus-visible:bg-muted/50 disabled:opacity-50"
+          className="focus-visible:bg-muted/50 h-11 w-12 border-x bg-transparent text-center text-sm tabular-nums outline-none disabled:opacity-50"
           value={draft}
           disabled={disabled}
           onChange={(event) => setDraft(event.target.value.replace(/\D/g, ""))}

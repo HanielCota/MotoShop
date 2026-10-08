@@ -44,7 +44,10 @@ it("requires a resolution note", async () => {
 it("does not set the resolver when only starting the review", async () => {
   mocks.find.mockResolvedValue({ status: "OPEN", order: { orderNumber: "MS-1" } });
   await reviewDispute({ disputeId: "d1", decision: "START_REVIEW", actorUserId: "admin" });
-  expect(mocks.updateMany).toHaveBeenCalledWith({ where: { id: "d1", status: "OPEN" }, data: { status: "UNDER_REVIEW" } });
+  expect(mocks.updateMany).toHaveBeenCalledWith({
+    where: { id: "d1", status: "OPEN" },
+    data: { status: "UNDER_REVIEW" },
+  });
 });
 
 it("fails without auditing when another operation changed the dispute", async () => {

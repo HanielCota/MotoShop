@@ -29,7 +29,9 @@ describe("product form model", () => {
     expect(parsed.data).toMatchObject({
       slug: "capacete-fox-v1",
       weightInGrams: 1500,
-      variants: [{ title: "Preto / M", sku: "FOX-V1-M", priceInCents: 149990, stock: 3, promotionalPriceInCents: null }],
+      variants: [
+        { title: "Preto / M", sku: "FOX-V1-M", priceInCents: 149990, stock: 3, promotionalPriceInCents: null },
+      ],
     });
   });
 

@@ -74,7 +74,8 @@ export default async function ProductsPage({
   if (params.moto === null && primaryFitment) {
     const explicit = new URLSearchParams();
     for (const [key, value] of Object.entries(await searchParams)) {
-      for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value]) explicit.append(key, entry);
+      for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value])
+        explicit.append(key, entry);
     }
     explicit.set("moto", primaryFitment.id);
     redirect(`/products?${explicit.toString()}` as Route);
@@ -125,7 +126,9 @@ export default async function ProductsPage({
       />
 
       <PrimaryMotorcycleBanner
-        primary={primaryMotorcycle && primaryFitment ? { id: primaryFitment.id, label: fitmentLabel(primaryFitment) } : null}
+        primary={
+          primaryMotorcycle && primaryFitment ? { id: primaryFitment.id, label: fitmentLabel(primaryFitment) } : null
+        }
         activeMoto={activeMoto}
         signedIn={Boolean(session)}
         query={query}
@@ -229,7 +232,9 @@ function PrimaryMotorcycleBanner({
   if (!primary) {
     return (
       <Link
-        href={(signedIn ? "/account/motorcycles" : `/login?next=${encodeURIComponent("/account/motorcycles")}`) as Route}
+        href={
+          (signedIn ? "/account/motorcycles" : `/login?next=${encodeURIComponent("/account/motorcycles")}`) as Route
+        }
         className="text-brand-strong inline-flex min-h-10 w-fit items-center gap-2 text-sm font-medium underline underline-offset-4"
       >
         <Bike aria-hidden="true" className="size-4" />
@@ -249,7 +254,9 @@ function PrimaryMotorcycleBanner({
       </p>
       <div className="flex flex-wrap gap-x-4">
         <Link
-          href={applied ? removeCatalogFilterHref(query, "moto") : buildCatalogHref(query, { moto: primary.id, page: 1 })}
+          href={
+            applied ? removeCatalogFilterHref(query, "moto") : buildCatalogHref(query, { moto: primary.id, page: 1 })
+          }
           className="text-brand-strong inline-flex min-h-10 items-center font-semibold underline underline-offset-4"
         >
           {applied ? "Ver todas as motos" : "Ver peças para minha moto"}

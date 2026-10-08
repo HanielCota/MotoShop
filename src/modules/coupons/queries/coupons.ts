@@ -29,8 +29,8 @@ function getCouponListWhere(input: CouponListInput, owner: { ownerType: "MARKETP
       : input.validity === "UPCOMING"
         ? { startsAt: { gt: now } }
         : input.validity === "EXPIRED"
-        ? { endsAt: { lt: now } }
-        : {}),
+          ? { endsAt: { lt: now } }
+          : {}),
     ...(query ? { code: { contains: query, mode: "insensitive" as const } } : {}),
   };
 }

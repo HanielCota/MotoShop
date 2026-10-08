@@ -8,7 +8,10 @@ export const shippingOriginSchema = z.object({
     .string()
     .trim()
     .regex(/^(\d{11}|\d{14})$/, "Informe um CPF ou CNPJ com números."),
-  originPostalCode: z.string().trim().regex(/^\d{8}$/, "Informe o CEP de origem com 8 números."),
+  originPostalCode: z
+    .string()
+    .trim()
+    .regex(/^\d{8}$/, "Informe o CEP de origem com 8 números."),
   originStreet: z.string().trim().min(2, "Informe o endereço de origem.").max(120),
   originNumber: z.string().trim().min(1, "Informe o número do endereço.").max(20),
   originComplement: z.string().trim().max(80).optional(),

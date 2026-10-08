@@ -19,13 +19,26 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function CategoryPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+export default async function CategoryPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { slug } = await params;
   const catalogParams = await loadPublicCatalogSearchParams(searchParams);
   const category = await getPublicCategoryBySlug(slug);
   if (!category) notFound();
 
-  const result = await listApprovedProducts({ categoryId: category.id, sort: catalogParams.sort, availability: catalogParams.availability, promotion: catalogParams.promotion, page: catalogParams.page, pageSize: 12 });
+  const result = await listApprovedProducts({
+    categoryId: category.id,
+    sort: catalogParams.sort,
+    availability: catalogParams.availability,
+    promotion: catalogParams.promotion,
+    page: catalogParams.page,
+    pageSize: 12,
+  });
   const categoryLabel = getCategoryLabel(category);
   const parentLabel = category.parent ? `${getCategoryLabel(category.parent)} / ` : "";
 

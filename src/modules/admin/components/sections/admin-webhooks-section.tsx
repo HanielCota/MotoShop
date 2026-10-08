@@ -85,7 +85,10 @@ export async function AdminWebhooksSection({ searchParams }: AdminSectionProps) 
                   {event.error ? <p className="text-destructive max-w-sm text-xs break-words">{event.error}</p> : null}
                   {event.status === "FAILED" ? (
                     <form action={retryWebhookEventAction.bind(null, event.id)}>
-                      <button type="submit" className="text-brand-text text-xs font-medium underline underline-offset-4">
+                      <button
+                        type="submit"
+                        className="text-brand-text text-xs font-medium underline underline-offset-4"
+                      >
                         Reprocessar
                       </button>
                     </form>

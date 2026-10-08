@@ -82,7 +82,9 @@ export function ProductBuyBox({
                   className={cn(
                     "flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border p-3 transition-[border-color,background-color]",
                     "has-[:focus-visible]:ring-ring/40 has-[:focus-visible]:ring-3",
-                    checked ? "border-moto-brand bg-moto-brand-surface" : "border-border bg-card hover:border-foreground/30",
+                    checked
+                      ? "border-moto-brand bg-moto-brand-surface"
+                      : "border-border bg-card hover:border-foreground/30",
                     unavailable && "opacity-70",
                   )}
                 >

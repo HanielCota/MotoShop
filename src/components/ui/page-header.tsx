@@ -40,12 +40,7 @@ export function PageHeader({ title, eyebrow, description, actions, back, classNa
 }
 
 /** Variante para seções dentro de uma página (renderiza `h2`). */
-export function SectionHeader({
-  title,
-  description,
-  actions,
-  className,
-}: Omit<PageHeaderProps, "eyebrow" | "back">) {
+export function SectionHeader({ title, description, actions, className }: Omit<PageHeaderProps, "eyebrow" | "back">) {
   return (
     <div className={cn("flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between", className)}>
       <div className="min-w-0 space-y-1">

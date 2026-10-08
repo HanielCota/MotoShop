@@ -18,7 +18,10 @@ export type CustomerAddress = {
   isDefault: boolean;
 };
 
-export async function listCustomerAddresses(userId: string, input: { query?: string | null } = {}): Promise<CustomerAddress[]> {
+export async function listCustomerAddresses(
+  userId: string,
+  input: { query?: string | null } = {},
+): Promise<CustomerAddress[]> {
   const query = input.query?.trim().slice(0, 100);
   const where: Prisma.CustomerAddressWhereInput = {
     userId,

@@ -71,16 +71,15 @@ export function ResetPasswordForm({ token }: { token: string }) {
             />
           </label>
           <FormMessage error={error ?? null} />
-          <Button
-            type="submit"
-            disabled={pending}
-            className="h-12 rounded-lg px-4 font-semibold"
-          >
+          <Button type="submit" disabled={pending} className="h-12 rounded-lg px-4 font-semibold">
             {pending ? "Aguarde..." : "Salvar nova senha"}
           </Button>
         </>
       )}
-      <Link href="/login" className="text-brand-strong inline-flex min-h-10 items-center text-sm font-medium underline-offset-4 hover:underline">
+      <Link
+        href="/login"
+        className="text-brand-strong inline-flex min-h-10 items-center text-sm font-medium underline-offset-4 hover:underline"
+      >
         Ir para o login
       </Link>
     </form>

@@ -104,7 +104,10 @@ export async function confirmShipmentLabelCancelled(input: {
       where: { id: shipment.id },
       select: { externalShipmentId: true, providerMetadata: true },
     });
-    if (current?.externalShipmentId !== shipment.externalShipmentId || !hasLabelCancellationFlag(current.providerMetadata)) {
+    if (
+      current?.externalShipmentId !== shipment.externalShipmentId ||
+      !hasLabelCancellationFlag(current.providerMetadata)
+    ) {
       throw new ApplicationError({ code: "CONFLICT", message: "A etiqueta já foi atualizada.", statusCode: 409 });
     }
     await tx.shipment.update({

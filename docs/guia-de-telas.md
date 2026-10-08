@@ -57,18 +57,18 @@ Roteiro para revisar todas as telas com dados de demonstração. Tudo o que apar
 
 Todas usam a mesma senha: o valor de `REVIEW_ACCOUNTS_PASSWORD`, no início de `scripts/seed-review-data.ts`. Entre em **/login**. Para trocar de conta, use **Sair** no menu do ícone de usuário (loja) ou no topo da Central do Lojista/Admin.
 
-| Perfil | E-mail | O que mostra |
-|---|---|---|
-| Cliente | `review.cliente@example.test` | Pedidos em todas as etapas, favoritos, motos, endereços, carrinho com duas lojas |
-| Lojista (dono) | `review.lojista@example.test` | Central do Lojista completa da loja **Garagem MX** |
-| Lojista (equipe de catálogo) | `review.catalogo@example.test` | A mesma loja com permissões limitadas (só catálogo) |
-| Lojista pendente | `review.pendente@example.test` | Loja aguardando aprovação |
-| Lojista (segunda loja) | `review.lojista2@example.test` | Loja **Box 77**, com comissão própria de 10% |
-| Lojistas das demais lojas | `review.lojista3` … `review.lojista6@example.test` | **Trilha Forte** (VIP), **Racing Sul** (comissão de 8%, VIP expirado), **Areia Motos**, **Cross Center** (VIP) |
-| Lojistas da fila de sellers | `review.lojista7` … `review.lojista9@example.test` | Cadastro pendente, loja suspensa e cadastro recusado |
-| Clientes extras | `review.cliente2` … `review.cliente13@example.test` | Autores das avaliações e perguntas; cada um tem 5–6 pedidos |
-| Admin | `review.admin@example.test` | Painel administrativo (exige o passo 1 acima) |
-| Contas de visualização | definidas por `REVIEW_VIEWER_*_EMAILS` | Histórico de cliente próprio e/ou acesso à Garagem MX como ADMIN |
+| Perfil                       | E-mail                                              | O que mostra                                                                                                   |
+| ---------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Cliente                      | `review.cliente@example.test`                       | Pedidos em todas as etapas, favoritos, motos, endereços, carrinho com duas lojas                               |
+| Lojista (dono)               | `review.lojista@example.test`                       | Central do Lojista completa da loja **Garagem MX**                                                             |
+| Lojista (equipe de catálogo) | `review.catalogo@example.test`                      | A mesma loja com permissões limitadas (só catálogo)                                                            |
+| Lojista pendente             | `review.pendente@example.test`                      | Loja aguardando aprovação                                                                                      |
+| Lojista (segunda loja)       | `review.lojista2@example.test`                      | Loja **Box 77**, com comissão própria de 10%                                                                   |
+| Lojistas das demais lojas    | `review.lojista3` … `review.lojista6@example.test`  | **Trilha Forte** (VIP), **Racing Sul** (comissão de 8%, VIP expirado), **Areia Motos**, **Cross Center** (VIP) |
+| Lojistas da fila de sellers  | `review.lojista7` … `review.lojista9@example.test`  | Cadastro pendente, loja suspensa e cadastro recusado                                                           |
+| Clientes extras              | `review.cliente2` … `review.cliente13@example.test` | Autores das avaliações e perguntas; cada um tem 5–6 pedidos                                                    |
+| Admin                        | `review.admin@example.test`                         | Painel administrativo (exige o passo 1 acima)                                                                  |
+| Contas de visualização       | definidas por `REVIEW_VIEWER_*_EMAILS`              | Histórico de cliente próprio e/ou acesso à Garagem MX como ADMIN                                               |
 
 **Volume de dados** (para conferir paginação, filtros e indicadores): 6 lojas publicadas + 2 pendentes + 1 suspensa + 1 recusada; cerca de 60 produtos aprovados em todas as categorias e marcas ativas (1 a 5 variações, estoque normal/baixo/esgotado, promoções ativas, futuras e expiradas, galerias com até 4 imagens); fila de moderação com rascunhos, enviados, recusados e arquivados; cerca de 95 pedidos nos últimos 120 dias em todas as etapas; ~130 avaliações de produto (1 a 5 estrelas, duas ocultadas pela moderação), ~45 avaliações de loja e ~60 perguntas (2/3 respondidas); 9 devoluções, 7 cancelamentos e 6 disputas em vários status; 10 cupons; auditoria, notificações, webhooks e eventos de outbox com falha. As imagens geradas mostram só a categoria e o selo "Demonstração" (sem marcas).
 
@@ -80,63 +80,63 @@ Todas usam a mesma senha: o valor de `REVIEW_ACCOUNTS_PASSWORD`, no início de `
 
 Revise cada tela no **celular** (no Chrome: F12 → ícone de celular → iPhone/Pixel) e no desktop. O projeto é pensado primeiro para o celular.
 
-| Tela | Endereço | O que observar |
-|---|---|---|
-| Home | `/` | Busca "Minha Moto" (fabricante → modelo → ano), categorias, produtos em destaque, rodapé |
-| Catálogo | `/products` | Filtros (no celular, em "Filtrar produtos"), chips de filtro ativo, ordenação, paginação |
-| Busca | `/products?q=capacete` | Resultado da busca e estado vazio (`/products?q=xyz`) |
-| Produto | `/products/review-capacete-apex-pro` (ou clique em qualquer card) | Galeria, variações, preço/promoção, aviso de compatibilidade com a moto, frete por CEP, perguntas e avaliações. No celular, a barra fixa "Adicionar" aparece ao rolar |
-| Loja | `/loja/review-garagem-mx` e `/loja/review-box-77` | Vitrine com selo VIP (Garagem MX), filtros, produtos e avaliações da loja |
-| Categoria | `/categoria/<slug>` (pela home ou pelo produto) | Página de categoria |
-| Marca | `/marca/<slug>` (link da marca no produto) | Página de marca |
-| Moto | `/moto/<fabricante>/<modelo>/<ano>` (pela busca "Minha Moto") | Peças compatíveis com a moto |
-| Carrinho | `/cart` | Itens agrupados por loja, subtotal por loja, aviso de pagamento indisponível, barra fixa no celular |
-| Checkout | `/checkout` | Formulário (CEP preenche o endereço), cotação de frete, aviso de pagamento indisponível |
-| Prévias visuais | `/cart?preview=1` e `/checkout?preview=1` | Carrinho e checkout com produtos de exemplo, sem precisar de conta |
-| Login / cadastro | `/login` e `/login?modo=cadastro` | Erros por campo, botão de mostrar senha |
-| Esqueci a senha | `/forgot-password` | Recuperação de acesso |
-| Página inexistente | `/qualquer-coisa` | Tela de "não encontrado" |
+| Tela               | Endereço                                                          | O que observar                                                                                                                                                        |
+| ------------------ | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Home               | `/`                                                               | Busca "Minha Moto" (fabricante → modelo → ano), categorias, produtos em destaque, rodapé                                                                              |
+| Catálogo           | `/products`                                                       | Filtros (no celular, em "Filtrar produtos"), chips de filtro ativo, ordenação, paginação                                                                              |
+| Busca              | `/products?q=capacete`                                            | Resultado da busca e estado vazio (`/products?q=xyz`)                                                                                                                 |
+| Produto            | `/products/review-capacete-apex-pro` (ou clique em qualquer card) | Galeria, variações, preço/promoção, aviso de compatibilidade com a moto, frete por CEP, perguntas e avaliações. No celular, a barra fixa "Adicionar" aparece ao rolar |
+| Loja               | `/loja/review-garagem-mx` e `/loja/review-box-77`                 | Vitrine com selo VIP (Garagem MX), filtros, produtos e avaliações da loja                                                                                             |
+| Categoria          | `/categoria/<slug>` (pela home ou pelo produto)                   | Página de categoria                                                                                                                                                   |
+| Marca              | `/marca/<slug>` (link da marca no produto)                        | Página de marca                                                                                                                                                       |
+| Moto               | `/moto/<fabricante>/<modelo>/<ano>` (pela busca "Minha Moto")     | Peças compatíveis com a moto                                                                                                                                          |
+| Carrinho           | `/cart`                                                           | Itens agrupados por loja, subtotal por loja, aviso de pagamento indisponível, barra fixa no celular                                                                   |
+| Checkout           | `/checkout`                                                       | Formulário (CEP preenche o endereço), cotação de frete, aviso de pagamento indisponível                                                                               |
+| Prévias visuais    | `/cart?preview=1` e `/checkout?preview=1`                         | Carrinho e checkout com produtos de exemplo, sem precisar de conta                                                                                                    |
+| Login / cadastro   | `/login` e `/login?modo=cadastro`                                 | Erros por campo, botão de mostrar senha                                                                                                                               |
+| Esqueci a senha    | `/forgot-password`                                                | Recuperação de acesso                                                                                                                                                 |
+| Página inexistente | `/qualquer-coisa`                                                 | Tela de "não encontrado"                                                                                                                                              |
 
 ## 4. Área do cliente (`review.cliente@example.test`)
 
-| Tela | Endereço | O que observar |
-|---|---|---|
-| Meus pedidos | `/orders` | Lista com status, filtros e busca |
+| Tela              | Endereço                                 | O que observar                                                                                                              |
+| ----------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Meus pedidos      | `/orders`                                | Lista com status, filtros e busca                                                                                           |
 | Detalhe do pedido | `/orders/<número>` (clique em um pedido) | Linha do tempo, rastreio, pagamento. Conforme a etapa: pedir cancelamento (pago), devolução e avaliação (entregue), disputa |
-| Favoritos | `/favorites` | Produtos salvos, remover favorito |
-| Minhas motos | `/account/motorcycles` | Garagem com moto principal |
-| Endereços | `/account/addresses` | Endereço padrão, adicionar e remover |
-| Notificações | `/account/notifications` | Preferências de e-mail |
+| Favoritos         | `/favorites`                             | Produtos salvos, remover favorito                                                                                           |
+| Minhas motos      | `/account/motorcycles`                   | Garagem com moto principal                                                                                                  |
+| Endereços         | `/account/addresses`                     | Endereço padrão, adicionar e remover                                                                                        |
+| Notificações      | `/account/notifications`                 | Preferências de e-mail                                                                                                      |
 
 Pedidos de demonstração (`/orders/MS-REVIEW-000X`):
 
-| Pedido | Situação | O que dá para ver |
-|---|---|---|
-| MS-REVIEW-0001 | Aguardando pagamento | Reconsulta de pagamento, estoque reservado |
-| MS-REVIEW-0002 | Pago | Solicitação de cancelamento já aberta |
-| MS-REVIEW-0003 | Em separação | Pedido em preparação pela loja |
-| MS-REVIEW-0004 | Enviado | Código de rastreio e disputa aberta |
-| MS-REVIEW-0005 | Entregue | Devolução solicitada, avaliações do produto e da loja |
-| MS-REVIEW-0006 | Cancelado | Pedido encerrado |
+| Pedido         | Situação                         | O que dá para ver                                     |
+| -------------- | -------------------------------- | ----------------------------------------------------- |
+| MS-REVIEW-0001 | Aguardando pagamento             | Reconsulta de pagamento, estoque reservado            |
+| MS-REVIEW-0002 | Pago                             | Solicitação de cancelamento já aberta                 |
+| MS-REVIEW-0003 | Em separação                     | Pedido em preparação pela loja                        |
+| MS-REVIEW-0004 | Enviado                          | Código de rastreio e disputa aberta                   |
+| MS-REVIEW-0005 | Entregue                         | Devolução solicitada, avaliações do produto e da loja |
+| MS-REVIEW-0006 | Cancelado                        | Pedido encerrado                                      |
 | MS-REVIEW-0007 | Duas lojas, parcialmente enviado | Um pedido dividido por loja, com cupom do marketplace |
-| MS-REVIEW-0008 | Convidado | Só pelo link do seed (ver seção 2) |
+| MS-REVIEW-0008 | Convidado                        | Só pelo link do seed (ver seção 2)                    |
 
 Os produtos de demonstração não passam pelo checkout, e os pagamentos são fictícios. "Reconsultar pagamento" e "Reprocessar webhook" podem mostrar erro do Mercado Pago sem alterar nada.
 
 ## 5. Central do Lojista (`review.lojista@example.test`)
 
-| Tela | Endereço | O que observar |
-|---|---|---|
-| Visão geral | `/seller` | Indicadores, alertas de estoque, próximos passos |
-| Pedidos | `/seller/orders` | Pedidos por status, filtros, ações de envio (marcar como enviado/entregue) |
-| Produtos | `/seller/products` | Produtos em todos os status: rascunho, em análise, rejeitado (com motivo), aprovado e arquivado. Ajuste de estoque |
-| Novo produto | `/seller/products/new` | Formulário com erro por campo e slug automático. Ao salvar, vai direto para a edição |
-| Editar produto | "Editar" em um rascunho | Fotos, status, motivo da rejeição, "Enviar para aprovação" |
-| Perguntas | `/seller/questions` | Perguntas respondidas e pendentes |
-| Frete | `/seller/shipping` | Modalidades de frete próprio (ativa e inativa) |
-| Integrações | `/seller/shipping/integrations` | Conexão com o Melhor Envio |
-| Cupons | `/seller/coupons` | Cupom ativo e cupom futuro |
-| Configurações | `/seller/settings` | Perfil da loja, logo/banner, redes sociais, equipe |
+| Tela           | Endereço                        | O que observar                                                                                                     |
+| -------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Visão geral    | `/seller`                       | Indicadores, alertas de estoque, próximos passos                                                                   |
+| Pedidos        | `/seller/orders`                | Pedidos por status, filtros, ações de envio (marcar como enviado/entregue)                                         |
+| Produtos       | `/seller/products`              | Produtos em todos os status: rascunho, em análise, rejeitado (com motivo), aprovado e arquivado. Ajuste de estoque |
+| Novo produto   | `/seller/products/new`          | Formulário com erro por campo e slug automático. Ao salvar, vai direto para a edição                               |
+| Editar produto | "Editar" em um rascunho         | Fotos, status, motivo da rejeição, "Enviar para aprovação"                                                         |
+| Perguntas      | `/seller/questions`             | Perguntas respondidas e pendentes                                                                                  |
+| Frete          | `/seller/shipping`              | Modalidades de frete próprio (ativa e inativa)                                                                     |
+| Integrações    | `/seller/shipping/integrations` | Conexão com o Melhor Envio                                                                                         |
+| Cupons         | `/seller/coupons`               | Cupom ativo e cupom futuro                                                                                         |
+| Configurações  | `/seller/settings`              | Perfil da loja, logo/banner, redes sociais, equipe                                                                 |
 
 Compare com `review.catalogo@example.test`: o menu mostra só o que a função de catálogo permite.
 
@@ -144,26 +144,26 @@ Com `review.pendente@example.test`, a Central mostra a loja aguardando aprovaç�
 
 ## 6. Admin (`review.admin@example.test`)
 
-| Tela | Endereço | O que observar |
-|---|---|---|
-| Painel | `/admin` | Contadores de pendências e saúde das integrações |
-| Lojistas | `/admin/sellers` | Aprovar a loja pendente, suspender e reativar |
-| Produtos | `/admin/products` | Moderação do produto em análise (aprovar/rejeitar) |
-| Catálogo | `/admin/catalog` | Categorias, marcas, fabricantes, modelos e motos |
-| Cupons | `/admin/coupons` | Cupons do marketplace |
-| Plano VIP | `/admin/vip` | Assinaturas das lojas |
-| Comissão | `/admin/commission` | Comissão padrão e por loja |
-| Pedidos | `/admin/orders` | Monitor de pedidos por loja |
-| Cancelamentos | `/admin/cancellations` | Solicitação de cancelamento pendente |
-| Devoluções | `/admin/returns` | Devolução pendente |
-| Disputas | `/admin/disputes` | Disputa aberta |
-| Moderação | `/admin/moderation` | Ocultar e restaurar perguntas e avaliações |
-| Etiquetas | `/admin/shipping-recovery` | Conferência de etiquetas |
-| Integrações | `/admin/integrations` | Quais serviços externos estão configurados |
-| Webhooks | `/admin/webhooks` | Evento com falha e "Reprocessar" |
-| E-mails | `/admin/emails` | Entrega com falha e "Reenviar" |
-| Auditoria | `/admin/audit` | Histórico de ações administrativas |
-| Eventos pendentes | `/admin/outbox` | Eventos que exigem atenção |
+| Tela              | Endereço                   | O que observar                                     |
+| ----------------- | -------------------------- | -------------------------------------------------- |
+| Painel            | `/admin`                   | Contadores de pendências e saúde das integrações   |
+| Lojistas          | `/admin/sellers`           | Aprovar a loja pendente, suspender e reativar      |
+| Produtos          | `/admin/products`          | Moderação do produto em análise (aprovar/rejeitar) |
+| Catálogo          | `/admin/catalog`           | Categorias, marcas, fabricantes, modelos e motos   |
+| Cupons            | `/admin/coupons`           | Cupons do marketplace                              |
+| Plano VIP         | `/admin/vip`               | Assinaturas das lojas                              |
+| Comissão          | `/admin/commission`        | Comissão padrão e por loja                         |
+| Pedidos           | `/admin/orders`            | Monitor de pedidos por loja                        |
+| Cancelamentos     | `/admin/cancellations`     | Solicitação de cancelamento pendente               |
+| Devoluções        | `/admin/returns`           | Devolução pendente                                 |
+| Disputas          | `/admin/disputes`          | Disputa aberta                                     |
+| Moderação         | `/admin/moderation`        | Ocultar e restaurar perguntas e avaliações         |
+| Etiquetas         | `/admin/shipping-recovery` | Conferência de etiquetas                           |
+| Integrações       | `/admin/integrations`      | Quais serviços externos estão configurados         |
+| Webhooks          | `/admin/webhooks`          | Evento com falha e "Reprocessar"                   |
+| E-mails           | `/admin/emails`            | Entrega com falha e "Reenviar"                     |
+| Auditoria         | `/admin/audit`             | Histórico de ações administrativas                 |
+| Eventos pendentes | `/admin/outbox`            | Eventos que exigem atenção                         |
 
 ---
 

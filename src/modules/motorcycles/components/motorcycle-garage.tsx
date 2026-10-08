@@ -55,14 +55,14 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
   return (
     <article className="border-border bg-card rounded-2xl border p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start gap-4">
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-moto-brand-surface text-brand-strong">
+        <div className="bg-moto-brand-surface text-brand-strong flex size-12 shrink-0 items-center justify-center rounded-xl">
           <Bike aria-hidden="true" className="size-6" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="font-sans text-lg font-semibold tracking-normal">{saved.label}</h2>
             {saved.isPrimary ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-moto-brand-surface px-2.5 py-1 text-xs font-semibold text-brand-strong">
+              <span className="bg-moto-brand-surface text-brand-strong inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold">
                 <Star aria-hidden="true" className="size-3.5" /> Principal
               </span>
             ) : null}
@@ -168,10 +168,15 @@ export function MotorcycleGarage({
         )}
       </section>
 
-      <section className="border-border bg-card rounded-2xl border p-5 shadow-sm sm:p-6" aria-labelledby="add-motorcycle-title">
+      <section
+        className="border-border bg-card rounded-2xl border p-5 shadow-sm sm:p-6"
+        aria-labelledby="add-motorcycle-title"
+      >
         <div className="flex items-center gap-2">
           <Plus aria-hidden="true" className="text-brand-strong size-5" />
-          <h2 id="add-motorcycle-title" className="text-foreground text-lg font-semibold">Adicionar moto</h2>
+          <h2 id="add-motorcycle-title" className="text-foreground text-lg font-semibold">
+            Adicionar moto
+          </h2>
         </div>
         <p className="text-muted-foreground mt-2 text-sm">
           Escolha uma configuração da base oficial. A primeira moto salva vira a principal.

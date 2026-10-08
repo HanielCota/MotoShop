@@ -4,13 +4,13 @@ Escopo: lógica de negócio, segurança, SRP/arquitetura e UI/UX das três área
 
 ## Validação
 
-| Verificação | Antes | Depois |
-|---|---|---|
-| `tsc --noEmit` | 0 erros | 0 erros |
-| `eslint .` | limpo | limpo |
-| Vitest | 93 arquivos / 468 testes | 121 arquivos / 624 testes, todos passando |
-| Integração (`tests/integration`) e E2E (Playwright) | — | não executados: precisam de banco e servidor. Compilam, e o spec E2E foi ajustado às novas rotas |
-| `next build` | — | não executado |
+| Verificação                                         | Antes                    | Depois                                                                                           |
+| --------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------ |
+| `tsc --noEmit`                                      | 0 erros                  | 0 erros                                                                                          |
+| `eslint .`                                          | limpo                    | limpo                                                                                            |
+| Vitest                                              | 93 arquivos / 468 testes | 121 arquivos / 624 testes, todos passando                                                        |
+| Integração (`tests/integration`) e E2E (Playwright) | —                        | não executados: precisam de banco e servidor. Compilam, e o spec E2E foi ajustado às novas rotas |
+| `next build`                                        | —                        | não executado                                                                                    |
 
 Prettier acusa cerca de 110 arquivos, a maioria intocados nesta revisão. A causa provável é final de linha CRLF do Windows. Rode `pnpm format` antes de commitar.
 
@@ -55,16 +55,16 @@ Estão marcadas no código com `TODO(regra-de-negócio)` e `TODO(convite)`.
 
 ## 3. SRP e arquitetura
 
-| Arquivo | Antes | Depois | Destino das responsabilidades |
-|---|---|---|---|
-| `admin/components/admin-section-content.tsx` | 1745 | 49 | 14 seções em `admin/components/sections/`, `admin-href.ts`, `admin-ui.tsx`, `queries/dashboard-counters.ts` |
-| `app/(seller)/seller/page.tsx` | 837 | 112 | cards em `sellers/components/dashboard/`, novas rotas `/seller/products`, `/seller/settings`, `/seller/coupons` |
-| `checkout/application/checkout-service.ts` | 695 | ~210 | `seller-charges`, `order-number`, `create-pending-order`, `reserve-order-inventory`, `validate-coupon-for-customer`, `assert-payment-ready` |
-| `app/products/[slug]/page.tsx` | 613 | 251 | `products/components/detail/*`, seções de avaliações/perguntas, `product-offer-summary`, `build-product-json-ld` |
-| `marketing/components/marketing-home.tsx` | 576 | 60 | header e finder (client) + 6 server components; o JS no cliente caiu |
-| `checkout/components/checkout-form.tsx` | 413 | 209 | hooks `use-checkout-shipping-quotes`/`use-checkout-submit` + 5 subcomponentes |
-| `app/orders/[orderNumber]/page.tsx` | 354 | 75 | `orders/components/order-detail/*` |
-| `products/actions/product-actions.ts` | 299 | ~150 | `products/application/product-lifecycle.ts`, `inventory/application/adjust-inventory-manually.ts` |
+| Arquivo                                      | Antes | Depois | Destino das responsabilidades                                                                                                               |
+| -------------------------------------------- | ----- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `admin/components/admin-section-content.tsx` | 1745  | 49     | 14 seções em `admin/components/sections/`, `admin-href.ts`, `admin-ui.tsx`, `queries/dashboard-counters.ts`                                 |
+| `app/(seller)/seller/page.tsx`               | 837   | 112    | cards em `sellers/components/dashboard/`, novas rotas `/seller/products`, `/seller/settings`, `/seller/coupons`                             |
+| `checkout/application/checkout-service.ts`   | 695   | ~210   | `seller-charges`, `order-number`, `create-pending-order`, `reserve-order-inventory`, `validate-coupon-for-customer`, `assert-payment-ready` |
+| `app/products/[slug]/page.tsx`               | 613   | 251    | `products/components/detail/*`, seções de avaliações/perguntas, `product-offer-summary`, `build-product-json-ld`                            |
+| `marketing/components/marketing-home.tsx`    | 576   | 60     | header e finder (client) + 6 server components; o JS no cliente caiu                                                                        |
+| `checkout/components/checkout-form.tsx`      | 413   | 209    | hooks `use-checkout-shipping-quotes`/`use-checkout-submit` + 5 subcomponentes                                                               |
+| `app/orders/[orderNumber]/page.tsx`          | 354   | 75     | `orders/components/order-detail/*`                                                                                                          |
+| `products/actions/product-actions.ts`        | 299   | ~150   | `products/application/product-lifecycle.ts`, `inventory/application/adjust-inventory-manually.ts`                                           |
 
 Outras mudanças estruturais:
 

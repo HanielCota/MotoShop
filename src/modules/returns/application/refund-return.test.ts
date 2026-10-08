@@ -72,7 +72,9 @@ it("retries a refund that the provider definitively rejected with a new attempt 
   mocks.find.mockResolvedValue(returned);
   mocks.transactions.mockResolvedValue([{ idempotencyKey: "return-refund:return", status: "FAILED" }]);
   await expect(refundReturnRequest(input)).resolves.toEqual({ outcome: "REFUNDED", orderNumber: "MS-1" });
-  expect(mocks.refund).toHaveBeenCalledWith(expect.objectContaining({ idempotencyKey: "return-refund:return:retry-1" }));
+  expect(mocks.refund).toHaveBeenCalledWith(
+    expect.objectContaining({ idempotencyKey: "return-refund:return:retry-1" }),
+  );
   expect(mocks.audit).toHaveBeenCalledWith({
     data: expect.objectContaining({
       action: "RETURN_REFUNDED",

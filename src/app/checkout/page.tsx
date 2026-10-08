@@ -66,8 +66,8 @@ export default async function CheckoutPage({
       />
       {payment.available ? null : (
         <InlineNotice tone="warning">
-          O pagamento pelo marketplace ainda não está disponível para este carrinho. Você pode conferir frete e
-          entrega, mas nenhum pedido ou cobrança será criado agora.
+          O pagamento pelo marketplace ainda não está disponível para este carrinho. Você pode conferir frete e entrega,
+          mas nenhum pedido ou cobrança será criado agora.
         </InlineNotice>
       )}
       <CheckoutForm

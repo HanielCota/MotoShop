@@ -18,7 +18,8 @@ export function buildProductInteractionHref(
 ): string {
   const next = { ...params, ...overrides };
   const query = new URLSearchParams();
-  if (next.reviewRating !== null && next.reviewRating !== undefined) query.set("reviewRating", String(next.reviewRating));
+  if (next.reviewRating !== null && next.reviewRating !== undefined)
+    query.set("reviewRating", String(next.reviewRating));
   if (next.reviewSort !== "newest") query.set("reviewSort", next.reviewSort);
   if (next.questionSort !== "newest") query.set("questionSort", next.questionSort);
   if (next.reviewPage > 1) query.set("reviewPage", String(next.reviewPage));

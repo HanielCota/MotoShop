@@ -387,7 +387,8 @@ export async function refreshSellerOrderTracking(sellerOrderId: string, sellerId
       where: { id: shipment.id },
       select: { status: true, shippedAt: true, deliveredAt: true },
     });
-    if (!currentShipment) throw new ApplicationError({ code: "NOT_FOUND", message: "Envio do lojista não encontrado." });
+    if (!currentShipment)
+      throw new ApplicationError({ code: "NOT_FOUND", message: "Envio do lojista não encontrado." });
     const status = resolveShipmentStatus(currentShipment.status, reportedStatus);
     const updatedShipment = await tx.shipment.update({
       where: { id: shipment.id },

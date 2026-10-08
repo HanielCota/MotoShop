@@ -34,23 +34,11 @@ export function OwnShippingMethodForm() {
       </label>
       <label className="grid gap-2">
         CEP final
-        <Input
-          name="postalCodeEnd"
-          inputMode="numeric"
-          pattern="[0-9]{5}-?[0-9]{3}"
-          placeholder="00000-000"
-          required
-        />
+        <Input name="postalCodeEnd" inputMode="numeric" pattern="[0-9]{5}-?[0-9]{3}" placeholder="00000-000" required />
       </label>
       <label className="grid gap-2">
         Preço por pedido da loja (R$)
-        <Input
-          name="price"
-          inputMode="decimal"
-          pattern="[0-9]+([,.][0-9]{1,2})?"
-          required
-          placeholder="15,00"
-        />
+        <Input name="price" inputMode="decimal" pattern="[0-9]+([,.][0-9]{1,2})?" required placeholder="15,00" />
       </label>
       <label className="grid gap-2">
         Prazo em dias úteis

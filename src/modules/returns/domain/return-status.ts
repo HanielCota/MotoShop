@@ -1,13 +1,7 @@
 import { ApplicationError } from "@/shared/errors/application-error";
 
 export type ReturnStatus =
-  | "REQUESTED"
-  | "UNDER_REVIEW"
-  | "APPROVED"
-  | "WAITING_RETURN"
-  | "RETURNED"
-  | "REFUNDED"
-  | "REJECTED";
+  "REQUESTED" | "UNDER_REVIEW" | "APPROVED" | "WAITING_RETURN" | "RETURNED" | "REFUNDED" | "REJECTED";
 
 export type ReturnReviewDecision = "APPROVE" | "REJECT" | "RECEIVE";
 

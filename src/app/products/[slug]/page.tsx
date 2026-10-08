@@ -65,7 +65,10 @@ export default async function ProductPage({
 }) {
   const { slug } = await params;
   const interactionParams = await loadProductInteractionSearchParams(searchParams);
-  const [product, session] = await Promise.all([getApprovedProductBySlug(slug, interactionParams), getCurrentSession()]);
+  const [product, session] = await Promise.all([
+    getApprovedProductBySlug(slug, interactionParams),
+    getCurrentSession(),
+  ]);
   if (!product) notFound();
 
   const [isFavorite, primaryMotorcycle] = session
@@ -137,7 +140,9 @@ export default async function ProductPage({
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline">{categoryLabel}</Badge>
             <Badge variant="neutral">{product.brand.name}</Badge>
-            {offer.hasPromotion ? <Badge className="bg-moto-brand text-moto-brand-foreground border-0">Oferta</Badge> : null}
+            {offer.hasPromotion ? (
+              <Badge className="bg-moto-brand text-moto-brand-foreground border-0">Oferta</Badge>
+            ) : null}
             {product.seller.subscriptions.length > 0 ? <Badge variant="brand">Patrocinado · Loja VIP</Badge> : null}
           </div>
           <h1 id="product-title" className="text-foreground mt-5 text-3xl leading-tight sm:text-4xl">

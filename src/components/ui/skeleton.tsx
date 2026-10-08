@@ -3,7 +3,14 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 export function Skeleton({ className, ...props }: ComponentProps<"div">) {
-  return <div data-slot="skeleton" aria-hidden="true" className={cn("bg-muted animate-pulse rounded-md", className)} {...props} />;
+  return (
+    <div
+      data-slot="skeleton"
+      aria-hidden="true"
+      className={cn("bg-muted animate-pulse rounded-md", className)}
+      {...props}
+    />
+  );
 }
 
 export function PageSkeleton({ rows = 4, label = "Carregando" }: { rows?: number; label?: string }) {
@@ -26,7 +33,11 @@ export function PageSkeleton({ rows = 4, label = "Carregando" }: { rows?: number
 
 export function ProductGridSkeleton({ items = 8 }: { items?: number }) {
   return (
-    <div role="status" aria-label="Carregando produtos" className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+    <div
+      role="status"
+      aria-label="Carregando produtos"
+      className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4"
+    >
       {Array.from({ length: items }, (_, index) => (
         <div key={index} className="space-y-3">
           <Skeleton className="aspect-square w-full rounded-xl" />

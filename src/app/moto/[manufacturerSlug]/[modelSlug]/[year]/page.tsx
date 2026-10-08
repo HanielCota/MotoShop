@@ -40,7 +40,14 @@ export default async function MotorcyclePage({
   if (!motorcycle || motorcycle.fitments.length === 0) notFound();
 
   const fitmentIds = motorcycle.fitments.map((fitment) => fitment.id);
-  const result = await listApprovedProducts({ motorcycleFitmentIds: fitmentIds, sort: catalogParams.sort, availability: catalogParams.availability, promotion: catalogParams.promotion, page: catalogParams.page, pageSize: 12 });
+  const result = await listApprovedProducts({
+    motorcycleFitmentIds: fitmentIds,
+    sort: catalogParams.sort,
+    availability: catalogParams.availability,
+    promotion: catalogParams.promotion,
+    page: catalogParams.page,
+    pageSize: 12,
+  });
   const fitmentDetails = motorcycle.fitments
     .map((fitment) => `${fitment.version || "padrão"} · ${fitment.displacementCc}cc`)
     .join(", ");

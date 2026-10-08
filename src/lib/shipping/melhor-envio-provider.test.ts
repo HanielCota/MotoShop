@@ -169,7 +169,11 @@ describe("MelhorEnvioProvider shipment reconciliation", () => {
 
     await expect(
       new MelhorEnvioProvider().generateShipment("external-1", "seller-specific-token"),
-    ).rejects.toMatchObject({ definitive, providerStatus: status, message: "O Melhor Envio não conseguiu gerar a etiqueta." });
+    ).rejects.toMatchObject({
+      definitive,
+      providerStatus: status,
+      message: "O Melhor Envio não conseguiu gerar a etiqueta.",
+    });
   });
 
   it("uses an operation-specific message when label checkout fails", async () => {

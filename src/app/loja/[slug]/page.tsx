@@ -89,7 +89,11 @@ export default async function PublicStorePage({
   ].filter((social) => social.href);
 
   function storeHref(
-    overrides: { productPage?: number; reviewPage?: number; productSort?: (typeof storeSortOptions)[number]["value"] } = {},
+    overrides: {
+      productPage?: number;
+      reviewPage?: number;
+      productSort?: (typeof storeSortOptions)[number]["value"];
+    } = {},
   ): Route {
     const query = new URLSearchParams();
     const reviewPage = overrides.reviewPage ?? storeParams.storeReviewPage;
@@ -118,7 +122,7 @@ export default async function PublicStorePage({
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
       <section
-        className="relative isolate overflow-hidden rounded-[1.75rem] bg-moto-brand-foreground text-white shadow-[0_24px_70px_-50px_rgba(0,0,0,0.8)]"
+        className="bg-moto-brand-foreground relative isolate overflow-hidden rounded-[1.75rem] text-white shadow-[0_24px_70px_-50px_rgba(0,0,0,0.8)]"
         aria-labelledby="store-name"
       >
         {store.bannerUrl ? (
@@ -137,7 +141,7 @@ export default async function PublicStorePage({
           aria-hidden="true"
         />
         <div
-          className="absolute inset-0 -z-10 bg-gradient-to-r from-moto-brand-foreground via-moto-brand-foreground/90 to-brand-strong/40"
+          className="from-moto-brand-foreground via-moto-brand-foreground/90 to-brand-strong/40 absolute inset-0 -z-10 bg-gradient-to-r"
           aria-hidden="true"
         />
         <div className="relative flex min-h-[340px] flex-col justify-between gap-10 p-6 sm:min-h-[390px] sm:p-10">
@@ -193,7 +197,7 @@ export default async function PublicStorePage({
               {result.total === 1 ? "exibido" : "exibidos"}
             </span>
             {rating ? (
-              <a href="#avaliacoes-loja" className="hover:text-white hover:underline underline-offset-4">
+              <a href="#avaliacoes-loja" className="underline-offset-4 hover:text-white hover:underline">
                 <span aria-hidden="true" className="text-moto-brand">
                   ★
                 </span>{" "}
@@ -258,7 +262,11 @@ export default async function PublicStorePage({
                 </label>
                 <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
                   Oferta
-                  <DesignSelect aria-label="Oferta" name="storeProductPromotion" defaultValue={storeParams.storeProductPromotion}>
+                  <DesignSelect
+                    aria-label="Oferta"
+                    name="storeProductPromotion"
+                    defaultValue={storeParams.storeProductPromotion}
+                  >
                     <option value="ALL">Todos os preços</option>
                     <option value="ON_SALE">Em oferta</option>
                   </DesignSelect>

@@ -56,7 +56,9 @@ export function ProductGallery({
                 className={cn(
                   "bg-surface-sunken relative block aspect-square w-full overflow-hidden rounded-xl border transition-[border-color,box-shadow]",
                   "focus-visible:ring-ring/50 focus-visible:ring-3 focus-visible:outline-none",
-                  index === activeIndex ? "border-moto-brand ring-moto-brand/30 ring-2" : "border-border hover:border-foreground/30",
+                  index === activeIndex
+                    ? "border-moto-brand ring-moto-brand/30 ring-2"
+                    : "border-border hover:border-foreground/30",
                 )}
               >
                 <Image src={image.url} alt="" fill unoptimized sizes="120px" className="object-contain" />

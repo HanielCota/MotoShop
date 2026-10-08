@@ -6,15 +6,17 @@ import { isNotificationDeliveryRetryable } from "@/modules/notifications/domain/
 
 import { parseDateBoundary } from "./date-boundary";
 
-export async function listNotificationDeliveriesForAdmin(input: {
-  status?: string | null;
-  q?: string | null;
-  kind?: string | null;
-  from?: string | null;
-  to?: string | null;
-  sort?: "newest" | "oldest";
-  page?: number;
-} = {}) {
+export async function listNotificationDeliveriesForAdmin(
+  input: {
+    status?: string | null;
+    q?: string | null;
+    kind?: string | null;
+    from?: string | null;
+    to?: string | null;
+    sort?: "newest" | "oldest";
+    page?: number;
+  } = {},
+) {
   const pageSize = 20;
   const requestedPage = Math.max(input.page ?? 1, 1);
   const status = input.status && input.status !== "ALL" ? (input.status as NotificationDeliveryStatus) : undefined;
@@ -42,7 +44,19 @@ export async function listNotificationDeliveriesForAdmin(input: {
     db.notificationDelivery.count({ where }),
     db.notificationDelivery.findMany({
       where,
-      select: { id: true, eventKey: true, kind: true, recipientEmail: true, subject: true, status: true, providerId: true, error: true, sentAt: true, createdAt: true, updatedAt: true },
+      select: {
+        id: true,
+        eventKey: true,
+        kind: true,
+        recipientEmail: true,
+        subject: true,
+        status: true,
+        providerId: true,
+        error: true,
+        sentAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
       orderBy: { createdAt: input.sort === "oldest" ? "asc" : "desc" },
       skip: (requestedPage - 1) * pageSize,
       take: pageSize,
@@ -51,7 +65,10 @@ export async function listNotificationDeliveriesForAdmin(input: {
   const pageCount = Math.max(Math.ceil(total / pageSize), 1);
   const now = new Date();
   return {
-    deliveries: deliveries.map((delivery) => ({ ...delivery, retryable: isNotificationDeliveryRetryable(delivery, now) })),
+    deliveries: deliveries.map((delivery) => ({
+      ...delivery,
+      retryable: isNotificationDeliveryRetryable(delivery, now),
+    })),
     total,
     page: Math.min(requestedPage, pageCount),
     pageCount,

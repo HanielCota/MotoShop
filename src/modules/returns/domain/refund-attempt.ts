@@ -66,7 +66,8 @@ export function planRefundAttempt(baseKey: string, transactions: RefundAttemptTr
   if (nextAttempt > MAX_REFUND_ATTEMPTS) {
     throw new ApplicationError({
       code: "CONFLICT",
-      message: "O limite de tentativas de reembolso foi atingido. Verifique o pagamento no provedor antes de prosseguir.",
+      message:
+        "O limite de tentativas de reembolso foi atingido. Verifique o pagamento no provedor antes de prosseguir.",
       statusCode: 409,
     });
   }

@@ -22,7 +22,11 @@ function Feedback({ state }: { state: CatalogActionState }) {
   return (
     <>
       {state.error ? <p className="text-destructive text-sm">{state.error}</p> : null}
-      {state.success ? <p role="status" className="text-success-foreground text-sm">{state.success}</p> : null}
+      {state.success ? (
+        <p role="status" className="text-success-foreground text-sm">
+          {state.success}
+        </p>
+      ) : null}
     </>
   );
 }
@@ -62,13 +66,7 @@ export function CategoryForm({ categories }: { categories: Option[] }) {
           </option>
         ))}
       </DesignSelect>
-      <Input
-        name="sortOrder"
-        type="number"
-        min="0"
-        defaultValue="0"
-        placeholder="Ordem"
-      />
+      <Input name="sortOrder" type="number" min="0" defaultValue="0" placeholder="Ordem" />
     </FormShell>
   );
 }
@@ -95,12 +93,7 @@ export function MotorcycleModelForm({ manufacturers }: { manufacturers: Option[]
   const [state, action, pending] = useActionState(createMotorcycleModelAction, initialState);
   return (
     <FormShell action={action} state={state} pending={pending}>
-      <DesignSelect
-        aria-label="Fabricante"
-        name="manufacturerId"
-        required
-        defaultValue=""
-      >
+      <DesignSelect aria-label="Fabricante" name="manufacturerId" required defaultValue="">
         <option value="">Fabricante</option>
         {manufacturers.map((manufacturer) => (
           <option key={manufacturer.id} value={manufacturer.id}>
@@ -117,12 +110,7 @@ export function MotorcycleFitmentForm({ models }: { models: Option[] }) {
   const [state, action, pending] = useActionState(createMotorcycleFitmentAction, initialState);
   return (
     <FormShell action={action} state={state} pending={pending}>
-      <DesignSelect
-        aria-label="Modelo da moto"
-        name="motorcycleModelId"
-        required
-        defaultValue=""
-      >
+      <DesignSelect aria-label="Modelo da moto" name="motorcycleModelId" required defaultValue="">
         <option value="">Modelo</option>
         {models.map((model) => (
           <option key={model.id} value={model.id}>
@@ -132,13 +120,7 @@ export function MotorcycleFitmentForm({ models }: { models: Option[] }) {
       </DesignSelect>
       <Input name="version" placeholder="Versão (opcional)" />
       <div className="grid grid-cols-2 gap-3">
-        <Input
-          name="displacementCc"
-          type="number"
-          min="1"
-          placeholder="Cilindrada cc"
-          required
-        />
+        <Input name="displacementCc" type="number" min="1" placeholder="Cilindrada cc" required />
         <Input name="year" type="number" min="1900" max="2200" placeholder="Ano" required />
       </div>
     </FormShell>

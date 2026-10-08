@@ -36,9 +36,9 @@ describe("markShipmentLabelForCancellation", () => {
       providerMetadata: { checkoutResult: "paid" },
     });
 
-    await expect(
-      markShipmentLabelForCancellation(tx as never, "seller-order-1", "admin-1"),
-    ).resolves.toEqual({ labelCancellationRequired: true });
+    await expect(markShipmentLabelForCancellation(tx as never, "seller-order-1", "admin-1")).resolves.toEqual({
+      labelCancellationRequired: true,
+    });
 
     expect(mocks.shipmentUpdate).toHaveBeenCalledWith({
       where: { id: "shipment-1" },
@@ -66,9 +66,9 @@ describe("markShipmentLabelForCancellation", () => {
       providerMetadata: null,
     });
 
-    await expect(
-      markShipmentLabelForCancellation(tx as never, "seller-order-1", "admin-1"),
-    ).resolves.toEqual({ labelCancellationRequired: false });
+    await expect(markShipmentLabelForCancellation(tx as never, "seller-order-1", "admin-1")).resolves.toEqual({
+      labelCancellationRequired: false,
+    });
     expect(mocks.shipmentUpdate).not.toHaveBeenCalled();
     expect(mocks.auditCreate).not.toHaveBeenCalled();
   });
@@ -100,7 +100,11 @@ describe("confirmShipmentLabelCancelled", () => {
     mocks.shipmentFindUnique.mockResolvedValue(flagged);
     mocks.txShipmentFindUnique.mockResolvedValue(flagged);
 
-    await confirmShipmentLabelCancelled({ shipmentId: "shipment-1", actorUserId: "admin-1", confirmedOrderNumber: "MS-1" });
+    await confirmShipmentLabelCancelled({
+      shipmentId: "shipment-1",
+      actorUserId: "admin-1",
+      confirmedOrderNumber: "MS-1",
+    });
 
     expect(mocks.shipmentUpdate).toHaveBeenCalledWith({
       where: { id: "shipment-1" },

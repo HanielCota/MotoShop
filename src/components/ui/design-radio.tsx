@@ -44,11 +44,11 @@ export function DesignRadio({ value, disabled, className }: { value: string; dis
       disabled={disabled}
       className={cn(
         "border-input bg-background data-checked:border-brand-strong data-checked:text-brand-strong flex size-4 shrink-0 items-center justify-center rounded-full border",
-        "focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/40 data-disabled:cursor-not-allowed data-disabled:opacity-50",
+        "focus-visible:ring-ring/40 focus-visible:ring-3 focus-visible:outline-none data-disabled:cursor-not-allowed data-disabled:opacity-50",
         className,
       )}
     >
-      <Radio.Indicator className="data-unchecked:hidden before:block before:size-2 before:rounded-full before:bg-current" />
+      <Radio.Indicator className="before:block before:size-2 before:rounded-full before:bg-current data-unchecked:hidden" />
     </Radio.Root>
   );
 }

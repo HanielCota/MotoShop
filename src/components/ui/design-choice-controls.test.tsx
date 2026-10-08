@@ -26,8 +26,12 @@ describe("design choice controls", () => {
     const { container } = render(
       <form>
         <DesignRadioGroup name="paymentType" label="Pagamento" value="pix" onValueChange={() => {}}>
-          <label><DesignRadio value="pix" /> Pix</label>
-          <label><DesignRadio value="card" disabled /> Cartão</label>
+          <label>
+            <DesignRadio value="pix" /> Pix
+          </label>
+          <label>
+            <DesignRadio value="card" disabled /> Cartão
+          </label>
         </DesignRadioGroup>
       </form>,
     );

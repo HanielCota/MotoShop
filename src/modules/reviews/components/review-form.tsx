@@ -102,7 +102,10 @@ export function ReviewForm({
   }
 
   return (
-    <form onSubmit={submitReview} className="border-moto-brand/30 bg-moto-brand-surface mt-4 space-y-4 rounded-xl border p-4">
+    <form
+      onSubmit={submitReview}
+      className="border-moto-brand/30 bg-moto-brand-surface mt-4 space-y-4 rounded-xl border p-4"
+    >
       <input type="hidden" name="orderItemId" value={orderItemId} />
       <input type="hidden" name="productRatingTenths" value={ratingTenths} />
       <input type="hidden" name="media" value="[]" />

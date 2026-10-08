@@ -71,7 +71,8 @@ else if (mode === "summary") {
 } else if (mode === "select-without-value") {
   for (const row of rows.filter(
     (row) => row.tag === "DesignSelect" && !row.attributes.value && !row.attributes.defaultValue,
-  )) console.log(`${row.file}:${row.line} | ${row.attributes.name ?? row.attributes["aria-label"] ?? "—"}`);
+  ))
+    console.log(`${row.file}:${row.line} | ${row.attributes.name ?? row.attributes["aria-label"] ?? "—"}`);
 } else {
   for (const row of rows.filter((row) => row.tag === mode)) {
     console.log(

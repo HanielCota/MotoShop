@@ -593,7 +593,10 @@ describe("definitive provider rejections", () => {
       shipment: { ...pendingSellerOrder.shipment, externalShipmentId: "external-1" },
     });
     mocks.generateShipment.mockRejectedValueOnce(
-      new ShippingProviderRequestError({ message: "O Melhor Envio não conseguiu gerar a etiqueta.", providerStatus: 400 }),
+      new ShippingProviderRequestError({
+        message: "O Melhor Envio não conseguiu gerar a etiqueta.",
+        providerStatus: 400,
+      }),
     );
 
     await expect(generateSellerOrderShipment("seller-order-1", "seller-1", "u")).rejects.toMatchObject({

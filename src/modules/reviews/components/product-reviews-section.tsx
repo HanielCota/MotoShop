@@ -94,12 +94,19 @@ export function ProductReviewsSection({
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenar avaliações
-              <DesignSelect aria-label="Ordenar avaliações" className="h-10" name="reviewSort" defaultValue={params.reviewSort}>
+              <DesignSelect
+                aria-label="Ordenar avaliações"
+                className="h-10"
+                name="reviewSort"
+                defaultValue={params.reviewSort}
+              >
                 <option value="newest">Mais recentes</option>
                 <option value="oldest">Mais antigas</option>
               </DesignSelect>
             </label>
-            {params.questionSort !== "newest" ? <input type="hidden" name="questionSort" value={params.questionSort} /> : null}
+            {params.questionSort !== "newest" ? (
+              <input type="hidden" name="questionSort" value={params.questionSort} />
+            ) : null}
             {params.questionPage > 1 ? <input type="hidden" name="questionPage" value={params.questionPage} /> : null}
             <Button type="submit" variant="outline" className="h-10 px-4">
               Aplicar
@@ -159,7 +166,11 @@ function ReviewMedia({ media }: { media: ProductReview["media"] }) {
         return (
           <li key={item.id}>
             {item.mediaType === "video" ? (
-              <video controls preload="metadata" className="border-border max-h-56 max-w-full rounded-lg border bg-black">
+              <video
+                controls
+                preload="metadata"
+                className="border-border max-h-56 max-w-full rounded-lg border bg-black"
+              >
                 <source src={url} type={item.contentType} />
                 Seu navegador não consegue reproduzir este vídeo.
               </video>
@@ -171,7 +182,14 @@ function ReviewMedia({ media }: { media: ProductReview["media"] }) {
                 aria-label={`Abrir foto ${index + 1} da avaliação em nova aba`}
                 className="border-border bg-surface-sunken focus-visible:ring-ring/50 relative block size-24 overflow-hidden rounded-lg border focus-visible:ring-3 focus-visible:outline-none"
               >
-                <Image src={url} alt={`Foto ${index + 1} anexada à avaliação`} fill unoptimized sizes="96px" className="object-cover" />
+                <Image
+                  src={url}
+                  alt={`Foto ${index + 1} anexada à avaliação`}
+                  fill
+                  unoptimized
+                  sizes="96px"
+                  className="object-cover"
+                />
               </a>
             )}
           </li>

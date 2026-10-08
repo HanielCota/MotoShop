@@ -100,7 +100,7 @@ export function CartPreview() {
       >
         <ShoppingBag aria-hidden="true" className="size-5" />
         {data && data.itemCount > 0 ? (
-          <span className="bg-moto-brand absolute top-0.5 right-0.5 min-w-5 rounded-full px-1 text-center text-moto-brand-foreground text-xs leading-5 font-bold">
+          <span className="bg-moto-brand text-moto-brand-foreground absolute top-0.5 right-0.5 min-w-5 rounded-full px-1 text-center text-xs leading-5 font-bold">
             {data.itemCount > 99 ? "99+" : data.itemCount}
           </span>
         ) : null}
@@ -136,7 +136,7 @@ export function CartPreview() {
                 <p className="text-sm font-medium">Seu carrinho está vazio</p>
                 <Link
                   href="/products"
-                  className="mt-2 inline-flex min-h-10 items-center text-sm font-medium text-brand-strong underline underline-offset-4"
+                  className="text-brand-strong mt-2 inline-flex min-h-10 items-center text-sm font-medium underline underline-offset-4"
                 >
                   Explorar produtos
                 </Link>

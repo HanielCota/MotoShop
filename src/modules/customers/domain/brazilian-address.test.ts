@@ -37,7 +37,13 @@ describe("CPF helpers", () => {
 describe("parseViaCepResponse", () => {
   it("maps a ViaCEP payload", () => {
     expect(
-      parseViaCepResponse({ cep: "01001-000", logradouro: "Praça da Sé", bairro: "Sé", localidade: "São Paulo", uf: "sp" }),
+      parseViaCepResponse({
+        cep: "01001-000",
+        logradouro: "Praça da Sé",
+        bairro: "Sé",
+        localidade: "São Paulo",
+        uf: "sp",
+      }),
     ).toEqual({ street: "Praça da Sé", neighborhood: "Sé", city: "São Paulo", state: "SP" });
   });
 
@@ -70,7 +76,11 @@ describe("applyCepAutofill", () => {
   });
 
   it("does not clear a field when ViaCEP has no value for it", () => {
-    const result = applyCepAutofill({ street: "", neighborhood: "", city: "", state: "" }, { ...address, street: "" }, {});
+    const result = applyCepAutofill(
+      { street: "", neighborhood: "", city: "", state: "" },
+      { ...address, street: "" },
+      {},
+    );
     expect(result.values.street).toBe("");
     expect(result.autofilled.street).toBeUndefined();
   });

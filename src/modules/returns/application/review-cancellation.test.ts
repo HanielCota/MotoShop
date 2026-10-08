@@ -19,7 +19,9 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/modules/payments/application/refund-payment", () => ({ refundPayment: mocks.refund }));
-vi.mock("@/modules/inventory/application/settle-order-inventory", () => ({ cancelCommittedInventory: mocks.cancelInventory }));
+vi.mock("@/modules/inventory/application/settle-order-inventory", () => ({
+  cancelCommittedInventory: mocks.cancelInventory,
+}));
 vi.mock("@/modules/orders/application/sync-fulfillment-status", () => ({
   syncFulfillmentStatuses: mocks.syncFulfillment,
 }));
@@ -121,7 +123,10 @@ describe("retry of an approved cancellation whose refund failed", () => {
     expect(mocks.audit).toHaveBeenCalledWith({
       data: expect.objectContaining({
         action: "CANCELLATION_REFUNDED",
-        metadata: expect.objectContaining({ refundAttempt: 2, refundIdempotencyKey: "cancellation-refund:request:retry-1" }),
+        metadata: expect.objectContaining({
+          refundAttempt: 2,
+          refundIdempotencyKey: "cancellation-refund:request:retry-1",
+        }),
       }),
     });
   });
@@ -132,7 +137,9 @@ describe("retry of an approved cancellation whose refund failed", () => {
     await expect(
       reviewCancellationRequest({ cancellationRequestId: "request", decision: "APPROVE", actorUserId: "admin" }),
     ).rejects.toThrow("ainda não foi confirmado");
-    expect(mocks.refund).toHaveBeenCalledWith(expect.objectContaining({ idempotencyKey: "cancellation-refund:request" }));
+    expect(mocks.refund).toHaveBeenCalledWith(
+      expect.objectContaining({ idempotencyKey: "cancellation-refund:request" }),
+    );
     expect(mocks.txUpdate).not.toHaveBeenCalled();
   });
 

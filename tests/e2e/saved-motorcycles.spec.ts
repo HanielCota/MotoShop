@@ -64,10 +64,7 @@ test("cliente salva, edita e usa sua moto principal", async ({ page }, testInfo)
     await page.getByRole("button", { name: "Ver peças" }).click();
     await expect(page).toHaveURL(new RegExp(`/products\\?moto=${fitments[1]!.id}$`));
     await page.goto("/products");
-    await expect(page.getByRole("link", { name: "Ver todas as motos" })).toHaveAttribute(
-      "href",
-      "/products?moto=all",
-    );
+    await expect(page.getByRole("link", { name: "Ver todas as motos" })).toHaveAttribute("href", "/products?moto=all");
     await expect(page.getByText("Minha moto principal:").locator("..")).toContainText(
       fitments[1]!.motorcycleModel.name,
     );

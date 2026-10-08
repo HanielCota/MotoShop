@@ -55,13 +55,26 @@ export function ProductQuestionsSection({
       </CardHeader>
       <CardContent className="space-y-4">
         {questionCount > 1 ? (
-          <form className="bg-surface-sunken flex flex-wrap items-end gap-3 rounded-lg p-3" method="get" action={`#${SECTION_ID}`}>
-            {params.reviewRating !== null ? <input type="hidden" name="reviewRating" value={params.reviewRating} /> : null}
-            {params.reviewSort !== "newest" ? <input type="hidden" name="reviewSort" value={params.reviewSort} /> : null}
+          <form
+            className="bg-surface-sunken flex flex-wrap items-end gap-3 rounded-lg p-3"
+            method="get"
+            action={`#${SECTION_ID}`}
+          >
+            {params.reviewRating !== null ? (
+              <input type="hidden" name="reviewRating" value={params.reviewRating} />
+            ) : null}
+            {params.reviewSort !== "newest" ? (
+              <input type="hidden" name="reviewSort" value={params.reviewSort} />
+            ) : null}
             {params.reviewPage > 1 ? <input type="hidden" name="reviewPage" value={params.reviewPage} /> : null}
             <label className="flex flex-col gap-1 text-sm font-medium">
               Ordenar perguntas
-              <DesignSelect aria-label="Ordenar perguntas" className="h-10" name="questionSort" defaultValue={params.questionSort}>
+              <DesignSelect
+                aria-label="Ordenar perguntas"
+                className="h-10"
+                name="questionSort"
+                defaultValue={params.questionSort}
+              >
                 <option value="newest">Mais recentes</option>
                 <option value="oldest">Mais antigas</option>
               </DesignSelect>
