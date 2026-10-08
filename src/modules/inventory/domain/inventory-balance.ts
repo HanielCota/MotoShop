@@ -14,7 +14,7 @@ export function reserveInventory(balance: InventoryBalance, quantity: number): I
   if (quantity > balance.availableQuantity) {
     throw new ApplicationError({
       code: "OUT_OF_STOCK",
-      message: "There is not enough available inventory to create the reservation.",
+      message: "Não há estoque disponível suficiente para esta quantidade.",
       statusCode: 409,
     });
   }

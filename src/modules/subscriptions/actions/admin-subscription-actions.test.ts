@@ -20,7 +20,7 @@ it("locks the seller before checking VIP state and rejects an unavailable seller
   const form = new FormData();
   form.set("sellerId", "seller");
   form.set("months", "1");
-  expect((await activateVipSubscriptionAction({}, form)).error).toContain("não encontrado");
+  expect((await activateVipSubscriptionAction({}, form)).error).toContain("não encontrada");
   expect(mocks.lock.mock.invocationCallOrder[0]).toBeLessThan(mocks.seller.mock.invocationCallOrder[0]!);
   expect(mocks.subscription).not.toHaveBeenCalled();
 });

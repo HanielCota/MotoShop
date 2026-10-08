@@ -39,7 +39,7 @@ export async function activateVipSubscriptionAction(
         where: { id: parsed.data.sellerId, status: { in: ["APPROVED", "ACTIVE"] } },
       });
       if (!seller)
-        throw new ApplicationError({ code: "CONFLICT", message: "Seller não encontrado ou ainda não aprovado." });
+        throw new ApplicationError({ code: "CONFLICT", message: "Loja não encontrada ou ainda não aprovada." });
 
       const activeSubscription = await tx.sellerSubscription.findFirst({
         where: {

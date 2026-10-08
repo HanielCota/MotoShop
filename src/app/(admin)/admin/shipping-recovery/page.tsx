@@ -32,7 +32,7 @@ export default async function AdminShipmentRecoveryPage() {
 
       <AdminCard
         id="admin-shipping-recovery"
-        title="Por que estas etiquetas estão aguardando?"
+        title="Etiquetas sem confirmação"
         description="Uma compra ou geração pode terminar sem confirmação, mesmo que o Melhor Envio tenha recebido a solicitação. O sistema bloqueia novas tentativas até um administrador conferir o resultado."
       >
         {shipments.length === 0 ? (
