@@ -20,15 +20,45 @@ export function calculateCouponDiscount(coupon: CouponDiscountDefinition, subtot
     });
   }
 
-  const rawDiscountInCents =
-    coupon.discountType === "PERCENTAGE"
-      ? Number((BigInt(subtotalInCents) * BigInt(coupon.percentageBps ?? 0)) / BigInt(10_000))
-      : (coupon.fixedAmountInCents ?? 0);
+  let rawDiscountInCents: number;
+  if (coupon.discountType === "PERCENTAGE") {
+    const percentageBps = coupon.percentageBps;
+    if (
+      percentageBps === null ||
+      !Number.isSafeInteger(percentageBps) ||
+      percentageBps < 1 ||
+      percentageBps > 10_000 ||
+      coupon.fixedAmountInCents !== null
+    ) {
+      throw invalidCouponConfiguration();
+    }
+    rawDiscountInCents = Number((BigInt(subtotalInCents) * BigInt(percentageBps)) / BigInt(10_000));
+  } else {
+    const fixedAmountInCents = coupon.fixedAmountInCents;
+    if (
+      fixedAmountInCents === null ||
+      !Number.isSafeInteger(fixedAmountInCents) ||
+      fixedAmountInCents < 1 ||
+      fixedAmountInCents > 2_147_483_647 ||
+      coupon.percentageBps !== null
+    ) {
+      throw invalidCouponConfiguration();
+    }
+    rawDiscountInCents = fixedAmountInCents;
+  }
   const discount = Math.min(rawDiscountInCents, subtotalInCents);
   if (discount <= 0) {
     throw new ApplicationError({ code: "CONFLICT", message: "O cupom não gera desconto válido.", statusCode: 409 });
   }
   return discount;
+}
+
+function invalidCouponConfiguration() {
+  return new ApplicationError({
+    code: "CONFIGURATION_ERROR",
+    message: "Este cupom está configurado incorretamente. Escolha outro cupom.",
+    statusCode: 503,
+  });
 }
 
 export function allocateDiscountAcrossSubtotals(

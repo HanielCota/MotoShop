@@ -8,9 +8,11 @@ import { getPackageMeasurements } from "@/modules/shipping/domain/package-measur
 import { melhorEnvioProvider } from "@/lib/shipping/melhor-envio-provider";
 import { getSellerMelhorEnvioAccessToken } from "@/modules/shipping/infrastructure/melhor-envio-oauth";
 import { ApplicationError } from "@/shared/errors/application-error";
-import type { ShippingQuote } from "@/shared/shipping/shipping-provider";
+import { consumeRateLimit } from "@/shared/rate-limit/consume-rate-limit";
+import type { ShippingQuote, ShippingQuoteInput } from "@/shared/shipping/shipping-provider";
 
 import { getActiveCart } from "@/modules/cart/queries/cart";
+import { purchasableVariantWhere } from "@/modules/products/application/purchasable-variant";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 
 export type CheckoutShippingQuote = Pick<
@@ -19,25 +21,41 @@ export type CheckoutShippingQuote = Pick<
 >;
 export type SellerShippingQuotes = { sellerId: string; storeName: string; quotes: CheckoutShippingQuote[] };
 
+// Interactive (pre-checkout) quotes spend the seller's own Melhor Envio quota,
+// so they share a per-seller budget. Checkout submission is already limited
+// per buyer and must not be blocked by browsing traffic.
+const SELLER_QUOTE_BUDGET = { windowSeconds: 60, max: 120 } as const;
+
+type QuoteOptions = { enforceSellerBudget?: boolean };
+
+async function quoteIntegratedShipping(
+  sellerId: string,
+  input: ShippingQuoteInput,
+  accessToken: string,
+  options: QuoteOptions,
+): Promise<ShippingQuote[]> {
+  if (options.enforceSellerBudget) {
+    const budget = await consumeRateLimit({ key: `shipping-quote:seller:${sellerId}`, ...SELLER_QUOTE_BUDGET });
+    if (!budget.allowed) {
+      logger.warn({ event: "shipping.seller_quote_budget_exceeded", sellerId });
+      throw new ApplicationError({
+        code: "CONFLICT",
+        statusCode: 429,
+        message: "O cálculo de frete desta loja está temporariamente indisponível. Tente novamente em instantes.",
+      });
+    }
+  }
+  return melhorEnvioProvider.quote(input, accessToken);
+}
+
 export async function quoteShippingForActiveCart(postalCode: string): Promise<SellerShippingQuotes[]> {
   const cart = await getActiveCart();
-  return quoteShippingForCart(cart, postalCode);
+  return quoteShippingForCart(cart, postalCode, { enforceSellerBudget: true });
 }
 
 export async function quoteShippingForVariant(variantId: string, postalCode: string): Promise<SellerShippingQuotes[]> {
   const variant = await db.productVariant.findFirst({
-    where: {
-      id: variantId,
-      active: true,
-      inventory: { availableQuantity: { gt: 0 } },
-      product: {
-        status: "APPROVED",
-        isDemo: false,
-        category: { active: true },
-        brand: { active: true },
-        seller: { status: { in: ["APPROVED", "ACTIVE"] } },
-      },
-    },
+    where: purchasableVariantWhere(variantId, { requireStock: true }),
     include: { inventory: true, product: { include: { store: true } } },
   });
   if (!variant?.product)
@@ -63,27 +81,27 @@ export async function quoteShippingForVariant(variantId: string, postalCode: str
     shippingIntegration && fromPostalCode && measurements ? await getSellerMelhorEnvioAccessToken(sellerId) : null;
   const providerQuotes =
     accessToken && fromPostalCode && measurements
-      ? await melhorEnvioProvider
-          .quote(
-            {
-              fromPostalCode,
-              toPostalCode: postalCode,
-              products: [
-                {
-                  id: variant.sku,
-                  ...measurements,
-                  insuranceValueInCents: getCurrentPriceInCents(variant),
-                  quantity: 1,
-                },
-              ],
-            },
-            accessToken,
-          )
-          .catch((error: unknown) => {
-            if (ownQuotes.length === 0) throw error;
-            logger.warn({ event: "shipping.integrated_quote_unavailable", sellerId });
-            return [];
-          })
+      ? await quoteIntegratedShipping(
+          sellerId,
+          {
+            fromPostalCode,
+            toPostalCode: postalCode,
+            products: [
+              {
+                id: variant.sku,
+                ...measurements,
+                insuranceValueInCents: getCurrentPriceInCents(variant),
+                quantity: 1,
+              },
+            ],
+          },
+          accessToken,
+          { enforceSellerBudget: true },
+        ).catch((error: unknown) => {
+          if (ownQuotes.length === 0) throw error;
+          logger.warn({ event: "shipping.integrated_quote_unavailable", sellerId });
+          return [];
+        })
       : [];
 
   const quotes: CheckoutShippingQuote[] = [
@@ -109,6 +127,7 @@ export async function quoteShippingForVariant(variantId: string, postalCode: str
 export async function quoteShippingForCart(
   cart: Awaited<ReturnType<typeof getActiveCart>>,
   postalCode: string,
+  options: QuoteOptions = {},
 ): Promise<SellerShippingQuotes[]> {
   if (!cart || cart.items.length === 0) {
     throw new ApplicationError({ code: "NOT_FOUND", message: "Adicione um produto antes de calcular o frete." });
@@ -151,20 +170,16 @@ export async function quoteShippingForCart(
           : null;
       const providerQuotes =
         accessToken && fromPostalCode && completeMeasurements
-          ? await melhorEnvioProvider
-              .quote(
-                {
-                  fromPostalCode,
-                  toPostalCode: postalCode,
-                  products,
-                },
-                accessToken,
-              )
-              .catch((error: unknown) => {
-                if (ownQuotes.length === 0) throw error;
-                logger.warn({ event: "shipping.integrated_quote_unavailable", sellerId });
-                return [];
-              })
+          ? await quoteIntegratedShipping(
+              sellerId,
+              { fromPostalCode, toPostalCode: postalCode, products },
+              accessToken,
+              options,
+            ).catch((error: unknown) => {
+              if (ownQuotes.length === 0) throw error;
+              logger.warn({ event: "shipping.integrated_quote_unavailable", sellerId });
+              return [];
+            })
           : [];
 
       return {

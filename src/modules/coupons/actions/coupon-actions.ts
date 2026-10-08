@@ -28,8 +28,8 @@ export async function createMarketplaceCouponAction(
   _previousState: CouponActionState,
   formData: FormData,
 ): Promise<CouponActionState> {
-  await requireAdminAccess();
-  return createCoupon(formData, { ownerType: "MARKETPLACE", fundedBy: "MARKETPLACE" });
+  const session = await requireAdminAccess();
+  return createCoupon(formData, { ownerType: "MARKETPLACE", fundedBy: "MARKETPLACE", actorUserId: session.user.id });
 }
 
 export async function createSellerCouponAction(
@@ -37,16 +37,29 @@ export async function createSellerCouponAction(
   formData: FormData,
 ): Promise<CouponActionState> {
   const context = await requireSellerAccess("COUPON_MANAGE");
-  return createCoupon(formData, { ownerType: "SELLER", fundedBy: "SELLER", sellerId: context.seller.id });
+  return createCoupon(formData, {
+    ownerType: "SELLER",
+    fundedBy: "SELLER",
+    sellerId: context.seller.id,
+    actorUserId: context.session.user.id,
+  });
 }
+
+const couponStatusSchema = z.object({ couponId: z.string().cuid(), active: z.boolean() });
 
 export async function setMarketplaceCouponActiveAction(couponId: string, active: boolean): Promise<void> {
   const session = await requireAdminAccess();
-  const coupon = await db.coupon.findFirst({ where: { id: couponId, ownerType: "MARKETPLACE", sellerId: null } });
-  if (!coupon) return;
-  await db.$transaction([
-    db.coupon.update({ where: { id: coupon.id }, data: { active } }),
-    db.auditLog.create({
+  const input = couponStatusSchema.safeParse({ couponId, active });
+  if (!input.success) return;
+  await db.$transaction(async (tx) => {
+    const coupon = await tx.coupon.findFirst({ where: { id: couponId, ownerType: "MARKETPLACE", sellerId: null } });
+    if (!coupon) return;
+    const result = await tx.coupon.updateMany({
+      where: { id: coupon.id, ownerType: "MARKETPLACE", sellerId: null, active: !active },
+      data: { active },
+    });
+    if (result.count !== 1) return;
+    await tx.auditLog.create({
       data: {
         action: active ? "MARKETPLACE_COUPON_ACTIVATED" : "MARKETPLACE_COUPON_DEACTIVATED",
         entityType: "Coupon",
@@ -54,20 +67,26 @@ export async function setMarketplaceCouponActiveAction(couponId: string, active:
         metadata: { code: coupon.code, active },
         actorUserId: session.user.id,
       },
-    }),
-  ]);
-  revalidatePath("/admin");
+    });
+  });
+  revalidatePath("/admin", "layout");
 }
 
 export async function setSellerCouponActiveAction(couponId: string, active: boolean): Promise<void> {
   const context = await requireSellerAccess("COUPON_MANAGE");
-  const coupon = await db.coupon.findFirst({
-    where: { id: couponId, ownerType: "SELLER", sellerId: context.seller.id },
-  });
-  if (!coupon) return;
-  await db.$transaction([
-    db.coupon.update({ where: { id: coupon.id }, data: { active } }),
-    db.auditLog.create({
+  const input = couponStatusSchema.safeParse({ couponId, active });
+  if (!input.success) return;
+  await db.$transaction(async (tx) => {
+    const coupon = await tx.coupon.findFirst({
+      where: { id: couponId, ownerType: "SELLER", sellerId: context.seller.id },
+    });
+    if (!coupon) return;
+    const result = await tx.coupon.updateMany({
+      where: { id: coupon.id, ownerType: "SELLER", sellerId: context.seller.id, active: !active },
+      data: { active },
+    });
+    if (result.count !== 1) return;
+    await tx.auditLog.create({
       data: {
         action: active ? "SELLER_COUPON_ACTIVATED" : "SELLER_COUPON_DEACTIVATED",
         entityType: "Coupon",
@@ -75,14 +94,19 @@ export async function setSellerCouponActiveAction(couponId: string, active: bool
         metadata: { code: coupon.code, active },
         actorUserId: context.session.user.id,
       },
-    }),
-  ]);
-  revalidatePath("/seller");
+    });
+  });
+  revalidatePath("/seller", "layout");
 }
 
 async function createCoupon(
   formData: FormData,
-  owner: { ownerType: "MARKETPLACE" | "SELLER"; fundedBy: "MARKETPLACE" | "SELLER"; sellerId?: string },
+  owner: {
+    ownerType: "MARKETPLACE" | "SELLER";
+    fundedBy: "MARKETPLACE" | "SELLER";
+    sellerId?: string;
+    actorUserId: string;
+  },
 ): Promise<CouponActionState> {
   const parsed = couponSchema.safeParse({
     code: formData.get("code"),
@@ -114,12 +138,34 @@ async function createCoupon(
         : {}),
       fundedBy: owner.fundedBy,
     };
-    if (owner.sellerId) {
-      await db.coupon.create({ data: { ...data, sellerId: owner.sellerId } });
-    } else {
-      await db.coupon.create({ data });
-    }
-    revalidatePath(owner.ownerType === "MARKETPLACE" ? "/admin" : "/seller");
+    await db.$transaction(async (tx) => {
+      const coupon = owner.sellerId
+        ? await tx.coupon.create({ data: { ...data, sellerId: owner.sellerId } })
+        : await tx.coupon.create({ data });
+      await tx.auditLog.create({
+        data: {
+          action: "COUPON_CREATED",
+          entityType: "Coupon",
+          entityId: coupon.id,
+          actorUserId: owner.actorUserId,
+          metadata: {
+            code: data.code,
+            ownerType: owner.ownerType,
+            fundedBy: owner.fundedBy,
+            sellerId: owner.sellerId ?? null,
+            discountType: data.discountType,
+            percentageBps: parsed.data.discountType === "PERCENTAGE" ? (parsed.data.percentageBps ?? null) : null,
+            fixedAmountInCents:
+              parsed.data.discountType === "FIXED_AMOUNT" ? (parsed.data.fixedAmountInCents ?? null) : null,
+            minimumPurchaseInCents: data.minimumPurchaseInCents,
+            globalUsageLimit: parsed.data.globalUsageLimit ?? null,
+            perCustomerUsageLimit: parsed.data.perCustomerUsageLimit ?? null,
+          },
+        },
+      });
+    });
+    if (owner.ownerType === "MARKETPLACE") revalidatePath("/admin", "layout");
+    else revalidatePath("/seller", "layout");
     return { success: `Cupom ${parsed.data.code} criado.` };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

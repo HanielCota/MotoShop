@@ -40,3 +40,7 @@ it.each([
 ])("rejects incomplete or inconsistent payment data %j", (payment) => {
   expect(checkoutSchema.safeParse({ ...checkout, ...payment }).success).toBe(false);
 });
+it("normalizes the customer e-mail so coupon limits cannot be bypassed by casing", () => {
+  const result = checkoutSchema.parse({ ...checkout, customerEmail: "  Buyer@Example.TEST " });
+  expect(result.customerEmail).toBe("buyer@example.test");
+});

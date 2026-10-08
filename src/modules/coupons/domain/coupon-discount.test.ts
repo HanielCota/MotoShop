@@ -34,6 +34,33 @@ describe("calculateCouponDiscount", () => {
       ),
     ).toThrow("valor mínimo");
   });
+
+  it.each([
+    { percentageBps: null, fixedAmountInCents: null },
+    { percentageBps: 10_001, fixedAmountInCents: null },
+    { percentageBps: 1_000, fixedAmountInCents: 500 },
+  ])("rejects inconsistent or out-of-range percentage configuration: %o", ({ percentageBps, fixedAmountInCents }) => {
+    expect(() =>
+      calculateCouponDiscount(
+        { discountType: "PERCENTAGE", percentageBps, fixedAmountInCents, minimumPurchaseInCents: 0 },
+        10_000,
+      ),
+    ).toThrow("configurado incorretamente");
+  });
+
+  it.each([
+    { percentageBps: null, fixedAmountInCents: null },
+    { percentageBps: 1_000, fixedAmountInCents: 500 },
+    { percentageBps: null, fixedAmountInCents: 0 },
+    { percentageBps: null, fixedAmountInCents: 2_147_483_648 },
+  ])("rejects inconsistent fixed-amount configuration: %o", ({ percentageBps, fixedAmountInCents }) => {
+    expect(() =>
+      calculateCouponDiscount(
+        { discountType: "FIXED_AMOUNT", percentageBps, fixedAmountInCents, minimumPurchaseInCents: 0 },
+        10_000,
+      ),
+    ).toThrow("configurado incorretamente");
+  });
 });
 
 describe("allocateDiscountAcrossSubtotals", () => {

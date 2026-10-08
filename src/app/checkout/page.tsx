@@ -1,57 +1,81 @@
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { InlineNotice } from "@/components/ui/inline-notice";
+import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getActiveCart } from "@/modules/cart/queries/cart";
+import { VisualCheckoutPreview } from "@/modules/cart/components/visual-preview";
 import { CheckoutForm } from "@/modules/checkout/components/checkout-form";
 import { listCustomerAddresses } from "@/modules/customers/queries/customer-addresses";
+import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 
-export default async function CheckoutPage() {
+export default async function CheckoutPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview?: string | string[] }>;
+}) {
+  const { preview } = await searchParams;
+  if (process.env.NODE_ENV !== "production" && preview === "1") return <VisualCheckoutPreview />;
+
   const [cart, session] = await Promise.all([getActiveCart(), getCurrentSession()]);
   if (!cart || cart.items.length === 0) {
     return (
-      <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
-        <Card className="border-[#e1dcd3] bg-white">
-          <CardContent className="flex min-h-72 flex-col items-center justify-center px-6 py-12 text-center">
-            <span className="mb-5 flex size-16 items-center justify-center rounded-2xl bg-[#fff0e8] text-[#c54817]">
-              <ShoppingBag className="size-8" aria-hidden="true" />
-            </span>
-            <h1 className="text-2xl font-semibold tracking-tight">Seu carrinho está vazio</h1>
-            <p className="text-muted-foreground mt-2 max-w-md text-sm leading-6">
-              Adicione um produto ao carrinho para continuar a compra.
-            </p>
-            <Link className={buttonVariants({ className: "mt-6 rounded-lg px-5" })} href="/products">
-              Explorar produtos
+      <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-10 sm:px-6">
+        <PageHeader eyebrow="Compra segura" title="Finalizar compra" />
+        <EmptyState
+          icon={ShoppingBag}
+          title="Seu carrinho está vazio"
+          description="Adicione um produto ao carrinho para continuar a compra."
+          action={{ label: "Ver produtos", href: "/products" }}
+        />
+        {process.env.NODE_ENV !== "production" ? (
+          <p className="text-center">
+            <Link href="/checkout?preview=1" className="text-sm underline underline-offset-4">
+              Ver prévia com produtos de exemplo
             </Link>
-          </CardContent>
-        </Card>
+          </p>
+        ) : null}
       </main>
     );
   }
 
   const savedAddresses = session ? await listCustomerAddresses(session.user.id) : [];
   const now = new Date();
+  const items = cart.items.map((item) => ({
+    id: item.id,
+    name: item.variant.product.name,
+    variant: item.variant.title,
+    quantity: item.quantity,
+    lineTotalInCents: getCurrentPriceInCents(item.variant, now) * item.quantity,
+  }));
+  const payment = getCheckoutPaymentAvailability(new Set(cart.items.map((item) => item.variant.product.sellerId)).size);
   const cartSummary = {
-    itemCount: cart.items.reduce((total, item) => total + item.quantity, 0),
-    itemsSubtotalInCents: cart.items.reduce(
-      (total, item) => total + getCurrentPriceInCents(item.variant, now) * item.quantity,
-      0,
-    ),
+    itemCount: items.reduce((total, item) => total + item.quantity, 0),
+    itemsSubtotalInCents: items.reduce((total, item) => total + item.lineTotalInCents, 0),
   };
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6">
-      <div>
-        <p className="text-muted-foreground text-sm">Compra segura</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Checkout</h1>
-      </div>
+      <PageHeader
+        eyebrow="Compra segura"
+        title="Finalizar compra"
+        back={{ href: "/cart", label: "Voltar ao carrinho" }}
+      />
+      {payment.available ? null : (
+        <InlineNotice tone="warning">
+          O pagamento pelo marketplace ainda não está disponível para este carrinho. Você pode conferir frete e
+          entrega, mas nenhum pedido ou cobrança será criado agora.
+        </InlineNotice>
+      )}
       <CheckoutForm
         savedAddresses={savedAddresses}
         cartSummary={cartSummary}
-        paymentAvailable={false}
+        items={items}
+        paymentAvailable={payment.available}
+        cardPublicKey={payment.cardPublicKey}
       />
     </main>
   );

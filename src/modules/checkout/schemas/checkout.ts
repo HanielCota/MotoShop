@@ -4,7 +4,11 @@ import { isValidCpf } from "../domain/cpf";
 export const checkoutSchema = z
   .object({
     customerName: z.string().trim().min(2, "Informe seu nome.").max(120),
-    customerEmail: z.email("Informe um e-mail válido."),
+    // Normalized so per-customer coupon limits and order lookups cannot be bypassed by casing.
+    customerEmail: z.preprocess(
+      (value) => (typeof value === "string" ? value.trim().toLowerCase() : value),
+      z.email("Informe um e-mail válido."),
+    ),
     customerPhone: z.string().trim().min(10, "Informe um telefone válido.").max(30),
     customerTaxId: z
       .string()

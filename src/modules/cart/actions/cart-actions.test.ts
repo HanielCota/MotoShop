@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => {
   const tx = {
     $queryRaw: vi.fn(),
@@ -46,4 +47,18 @@ it("rechecks cart ownership and active state after waiting for its lock", async 
   expect(mocks.tx.cartItem.findFirst).toHaveBeenLastCalledWith(
     expect.objectContaining({ where: { id, cart: { userId: "buyer", status: "ACTIVE" } } }),
   );
+});
+it("uses the shared purchasable-variant rule when adding", async () => {
+  mocks.tx.cartItem.findUnique.mockResolvedValue(null);
+  await addToCartAction(id, 1);
+  expect(mocks.variant).toHaveBeenCalledWith(
+    expect.objectContaining({
+      where: expect.objectContaining({
+        id,
+        active: true,
+        product: expect.objectContaining({ status: "APPROVED", isDemo: false }),
+      }),
+    }),
+  );
+  expect(mocks.tx.cartItem.upsert).toHaveBeenCalled();
 });

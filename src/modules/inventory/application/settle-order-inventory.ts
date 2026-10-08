@@ -26,10 +26,17 @@ export async function releaseOrderReservations(
   await settleReservedInventory(tx, sellerOrders, referenceId, "RESERVATION_RELEASE", reason, true);
 }
 
+/** Origem que justifica a devolução de estoque já baixado (rastreabilidade do movimento). */
+export type CommittedInventoryCancellationReference = {
+  referenceType: "CANCELLATION_REQUEST" | "SELLER_ORDER";
+  referenceId: string;
+  actorUserId: string | null;
+};
+
 export async function cancelCommittedInventory(
   tx: InventoryTransaction,
   sellerOrders: ReservedSellerOrder[],
-  referenceId: string,
+  reference: CommittedInventoryCancellationReference,
 ): Promise<void> {
   for (const sellerOrder of sellerOrders) {
     for (const item of sellerOrder.items) {
@@ -53,8 +60,9 @@ export async function cancelCommittedInventory(
           quantityChange: item.quantity,
           availableQuantityAfter: after.availableQuantity,
           reservedQuantityAfter: after.reservedQuantity,
-          referenceType: "ORDER",
-          referenceId,
+          referenceType: reference.referenceType,
+          referenceId: reference.referenceId,
+          actorUserId: reference.actorUserId,
           reason: "Seller order cancelled",
           inventoryId: inventory.id,
           variantId: item.variantId,

@@ -3,7 +3,9 @@
 import { useState } from "react";
 
 import { DesignSelect } from "@/components/ui/design-select";
-import { formatMoneyInCents } from "@/lib/utils";
+import { FormMessage } from "@/components/ui/form-message";
+import { formatMoneyInCents } from "@/lib/format";
+import { formatCep, isCompleteCep } from "@/modules/customers/domain/brazilian-address";
 import { quoteProductShippingAction } from "../actions/shipping-actions";
 
 type Option = { id: string; title: string; available: boolean };
@@ -36,16 +38,16 @@ export function ProductShippingQuote({ options }: { options: Option[] }) {
   return (
     <section
       aria-labelledby="product-shipping-title"
-      className="mt-5 rounded-xl border border-[#e4dfd5] bg-[#faf9f6] p-4"
+      className="bg-surface-sunken mt-5 rounded-xl border p-4"
     >
-      <h2 id="product-shipping-title" className="text-sm font-semibold text-[#1b1a18]">
+      <h2 id="product-shipping-title" className="text-foreground text-sm font-semibold">
         Calcule a entrega
       </h2>
-      <p className="mt-1 text-xs text-slate-600">
+      <p className="mt-1 text-xs text-muted-foreground">
         Informe seu CEP para consultar as opções disponíveis. O prazo final aparece no checkout.
       </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
-        <label className="text-xs font-medium text-slate-700">
+        <label className="text-xs font-medium text-foreground">
           Opção do produto
           <DesignSelect
             aria-label="Opção para cálculo de frete"
@@ -65,11 +67,11 @@ export function ProductShippingQuote({ options }: { options: Option[] }) {
             ))}
           </DesignSelect>
         </label>
-        <label className="text-xs font-medium text-slate-700">
+        <label className="text-xs font-medium text-foreground">
           CEP
           <input
             value={postalCode}
-            onChange={(event) => setPostalCode(event.currentTarget.value)}
+            onChange={(event) => setPostalCode(formatCep(event.currentTarget.value))}
             inputMode="numeric"
             autoComplete="postal-code"
             maxLength={9}
@@ -81,19 +83,15 @@ export function ProductShippingQuote({ options }: { options: Option[] }) {
         <button
           type="button"
           onClick={() => void calculate()}
-          disabled={pending || !variantId || postalCode.replace(/\D/g, "").length !== 8}
-          className="bg-foreground text-background min-h-10 rounded-md px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={pending || !variantId || !isCompleteCep(postalCode)}
+          className="bg-foreground text-background min-h-11 rounded-md px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pending ? "Calculando…" : "Calcular"}
         </button>
       </div>
-      {message ? (
-        <p role="status" className="mt-3 text-sm text-amber-800">
-          {message}
-        </p>
-      ) : null}
+      <FormMessage className="mt-3" error={message ?? null} />
       {quotes?.map((seller) => (
-        <ul key={seller.sellerId} className="mt-3 divide-y rounded-lg border bg-white px-3">
+        <ul key={seller.sellerId} className="bg-card mt-3 divide-y rounded-lg border px-3">
           {seller.quotes.map((quote) => (
             <li
               key={`${quote.provider}-${quote.serviceCode}`}
@@ -105,7 +103,7 @@ export function ProductShippingQuote({ options }: { options: Option[] }) {
               <span className="font-semibold">
                 {formatMoneyInCents(quote.priceInCents)}
                 {quote.estimatedDeliveryDays !== undefined ? (
-                  <span className="ml-2 font-normal text-slate-600">
+                  <span className="ml-2 font-normal text-muted-foreground">
                     · {quote.estimatedDeliveryDays} dia(s) útil(eis)
                   </span>
                 ) : null}

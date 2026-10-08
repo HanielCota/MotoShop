@@ -45,7 +45,7 @@ it("opens a cart summary and links to the full cart", async () => {
   expect(await screen.findByText("Capacete off-road")).toBeInTheDocument();
   expect(screen.getByText("Subtotal").parentElement?.querySelector("strong")).toHaveTextContent("300,00");
   expect(screen.getByRole("link", { name: "Ver carrinho" })).toHaveAttribute("href", "/cart");
-  expect(screen.getByRole("link", { name: "Ir para checkout" })).toHaveAttribute("href", "/checkout");
+  expect(screen.getByRole("link", { name: "Finalizar compra" })).toHaveAttribute("href", "/checkout");
 });
 
 it("lets the customer remove an item from the preview", async () => {
@@ -64,7 +64,7 @@ it("lets the customer remove an item from the preview", async () => {
 
   fireEvent.click(screen.getByRole("button", { name: "Visualizar carrinho" }));
   expect(await screen.findByText("Capacete off-road")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Remover" }));
+  fireEvent.click(screen.getByRole("button", { name: "Remover Capacete off-road do carrinho" }));
   await waitFor(() => expect(actions.update).toHaveBeenCalledWith("item-1", 0));
   expect(await screen.findByText("Seu carrinho está vazio")).toBeInTheDocument();
 });

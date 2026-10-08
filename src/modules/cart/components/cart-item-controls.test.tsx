@@ -30,3 +30,25 @@ it("does not interpret an empty quantity as a request to delete the item", () =>
   expect(input).toHaveValue("2");
   expect(mocks.update).not.toHaveBeenCalled();
 });
+
+it("commits immediately from the stepper buttons and announces errors", async () => {
+  mocks.update.mockResolvedValue({ error: "A quantidade solicitada não está disponível." });
+  render(<CartItemControls cartItemId="cart-item" quantity={2} productName="Capacete Apex" maxQuantity={5} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Aumentar quantidade de Capacete Apex" }));
+
+  expect(mocks.update).toHaveBeenCalledWith("cart-item", 3);
+  expect(await screen.findByRole("alert")).toHaveTextContent("não está disponível");
+  // O valor otimista volta ao do servidor quando a transição termina.
+  await waitFor(() => expect(screen.getByRole("textbox", { name: "Quantidade de Capacete Apex" })).toHaveValue("2"));
+});
+
+it("removes the item through a labelled button", async () => {
+  mocks.update.mockResolvedValue({ success: "Carrinho atualizado." });
+  render(<CartItemControls cartItemId="cart-item" quantity={1} productName="Capacete Apex" />);
+
+  expect(screen.getByRole("button", { name: "Diminuir quantidade de Capacete Apex" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Remover Capacete Apex do carrinho" }));
+
+  await waitFor(() => expect(mocks.update).toHaveBeenCalledWith("cart-item", 0));
+});

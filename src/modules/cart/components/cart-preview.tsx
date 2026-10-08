@@ -3,11 +3,12 @@
 import { Popover } from "@base-ui/react/popover";
 import { ShoppingBag } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { formatMoneyInCents } from "@/lib/utils";
+import { formatMoneyInCents } from "@/lib/format";
 
 import { clearCartAction, getCartPreviewAction, updateCartItemAction } from "../actions/cart-actions";
+import { CART_UPDATED_EVENT } from "./cart-events";
 
 type CartPreviewData = Awaited<ReturnType<typeof getCartPreviewAction>>;
 
@@ -16,6 +17,7 @@ export function CartPreview() {
   const [data, setData] = useState<CartPreviewData>();
   const [message, setMessage] = useState<string>();
   const [pending, setPending] = useState(false);
+  const [isError, setIsError] = useState(false);
 
   async function refresh() {
     setPending(true);
@@ -23,12 +25,21 @@ export function CartPreview() {
       const result = await getCartPreviewAction();
       setData(result);
       setMessage(result.error);
+      setIsError(Boolean(result.error));
     } catch {
       setMessage("Não foi possível carregar o carrinho.");
+      setIsError(true);
     } finally {
       setPending(false);
     }
   }
+
+  // Mantém o contador atualizado quando um produto é adicionado em outra parte da página.
+  useEffect(() => {
+    const handleCartUpdated = () => void refresh();
+    window.addEventListener(CART_UPDATED_EVENT, handleCartUpdated);
+    return () => window.removeEventListener(CART_UPDATED_EVENT, handleCartUpdated);
+  }, []);
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
@@ -37,17 +48,20 @@ export function CartPreview() {
 
   async function updateItem(cartItemId: string, quantity: number) {
     setMessage(undefined);
+    setIsError(false);
     setPending(true);
     try {
       const result = await updateCartItemAction(cartItemId, quantity);
       if (result.error) {
         setMessage(result.error);
+        setIsError(true);
         return;
       }
       const updated = await getCartPreviewAction();
       setData(updated);
     } catch {
       setMessage("Não foi possível atualizar o carrinho. Tente novamente.");
+      setIsError(true);
     } finally {
       setPending(false);
     }
@@ -55,17 +69,21 @@ export function CartPreview() {
 
   async function clearCart() {
     setMessage(undefined);
+    setIsError(false);
     setPending(true);
     try {
       const result = await clearCartAction();
       if (result.error) {
         setMessage(result.error);
+        setIsError(true);
         return;
       }
       setData({ items: [], itemCount: 0, subtotalInCents: 0 });
       setMessage(result.success);
+      setIsError(false);
     } catch {
       setMessage("Não foi possível esvaziar o carrinho. Tente novamente.");
+      setIsError(true);
     } finally {
       setPending(false);
     }
@@ -82,7 +100,7 @@ export function CartPreview() {
       >
         <ShoppingBag aria-hidden="true" className="size-5" />
         {data && data.itemCount > 0 ? (
-          <span className="bg-moto-brand absolute top-0.5 right-0.5 min-w-4 rounded-full px-1 text-center text-[10px] leading-4 font-bold text-black">
+          <span className="bg-moto-brand absolute top-0.5 right-0.5 min-w-5 rounded-full px-1 text-center text-moto-brand-foreground text-xs leading-5 font-bold">
             {data.itemCount > 99 ? "99+" : data.itemCount}
           </span>
         ) : null}
@@ -118,7 +136,7 @@ export function CartPreview() {
                 <p className="text-sm font-medium">Seu carrinho está vazio</p>
                 <Link
                   href="/products"
-                  className="mt-2 inline-flex min-h-10 items-center text-sm font-medium text-[#a63a0b] underline underline-offset-4"
+                  className="mt-2 inline-flex min-h-10 items-center text-sm font-medium text-brand-strong underline underline-offset-4"
                 >
                   Explorar produtos
                 </Link>
@@ -138,7 +156,7 @@ export function CartPreview() {
                             aria-label={`Diminuir quantidade de ${item.name}`}
                             disabled={pending || item.quantity <= 1}
                             onClick={() => updateItem(item.id, item.quantity - 1)}
-                            className="border-border hover:bg-muted inline-flex size-8 items-center justify-center rounded-md border text-base disabled:opacity-40"
+                            className="border-border hover:bg-muted inline-flex size-9 items-center justify-center rounded-md border text-base disabled:opacity-40"
                           >
                             −
                           </button>
@@ -150,7 +168,7 @@ export function CartPreview() {
                             aria-label={`Aumentar quantidade de ${item.name}`}
                             disabled={pending || item.quantity >= Math.min(99, item.availableQuantity)}
                             onClick={() => updateItem(item.id, item.quantity + 1)}
-                            className="border-border hover:bg-muted inline-flex size-8 items-center justify-center rounded-md border text-base disabled:opacity-40"
+                            className="border-border hover:bg-muted inline-flex size-9 items-center justify-center rounded-md border text-base disabled:opacity-40"
                           >
                             +
                           </button>
@@ -160,6 +178,7 @@ export function CartPreview() {
                       <button
                         type="button"
                         disabled={pending}
+                        aria-label={`Remover ${item.name} do carrinho`}
                         onClick={() => updateItem(item.id, 0)}
                         className="text-muted-foreground hover:text-foreground min-h-9 shrink-0 rounded-md px-2 text-xs font-medium underline underline-offset-4 disabled:opacity-50"
                       >
@@ -184,15 +203,18 @@ export function CartPreview() {
                   </Link>
                   <Link
                     href="/checkout"
-                    className="bg-moto-brand hover:bg-moto-brand/90 flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold text-black transition-colors"
+                    className="bg-moto-brand hover:bg-moto-brand/90 text-moto-brand-foreground flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold transition-colors"
                   >
-                    Ir para checkout
+                    Finalizar compra
                   </Link>
                 </div>
               </>
             ) : null}
             {message ? (
-              <p role="status" className="text-muted-foreground mt-2 text-xs">
+              <p
+                role={isError ? "alert" : "status"}
+                className={isError ? "text-destructive mt-2 text-xs" : "text-muted-foreground mt-2 text-xs"}
+              >
                 {message}
               </p>
             ) : null}
