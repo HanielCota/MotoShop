@@ -103,6 +103,20 @@ export function StorefrontNavigation() {
           Catálogo
         </Link>
         <Link
+          href="/#minha-moto"
+          onClick={() => setMenuOpen(false)}
+          className="flex min-h-11 items-center border-b border-white/10 text-sm font-medium"
+        >
+          Peças para minha moto
+        </Link>
+        <Link
+          href="/#categorias"
+          onClick={() => setMenuOpen(false)}
+          className="flex min-h-11 items-center border-b border-white/10 text-sm font-medium"
+        >
+          Categorias
+        </Link>
+        <Link
           href="/seller"
           onClick={() => setMenuOpen(false)}
           className="flex min-h-11 items-center text-sm font-medium"
@@ -125,7 +139,7 @@ function HeaderSearch({ id, className }: { id: string; className?: string }) {
         name="q"
         type="search"
         placeholder="Buscar peças, marcas ou lojas"
-        className="focus-visible:border-moto-brand focus-visible:ring-moto-brand/40 h-10 w-full rounded-md border border-white/20 bg-white/10 pr-11 pl-3 text-sm text-white placeholder:text-white/55 focus-visible:ring-3 focus-visible:outline-none"
+        className="focus-visible:border-moto-brand focus-visible:ring-moto-brand/40 h-11 w-full rounded-md border border-white/20 bg-white/10 pr-11 pl-3 text-base text-white placeholder:text-white/55 focus-visible:ring-3 focus-visible:outline-none md:h-10 md:text-sm"
       />
       <button
         type="submit"
