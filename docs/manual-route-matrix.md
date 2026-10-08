@@ -1,4 +1,4 @@
-# T05 — matriz de rotas e jornadas
+# T05 — matriz de rotas e fluxos
 
 Atualização: 07/10/2026. Inventário das 31 páginas `page.tsx` preexistentes e das 14 novas seções dinâmicas do Admin, totalizando 45 rotas de página. **Manual** significa interação no navegador do Moto Shop; **E2E** é Playwright com fixtures e não deve ser confundido com inspeção manual. **Pendente** não significa aprovado. Nesta rodada, o servidor local foi acessado na porta 3005. Nenhuma compra ou cobrança real foi concluída.
 
@@ -54,4 +54,4 @@ Na rodada de 07/10, as 17 áreas do Admin abriram no navegador em 390 px sem err
 
 ## Próximo passe
 
-Faltam interações manuais de todas as mutações com cliente comum, lojista aprovado e Admin em desktop/mobile, incluindo validações, erro, atualização da página e voltar/avançar. O E2E cobre parte dessas jornadas, mas não substitui esse passe. Pagamento sandbox e OAuth de frete precisam de homologação própria; nunca marcar como aprovado apenas porque uma tela abre. O checkout deve ser conferido também em aparelho físico antes da abertura pública, pois o teste atual é Chromium mobile emulado.
+Faltam interações manuais de todas as mutações com cliente comum, lojista aprovado e Admin em desktop/mobile, incluindo validações, erro, atualização da página e voltar/avançar. O E2E cobre parte desses fluxos, mas não substitui esse passe. Pagamento sandbox e OAuth de frete precisam de homologação própria; nunca marcar como aprovado apenas porque uma tela abre. O checkout deve ser conferido também em aparelho físico antes da abertura pública, pois o teste atual é Chromium mobile emulado.
