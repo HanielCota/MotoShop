@@ -118,3 +118,27 @@ it("accepts a timestamp within the tolerance window", async () => {
   const response = await POST(signedRequest(true, String(Date.now() - 4 * 60 * 1000)));
   expect(response.status).toBe(202);
 });
+
+it("refuses oversized bodies before parsing, with or without Content-Length", async () => {
+  const original = signedRequest();
+  const payload = { ...(await original.json()), padding: "x".repeat(70 * 1024) };
+  const body = JSON.stringify(payload);
+  const declared = await POST(new Request(original.url, { method: "POST", headers: original.headers, body }));
+  expect(declared.status).toBe(413);
+
+  const encoded = new TextEncoder().encode(body);
+  const streamed = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (let offset = 0; offset < encoded.length; offset += 8 * 1024)
+        controller.enqueue(encoded.slice(offset, offset + 8 * 1024));
+      controller.close();
+    },
+  });
+  const headers = new Headers(original.headers);
+  headers.delete("content-length");
+  const chunked = await POST(
+    new Request(original.url, { method: "POST", headers, body: streamed, duplex: "half" } as RequestInit),
+  );
+  expect(chunked.status).toBe(413);
+  expect(mocks.create).not.toHaveBeenCalled();
+});

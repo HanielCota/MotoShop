@@ -51,7 +51,7 @@ export function ProductQuestionsSection({
         <CardTitle>
           <h2 className="text-xl">Dúvidas sobre o produto</h2>
         </CardTitle>
-        <CardDescription>Veja respostas da loja e ajude a comunidade do motocross.</CardDescription>
+        <CardDescription>Perguntas de clientes e respostas da loja.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {questionCount > 1 ? (

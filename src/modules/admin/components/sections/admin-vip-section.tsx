@@ -2,7 +2,7 @@ import { Crown } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatCount } from "@/lib/format";
 import { listSellersForAdmin } from "@/modules/sellers/queries/sellers";
 import { VipSubscriptionForm } from "@/modules/subscriptions/components/vip-subscription-form";
 
@@ -71,7 +71,7 @@ export async function AdminVipSection({ searchParams }: AdminSectionProps) {
           pageCount={result.pageCount}
           previousHref={pageHref(result.page - 1)}
           nextHref={pageHref(result.page + 1)}
-          summary={<>{result.total} loja(s)</>}
+          summary={<>{formatCount(result.total, "loja", "lojas")}</>}
         />
       ) : null}
     </AdminCard>

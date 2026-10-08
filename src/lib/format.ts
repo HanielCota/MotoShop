@@ -36,3 +36,10 @@ export function formatDateTime(value: DateInput): string {
 export function formatMoneyInCents(amountInCents: number): string {
   return moneyFormatter.format(amountInCents / 100);
 }
+
+const countFormatter = new Intl.NumberFormat("pt-BR");
+
+/** "1 pedido", "2 pedidos", "1.250 pedidos": quantidade com a palavra já no singular ou no plural. */
+export function formatCount(count: number, singular: string, plural: string): string {
+  return `${countFormatter.format(count)} ${count === 1 ? singular : plural}`;
+}

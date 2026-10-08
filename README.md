@@ -1,6 +1,6 @@
 # O Moto Shop
 
-Marketplace multi-seller focado no ecossistema de motocross. Um checkout unificado para o cliente, dividido
+Marketplace multi-seller focado em motocross. Um checkout unificado para o cliente, dividido
 internamente em um `SellerOrder` por lojista, com três experiências:
 
 - **Storefront**: busca, categorias, Minha Moto, produto, carrinho, checkout (inclusive como convidado), pedidos,
@@ -111,7 +111,7 @@ módulos ([AGENTS.md §4–5](AGENTS.md#4-arquitetura-obrigatória)).
 | [docs/mvp-checklist.md](docs/mvp-checklist.md)                                 | Checklist até a abertura pública                       |
 | [docs/production-readiness.md](docs/production-readiness.md)                   | Prontidão para produção: evidências e bloqueadores     |
 | [docs/critical-flow-matrix.md](docs/critical-flow-matrix.md)                   | Cenários críticos e evidências de teste                |
-| [docs/manual-route-matrix.md](docs/manual-route-matrix.md)                     | Matriz de rotas e jornadas                             |
+| [docs/manual-route-matrix.md](docs/manual-route-matrix.md)                     | Matriz de rotas e fluxos                               |
 | [docs/release-inventory.md](docs/release-inventory.md)                         | Inventário da versão candidata                         |
 | [docs/auditoria-2026-10.md](docs/auditoria-2026-10.md)                         | Auditoria de negócio, segurança e UI/UX                |
 | [docs/auditoria-repositorio-2026-10.md](docs/auditoria-repositorio-2026-10.md) | Auditoria do repositório e plano de melhorias          |

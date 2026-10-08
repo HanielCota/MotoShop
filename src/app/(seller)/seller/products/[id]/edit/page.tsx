@@ -93,7 +93,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       <Card>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <h2 className="font-semibold">Pronto para publicar?</h2>
+            <h2 className="font-semibold">Enviar para análise</h2>
             <p className="text-muted-foreground text-sm">
               Salve as alterações antes de enviar. Depois do envio, o produto fica bloqueado para edição até a análise
               do Moto Shop.

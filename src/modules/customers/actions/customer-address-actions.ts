@@ -7,6 +7,8 @@ import { db } from "@/lib/database";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
 import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
 
+import { isBrazilianStateCode } from "../domain/brazilian-address";
+
 const addressSchema = z.object({
   label: z.string().trim().min(2, "Informe um nome para o endereço.").max(40),
   recipient: z.string().trim().min(2, "Informe o destinatário.").max(120),
@@ -19,7 +21,7 @@ const addressSchema = z.object({
   complement: z.string().trim().max(80).optional(),
   neighborhood: z.string().trim().min(2, "Informe o bairro.").max(100),
   city: z.string().trim().min(2, "Informe a cidade.").max(100),
-  state: z.string().trim().length(2, "Informe a UF.").toUpperCase(),
+  state: z.string().trim().toUpperCase().refine(isBrazilianStateCode, "Informe uma UF válida, como SP ou RJ."),
   isDefault: z.boolean().default(false),
 });
 

@@ -26,6 +26,7 @@ import {
   buildCatalogHref,
   clearCatalogFiltersHref,
   countActiveCatalogFilters,
+  normalizeCatalogPrice,
   removeCatalogFilterHref,
   type CatalogFilterKey,
   type CatalogQuery,
@@ -94,8 +95,8 @@ export default async function ProductsPage({
     seller: params.seller,
     sort: params.sort,
     availability: params.availability,
-    minPrice: params.minPrice ?? null,
-    maxPrice: params.maxPrice ?? null,
+    minPrice: normalizeCatalogPrice(params.minPrice),
+    maxPrice: normalizeCatalogPrice(params.maxPrice),
     promotion: params.promotion,
     page: params.page,
   };

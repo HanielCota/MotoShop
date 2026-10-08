@@ -1,5 +1,5 @@
 /**
- * Dados de REVISÃO VISUAL do O Moto Shop.
+ * Dados de REVISÃO VISUAL do Moto Shop.
  *
  * Cria contas, lojas, produtos, pedidos e pós-venda fictícios para revisar todas as telas
  * (storefront, conta do cliente, Central do Lojista e Admin). Tudo é isolado por:
@@ -274,7 +274,7 @@ type ProductDefinition = {
 };
 
 const NOTICE =
-  " Produto fictício criado para revisão visual do O Moto Shop; preço, estoque e compatibilidade são ilustrativos.";
+  " Produto fictício criado para revisão visual do Moto Shop; preço, estoque e compatibilidade são ilustrativos.";
 
 const products: ProductDefinition[] = [
   {

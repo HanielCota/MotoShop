@@ -26,5 +26,8 @@ export function getSafeRedirectPath(next: string | null | undefined, fallback = 
     return fallback;
   }
   if (url.origin !== PLACEHOLDER_ORIGIN) return fallback;
+  // Segmentos "." e ".." são resolvidos pelo parser: "/..//evil.com" vira "//evil.com",
+  // que o navegador trataria como URL de outra origem.
+  if (url.pathname.startsWith("//")) return fallback;
   return `${url.pathname}${url.search}${url.hash}`;
 }

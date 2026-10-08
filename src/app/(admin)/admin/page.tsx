@@ -18,6 +18,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { adminSections } from "@/modules/admin/admin-sections";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { getAdminDashboardCounters } from "@/modules/admin/queries/dashboard-counters";
+import { formatCount } from "@/lib/format";
 
 export const metadata = { title: "Visão geral · Admin" };
 
@@ -96,7 +97,9 @@ export default async function AdminHomePage() {
         <SectionHeader
           title={<span id="pending-heading">Aguardando ação</span>}
           description={
-            totalPending > 0 ? `${totalPending} item(ns) aguardando um administrador.` : "Nada pendente no momento."
+            totalPending > 0
+              ? `${formatCount(totalPending, "item aguardando", "itens aguardando")} um administrador.`
+              : "Nada pendente no momento."
           }
         />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

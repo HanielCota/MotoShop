@@ -6,6 +6,7 @@ import { Prisma, ProductStatus } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
 
 import { buildRatingDistribution } from "../domain/review-distribution";
+import { normalizeRequestedPage, resolvePage } from "../domain/pagination";
 import { netUnitsSold, SALE_REVERSING_RETURN_STATUSES, SOLD_SELLER_ORDER_STATUSES } from "../domain/units-sold";
 
 import { findPublicProductPage, type PublicProductFilter } from "./public-product-page";
@@ -26,6 +27,9 @@ export async function listProductCategories() {
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 }
+
+// Price columns are PostgreSQL INT4: larger URL values would make Prisma reject the query.
+const MAX_INT4 = 2_147_483_647;
 
 export async function listProductBrands() {
   return db.brand.findMany({ where: { active: true }, orderBy: { name: "asc" } });
@@ -48,20 +52,20 @@ export async function listSellerProducts(
   } = {},
 ) {
   const pageSize = Math.min(Math.max(input.pageSize ?? 20, 1), 50);
-  const requestedPage = Math.max(input.page ?? 1, 1);
+  const requestedPage = normalizeRequestedPage(input.page);
   const query = input.query?.trim();
   const status = input.status && input.status !== "ALL" ? (input.status as ProductStatus) : undefined;
   const minPrice =
     typeof input.minPriceInCents === "number" &&
     Number.isSafeInteger(input.minPriceInCents) &&
     input.minPriceInCents >= 0
-      ? input.minPriceInCents
+      ? Math.min(input.minPriceInCents, MAX_INT4)
       : undefined;
   const maxPrice =
     typeof input.maxPriceInCents === "number" &&
     Number.isSafeInteger(input.maxPriceInCents) &&
     input.maxPriceInCents >= 0
-      ? input.maxPriceInCents
+      ? Math.min(input.maxPriceInCents, MAX_INT4)
       : undefined;
   const variantFilter: Prisma.ProductVariantWhereInput = {
     ...(minPrice !== undefined || maxPrice !== undefined ? { active: true } : {}),
@@ -245,8 +249,8 @@ export async function getApprovedProductBySlug(
   } = {},
 ) {
   const pageSize = 6;
-  const requestedReviewPage = Math.max(input.reviewPage ?? 1, 1);
-  const requestedQuestionPage = Math.max(input.questionPage ?? 1, 1);
+  const requestedReviewPage = normalizeRequestedPage(input.reviewPage);
+  const requestedQuestionPage = normalizeRequestedPage(input.questionPage);
   const reviewRating =
     typeof input.reviewRating === "number" &&
     Number.isInteger(input.reviewRating) &&
@@ -255,6 +259,25 @@ export async function getApprovedProductBySlug(
       ? input.reviewRating
       : undefined;
   const now = new Date();
+  const reviewsInclude = (page: number) =>
+    ({
+      where: { hiddenAt: null, ...(reviewRating ? { ratingTenths: { gte: reviewRating * 10 } } : {}) },
+      include: { user: { select: { name: true } }, media: { orderBy: { sortOrder: "asc" } } },
+      orderBy: { createdAt: input.reviewSort === "oldest" ? "asc" : "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }) satisfies Prisma.Product$productReviewsArgs;
+  const questionsInclude = (page: number) =>
+    ({
+      where: { hiddenAt: null },
+      include: {
+        askedBy: { select: { name: true } },
+        answeredBy: { select: { name: true } },
+      },
+      orderBy: { createdAt: input.questionSort === "oldest" ? "asc" : "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }) satisfies Prisma.Product$questionsArgs;
   const product = await db.product.findFirst({
     where: {
       slug,
@@ -285,23 +308,8 @@ export async function getApprovedProductBySlug(
       compatibilities: {
         include: { motorcycleFitment: { include: { motorcycleModel: { include: { manufacturer: true } } } } },
       },
-      productReviews: {
-        where: { hiddenAt: null, ...(reviewRating ? { ratingTenths: { gte: reviewRating * 10 } } : {}) },
-        include: { user: { select: { name: true } }, media: { orderBy: { sortOrder: "asc" } } },
-        orderBy: { createdAt: input.reviewSort === "oldest" ? "asc" : "desc" },
-        skip: (requestedReviewPage - 1) * pageSize,
-        take: pageSize,
-      },
-      questions: {
-        where: { hiddenAt: null },
-        include: {
-          askedBy: { select: { name: true } },
-          answeredBy: { select: { name: true } },
-        },
-        orderBy: { createdAt: input.questionSort === "oldest" ? "asc" : "desc" },
-        skip: (requestedQuestionPage - 1) * pageSize,
-        take: pageSize,
-      },
+      productReviews: reviewsInclude(requestedReviewPage),
+      questions: questionsInclude(requestedQuestionPage),
       _count: { select: { productReviews: { where: { hiddenAt: null } }, questions: { where: { hiddenAt: null } } } },
     },
   });
@@ -319,11 +327,29 @@ export async function getApprovedProductBySlug(
     getProductUnitsSold(product.id),
   ]);
   const reviewCount = reviewSummary._count._all;
-  const reviewPageCount = Math.max(Math.ceil(reviewCount / pageSize), 1);
-  const questionPageCount = Math.max(Math.ceil(product._count.questions / pageSize), 1);
+  const { page: reviewPage, pageCount: reviewPageCount } = resolvePage(requestedReviewPage, reviewCount, pageSize);
+  const { page: questionPage, pageCount: questionPageCount } = resolvePage(
+    requestedQuestionPage,
+    product._count.questions,
+    pageSize,
+  );
+  // A page past the end (old link, hand-edited URL) shows the last page instead of an empty list.
+  const [productReviews, questions] = await Promise.all([
+    reviewPage === requestedReviewPage
+      ? product.productReviews
+      : db.productReview.findMany({ ...reviewsInclude(reviewPage), where: reviewWhere }),
+    questionPage === requestedQuestionPage
+      ? product.questions
+      : db.productQuestion.findMany({
+          ...questionsInclude(questionPage),
+          where: { productId: product.id, hiddenAt: null },
+        }),
+  ]);
 
   return {
     ...product,
+    productReviews,
+    questions,
     productReviewAverage: reviewSummary._avg.ratingTenths === null ? null : reviewSummary._avg.ratingTenths / 10,
     productReviewCount: reviewCount,
     reviewDistribution: buildRatingDistribution(
@@ -331,9 +357,9 @@ export async function getApprovedProductBySlug(
     ),
     unitsSold,
     questionCount: product._count.questions,
-    reviewPage: Math.min(requestedReviewPage, reviewPageCount),
+    reviewPage,
     reviewPageCount,
-    questionPage: Math.min(requestedQuestionPage, questionPageCount),
+    questionPage,
     questionPageCount,
   };
 }

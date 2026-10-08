@@ -2,7 +2,7 @@
 
 Roteiro para revisar todas as telas com dados de demonstração. Tudo o que aparece com **"· demonstração"** ou **"(demonstração)"** é fictício: lojas, produtos, preços e pedidos foram criados só para esta revisão e não podem ser comprados.
 
-> O pagamento real está **bloqueado de propósito** (o Mercado Pago ainda não liberou a divisão de pagamento entre lojistas). Por isso o checkout mostra um aviso e não cria pedidos. Isso é esperado, não é erro.
+> O pagamento real está **bloqueado de propósito** (o Mercado Pago ainda não liberou a divisão de pagamento entre lojistas). Por isso o checkout mostra um aviso e não cria pedidos; esse comportamento é esperado.
 
 ---
 
@@ -186,6 +186,6 @@ Para cada observação, anote:
 
 Pontos que precisam de decisão do dono do produto (registrados em `docs/auditoria-2026-10.md`):
 
-- Link de WhatsApp na vitrine da loja: manter, remover ou restringir?
+- Link de WhatsApp na vitrine da loja: decidido em 08/10/2026, fica mantido (ver `AGENTS.md`).
 - Códigos de cupom: o lojista pode usar qualquer código ou alguns ficam reservados ao marketplace?
 - Quem aprova o merge para a `main` e o deploy.

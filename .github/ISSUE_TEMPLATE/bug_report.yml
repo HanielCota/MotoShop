@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Obrigado por reportar. **Falhas de segurança não devem ser abertas aqui**: siga o SECURITY.md.
+        **Falhas de segurança não devem ser abertas aqui**: siga o SECURITY.md.
         Não cole senhas, tokens, dados de cartão ou dados pessoais de clientes.
   - type: input
     id: url
