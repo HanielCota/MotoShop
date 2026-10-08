@@ -15,7 +15,7 @@ import { FavoriteButton } from "@/modules/favorites/components/favorite-button";
 import { listFavoriteProducts } from "@/modules/favorites/queries/favorites";
 import { loadFavoriteSearchParams } from "@/modules/favorites/search-params";
 import { toProductCardData } from "@/modules/products/components/product-grid";
-import { CustomerAccountNavigation } from "@/modules/customers/components/customer-account-navigation";
+import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
 
 export default async function FavoritesPage({
   searchParams,
@@ -46,23 +46,26 @@ export default async function FavoritesPage({
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6">
+    <CustomerAccountShell pathname="/favorites">
       <PageHeader
         eyebrow="Minha conta"
         title="Meus favoritos"
         description="Guarde produtos para revisitar antes da próxima sessão."
       />
 
-      <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-      <CustomerAccountNavigation pathname="/favorites" />
-      <div className="min-w-0 space-y-6">
       <form
         className="border-border bg-card grid gap-3 rounded-xl border p-4 sm:grid-cols-[1fr_180px_180px_auto] sm:items-end [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:w-full"
         method="get"
       >
         <label className="flex flex-col gap-2 text-sm font-medium">
           Buscar favorito
-          <Input type="search" className="h-11" name="favoriteQ" defaultValue={params.favoriteQ ?? ""} placeholder="Produto, marca ou loja" />
+          <Input
+            type="search"
+            className="h-11"
+            name="favoriteQ"
+            defaultValue={params.favoriteQ ?? ""}
+            placeholder="Produto, marca ou loja"
+          />
         </label>
         <label className="flex flex-col gap-2 text-sm font-medium">
           Disponibilidade
@@ -133,11 +136,13 @@ export default async function FavoritesPage({
           pageCount={result.pageCount}
           previousHref={pageHref(result.page - 1)}
           nextHref={pageHref(result.page + 1)}
-          summary={<>{result.total} {result.total === 1 ? "favorito" : "favoritos"}</>}
+          summary={
+            <>
+              {result.total} {result.total === 1 ? "favorito" : "favoritos"}
+            </>
+          }
         />
       ) : null}
-      </div>
-      </div>
-    </main>
+    </CustomerAccountShell>
   );
 }
