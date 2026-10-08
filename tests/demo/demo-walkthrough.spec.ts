@@ -38,7 +38,7 @@ async function visit(page: Page, url: string, expectations: { h1?: RegExp; text?
 
 test.describe("Loja pública (visitante)", () => {
   test("home, catálogo e busca", async ({ page }) => {
-    await visit(page, "/", { text: [/Comprar por moto/i] });
+    await visit(page, "/", { text: [/Peças por moto/i] });
     await visit(page, "/products", { text: [/\d+ produtos/] });
     const count = Number(
       (
@@ -92,11 +92,15 @@ test.describe("Área do cliente", () => {
     await visit(page, "/orders/MS-REVIEW-0007");
   });
 
-  test("favoritos, motos, endereços, notificações e carrinho", async ({ page }) => {
+  test("serviços da conta, motos e carrinho", async ({ page }) => {
     await visit(page, "/favorites", { h1: /Meus favoritos/ });
+    await visit(page, "/account/profile", { h1: /Dados cadastrais/, text: ["Serviços"] });
+    await visit(page, "/account/password", { h1: /Redefinir senha/ });
+    await visit(page, "/account/addresses", { h1: /Meus endereços/ });
+    // Old notification link now lands on the preferences section of "Dados cadastrais".
+    await page.goto("/account/notifications");
+    await expect(page).toHaveURL(/\/account\/profile/);
     await visit(page, "/account/motorcycles", { h1: /Minhas motos/ });
-    await visit(page, "/account/addresses", { h1: /Endereços salvos/ });
-    await visit(page, "/account/notifications", { h1: /Notificações/ });
     await visit(page, "/cart", { h1: /Carrinho/ });
     await visit(page, "/checkout", { h1: /Finalizar compra/ });
   });

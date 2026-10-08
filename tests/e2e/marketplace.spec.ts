@@ -57,7 +57,7 @@ test("store registration → approval → product → publication → catalog �
   try {
     await page.goto("/login?next=/seller");
     await page.getByRole("button", { name: "Ainda não tenho conta" }).click();
-    await page.getByLabel("Nome", { exact: true }).fill("Lojista de teste");
+    await page.getByLabel(/^Nome\*?$/).fill("Lojista de teste");
     await page.getByLabel("E-mail", { exact: true }).fill(sellerEmail);
     await page.getByLabel("Senha", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Criar conta", exact: true }).click();
@@ -129,7 +129,7 @@ test("store registration → approval → product → publication → catalog �
     await staffPage.getByLabel("Senha", { exact: true }).fill(staffPassword);
     await staffPage.getByRole("button", { name: "Entrar", exact: true }).click();
     await expect(staffPage).toHaveURL(/\/seller\/orders$/);
-    await expect(staffPage.getByRole("heading", { name: "Fulfillment e envios" })).toBeVisible();
+    await expect(staffPage.getByRole("heading", { name: "Preparação e envio" })).toBeVisible();
     await staffPage.goto("/seller");
     await expect(staffPage.getByRole("heading", { name: "Equipe da loja" })).toHaveCount(0);
     await expect(staffPage.getByRole("heading", { name: "Resumo financeiro" })).toHaveCount(0);
@@ -137,7 +137,7 @@ test("store registration → approval → product → publication → catalog �
     await expect(staffPage).toHaveURL(/\/seller\?error=permission$/);
 
     await page.goto("/seller/orders");
-    await expect(page.getByRole("heading", { name: "Fulfillment e envios" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Preparação e envio" })).toBeVisible();
     await expect(page.getByText("Ainda não há pedidos para processar.")).toBeVisible();
     await page.goto("/seller/questions");
     await expect(page.getByRole("heading", { name: "Perguntas dos clientes" })).toBeVisible();
@@ -145,8 +145,8 @@ test("store registration → approval → product → publication → catalog �
     await page.goto("/seller/shipping/integrations");
     await expect(page.getByRole("heading", { name: "Integrações de frete" })).toBeVisible();
     await page.goto("/seller/coupons");
-    await page.getByPlaceholder("Código (ex.: TRILHA10)").fill(sellerCouponCode);
-    await page.getByPlaceholder("Percentual em bps (1000 = 10%)").fill("1500");
+    await page.getByLabel(/^Código do cupom\*?$/).fill(sellerCouponCode);
+    await page.getByLabel(/^Desconto \(%\)\*?$/).fill("15");
     await page.getByRole("button", { name: "Criar cupom", exact: true }).click();
     await expect(page.getByText(`Cupom ${sellerCouponCode} criado.`, { exact: true })).toBeVisible();
     const temporarySellerCoupon = await testDb.coupon.findUniqueOrThrow({ where: { code: sellerCouponCode } });
@@ -156,8 +156,9 @@ test("store registration → approval → product → publication → catalog �
       sellerId: fixtureStore.sellerId,
       active: true,
     });
-    await page.goto(`/seller?couponQ=${sellerCouponCode}`);
-    const sellerCouponRow = page.getByText(sellerCouponCode, { exact: true }).locator("..");
+    await page.goto(`/seller/coupons?couponQ=${sellerCouponCode}`);
+    // Cards on small screens, table rows on larger ones: use whichever is visible.
+    const sellerCouponRow = page.locator("li, tr").filter({ hasText: sellerCouponCode }).filter({ visible: true });
     await sellerCouponRow.getByRole("button", { name: "Desativar", exact: true }).click();
     await expect
       .poll(async () => (await testDb.coupon.findUnique({ where: { code: sellerCouponCode } }))?.active)
@@ -180,19 +181,23 @@ test("store registration → approval → product → publication → catalog �
     await adminPage.goto("/admin/outbox");
     await expect(adminPage.getByRole("heading", { name: "Eventos que precisam de atenção" })).toBeVisible();
     await adminPage.goto("/admin/coupons");
-    await adminPage.getByPlaceholder("Código (ex.: TRILHA10)").fill(couponCode);
+    const couponCodeField = adminPage.getByLabel(/^Código do cupom\*?$/);
+    const couponPercentField = adminPage.getByLabel(/^Desconto \(%\)\*?$/);
+    await couponCodeField.fill(couponCode);
+    // Malformed percent passes the browser's required check and must be rejected by the server.
+    await couponPercentField.fill("dez");
     await adminPage.getByRole("button", { name: "Criar cupom", exact: true }).click();
-    await expect(adminPage.getByText("Informe o percentual em basis points.", { exact: true })).toBeVisible();
+    await expect(adminPage.getByText(/Informe o percentual com até duas casas/)).toBeVisible();
     expect(await testDb.coupon.findUnique({ where: { code: couponCode } })).toBeNull();
     // A failed server validation must preserve the required code so the same form can be corrected and retried.
-    await expect(adminPage.getByPlaceholder("Código (ex.: TRILHA10)")).toHaveValue(couponCode);
-    await adminPage.getByPlaceholder("Percentual em bps (1000 = 10%)").fill("1000");
+    await expect(couponCodeField).toHaveValue(couponCode);
+    await couponPercentField.fill("10");
     await adminPage.getByRole("button", { name: "Criar cupom", exact: true }).click();
     await expect(adminPage.getByText(`Cupom ${couponCode} criado.`, { exact: true })).toBeVisible();
     const temporaryCoupon = await testDb.coupon.findUniqueOrThrow({ where: { code: couponCode } });
     expect(temporaryCoupon).toMatchObject({ ownerType: "MARKETPLACE", fundedBy: "MARKETPLACE", active: true });
     await adminPage.goto(`/admin/coupons?couponQ=${couponCode}`);
-    const couponRow = adminPage.getByText(couponCode, { exact: true }).locator("..");
+    const couponRow = adminPage.locator("li, tr").filter({ hasText: couponCode }).filter({ visible: true });
     await couponRow.getByRole("button", { name: "Desativar", exact: true }).click();
     await expect
       .poll(async () => (await testDb.coupon.findUnique({ where: { code: couponCode } }))?.active)
@@ -206,10 +211,11 @@ test("store registration → approval → product → publication → catalog �
       .not.toBeNull();
 
     await page.goto("/seller/products/new");
-    await page.getByLabel("Nome *", { exact: true }).fill(productName);
-    await page.getByLabel("Slug *", { exact: true }).fill(slug);
+    await page.getByLabel(/^Nome\*?$/).fill(productName);
+    await expect(page.getByLabel(/^Nome\*?$/)).toHaveAttribute("aria-required", "true");
+    await page.getByLabel(/^Slug\*?$/).fill(slug);
     await page
-      .getByLabel("Descrição *", { exact: true })
+      .getByLabel(/^Descrição\*?$/)
       .fill("Produto temporário para validar a jornada do Moto Shop, sem vendas reais.");
     await chooseOption(page, "Categoria", "Capacetes");
     const brand = await testDb.brand.findFirstOrThrow({ where: { active: true }, orderBy: { name: "asc" } });
@@ -228,10 +234,11 @@ test("store registration → approval → product → publication → catalog �
     await fitmentSelect.click();
     await page.getByRole("option").first().click();
     await page.keyboard.press("Escape");
-    await page.getByLabel("Variação 1 *", { exact: true }).fill("Preto / M");
-    await page.getByLabel("SKU *", { exact: true }).fill(`SKU-${run}`);
-    await page.getByLabel("Preço (R$) *", { exact: true }).fill("199,90");
-    await page.getByLabel("Estoque *", { exact: true }).fill("5");
+    const firstVariant = page.getByRole("group", { name: "Variação 1", exact: true });
+    await firstVariant.getByLabel(/^Nome da variação\*?$/).fill("Preto / M");
+    await firstVariant.getByLabel(/^SKU\*?$/).fill(`SKU-${run}`);
+    await firstVariant.getByLabel(/^Preço \(R\$\)\*?$/).fill("199,90");
+    await firstVariant.getByLabel(/^Estoque\*?$/).fill("5");
     await page.locator("summary").filter({ hasText: "Dados de embalagem" }).click();
     const packaging = page.locator("details").filter({ hasText: "Dados de embalagem" }).first();
     await packaging.getByLabel("Peso embalado (g)").fill("1500");
@@ -261,7 +268,9 @@ test("store registration → approval → product → publication → catalog �
     await expect(page.getByLabel("Início da promoção")).toHaveValue("2026-01-01T10:00");
     await page.getByLabel("Preço promocional (R$)").fill("250,00");
     await page.getByRole("button", { name: "Salvar alterações" }).click();
-    await expect(page.getByRole("alert").filter({ hasText: "menor que o preço normal" })).toBeVisible();
+    // Validated in the form: the error sits under the field and is linked to it (aria-invalid/describedby).
+    await expect(page.getByText(/menor que o preço normal/)).toBeVisible();
+    await expect(page.getByLabel("Preço promocional (R$)")).toHaveAttribute("aria-invalid", "true");
     await expect(page.getByLabel("Preço promocional (R$)")).toHaveValue("250,00");
     await page.getByLabel("Preço promocional (R$)").fill("189,90");
     await page.getByRole("button", { name: "Salvar alterações" }).click();
@@ -281,13 +290,13 @@ test("store registration → approval → product → publication → catalog �
     });
     await page.goto(`/products?q=${run}`);
     await expect(page.getByRole("heading", { name: "0 produtos", exact: true })).toBeVisible();
-    await page.goto("/seller");
+    await page.goto("/seller/products");
     await page.getByRole("button", { name: "Arquivar", exact: true }).click();
     await expect.poll(async () => (await testDb.product.findUnique({ where: { slug } }))?.status).toBe("ARCHIVED");
-    await page.goto("/seller?productStatus=ARCHIVED");
+    await page.goto("/seller/products?productStatus=ARCHIVED");
     await page.getByRole("button", { name: "Restaurar", exact: true }).click();
     await expect.poll(async () => (await testDb.product.findUnique({ where: { slug } }))?.status).toBe("DRAFT");
-    await page.goto("/seller");
+    await page.goto("/seller/products");
     await page.getByRole("button", { name: "Enviar para aprovação" }).click();
     await expect.poll(async () => (await testDb.product.findUnique({ where: { slug } }))?.status).toBe("SUBMITTED");
     await adminPage.goto("/admin/products");
@@ -297,7 +306,7 @@ test("store registration → approval → product → publication → catalog �
       .getByRole("button", { name: "Aprovar", exact: true })
       .click();
     await expect.poll(async () => (await testDb.product.findUnique({ where: { slug } }))?.status).toBe("APPROVED");
-    await page.goto(`/seller?couponQ=${couponCode}`);
+    await page.goto(`/seller/coupons?couponQ=${couponCode}`);
     await expect(page.getByText(couponCode, { exact: true })).toHaveCount(0);
     await page.goto(`/products?q=${run}&moto=${fitment}`);
     await expect(page.getByRole("link", { name: productName, exact: true })).toBeVisible();
@@ -314,16 +323,17 @@ test("store registration → approval → product → publication → catalog �
     await expect(page.getByRole("link", { name: productName, exact: true })).toBeVisible();
     // No mobile os filtros da vitrine ficam recolhidos no painel compartilhado do catálogo.
     const openStoreFilters = async () => {
+      // The panel keeps its open state across the soft navigation of "Aplicar filtros": open it only when closed.
       const toggle = page.getByRole("button", { name: /Filtrar produtos/ });
-      if (await toggle.isVisible()) await toggle.click();
+      if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) === "false") await toggle.click();
     };
     await openStoreFilters();
-    await page.getByRole("searchbox", { name: "Buscar produto" }).fill("sem-correspondencia-e2e");
+    await page.getByRole("searchbox", { name: "Buscar nesta loja" }).fill("sem-correspondencia-e2e");
     await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
     await expect(page.getByRole("status")).toContainText("Nenhum produto corresponde");
     await openStoreFilters();
-    await expect(page.getByRole("searchbox", { name: "Buscar produto" })).toHaveValue("sem-correspondencia-e2e");
-    await page.getByRole("searchbox", { name: "Buscar produto" }).fill("");
+    await expect(page.getByRole("searchbox", { name: "Buscar nesta loja" })).toHaveValue("sem-correspondencia-e2e");
+    await page.getByRole("searchbox", { name: "Buscar nesta loja" }).fill("");
     await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
     await expect(page.getByRole("link", { name: productName, exact: true })).toBeVisible();
     await noHorizontalOverflow(page);
@@ -343,9 +353,13 @@ test("store registration → approval → product → publication → catalog �
     await page.getByLabel("Preço por pedido da loja (R$)").fill("15,00");
     await page.getByLabel("Prazo em dias úteis").fill("3");
     await page.getByRole("button", { name: "Criar modalidade" }).click();
-    await expect(page.getByRole("heading", { name: "Entrega de teste · Desativada" })).toBeVisible();
-    await page.getByRole("button", { name: "Ativar", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Entrega de teste · Ativa" })).toBeVisible();
+    // The method name is the heading; its state is a badge next to it.
+    const shippingMethod = page
+      .locator("[data-slot=card]")
+      .filter({ has: page.getByRole("heading", { name: "Entrega de teste", exact: true }) });
+    await expect(shippingMethod.getByText("Desativada", { exact: true })).toBeVisible();
+    await shippingMethod.getByRole("button", { name: "Ativar", exact: true }).click();
+    await expect(shippingMethod.getByText("Ativa", { exact: true })).toBeVisible();
     await noHorizontalOverflow(page);
     await page.screenshot({ path: testInfo.outputPath("own-shipping.png"), fullPage: true, caret: "initial" });
     await page.goto("/checkout");
@@ -436,9 +450,13 @@ test("public landing, keyboard filters and empty results remain usable", async (
   await expect(page.locator("h1")).toBeVisible();
   await noHorizontalOverflow(page);
   await page.goto("/products?q=no-matching-product-9e87a4");
-  const toggle = page.getByText("Categoria, preço e outros filtros", { exact: true });
-  await toggle.focus();
-  await page.keyboard.press("Enter");
+  // On small screens the filters start collapsed behind a button; it must open with the keyboard.
+  const toggle = page.getByRole("button", { name: /Filtrar produtos/ });
+  if (await toggle.isVisible()) {
+    await toggle.focus();
+    await page.keyboard.press("Enter");
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  }
   await expect(page.getByLabel("Preço mínimo (R$)")).toBeVisible();
   await expect(page.getByText(/Nenhum produto encontrado/)).toBeVisible();
   await noHorizontalOverflow(page);

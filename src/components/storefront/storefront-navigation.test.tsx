@@ -48,14 +48,14 @@ it("stays out of the seller and admin areas", () => {
   }
 });
 
-it("uses both complete logo variants for the hover transition", () => {
+it("uses both horizontal logo variants for the hover transition", () => {
   authMocks.useSession.mockReturnValue({ data: null });
   render(<StorefrontNavigation />);
 
   const brand = screen.getByRole("link", { name: "O Moto Shop, página inicial" });
   expect(Array.from(brand.querySelectorAll("img"), (image) => image.getAttribute("src"))).toEqual([
-    "/Banner2.png",
-    "/Banner1.png",
+    "/brand/logo-horizontal-dark.webp",
+    "/brand/logo-horizontal-orange.webp",
   ]);
 });
 
@@ -66,10 +66,12 @@ it("gives signed-in customers an account menu with their shortcuts", () => {
   expect(trigger).toHaveAttribute("aria-expanded", "false");
   fireEvent.click(trigger);
   expect(trigger).toHaveAttribute("aria-expanded", "true");
-  expect(screen.getByRole("link", { name: "Pedidos" })).toHaveAttribute("href", "/orders");
+  expect(screen.getByRole("link", { name: "Meus pedidos" })).toHaveAttribute("href", "/orders");
   expect(screen.getByRole("link", { name: "Favoritos" })).toHaveAttribute("href", "/favorites");
-  expect(screen.getByRole("link", { name: "Minhas motos" })).toHaveAttribute("href", "/account/motorcycles");
-  fireEvent.keyDown(screen.getByRole("link", { name: "Pedidos" }), { key: "Escape" });
+  expect(screen.getByRole("link", { name: "Dados cadastrais" })).toHaveAttribute("href", "/account/profile");
+  expect(screen.getByRole("link", { name: "Redefinir senha" })).toHaveAttribute("href", "/account/password");
+  expect(screen.getByRole("link", { name: "Meus endereços" })).toHaveAttribute("href", "/account/addresses");
+  fireEvent.keyDown(screen.getByRole("link", { name: "Meus pedidos" }), { key: "Escape" });
   expect(trigger).toHaveAttribute("aria-expanded", "false");
   expect(trigger).toHaveFocus();
   expect(screen.queryByRole("link", { name: "Compatibilidade" })).not.toBeInTheDocument();

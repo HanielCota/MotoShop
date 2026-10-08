@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,11 @@ import { listCustomerAddresses } from "@/modules/customers/queries/customer-addr
 import { loadCustomerAddressSearchParams } from "@/modules/customers/search-params";
 import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
 
+export const metadata: Metadata = {
+  title: "Meus endereços",
+  robots: { index: false, follow: false },
+};
+
 export default async function CustomerAddressesPage({
   searchParams,
 }: {
@@ -23,8 +29,8 @@ export default async function CustomerAddressesPage({
   const addresses = await listCustomerAddresses(session.user.id, { query: params.addressQ });
 
   return (
-    <CustomerAccountShell pathname="/account/addresses">
-      <PageHeader eyebrow="Minha conta" title="Endereços salvos" description="Deixe o próximo checkout mais rápido." />
+    <CustomerAccountShell pathname="/account/addresses" userName={session.user.name}>
+      <PageHeader eyebrow="Minha conta" title="Meus endereços" description="Deixe o próximo checkout mais rápido." />
 
       <form
         className="border-border bg-card flex flex-wrap items-end gap-3 rounded-xl border p-4"

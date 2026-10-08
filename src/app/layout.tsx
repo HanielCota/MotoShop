@@ -4,6 +4,7 @@ import { Geist } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import { BRAND_DESCRIPTION, BRAND_NAME, BRAND_SLOGAN } from "@/config/brand";
 import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { SiteFooter } from "@/components/storefront/site-footer";
 import { StorefrontNavigation } from "@/components/storefront/storefront-navigation";
@@ -16,12 +17,19 @@ const display = Barlow_Condensed({ subsets: ["latin"], weight: ["600", "700"], v
 
 export const metadata: Metadata = {
   metadataBase: new URL(getApplicationBaseUrl()),
+  applicationName: BRAND_NAME,
   title: {
-    default: "O Marketplace de quem vive o OFF-ROAD!",
-    template: "%s | O Moto Shop",
+    default: BRAND_SLOGAN,
+    template: `%s | ${BRAND_NAME}`,
   },
-  description:
-    "O Moto Shop Brasil é uma plataforma e-commerce no formato de marketplace voltada para o setor de motopeças, acessórios e equipamentos, com destaque para o segmento off-road. A plataforma atua como ponte tecnológica entre clientes finais e lojistas parceiros.",
+  description: BRAND_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    siteName: BRAND_NAME,
+    title: BRAND_SLOGAN,
+    description: BRAND_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

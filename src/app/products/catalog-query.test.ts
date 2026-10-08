@@ -4,6 +4,7 @@ import {
   buildCatalogHref,
   clearCatalogFiltersHref,
   countActiveCatalogFilters,
+  normalizeCatalogPrice,
   removeCatalogFilterHref,
   type CatalogQuery,
 } from "./catalog-query";
@@ -43,5 +44,15 @@ describe("catalog query", () => {
 
   it("counts price range as one filter", () => {
     expect(countActiveCatalogFilters({ ...base, minPrice: 1, maxPrice: 2, q: "x" })).toBe(2);
+  });
+});
+
+describe("normalizeCatalogPrice", () => {
+  it("keeps non-negative integer cents and drops values the query ignores", () => {
+    expect(normalizeCatalogPrice(0)).toBe(0);
+    expect(normalizeCatalogPrice(15_000)).toBe(15_000);
+    expect(normalizeCatalogPrice(-100)).toBeNull();
+    expect(normalizeCatalogPrice(1e20)).toBeNull();
+    expect(normalizeCatalogPrice(null)).toBeNull();
   });
 });

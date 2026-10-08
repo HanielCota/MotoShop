@@ -8,7 +8,7 @@ export function PriceFilterInput({ name, cents }: { name: string; cents: number 
   return (
     <>
       <Input
-        className="border-input bg-background h-11 min-w-0 rounded-md border px-3 text-sm"
+        className="sm:h-11"
         inputMode="decimal"
         pattern="[0-9]+([,.][0-9]{1,2})?"
         value={value}

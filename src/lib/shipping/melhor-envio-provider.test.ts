@@ -49,49 +49,118 @@ describe("MelhorEnvioProvider shipment reconciliation", () => {
     ).rejects.toMatchObject({ code: "CONFLICT", statusCode: 502 });
   });
 
-  it("places the platform order tag under options as required by the provider API", async () => {
+  it("places the platform order tag under options and sends total insurance with unit values", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        Response.json({ id: "cart-shipment-1", recipient: { name: "Cliente Teste", document: "12345678900" } }),
-      )
-      .mockResolvedValueOnce(Response.json({ result: "paid", address: "Rua confidencial, 1" }));
+        Response.json({ id: "cart-shipment-1", protocol: "ORD-1", recipient: { document: "12345678900" } }),
+      );
     vi.stubGlobal("fetch", fetchMock);
-    const provider = new MelhorEnvioProvider();
 
-    const result = await provider.createShipment(
+    const result = await new MelhorEnvioProvider().addToCart(
       {
         sellerOrderId: "seller-order-1",
         serviceCode: "1",
-        from: {} as never,
-        to: {} as never,
-        products: [],
-        volumes: [],
+        from: {},
+        to: {},
+        products: [
+          {
+            id: "SKU-1",
+            name: "Luva",
+            unitaryValueInCents: 5000,
+            widthInCm: 10,
+            heightInCm: 5,
+            lengthInCm: 20,
+            weightInKg: 0.2,
+            insuranceValueInCents: 5000,
+            quantity: 2,
+          },
+        ],
+        volumes: [{ heightInCm: 10, widthInCm: 11, lengthInCm: 20, weightInKg: 0.4 }],
         insuranceValueInCents: 10_000,
         tags: [{ tag: "MS-202610-0001" }],
-        quote: {
-          provider: "MELHOR_ENVIO",
-          serviceCode: "1",
-          carrier: "Transportadora",
-          service: "Expresso",
-          priceInCents: 2500,
-          raw: {},
-        },
       },
       "seller-specific-token",
     );
 
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://sandbox.melhorenvio.com.br/api/v2/me/cart");
     const requestBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
-    expect(
-      fetchMock.mock.calls.every(
-        ([, init]) => (init?.headers as Record<string, string>).Authorization === "Bearer seller-specific-token",
-      ),
-    ).toBe(true);
     expect(requestBody.options.tags).toEqual([{ tag: "MS-202610-0001" }]);
     expect(requestBody.tags).toBeUndefined();
-    expect(result.providerMetadata).toEqual({ checkoutResult: "paid" });
-    expect(JSON.stringify(result.providerMetadata)).not.toContain("12345678900");
-    expect(JSON.stringify(result.providerMetadata)).not.toContain("Rua confidencial");
+    expect(requestBody.options.insurance_value).toBe(100);
+    expect(requestBody.products).toEqual([{ name: "Luva", quantity: 2, unitary_value: 50 }]);
+    expect(requestBody.volumes).toEqual([{ height: 10, width: 11, length: 20, weight: 0.4 }]);
+    expect(result).toEqual({ cartItemId: "cart-shipment-1", providerMetadata: { protocol: "ORD-1" } });
+    expect(JSON.stringify(result)).not.toContain("12345678900");
+  });
+
+  it("pays an existing cart item with a single checkout call and keeps only safe metadata", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      Response.json({
+        purchase: { id: "purchase-1", status: "paid", orders: [{ id: "cart-shipment-1", status: "released" }] },
+        address: "Rua confidencial, 1",
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await new MelhorEnvioProvider().checkoutCart("cart-shipment-1", "seller-specific-token");
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://sandbox.melhorenvio.com.br/api/v2/me/shipment/checkout");
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ orders: ["cart-shipment-1"] });
+    expect(result).toEqual({
+      externalShipmentId: "cart-shipment-1",
+      status: "READY_TO_SHIP",
+      providerMetadata: { purchaseId: "purchase-1", purchaseStatus: "paid" },
+    });
+    expect(JSON.stringify(result)).not.toContain("Rua confidencial");
+  });
+
+  it("sends the unit insurance value with the quantity and reads the quoted packages", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      Response.json([
+        {
+          id: 3,
+          name: ".Package",
+          custom_price: "30.10",
+          company: { name: "Jadlog" },
+          packages: [
+            { dimensions: { height: 12, width: 20, length: 30 }, weight: "1.50", insurance_value: "300.00" },
+            { dimensions: { height: 5, width: 11, length: 16 }, weight: "0.30", insurance_value: "100.00" },
+          ],
+        },
+        { id: 4, name: "Sem pacotes", custom_price: "40.00", company: { name: "Jadlog" }, packages: [{}] },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const quotes = await new MelhorEnvioProvider().quote(
+      {
+        fromPostalCode: "01001000",
+        toPostalCode: "01310000",
+        products: [
+          {
+            id: "SKU-1",
+            widthInCm: 10,
+            heightInCm: 5,
+            lengthInCm: 20,
+            weightInKg: 0.5,
+            insuranceValueInCents: 10_000,
+            quantity: 4,
+          },
+        ],
+      },
+      "seller-specific-token",
+    );
+
+    const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(body.products[0]).toMatchObject({ insurance_value: 100, quantity: 4 });
+    expect(quotes[0]?.packages).toEqual([
+      { heightInCm: 12, widthInCm: 20, lengthInCm: 30, weightInKg: 1.5, insuranceValueInCents: 30_000 },
+      { heightInCm: 5, widthInCm: 11, lengthInCm: 16, weightInKg: 0.3, insuranceValueInCents: 10_000 },
+    ]);
+    expect(quotes[1]?.packages).toBeUndefined();
   });
 
   it("persists only allowlisted scalar shipment and tracking metadata", async () => {
@@ -176,29 +245,39 @@ describe("MelhorEnvioProvider shipment reconciliation", () => {
     });
   });
 
-  it("uses an operation-specific message when label checkout fails", async () => {
+  it.each([
+    [
+      "registrar a etiqueta no carrinho",
+      (provider: MelhorEnvioProvider) =>
+        provider.addToCart(
+          {
+            sellerOrderId: "seller-order-1",
+            serviceCode: "1",
+            from: {},
+            to: {},
+            products: [],
+            volumes: [{ heightInCm: 1, widthInCm: 1, lengthInCm: 1, weightInKg: 1 }],
+            insuranceValueInCents: 0,
+          },
+          "seller-specific-token",
+        ),
+    ],
+    ["comprar a etiqueta", (provider: MelhorEnvioProvider) => provider.checkoutCart("cart-1", "seller-specific-token")],
+    [
+      "calcular o frete",
+      (provider: MelhorEnvioProvider) =>
+        provider.quote({ fromPostalCode: "01001000", toPostalCode: "01310000", products: [] }, "seller-specific-token"),
+    ],
+    ["atualizar o rastreio", (provider: MelhorEnvioProvider) => provider.track("external-1", "seller-specific-token")],
+  ] as const)("uses an operation-specific message when the provider fails to %s", async (operation, call) => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(Response.json({ id: "cart-shipment-1" }))
-        .mockResolvedValueOnce(Response.json({ message: "saldo insuficiente" }, { status: 422 })),
+      vi.fn().mockResolvedValueOnce(Response.json({ message: "saldo insuficiente" }, { status: 422 })),
     );
 
-    await expect(
-      new MelhorEnvioProvider().createShipment(
-        {
-          sellerOrderId: "seller-order-1",
-          serviceCode: "1",
-          from: {},
-          to: {},
-          products: [],
-          volumes: [],
-          insuranceValueInCents: 0,
-          quote: { provider: "MELHOR_ENVIO", serviceCode: "1", carrier: "C", service: "S", priceInCents: 1, raw: {} },
-        },
-        "seller-specific-token",
-      ),
-    ).rejects.toMatchObject({ message: "O Melhor Envio não conseguiu comprar a etiqueta.", definitive: true });
+    await expect(call(new MelhorEnvioProvider())).rejects.toMatchObject({
+      message: `O Melhor Envio não conseguiu ${operation}.`,
+      definitive: true,
+    });
   });
 });

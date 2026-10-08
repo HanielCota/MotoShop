@@ -3,7 +3,7 @@ import { ShoppingBag } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatCount } from "@/lib/format";
 import { listSellerOptionsForAdmin } from "@/modules/sellers/queries/sellers";
 import { getStatusLabel, getStatusOptions } from "@/shared/presentation/status-labels";
 
@@ -110,7 +110,9 @@ export async function AdminOrdersSection({ searchParams }: AdminSectionProps) {
             <tr key={order.id}>
               <td className={`${cellClassName} font-medium whitespace-nowrap`}>
                 {order.order.orderNumber}
-                <p className="text-muted-foreground text-xs font-normal">{order._count.items} item(ns)</p>
+                <p className="text-muted-foreground text-xs font-normal">
+                  {formatCount(order._count.items, "item", "itens")}
+                </p>
               </td>
               <td className={cellClassName}>
                 <p>{order.storeNameSnapshot}</p>
@@ -147,7 +149,7 @@ export async function AdminOrdersSection({ searchParams }: AdminSectionProps) {
           pageCount={result.pageCount}
           previousHref={pageHref(result.page - 1)}
           nextHref={pageHref(result.page + 1)}
-          summary={<>{result.total} pedido(s)</>}
+          summary={<>{formatCount(result.total, "pedido", "pedidos")}</>}
         />
       ) : null}
     </AdminCard>

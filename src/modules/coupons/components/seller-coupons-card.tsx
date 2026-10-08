@@ -92,64 +92,73 @@ export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: 
             action={hasFilters ? { label: "Limpar filtros", href: basePath } : undefined}
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <caption className="sr-only">Cupons da loja</caption>
-              <thead className="text-muted-foreground border-b text-xs">
-                <tr>
-                  <th scope="col" className="py-2 pr-3 font-medium">
-                    Código
-                  </th>
-                  <th scope="col" className="py-2 pr-3 font-medium">
-                    Desconto
-                  </th>
-                  <th scope="col" className="py-2 pr-3 font-medium">
-                    Status
-                  </th>
-                  <th scope="col" className="py-2 pr-3 font-medium">
-                    Uso
-                  </th>
-                  <th scope="col" className="py-2 pr-3 font-medium">
-                    Validade
-                  </th>
-                  <th scope="col" className="py-2 font-medium">
-                    <span className="sr-only">Ações</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-border divide-y">
-                {result.coupons.map((coupon) => (
-                  <tr key={coupon.id}>
-                    <td className="py-3 pr-3 font-semibold">{coupon.code}</td>
-                    <td className="py-3 pr-3 tabular-nums">
-                      {coupon.discountType === "PERCENTAGE"
-                        ? `${(coupon.percentageBps ?? 0) / 100}%`
-                        : formatMoneyInCents(coupon.fixedAmountInCents ?? 0)}
-                    </td>
-                    <td className="py-3 pr-3">
-                      <Badge variant={coupon.active ? "success" : "neutral"}>
-                        {coupon.active ? "Ativo" : "Inativo"}
-                      </Badge>
-                    </td>
-                    <td className="py-3 pr-3 tabular-nums">
-                      {coupon._count.redemptions}
-                      {coupon.globalUsageLimit !== null ? `/${coupon.globalUsageLimit}` : ""}
-                    </td>
-                    <td className="text-muted-foreground py-3 pr-3">
-                      {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "Sem prazo"}
-                    </td>
-                    <td className="py-3 text-right">
-                      <form action={setSellerCouponActiveAction.bind(null, coupon.id, !coupon.active)}>
-                        <Button type="submit" variant="outline" size="sm">
-                          {coupon.active ? "Desativar" : "Ativar"}
-                        </Button>
-                      </form>
-                    </td>
+          <>
+            {/* Small screens: stacked cards so the action is always visible without scrolling sideways. */}
+            <ul className="divide-border divide-y md:hidden" aria-label="Cupons da loja">
+              {result.coupons.map((coupon) => (
+                <li key={coupon.id} className="flex flex-col gap-2 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-semibold break-all">{coupon.code}</p>
+                      <p className="text-sm tabular-nums">{couponDiscountLabel(coupon)} de desconto</p>
+                    </div>
+                    <Badge variant={coupon.active ? "success" : "neutral"}>{coupon.active ? "Ativo" : "Inativo"}</Badge>
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    {couponUsageLabel(coupon)} · {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "Sem prazo"}
+                  </p>
+                  <CouponActiveToggle couponId={coupon.id} active={coupon.active} />
+                </li>
+              ))}
+            </ul>
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <caption className="sr-only">Cupons da loja</caption>
+                <thead className="text-muted-foreground border-b text-xs">
+                  <tr>
+                    <th scope="col" className="py-2 pr-3 font-medium">
+                      Código
+                    </th>
+                    <th scope="col" className="py-2 pr-3 font-medium">
+                      Desconto
+                    </th>
+                    <th scope="col" className="py-2 pr-3 font-medium">
+                      Status
+                    </th>
+                    <th scope="col" className="py-2 pr-3 font-medium">
+                      Uso
+                    </th>
+                    <th scope="col" className="py-2 pr-3 font-medium">
+                      Validade
+                    </th>
+                    <th scope="col" className="py-2 font-medium">
+                      <span className="sr-only">Ações</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-border divide-y">
+                  {result.coupons.map((coupon) => (
+                    <tr key={coupon.id}>
+                      <td className="py-3 pr-3 font-semibold">{coupon.code}</td>
+                      <td className="py-3 pr-3 tabular-nums">{couponDiscountLabel(coupon)}</td>
+                      <td className="py-3 pr-3">
+                        <Badge variant={coupon.active ? "success" : "neutral"}>
+                          {coupon.active ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </td>
+                      <td className="py-3 pr-3 tabular-nums">{couponUsageLabel(coupon)}</td>
+                      <td className="text-muted-foreground py-3 pr-3">
+                        {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "Sem prazo"}
+                      </td>
+                      <td className="py-3 text-right">
+                        <CouponActiveToggle couponId={coupon.id} active={coupon.active} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
         <Pagination
           ariaLabel="Paginação de cupons da loja"
@@ -160,5 +169,36 @@ export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: 
         />
       </CardContent>
     </Card>
+  );
+}
+
+type CouponSummary = {
+  discountType: string;
+  percentageBps: number | null;
+  fixedAmountInCents: number | null;
+  globalUsageLimit: number | null;
+  _count: { redemptions: number };
+};
+
+function couponDiscountLabel(coupon: CouponSummary): string {
+  return coupon.discountType === "PERCENTAGE"
+    ? `${((coupon.percentageBps ?? 0) / 100).toLocaleString("pt-BR")}%`
+    : formatMoneyInCents(coupon.fixedAmountInCents ?? 0);
+}
+
+function couponUsageLabel(coupon: CouponSummary): string {
+  const used = coupon._count.redemptions;
+  return coupon.globalUsageLimit !== null
+    ? `${used}/${coupon.globalUsageLimit} usos`
+    : `${used} ${used === 1 ? "uso" : "usos"}`;
+}
+
+function CouponActiveToggle({ couponId, active }: { couponId: string; active: boolean }) {
+  return (
+    <form action={setSellerCouponActiveAction.bind(null, couponId, !active)}>
+      <Button type="submit" variant="outline" size="sm">
+        {active ? "Desativar" : "Ativar"}
+      </Button>
+    </form>
   );
 }

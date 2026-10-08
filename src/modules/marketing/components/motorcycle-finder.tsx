@@ -66,7 +66,7 @@ export function MotorcycleFinder({
           aria-controls="marketing-search-panel"
           onClick={() => setFinderMode("motorcycle")}
         >
-          Comprar por moto
+          Peças por moto
         </button>
         <button
           className={tabClassName}
@@ -91,7 +91,6 @@ export function MotorcycleFinder({
               <span className={fieldLabelClassName}>Fabricante</span>
               <DesignSelect
                 aria-label="Fabricante"
-                tone="marketing"
                 disabled={!selectedFitment}
                 value={selectedFitment?.manufacturer ?? ""}
                 onValueChange={(value) => {
@@ -107,7 +106,6 @@ export function MotorcycleFinder({
               <span className={fieldLabelClassName}>Modelo</span>
               <DesignSelect
                 aria-label="Modelo"
-                tone="marketing"
                 disabled={!selectedFitment}
                 value={selectedFitment?.model ?? ""}
                 onValueChange={(value) => {
@@ -126,7 +124,6 @@ export function MotorcycleFinder({
               <span className={fieldLabelClassName}>Ano e versão</span>
               <DesignSelect
                 aria-label="Ano e versão"
-                tone="marketing"
                 disabled={!selectedFitment}
                 name="moto"
                 value={selectedFitment?.id ?? ""}
@@ -146,7 +143,7 @@ export function MotorcycleFinder({
             </Button>
             <p className={helperClassName}>
               {selectedFitment
-                ? "Mostraremos produtos com compatibilidade cadastrada para a moto selecionada."
+                ? "Mostramos as peças compatíveis com a moto selecionada."
                 : "A seleção de motos está indisponível no momento. Use a busca por produto ou explore o catálogo."}
             </p>
           </form>

@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { logger } from "@/lib/logger";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
 
 import { reviewCancellationRequest } from "../application/review-cancellation";
 
@@ -14,6 +15,23 @@ const reviewSchema = z.object({
 });
 
 export type CancellationAdminActionState = { error?: string; success?: string };
+
+/**
+ * Erros de domínio têm mensagem própria. Falhas inesperadas (provedor de pagamento indisponível,
+ * timeout, rede) não podem chegar ao Admin como texto genérico em inglês: registra o erro e
+ * informa que a solicitação continua no mesmo estado e pode ser reprocessada.
+ */
+function toActionError(error: unknown, cancellationRequestId: string): { error: string } {
+  if (error instanceof ApplicationError && error.code !== "INTERNAL_ERROR") return { error: error.message };
+  logger.error({
+    event: "cancellation.admin_action_failed",
+    cancellationRequestId,
+    error: error instanceof Error ? error.message : "unknown",
+  });
+  return {
+    error: "Não foi possível concluir agora. A solicitação permanece pendente e pode ser reprocessada em instantes.",
+  };
+}
 
 const successMessages = {
   REFUNDED: "Cancelamento aprovado, estoque restaurado e reembolso processado.",
@@ -45,6 +63,6 @@ export async function reviewCancellationRequestAction(
     }
     return { success: successMessages[result.outcome] };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return toActionError(error, cancellationRequestId);
   }
 }

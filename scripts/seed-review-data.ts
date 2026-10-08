@@ -1,12 +1,12 @@
 /**
- * Dados de REVISÃO VISUAL do O Moto Shop.
+ * Dados de REVISÃO VISUAL do Moto Shop.
  *
  * Cria contas, lojas, produtos, pedidos e pós-venda fictícios para revisar todas as telas
  * (storefront, conta do cliente, Central do Lojista e Admin). Tudo é isolado por:
  * - e-mails `review.*@example.test`;
  * - slugs `review-*`, SKUs/códigos `REVIEW-*` e pedidos `MS-REVIEW-*`;
  * - lojas com nome terminado em " · demonstração" e produtos `isDemo: true`;
- * - IDs determinísticos `rvw…` (scripts/review-seed-ids.ts) no conjunto ampliado.
+ * - IDs determinísticos `czrvw…` (scripts/review-seed-ids.ts) no conjunto ampliado.
  *
  * Idempotente: pode ser executado várias vezes. Nunca apaga nem altera dados que não
  * foram criados por este script. Para remover: `scripts/remove-review-data.ts`.
@@ -274,7 +274,7 @@ type ProductDefinition = {
 };
 
 const NOTICE =
-  " Produto fictício criado para revisão visual do O Moto Shop; preço, estoque e compatibilidade são ilustrativos.";
+  " Produto fictício criado para revisão visual do Moto Shop; preço, estoque e compatibilidade são ilustrativos.";
 
 const products: ProductDefinition[] = [
   {

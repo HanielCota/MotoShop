@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 
@@ -11,6 +12,11 @@ import { CheckoutForm } from "@/modules/checkout/components/checkout-form";
 import { listCustomerAddresses } from "@/modules/customers/queries/customer-addresses";
 import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
+
+export const metadata: Metadata = {
+  title: "Finalizar compra",
+  robots: { index: false, follow: false },
+};
 
 export default async function CheckoutPage({
   searchParams,

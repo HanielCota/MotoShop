@@ -24,6 +24,10 @@ describe("getSafeRedirectPath", () => {
     null,
     undefined,
     "/%E0%A4%A",
+    "/..//evil.com",
+    "/.//evil.com",
+    "/%2E%2E//evil.com",
+    "/a/..//evil.com",
   ])("rejects %s", (input) => {
     expect(getSafeRedirectPath(input)).toBe("/");
   });

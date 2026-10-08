@@ -6,6 +6,8 @@ export type FormFieldControlProps = {
   id: string;
   "aria-invalid": true | undefined;
   "aria-describedby": string | undefined;
+  /** The visual asterisk is aria-hidden, so the requirement is announced through aria-required. */
+  "aria-required": true | undefined;
 };
 
 export function formFieldIds(id: string, { hint, error }: { hint?: unknown; error?: unknown }) {
@@ -59,7 +61,12 @@ export function FormField({
           </span>
         ) : null}
       </label>
-      {children({ id, "aria-invalid": error ? true : undefined, "aria-describedby": describedBy })}
+      {children({
+        id,
+        "aria-invalid": error ? true : undefined,
+        "aria-describedby": describedBy,
+        "aria-required": required ? true : undefined,
+      })}
       {hint ? (
         <p id={hintId} aria-live={hintLive ? "polite" : undefined} className="text-muted-foreground text-xs">
           {hint}

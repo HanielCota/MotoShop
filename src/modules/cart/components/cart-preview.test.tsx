@@ -84,15 +84,21 @@ it("lets the customer empty the whole cart from the preview", async () => {
     itemCount: 1,
     subtotalInCents: 15000,
   });
-  actions.clear.mockResolvedValue({ success: "Carrinho esvaziado." });
+  actions.clear.mockResolvedValue({ success: "Carrinho limpo." });
   render(<CartPreview />);
 
   fireEvent.click(screen.getByRole("button", { name: "Visualizar carrinho" }));
   expect(await screen.findByText("Capacete off-road")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Esvaziar" }));
+  fireEvent.click(screen.getByRole("button", { name: "Limpar carrinho" }));
+  fireEvent.click(screen.getByRole("button", { name: "Manter itens" }));
+  expect(screen.queryByRole("button", { name: "Sim, limpar" })).not.toBeInTheDocument();
+  expect(screen.getByText("Capacete off-road")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Limpar carrinho" }));
+  expect(actions.clear).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Sim, limpar" }));
 
   await waitFor(() => expect(actions.clear).toHaveBeenCalledOnce());
-  expect(await screen.findByText("Carrinho esvaziado.")).toBeInTheDocument();
+  expect(await screen.findByText("Carrinho limpo.")).toBeInTheDocument();
   expect(screen.getByText("Seu carrinho está vazio")).toBeInTheDocument();
 });
 

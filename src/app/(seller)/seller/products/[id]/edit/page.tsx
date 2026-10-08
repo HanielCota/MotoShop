@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +14,11 @@ import { listProductBrands, listProductCategories } from "@/modules/products/que
 import { getSellerProductForEdit } from "@/modules/products/queries/seller-product-for-edit";
 import { formatPromotionDate, getMeasurements } from "@/modules/products/domain/product-commercial-fields";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
+
+export const metadata: Metadata = {
+  title: "Editar produto · Central do Lojista",
+  robots: { index: false, follow: false },
+};
 
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -87,7 +93,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       <Card>
         <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <h2 className="font-semibold">Pronto para publicar?</h2>
+            <h2 className="font-semibold">Enviar para análise</h2>
             <p className="text-muted-foreground text-sm">
               Salve as alterações antes de enviar. Depois do envio, o produto fica bloqueado para edição até a análise
               do Moto Shop.

@@ -8,13 +8,17 @@ import { ingestMercadoPagoWebhook } from "@/modules/payments/application/ingest-
 
 /** Signed notifications older (or further in the future) than this are treated as replays. */
 const SIGNATURE_TOLERANCE_MS = 5 * 60 * 1000;
+/** Mercado Pago notifications are a few hundred bytes; anything larger is refused before parsing. */
+const MAX_BODY_BYTES = 64 * 1024;
 
 export async function POST(request: Request) {
+  const body = await readBoundedBody(request, MAX_BODY_BYTES);
+  if (body === null) return NextResponse.json({ error: "Payload too large" }, { status: 413 });
   const identifier = z.union([z.string().min(1).max(100), z.number().int().positive()]);
   const parsed = z
     .object({ id: identifier, type: z.string().min(1).max(100), data: z.object({ id: identifier }) })
     .passthrough()
-    .safeParse(await request.json().catch(() => null));
+    .safeParse(parseJson(body));
   if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   const payload = parsed.data;
   const paymentId = String(payload.data.id);
@@ -71,4 +75,33 @@ function isFreshSignatureTimestamp(timestamp: string, nowMs: number): boolean {
   const value = Number(timestamp);
   const timestampMs = value < 100_000_000_000 ? value * 1000 : value;
   return Math.abs(nowMs - timestampMs) <= SIGNATURE_TOLERANCE_MS;
+}
+
+/** Reads the body as text, stopping (null) as soon as it exceeds `maxBytes`, even without Content-Length. */
+async function readBoundedBody(request: Request, maxBytes: number): Promise<string | null> {
+  const declaredLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) return null;
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      return null;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function parseJson(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }

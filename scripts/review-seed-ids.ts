@@ -3,13 +3,15 @@ import { createHash } from "node:crypto";
 /**
  * IDs determinísticos dos dados de revisão ampliados.
  *
- * O prefixo `rvw` nunca é gerado por `cuid()` (que sempre começa com "c"), e o restante é derivado
- * de `kind:key`. Assim o seed pode usar `createMany({ skipDuplicates: true })` de forma idempotente,
- * e o script de remoção consegue reconhecer com segurança linhas criadas pelo seed em tabelas que
- * pertencem a usuários reais (endereços, motos salvas e carrinho das contas de visualização),
- * recalculando o ID esperado em vez de confiar em um rótulo.
+ * Os IDs precisam passar na validação `z.cuid()` das Server Actions (começar com "c"); senão a demo
+ * quebra ao favoritar, responder ou moderar itens do seed. O prefixo `czrvw` cumpre isso e continua
+ * distinguível de IDs reais: o segundo caractere de um cuid é o início do timestamp em base 36 (hoje
+ * "m"), e "z" só apareceria décadas à frente. O restante é derivado de `kind:key`, então o seed pode
+ * usar `createMany({ skipDuplicates: true })` de forma idempotente e o script de remoção reconhece
+ * com segurança linhas criadas pelo seed em tabelas de usuários reais (endereços, motos salvas e
+ * carrinho das contas de visualização), recalculando o ID esperado em vez de confiar em um rótulo.
  */
-export const REVIEW_ID_PREFIX = "rvw";
+export const REVIEW_ID_PREFIX = "czrvw";
 
 export function reviewId(kind: string, key: string): string {
   return REVIEW_ID_PREFIX + createHash("sha256").update(`${kind}:${key}`).digest("hex").slice(0, 22);

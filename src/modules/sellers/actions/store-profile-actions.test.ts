@@ -96,4 +96,19 @@ describe("store profile authorization and audit", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/loja/loja-a");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/loja/loja-a-off-road");
   });
+
+  it("records the previous WhatsApp link in the audit snapshot", async () => {
+    mocks.findFirst.mockResolvedValue({ ...oldStore, whatsappUrl: "https://wa.me/5511999999999" });
+
+    await updateStoreProfileAction({}, profileForm());
+
+    expect(mocks.auditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        metadata: expect.objectContaining({
+          previous: expect.objectContaining({ whatsappUrl: "https://wa.me/5511999999999" }),
+          current: expect.objectContaining({ whatsappUrl: null }),
+        }),
+      }),
+    });
+  });
 });
