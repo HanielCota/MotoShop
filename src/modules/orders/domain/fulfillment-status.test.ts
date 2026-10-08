@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canRunShipmentOperation,
   getOrderStatusFromSellerOrders,
   getSellerOrderStatusFromShipment,
   mapProviderShipmentStatus,
@@ -28,7 +29,36 @@ describe("fulfillment status", () => {
     expect(getOrderStatusFromSellerOrders(["SHIPPED", "PAID"])).toBe("PARTIALLY_SHIPPED");
     expect(getOrderStatusFromSellerOrders(["SHIPPED", "DELIVERED"])).toBe("SHIPPED");
     expect(getOrderStatusFromSellerOrders(["DELIVERED", "DELIVERED"])).toBe("DELIVERED");
-    expect(getOrderStatusFromSellerOrders(["CANCELLED", "DELIVERED"])).toBe("PARTIALLY_CANCELLED");
+  });
+
+  it("prioritizes the progress of active seller orders over partial cancellations", () => {
+    expect(getOrderStatusFromSellerOrders(["CANCELLED", "DELIVERED"])).toBe("DELIVERED");
+    expect(getOrderStatusFromSellerOrders(["CANCELLED", "DELIVERED", "DELIVERED"])).toBe("DELIVERED");
+    expect(getOrderStatusFromSellerOrders(["CANCELLED", "SHIPPED", "DELIVERED"])).toBe("SHIPPED");
+    expect(getOrderStatusFromSellerOrders(["CANCELLED", "SHIPPED", "PAID"])).toBe("PARTIALLY_SHIPPED");
+    expect(getOrderStatusFromSellerOrders(["CANCELLED", "PAID"])).toBe("PARTIALLY_CANCELLED");
+    expect(getOrderStatusFromSellerOrders(["CANCELLED", "PROCESSING"])).toBe("PARTIALLY_CANCELLED");
+    expect(getOrderStatusFromSellerOrders(["CANCELLED", "CANCELLED"])).toBe("CANCELLED");
+    expect(getOrderStatusFromSellerOrders([])).toBe("PENDING_PAYMENT");
+  });
+});
+
+describe("shipment operations by seller order status", () => {
+  it("never purchases or generates labels for cancelled or unpaid seller orders", () => {
+    for (const status of ["CANCELLED", "PENDING_PAYMENT", "CANCELLATION_REQUESTED"] as const) {
+      expect(canRunShipmentOperation(status, "PURCHASE")).toBe(false);
+      expect(canRunShipmentOperation(status, "GENERATE")).toBe(false);
+    }
+    expect(canRunShipmentOperation("PAID", "PURCHASE")).toBe(true);
+    expect(canRunShipmentOperation("SHIPPED", "PURCHASE")).toBe(false);
+    expect(canRunShipmentOperation("SHIPPED", "GENERATE")).toBe(true);
+  });
+
+  it("keeps tracking available until delivery but not after cancellation", () => {
+    expect(canRunShipmentOperation("SHIPPED", "TRACK")).toBe(true);
+    expect(canRunShipmentOperation("DELIVERED", "TRACK")).toBe(true);
+    expect(canRunShipmentOperation("CANCELLED", "TRACK")).toBe(false);
+    expect(canRunShipmentOperation("PENDING_PAYMENT", "TRACK")).toBe(false);
   });
 });
 

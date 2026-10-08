@@ -29,7 +29,12 @@ export async function claimGuestOrderAction(
 
   try {
     await assertRateLimit({ key: `claim-order:${session.user.id}`, windowSeconds: 60, max: 5 });
-    await claimGuestOrder({ ...parsed.data, userId: session.user.id, userEmail: session.user.email });
+    await claimGuestOrder({
+      ...parsed.data,
+      userId: session.user.id,
+      userEmail: session.user.email,
+      userEmailVerified: session.user.emailVerified === true,
+    });
     revalidatePath("/orders");
     revalidatePath(`/orders/${parsed.data.orderNumber}`);
     return { success: true };

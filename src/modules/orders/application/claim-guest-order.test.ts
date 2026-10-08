@@ -1,9 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ findFirst: vi.fn(), updateMany: vi.fn() }));
+const mocks = vi.hoisted(() => ({ findFirst: vi.fn(), updateMany: vi.fn(), auditCreate: vi.fn() }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/modules/cart/infrastructure/cart-access", () => ({ hashGuestToken: (token: string) => `hash:${token}` }));
-vi.mock("@/lib/database", () => ({ db: { order: { findFirst: mocks.findFirst, updateMany: mocks.updateMany } } }));
+vi.mock("@/lib/database", () => {
+  const tx = { order: { updateMany: mocks.updateMany }, auditLog: { create: mocks.auditCreate } };
+  return {
+    db: {
+      order: { findFirst: mocks.findFirst },
+      $transaction: (callback: (client: typeof tx) => Promise<unknown>) => callback(tx),
+    },
+  };
+});
 
 import { claimGuestOrder } from "./claim-guest-order";
 
@@ -12,6 +20,7 @@ const input = {
   accessToken: "secure-guest-token",
   userId: "user-a",
   userEmail: "buyer@example.test",
+  userEmailVerified: true,
 };
 
 beforeEach(() => {
@@ -31,6 +40,15 @@ describe("claim guest order", () => {
       where: { id: "order-a", userId: null, guestAccessTokenHash: "hash:secure-guest-token" },
       data: { userId: "user-a", guestAccessTokenHash: null },
     });
+    expect(mocks.auditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ action: "ORDER_GUEST_CLAIMED", entityId: "order-a", actorUserId: "user-a" }),
+    });
+  });
+
+  it("rejects an account whose e-mail is not verified", async () => {
+    await expect(claimGuestOrder({ ...input, userEmailVerified: false })).rejects.toThrow(/Confirme o e-mail/);
+    expect(mocks.findFirst).not.toHaveBeenCalled();
+    expect(mocks.updateMany).not.toHaveBeenCalled();
   });
 
   it("rejects a different account email without mutating the order", async () => {
@@ -41,5 +59,6 @@ describe("claim guest order", () => {
   it("does not overwrite a claim won by another concurrent request", async () => {
     mocks.updateMany.mockResolvedValue({ count: 0 });
     await expect(claimGuestOrder(input)).rejects.toThrow(/já foi vinculado/);
+    expect(mocks.auditCreate).not.toHaveBeenCalled();
   });
 });

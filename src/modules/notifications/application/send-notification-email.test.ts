@@ -17,6 +17,8 @@ vi.mock("@/lib/email/resend-email-provider", () => ({
     send = mocks.send;
   },
 }));
+import { RetryAfterError } from "inngest";
+
 import { sendNotificationEmail } from "./send-notification-email";
 const input = { eventKey: "payment:1", kind: "PAYMENT", to: "buyer@example.test", subject: "Teste", react: "Teste" };
 beforeEach(() => {
@@ -37,4 +39,22 @@ it("does not send an event already delivered", async () => {
   mocks.find.mockResolvedValue({ status: "SENT" });
   await expect(sendNotificationEmail(input)).resolves.toEqual({ status: "SKIPPED" });
   expect(mocks.send).not.toHaveBeenCalled();
+});
+it("asks Inngest to retry after the lease instead of dropping a fresh in-flight delivery", async () => {
+  mocks.find.mockResolvedValue({ id: "delivery", status: "PROCESSING", updatedAt: new Date(Date.now() - 60_000) });
+  const error = await sendNotificationEmail(input).catch((caught: unknown) => caught);
+  expect(error).toBeInstanceOf(RetryAfterError);
+  // The SDK serializes the delay in seconds.
+  const retryAfter = Number((error as RetryAfterError).retryAfter);
+  expect(retryAfter).toBeGreaterThanOrEqual(4 * 60 - 1);
+  expect(retryAfter).toBeLessThanOrEqual(4 * 60 + 5);
+  expect(mocks.send).not.toHaveBeenCalled();
+});
+it("reclaims a PROCESSING delivery whose lease expired after a worker crash", async () => {
+  mocks.find.mockResolvedValue({ id: "delivery", status: "PROCESSING", updatedAt: new Date(Date.now() - 10 * 60_000) });
+  mocks.update.mockResolvedValue({ id: "delivery" });
+  await expect(sendNotificationEmail(input)).resolves.toEqual({ status: "SENT", providerId: "provider-id" });
+  expect(mocks.update).toHaveBeenCalledWith(
+    expect.objectContaining({ where: { id: "delivery" }, data: expect.objectContaining({ status: "PROCESSING" }) }),
+  );
 });

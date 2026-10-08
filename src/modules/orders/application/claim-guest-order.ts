@@ -9,7 +9,17 @@ export async function claimGuestOrder(input: {
   accessToken: string;
   userId: string;
   userEmail: string;
+  userEmailVerified: boolean;
 }) {
+  // An unverified account could have been registered by anyone holding the guest link;
+  // claiming revokes the link, so only a verified owner of the e-mail may do it.
+  if (!input.userEmailVerified) {
+    throw new ApplicationError({
+      code: "FORBIDDEN",
+      message: "Confirme o e-mail da sua conta antes de vincular este pedido.",
+    });
+  }
+
   const tokenHash = hashGuestToken(input.accessToken);
   const order = await db.order.findFirst({
     where: { orderNumber: input.orderNumber, guestAccessTokenHash: tokenHash, userId: null },
@@ -25,12 +35,23 @@ export async function claimGuestOrder(input: {
     });
   }
 
-  const updated = await db.order.updateMany({
-    where: { id: order.id, userId: null, guestAccessTokenHash: tokenHash },
-    data: { userId: input.userId, guestAccessTokenHash: null },
+  await db.$transaction(async (tx) => {
+    const updated = await tx.order.updateMany({
+      where: { id: order.id, userId: null, guestAccessTokenHash: tokenHash },
+      data: { userId: input.userId, guestAccessTokenHash: null },
+    });
+    if (updated.count !== 1) {
+      throw new ApplicationError({ code: "CONFLICT", message: "Este pedido já foi vinculado. Atualize a página." });
+    }
+    await tx.auditLog.create({
+      data: {
+        action: "ORDER_GUEST_CLAIMED",
+        entityType: "Order",
+        entityId: order.id,
+        actorUserId: input.userId,
+        metadata: { orderNumber: input.orderNumber },
+      },
+    });
   });
-  if (updated.count !== 1) {
-    throw new ApplicationError({ code: "CONFLICT", message: "Este pedido já foi vinculado. Atualize a página." });
-  }
   return { orderNumber: input.orderNumber };
 }

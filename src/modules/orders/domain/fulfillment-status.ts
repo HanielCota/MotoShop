@@ -1,5 +1,24 @@
 import type { OrderStatus, SellerOrderStatus, ShipmentStatus } from "@/generated/prisma/enums";
 
+export type ShipmentOperation = "PURCHASE" | "GENERATE" | "TRACK";
+
+/**
+ * Status do pedido da loja que admitem cada operação de envio integrada.
+ * Pedidos cancelados, aguardando pagamento ou com cancelamento em análise (para compra e
+ * geração) não podem receber etiqueta. O rastreio continua permitido após o envio, para que a
+ * entrega possa ser registrada, e durante a análise de cancelamento, para que o admin decida
+ * com o status real do envio.
+ */
+const shipmentOperationAllowedStatuses: Record<ShipmentOperation, readonly SellerOrderStatus[]> = {
+  PURCHASE: ["PAID", "PROCESSING"],
+  GENERATE: ["PAID", "PROCESSING", "SHIPPED"],
+  TRACK: ["PAID", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLATION_REQUESTED"],
+};
+
+export function canRunShipmentOperation(status: SellerOrderStatus, operation: ShipmentOperation): boolean {
+  return shipmentOperationAllowedStatuses[operation].includes(status);
+}
+
 export function getSellerOrderStatusFromShipment(
   currentStatus: SellerOrderStatus,
   shipmentStatus: ShipmentStatus,
@@ -46,17 +65,26 @@ export function mapProviderShipmentStatus(value: string): ShipmentStatus | null 
   return null;
 }
 
+/**
+ * Deriva o status global do pedido a partir dos pedidos por loja.
+ *
+ * O progresso das lojas ativas (não canceladas) tem precedência: um pedido com uma loja
+ * cancelada e as demais entregues está "Entregue" para o cliente, não "Parcialmente cancelado".
+ * `PARTIALLY_CANCELLED` só aparece quando as lojas restantes ainda não avançaram no envio.
+ */
 export function getOrderStatusFromSellerOrders(statuses: SellerOrderStatus[]): OrderStatus {
   if (statuses.length === 0) return "PENDING_PAYMENT";
 
   const activeStatuses = statuses.filter((status) => status !== "CANCELLED");
   if (activeStatuses.length === 0) return "CANCELLED";
-  if (statuses.some((status) => status === "CANCELLED")) return "PARTIALLY_CANCELLED";
+
+  const isShippedOrDelivered = (status: SellerOrderStatus) => status === "SHIPPED" || status === "DELIVERED";
   if (activeStatuses.every((status) => status === "DELIVERED")) return "DELIVERED";
-  if (activeStatuses.every((status) => status === "SHIPPED" || status === "DELIVERED")) return "SHIPPED";
-  if (activeStatuses.some((status) => status === "SHIPPED" || status === "DELIVERED")) {
-    return "PARTIALLY_SHIPPED";
-  }
+  if (activeStatuses.every(isShippedOrDelivered)) return "SHIPPED";
+  if (activeStatuses.some(isShippedOrDelivered)) return "PARTIALLY_SHIPPED";
+
+  if (activeStatuses.length < statuses.length) return "PARTIALLY_CANCELLED";
+
   if (activeStatuses.some((status) => status === "PROCESSING" || status === "CANCELLATION_REQUESTED")) {
     return "PROCESSING";
   }
