@@ -89,7 +89,7 @@ export default async function CustomerOrdersPage({
       <PageHeader
         eyebrow="Minha conta"
         title="Meus pedidos"
-        description="Acompanhe compras, lojas e envios em um só lugar."
+        description="Acompanhe o pagamento e a entrega de cada compra."
       />
 
       <p className="text-muted-foreground text-sm" aria-live="polite">

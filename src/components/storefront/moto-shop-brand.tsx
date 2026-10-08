@@ -33,7 +33,7 @@ const logoAssets = {
 /**
  * Brand mark with a "holeshot" hover: the engine revs, the mark launches into a wheelie, the
  * orange livery sweeps in on a race-stripe diagonal, with speed lines and an exhaust puff.
- * Pure CSS (transform/opacity only); reduced-motion users get a plain crossfade.
+ * Pure CSS (transform/opacity/clip-path); reduced-motion users get the stripe sweep without movement.
  */
 export function MotoShopBrand({ variant = "header" }: MotoShopBrandProps) {
   const asset = variant === "header" ? logoAssets.horizontal : logoAssets.stacked;

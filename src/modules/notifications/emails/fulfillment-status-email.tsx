@@ -37,7 +37,7 @@ export function FulfillmentStatusEmail({
       <h1>{copy.title}</h1>
       <p>Olá, {customerName}.</p>
       <p>
-        {copy.description} Seller: <strong>{storeName}</strong>.
+        {copy.description} Loja: <strong>{storeName}</strong>.
       </p>
       <p>Pedido: {orderNumber}</p>
       {trackingCode ? (

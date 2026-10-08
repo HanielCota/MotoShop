@@ -16,7 +16,7 @@ export default async function CustomerPasswordPage() {
       <PageHeader
         eyebrow="Minha conta"
         title="Redefinir senha"
-        description="Troque a senha que você usa para entrar no O Moto Shop."
+        description="Troque a senha que você usa para entrar no Moto Shop."
       />
       <Card>
         <CardHeader>

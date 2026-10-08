@@ -83,6 +83,7 @@ export async function updateStoreProfileAction(
               description: store.description,
               instagramUrl: store.instagramUrl,
               youtubeUrl: store.youtubeUrl,
+              whatsappUrl: store.whatsappUrl,
               facebookUrl: store.facebookUrl,
             },
             current: {

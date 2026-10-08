@@ -2,6 +2,7 @@ import "server-only";
 
 import { db } from "@/lib/database";
 import type { CouponSort } from "../search-params";
+import { resolvePage } from "@/modules/products/domain/pagination";
 
 type CouponListInput = {
   query?: string | null;
@@ -49,9 +50,10 @@ async function listCoupons(
   sort: CouponSort = "newest",
 ) {
   const pageSize = 20;
-  const page = Math.max(requestedPage, 1);
-  const [total, coupons] = await Promise.all([
-    db.coupon.count({ where }),
+  // Count first so a huge or past-the-end ?couponPage= is clamped before it becomes an offset.
+  const total = await db.coupon.count({ where });
+  const { page, pageCount, skip } = resolvePage(requestedPage, total, pageSize);
+  const [coupons] = await Promise.all([
     db.coupon.findMany({
       where,
       orderBy:
@@ -62,11 +64,10 @@ async function listCoupons(
             : sort === "code_asc"
               ? [{ code: "asc" }, { createdAt: "desc" }]
               : [{ createdAt: "desc" }, { code: "asc" }],
-      skip: (page - 1) * pageSize,
+      skip,
       take: pageSize,
       include: { _count: { select: { redemptions: true } } },
     }),
   ]);
-  const pageCount = Math.max(Math.ceil(total / pageSize), 1);
-  return { coupons, total, page: Math.min(page, pageCount), pageCount };
+  return { coupons, total, page, pageCount };
 }

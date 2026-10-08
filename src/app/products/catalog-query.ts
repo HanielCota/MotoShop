@@ -19,6 +19,14 @@ export type CatalogQuery = {
   page: number;
 };
 
+/**
+ * Price bounds from the URL in cents. Negative or non-integer values are ignored by the query, so
+ * they must not become a filter chip ("A partir de -R$ 1,00") or an input value the form rejects.
+ */
+export function normalizeCatalogPrice(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
 export type CatalogFilterKey = "q" | "moto" | "category" | "brand" | "seller" | "availability" | "price" | "promotion";
 
 /** Serializa o estado do catálogo para `/products?...`, omitindo valores padrão. */

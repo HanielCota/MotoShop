@@ -13,6 +13,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
 
 import { getAuthErrorMessage } from "../domain/auth-error-message";
+import { parseAuthUserName } from "../domain/auth-user-name";
 import { getSafeRedirectPath } from "../domain/safe-redirect";
 
 type Mode = "sign-in" | "sign-up";
@@ -27,7 +28,10 @@ const fieldIds: Record<Field, string> = { name: "auth-name", email: "auth-email"
 
 function validate(mode: Mode, values: Record<Field, string>): FieldErrors {
   const errors: FieldErrors = {};
-  if (mode === "sign-up" && !values.name.trim()) errors.name = "Informe seu nome.";
+  if (mode === "sign-up") {
+    const name = parseAuthUserName(values.name);
+    if (!name.ok) errors.name = name.message;
+  }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email.trim())) errors.email = "Informe um e-mail válido.";
   if (values.password.length < 8) errors.password = "A senha precisa ter pelo menos 8 caracteres.";
   return errors;
@@ -90,7 +94,7 @@ export function AuthForm({
           : await authClient.signUp.email({ name, email, password, callbackURL: "/login?verified=1" });
 
       if (result.error) {
-        setError(getAuthErrorMessage(result.error.code));
+        setError(getAuthErrorMessage(result.error.code, result.error.status));
         return;
       }
 
@@ -134,6 +138,7 @@ export function AuthForm({
                 clearFieldError("name");
               }}
               autoComplete="name"
+              maxLength={120}
               placeholder="Como podemos chamar você?"
               className="bg-card h-12 px-4"
               required

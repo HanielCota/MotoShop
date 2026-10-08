@@ -1218,7 +1218,7 @@ async function seedOrders(
             "Loja não responde",
           ]),
           description:
-            "Abri a disputa porque não consegui resolver diretamente com a loja. Aguardo a mediação do O Moto Shop.",
+            "Abri a disputa porque não consegui resolver diretamente com a loja. Aguardo a mediação do Moto Shop.",
           resolutionNote:
             plan.dispute === "RESOLVED"
               ? "Loja enviou o item faltante com novo rastreio; cliente confirmou o recebimento."

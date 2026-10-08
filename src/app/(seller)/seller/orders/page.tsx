@@ -58,7 +58,7 @@ export default async function SellerOrdersPage({
     <>
       <PageHeader
         eyebrow="Pedidos"
-        title="Fulfillment e envios"
+        title="Preparação e envio"
         description="Compre etiquetas, gere documentos e acompanhe o rastreamento dos pedidos da sua loja."
       />
 

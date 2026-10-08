@@ -1,5 +1,7 @@
 import { ApplicationError } from "@/shared/errors/application-error";
 
+export const MAX_INVENTORY_QUANTITY = 2_147_483_647;
+
 export type InventoryBalance = Readonly<{
   availableQuantity: number;
   reservedQuantity: number;
@@ -12,7 +14,7 @@ export function reserveInventory(balance: InventoryBalance, quantity: number): I
   if (quantity > balance.availableQuantity) {
     throw new ApplicationError({
       code: "OUT_OF_STOCK",
-      message: "There is not enough available inventory to create the reservation.",
+      message: "Não há estoque disponível suficiente para esta quantidade.",
       statusCode: 409,
     });
   }
@@ -55,6 +57,10 @@ export function adjustAvailableInventory(balance: InventoryBalance, quantityChan
   const availableQuantity = balance.availableQuantity + quantityChange;
   if (availableQuantity < 0) {
     throwInvalidInventoryQuantity("Inventory adjustment cannot make availableQuantity negative.");
+  }
+  // Inventory quantities are persisted as PostgreSQL int4.
+  if (availableQuantity > MAX_INVENTORY_QUANTITY) {
+    throwInvalidInventoryQuantity("Inventory adjustment cannot exceed the maximum availableQuantity.");
   }
 
   return { availableQuantity, reservedQuantity: balance.reservedQuantity };

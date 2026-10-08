@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ review: vi.fn(), refund: vi.fn(), revalidate: vi.fn() }));
 vi.mock("server-only", () => ({}));
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn() } }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("@/modules/auth/application/authorization", () => ({
   requireAdminAccess: async () => ({ user: { id: "admin" } }),
@@ -48,4 +49,11 @@ it("revalidates the order after a refund", async () => {
 it("maps application errors to a predictable action result", async () => {
   mocks.refund.mockRejectedValue(new ApplicationError({ code: "CONFLICT", message: "A devolução mudou de estado." }));
   expect((await refundReturnRequestAction("return")).error).toContain("mudou de estado");
+});
+
+it("keeps an unexpected refund failure retryable instead of leaking a generic English error", async () => {
+  mocks.refund.mockRejectedValue(new Error("Mercado Pago request failed with status 404"));
+  const result = await refundReturnRequestAction("return");
+  expect(result.error).toContain("pode ser reprocessada");
+  expect(result.error).not.toContain("unexpected");
 });
