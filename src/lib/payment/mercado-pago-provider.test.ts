@@ -1,5 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 const paymentEnv = vi.hoisted(() => ({
+  LOG_LEVEL: "silent",
+  NODE_ENV: "test",
   MERCADO_PAGO_ACCESS_TOKEN: "TEST_TOKEN",
   MERCADO_PAGO_API_URL: "https://api.mercadopago.com",
   MERCADO_PAGO_NOTIFICATION_URL: undefined as string | undefined,
@@ -243,4 +245,83 @@ it("blocks marketplace charges until seller-linked Mercado Pago OAuth is availab
     }),
   ).rejects.toThrow("Nenhuma cobrança foi criada");
   expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it.each([
+  { providerStatus: "charged_back", expected: "REFUNDED" },
+  { providerStatus: "in_mediation", expected: "PROCESSING" },
+])("maps $providerStatus without inventing payment statuses", async ({ providerStatus, expected }) => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 456, status: providerStatus }) }),
+  );
+  expect(await new MercadoPagoProvider().getPayment("456")).toMatchObject({ externalId: "456", status: expected });
+});
+
+it("treats a rate-limited (429) charge request as definitively not processed", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({ ok: false, status: 429, json: async () => ({ error: "too_many_requests" }) }),
+  );
+  await expect(
+    new ConnectedSellerTestProvider().createPayment({
+      orderNumber: "MS-RATE",
+      amountInCents: 100,
+      payerEmail: "buyer@example.test",
+      payerTaxId: "19119119100",
+      paymentMethodId: "pix",
+      idempotencyKey: "rate-attempt",
+      sellerCount: 1,
+    }),
+  ).rejects.toMatchObject({ details: { httpStatus: 429, outcome: "DEFINITIVE_REJECTION" } });
+});
+
+it("maps the refund resource with its own id, amount and status", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      id: 999,
+      payment_id: 456,
+      amount: 12.5,
+      status: "approved",
+      payer: { email: "x@example.test" },
+    }),
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  const result = await new MercadoPagoProvider().refund({
+    externalId: "456",
+    amountInCents: 1_250,
+    idempotencyKey: "refund-1",
+  });
+  expect(JSON.parse(fetchMock.mock.calls[0]?.[1].body as string)).toEqual({ amount: 12.5 });
+  expect(result).toMatchObject({
+    externalId: "999",
+    status: "APPROVED",
+    providerMetadata: { refund_id: "999", payment_id: "456", amount: 12.5, status: "approved" },
+  });
+  expect(JSON.stringify(result.providerMetadata)).not.toContain("example.test");
+});
+
+it.each([
+  { refundStatus: "rejected", expected: "FAILED" },
+  { refundStatus: "cancelled", expected: "CANCELLED" },
+  { refundStatus: "in_process", expected: "PROCESSING" },
+])("maps refund status $refundStatus", async ({ refundStatus, expected }) => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 1, status: refundStatus }) }));
+  expect(await new MercadoPagoProvider().refund({ externalId: "456", idempotencyKey: "r" })).toMatchObject({
+    status: expected,
+  });
+});
+
+it("keeps the refunded amount reported on the payment for reconciliation", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 7, status: "refunded", transaction_amount: 10, transaction_amount_refunded: 10 }),
+    }),
+  );
+  expect((await new MercadoPagoProvider().getPayment("7")).providerMetadata).toMatchObject({
+    transaction_amount_refunded: 10,
+  });
 });

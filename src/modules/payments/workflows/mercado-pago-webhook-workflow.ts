@@ -7,8 +7,40 @@ import { reconcileMercadoPagoPayment } from "@/modules/payments/application/reco
 
 type PaymentWebhookEventData = { webhookEventId: string };
 
+/**
+ * Runs once the reconciliation exhausted its retries (or threw NonRetriableError):
+ * never leave the event stuck in PROCESSING, so the admin retry can pick it up.
+ * A PROCESSED event (a concurrent successful run) is never downgraded.
+ */
+export async function markWebhookEventFailedAfterRetries({
+  event,
+  error,
+}: {
+  event: { data: { event: { data: unknown } } };
+  error: Error;
+}): Promise<void> {
+  const webhookEventId = (event.data.event.data as Partial<PaymentWebhookEventData> | undefined)?.webhookEventId;
+  if (!webhookEventId) return;
+  await db.webhookEvent.updateMany({
+    where: { id: webhookEventId, status: { in: ["RECEIVED", "PROCESSING"] } },
+    data: {
+      status: "FAILED",
+      processedAt: null,
+      error: `Falha ao processar o webhook após as tentativas automáticas: ${error.message || error.name}`.slice(
+        0,
+        1000,
+      ),
+    },
+  });
+}
+
 export const reconcileMercadoPagoWebhook = inngest.createFunction(
-  { id: "reconcile-mercado-pago-webhook", retries: 3, triggers: [{ event: "motoshop/payment.webhook.received" }] },
+  {
+    id: "reconcile-mercado-pago-webhook",
+    retries: 3,
+    triggers: [{ event: "motoshop/payment.webhook.received" }],
+    onFailure: markWebhookEventFailedAfterRetries,
+  },
   async ({ event, step }) => {
     const eventData = event.data as PaymentWebhookEventData;
     const webhookEvent = await step.run("load-webhook-event", () =>

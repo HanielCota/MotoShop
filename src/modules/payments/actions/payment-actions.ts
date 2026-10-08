@@ -7,6 +7,7 @@ import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { hashGuestToken } from "@/modules/cart/infrastructure/cart-access";
 import { getCustomerOrder } from "@/modules/returns/queries/customer-orders";
 import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 import { recoverPayment } from "../application/recover-payment";
 
@@ -38,6 +39,12 @@ export async function refreshPendingPaymentAction(
       throw new ApplicationError({ code: "UNAUTHORIZED", message: "Acesse o pedido pelo link seguro do checkout." });
     }
 
+    // Each refresh may query the gateway: cap it per order (shared by every viewer of the order).
+    await assertRateLimit({
+      key: `payment-refresh:${parsed.data.orderNumber.toUpperCase()}`,
+      windowSeconds: 60,
+      max: 3,
+    });
     const order = await getCustomerOrder(parsed.data.orderNumber, identity);
     const payment = order?.payments[0];
     if (!payment) throw new ApplicationError({ code: "NOT_FOUND", message: "Pagamento não encontrado." });
@@ -47,6 +54,10 @@ export async function refreshPendingPaymentAction(
     const recovery = await recoverPayment(payment.id);
     if (recovery.outcome === "UNRESOLVED")
       return { success: "A cobrança ainda não foi localizada. O pedido continua pendente; não faça outro pagamento." };
+    if (recovery.outcome === "RELEASED") {
+      revalidatePath(`/orders/${parsed.data.orderNumber}`);
+      return { success: "Nenhuma cobrança chegou a ser criada. O pedido foi cancelado e você pode comprar novamente." };
+    }
     revalidatePath(`/orders/${parsed.data.orderNumber}`);
     return { success: "Status do pagamento atualizado." };
   } catch (error) {

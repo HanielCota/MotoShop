@@ -2,14 +2,13 @@ import "server-only";
 
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
-import { inngest } from "@/lib/inngest/client";
-import {
-  commitOrderReservations,
-  releaseOrderReservations,
-} from "@/modules/inventory/application/settle-order-inventory";
+import { logger } from "@/lib/logger";
 import type { GetPaymentResult } from "@/shared/payment/payment-provider";
 import { ApplicationError } from "@/shared/errors/application-error";
+import { isMotoShopOrderNumber } from "@/modules/checkout/domain/order-number";
 import { assertPaymentMatches } from "../domain/payment-match";
+import { detectUnexplainedReversal, unexplainedReversalMessages } from "../domain/payment-reversal";
+import { applyPaymentOutcome } from "./apply-payment-outcome";
 
 export async function reconcileMercadoPagoPayment(input: {
   externalId: string;
@@ -18,6 +17,31 @@ export async function reconcileMercadoPagoPayment(input: {
   expectedPaymentId?: string;
 }): Promise<{ orderNumber: string; status: GetPaymentResult["status"] }> {
   const externalReference = readExternalReference(input.result.providerMetadata);
+  // The Mercado Pago account may also receive payments from other integrations. A payment
+  // whose external_reference is not a Moto Shop order number will never match an order:
+  // acknowledge it instead of letting NOT_FOUND retries end as FAILED in the monitor.
+  if ((!externalReference || !isMotoShopOrderNumber(externalReference)) && input.webhookEventId) {
+    const known = await db.payment.findFirst({
+      where: { provider: "MERCADO_PAGO", externalId: input.externalId },
+      select: { id: true },
+    });
+    if (!known) {
+      logger.info({
+        event: "payment.webhook.foreign_reference_ignored",
+        externalId: input.externalId,
+        webhookEventId: input.webhookEventId,
+      });
+      await db.webhookEvent.update({
+        where: { id: input.webhookEventId },
+        data: {
+          status: "PROCESSED",
+          processedAt: new Date(),
+          error: "Ignorado: a cobrança não pertence a um pedido do Moto Shop.",
+        },
+      });
+      return { orderNumber: externalReference ?? "", status: input.result.status };
+    }
+  }
   const payment = await db.payment.findFirst({
     where: {
       provider: "MERCADO_PAGO",
@@ -59,7 +83,6 @@ export async function reconcileMercadoPagoPayment(input: {
         message: "A cobrança não corresponde ao pagamento deste pedido.",
       });
     }
-    const isFailed = input.result.status === "FAILED" || input.result.status === "CANCELLED";
     // Late/duplicate provider events must never regress fulfilled or cancelled orders.
     if (freshPayment.order.status !== "PENDING_PAYMENT") {
       const paymentWasAlreadySettled = ["APPROVED", "PARTIALLY_REFUNDED", "REFUNDED"].includes(freshPayment.status);
@@ -74,6 +97,30 @@ export async function reconcileMercadoPagoPayment(input: {
               "O provedor informou pagamento aprovado após o pedido sair de PENDING_PAYMENT. Revisão financeira manual necessária.",
           },
         });
+      }
+      const reversal = detectUnexplainedReversal({
+        paymentStatus: freshPayment.status,
+        paymentAmountInCents: freshPayment.amountInCents,
+        transactions: freshPayment.transactions,
+        result: input.result,
+      });
+      if (reversal) {
+        // Chargeback, mediation or a refund the Moto Shop did not issue: never mirror it
+        // silently. Leave the payment untouched and surface it in the webhook monitor.
+        logger.warn({
+          event: "payment.unexplained_reversal",
+          kind: reversal,
+          orderId: freshPayment.order.id,
+          paymentId: freshPayment.id,
+          externalId: input.externalId,
+          providerStatus: input.result.status,
+        });
+        if (input.webhookEventId)
+          await tx.webhookEvent.update({
+            where: { id: input.webhookEventId },
+            data: { status: "FAILED", processedAt: null, error: unexplainedReversalMessages[reversal] },
+          });
+        return freshPayment.status;
       }
       const isRefundUpdate =
         ["APPROVED", "PARTIALLY_REFUNDED"].includes(freshPayment.status) &&
@@ -97,49 +144,37 @@ export async function reconcileMercadoPagoPayment(input: {
       return isRefundUpdate ? input.result.status : freshPayment.status;
     }
 
-    await tx.payment.update({
-      where: { id: freshPayment.id },
-      data: {
+    if (input.result.status === "PARTIALLY_REFUNDED") {
+      // Partially refunded before the approval was settled here: neither PAID nor CANCELLED
+      // is safe automatically. Keep the order untouched and surface it for manual review.
+      logger.warn({
+        event: "payment.partially_refunded_before_settlement",
+        orderId: freshPayment.order.id,
         externalId: input.externalId,
-        status: input.result.status,
-        providerMetadata: input.result.providerMetadata as Prisma.InputJsonValue,
-        authorizedAt: input.result.authorizedAt ?? null,
-        paidAt: input.result.paidAt ?? null,
-        failedAt: input.result.failedAt ?? null,
-      },
-    });
+      });
+      if (input.webhookEventId)
+        await tx.webhookEvent.update({
+          where: { id: input.webhookEventId },
+          data: {
+            status: "FAILED",
+            processedAt: null,
+            error:
+              "O provedor informou reembolso parcial de um pedido ainda aguardando pagamento. Revisão financeira manual necessária.",
+          },
+        });
+      return freshPayment.status;
+    }
 
     const transaction =
       freshPayment.transactions.find((candidate) => candidate.type === "AUTHORIZATION") ?? freshPayment.transactions[0];
-    if (transaction) {
-      await tx.paymentTransaction.update({
-        where: { id: transaction.id },
-        data: {
-          externalId: input.externalId,
-          status: isFailed ? "FAILED" : isApproved ? "SUCCEEDED" : "PENDING",
-          providerMetadata: input.result.providerMetadata as Prisma.InputJsonValue,
-          processedAt: isApproved || isFailed ? new Date() : null,
-        },
-      });
-    }
-
-    if (isApproved) {
-      await commitOrderReservations(tx, freshPayment.order.sellerOrders, freshPayment.order.id);
-      await tx.order.update({ where: { id: freshPayment.order.id }, data: { status: "PAID" } });
-      await tx.sellerOrder.updateMany({ where: { orderId: freshPayment.order.id }, data: { status: "PAID" } });
-    }
-
-    if (isFailed) {
-      await releaseOrderReservations(
-        tx,
-        freshPayment.order.sellerOrders,
-        freshPayment.order.id,
-        "Payment failed or cancelled",
-      );
-      await tx.order.update({ where: { id: freshPayment.order.id }, data: { status: "CANCELLED" } });
-      await tx.sellerOrder.updateMany({ where: { orderId: freshPayment.order.id }, data: { status: "CANCELLED" } });
-      await tx.couponRedemption.deleteMany({ where: { orderId: freshPayment.order.id } });
-    }
+    await applyPaymentOutcome(tx, {
+      order: freshPayment.order,
+      paymentId: freshPayment.id,
+      transactionId: transaction?.id,
+      result: { ...input.result, externalId: input.externalId },
+      releaseReason:
+        input.result.status === "REFUNDED" ? "Payment refunded or charged back" : "Payment failed or cancelled",
+    });
 
     if (input.webhookEventId) {
       await tx.webhookEvent.update({
@@ -149,17 +184,6 @@ export async function reconcileMercadoPagoPayment(input: {
     }
     return input.result.status;
   });
-
-  if (persistedStatus === input.result.status && ["APPROVED", "FAILED", "CANCELLED"].includes(persistedStatus)) {
-    await inngest.send({
-      name: "motoshop/order.payment-status.changed",
-      data: {
-        orderNumber: payment.order.orderNumber,
-        status: input.result.status,
-        externalId: input.externalId,
-      },
-    });
-  }
 
   return { orderNumber: payment.order.orderNumber, status: persistedStatus };
 }

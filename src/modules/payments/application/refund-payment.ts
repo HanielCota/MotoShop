@@ -5,6 +5,7 @@ import { db } from "@/lib/database";
 import { mercadoPagoProvider } from "@/lib/payment/mercado-pago-provider";
 import { assertMoneyInCents, sumMoneyInCents } from "@/modules/orders/domain/money";
 import { ApplicationError } from "@/shared/errors/application-error";
+import { PaymentProviderError } from "@/shared/payment/payment-provider-error";
 
 export type RefundPaymentInput = {
   orderId: string;
@@ -24,9 +25,34 @@ export async function refundPayment(input: RefundPaymentInput): Promise<RefundPa
   assertRefundInput(input);
   const existingTransaction = await db.paymentTransaction.findUnique({
     where: { idempotencyKey: input.idempotencyKey },
-    include: { payment: { select: { status: true, orderId: true } } },
+    include: { payment: { select: { status: true, orderId: true, amountInCents: true, externalId: true } } },
   });
-  if (existingTransaction) return buildExistingResult(existingTransaction, input);
+  if (existingTransaction) {
+    assertSameRefundOperation(existingTransaction, input);
+    if (existingTransaction.status === "PENDING") {
+      // A previous attempt reserved this refund but its provider outcome is unknown
+      // (timeout, crash, in_process). Ask the provider again with the SAME idempotency
+      // key: the gateway returns the original refund instead of creating a second one.
+      const externalId = existingTransaction.payment.externalId;
+      if (!externalId) {
+        throw new ApplicationError({
+          code: "CONFLICT",
+          message: "Este pedido não possui um pagamento reembolsável.",
+          statusCode: 409,
+        });
+      }
+      return requestAndSettleRefund(
+        {
+          paymentId: existingTransaction.paymentId,
+          paymentAmountInCents: existingTransaction.payment.amountInCents,
+          transactionId: existingTransaction.id,
+          externalId,
+        },
+        input,
+      );
+    }
+    return buildExistingResult(existingTransaction, input);
+  }
 
   const payment = await findRefundablePayment(input.orderId);
   let reservation;
@@ -38,31 +64,82 @@ export async function refundPayment(input: RefundPaymentInput): Promise<RefundPa
         where: { idempotencyKey: input.idempotencyKey },
         include: { payment: { select: { status: true, orderId: true } } },
       });
-      if (concurrentTransaction) return buildExistingResult(concurrentTransaction, input);
+      if (concurrentTransaction) {
+        assertSameRefundOperation(concurrentTransaction, input);
+        return buildExistingResult(concurrentTransaction, input);
+      }
     }
     throw error;
   }
 
-  // An exception can occur after the provider accepted the refund. Keep the
-  // reservation pending until its outcome is known; never free money on timeout.
-  const providerResult = await mercadoPagoProvider.refund({
-    externalId: reservation.externalId,
-    amountInCents: input.amountInCents,
-    idempotencyKey: input.idempotencyKey,
-  });
+  return requestAndSettleRefund(
+    {
+      paymentId: reservation.payment.id,
+      paymentAmountInCents: reservation.payment.amountInCents,
+      transactionId: reservation.transaction.id,
+      externalId: reservation.externalId,
+    },
+    input,
+  );
+}
+
+type RefundReservation = {
+  paymentId: string;
+  paymentAmountInCents: number;
+  transactionId: string;
+  externalId: string;
+};
+
+async function requestAndSettleRefund(
+  reservation: RefundReservation,
+  input: RefundPaymentInput,
+): Promise<RefundPaymentResult> {
+  let providerResult;
+  try {
+    providerResult = await mercadoPagoProvider.refund({
+      externalId: reservation.externalId,
+      amountInCents: input.amountInCents,
+      idempotencyKey: input.idempotencyKey,
+    });
+  } catch (error) {
+    // A definitive rejection (400/401/403/422/429) means the provider did not accept the
+    // refund, so the reservation can be released. Any other exception can happen AFTER
+    // the provider accepted it: keep the reservation pending (a retry with the same key
+    // resolves it); never free money on timeout.
+    if (error instanceof PaymentProviderError && error.details.outcome === "DEFINITIVE_REJECTION") {
+      await markRefundFailed(reservation.transactionId);
+    }
+    throw error;
+  }
+
   if (providerResult.status !== "APPROVED") {
     if (["FAILED", "CANCELLED"].includes(providerResult.status)) {
-      await db.paymentTransaction.update({
-        where: { id: reservation.transaction.id },
-        data: { status: "FAILED", processedAt: new Date() },
-      });
+      await markRefundFailed(reservation.transactionId);
+      throw new ApplicationError({ code: "CONFLICT", message: "O provedor recusou o reembolso.", statusCode: 409 });
     }
     throw new ApplicationError({ code: "CONFLICT", message: "O reembolso ainda não foi confirmado pelo provedor." });
   }
+
+  // The provider reports the refunded value in reais. A mismatch means money moved differently from what was
+  // requested: keep the transaction PENDING (never mark it SUCCEEDED or FAILED) so a human reviews it.
+  const refundedAmount = providerResult.providerMetadata?.amount;
+  if (typeof refundedAmount === "number" && Math.round(refundedAmount * 100) !== input.amountInCents) {
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "O valor reembolsado pelo provedor difere do solicitado. O reembolso precisa de revisão financeira.",
+      statusCode: 409,
+    });
+  }
+
   const paymentStatus = await db.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM "payments" WHERE id = ${reservation.payment.id} FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM "payments" WHERE id = ${reservation.paymentId} FOR UPDATE`;
     const completed = await tx.paymentTransaction.findMany({
-      where: { paymentId: reservation.payment.id, type: "REFUND", status: "SUCCEEDED" },
+      where: {
+        paymentId: reservation.paymentId,
+        type: "REFUND",
+        status: "SUCCEEDED",
+        id: { not: reservation.transactionId },
+      },
       select: { amountInCents: true },
     });
     const refundedAmountInCents = sumMoneyInCents([
@@ -70,9 +147,9 @@ export async function refundPayment(input: RefundPaymentInput): Promise<RefundPa
       input.amountInCents,
     ]);
     const paymentStatus =
-      refundedAmountInCents === reservation.payment.amountInCents ? "REFUNDED" : "PARTIALLY_REFUNDED";
+      refundedAmountInCents === reservation.paymentAmountInCents ? "REFUNDED" : "PARTIALLY_REFUNDED";
     await tx.paymentTransaction.update({
-      where: { id: reservation.transaction.id },
+      where: { id: reservation.transactionId },
       data: {
         status: "SUCCEEDED",
         externalId: providerResult.externalId,
@@ -80,15 +157,23 @@ export async function refundPayment(input: RefundPaymentInput): Promise<RefundPa
         processedAt: new Date(),
       },
     });
-    await tx.payment.update({ where: { id: reservation.payment.id }, data: { status: paymentStatus } });
+    await tx.payment.update({ where: { id: reservation.paymentId }, data: { status: paymentStatus } });
     return paymentStatus;
   });
   return {
-    paymentId: reservation.payment.id,
-    transactionId: reservation.transaction.id,
+    paymentId: reservation.paymentId,
+    transactionId: reservation.transactionId,
     amountInCents: input.amountInCents,
     paymentStatus,
   };
+}
+
+async function markRefundFailed(transactionId: string): Promise<void> {
+  // Only a still-pending reservation can fail; a concurrent success must never be overwritten.
+  await db.paymentTransaction.updateMany({
+    where: { id: transactionId, status: "PENDING" },
+    data: { status: "FAILED", processedAt: new Date() },
+  });
 }
 
 async function reserveRefundTransaction(paymentId: string, input: RefundPaymentInput) {
@@ -164,6 +249,19 @@ function assertRefundInput(input: RefundPaymentInput): void {
   }
 }
 
+function assertSameRefundOperation(
+  transaction: { type: string; amountInCents: number; payment: { orderId: string } },
+  input: RefundPaymentInput,
+): void {
+  if (
+    transaction.type !== "REFUND" ||
+    transaction.payment.orderId !== input.orderId ||
+    transaction.amountInCents !== input.amountInCents
+  ) {
+    throw new ApplicationError({ code: "CONFLICT", message: "Esta chave de idempotência pertence a outra operação." });
+  }
+}
+
 function buildExistingResult(
   transaction: {
     id: string;
@@ -175,13 +273,7 @@ function buildExistingResult(
   },
   input: RefundPaymentInput,
 ): RefundPaymentResult {
-  if (
-    transaction.type !== "REFUND" ||
-    transaction.payment.orderId !== input.orderId ||
-    transaction.amountInCents !== input.amountInCents
-  ) {
-    throw new ApplicationError({ code: "CONFLICT", message: "Esta chave de idempotência pertence a outra operação." });
-  }
+  assertSameRefundOperation(transaction, input);
   if (transaction.status === "FAILED") {
     throw new ApplicationError({
       code: "CONFLICT",
