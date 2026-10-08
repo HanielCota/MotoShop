@@ -323,8 +323,9 @@ test("store registration → approval → product → publication → catalog �
     await expect(page.getByRole("link", { name: productName, exact: true })).toBeVisible();
     // No mobile os filtros da vitrine ficam recolhidos no painel compartilhado do catálogo.
     const openStoreFilters = async () => {
+      // The panel keeps its open state across the soft navigation of "Aplicar filtros": open it only when closed.
       const toggle = page.getByRole("button", { name: /Filtrar produtos/ });
-      if (await toggle.isVisible()) await toggle.click();
+      if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) === "false") await toggle.click();
     };
     await openStoreFilters();
     await page.getByRole("searchbox", { name: "Buscar nesta loja" }).fill("sem-correspondencia-e2e");
