@@ -427,7 +427,7 @@ export const getProductUnitsSold = cache(async (productId: string) => {
   return netUnitsSold(sold._sum.quantity, refunded._sum.quantity);
 });
 
-export async function getApprovedProductSeoBySlug(slug: string) {
+export const getApprovedProductSeoBySlug = cache(async (slug: string) => {
   return db.product.findFirst({
     where: {
       slug,
@@ -457,4 +457,4 @@ export async function getApprovedProductSeoBySlug(slug: string) {
       productReviews: { where: { hiddenAt: null }, select: { ratingTenths: true } },
     },
   });
-}
+});

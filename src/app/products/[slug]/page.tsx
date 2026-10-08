@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata, Route } from "next";
 
@@ -23,6 +24,7 @@ import {
   ProductCompatibilityCard,
 } from "@/modules/products/components/detail/product-compatibility-card";
 import { ProductFitmentBanner, type FitmentStatus } from "@/modules/products/components/detail/product-fitment-banner";
+import { ProductDetailSkeleton } from "@/modules/products/components/detail/product-detail-skeleton";
 import { ProductGallery } from "@/modules/products/components/detail/product-gallery";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 import {
@@ -60,14 +62,28 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
+type ProductSearchParams = Promise<Record<string, string | string[] | undefined>>;
+
 export default async function ProductPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: ProductSearchParams;
 }) {
   const { slug } = await params;
+  // Checa a existência antes de qualquer Suspense: depois que o streaming começa, o status já saiu como 200.
+  // A consulta é a mesma (em cache) usada pelo generateMetadata.
+  if (!(await getApprovedProductSeoBySlug(slug))) notFound();
+
+  return (
+    <Suspense fallback={<ProductDetailSkeleton />}>
+      <ProductDetail slug={slug} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function ProductDetail({ slug, searchParams }: { slug: string; searchParams: ProductSearchParams }) {
   const [loadedInteractionParams, rawSearchParams] = await Promise.all([
     loadProductInteractionSearchParams(searchParams),
     searchParams,

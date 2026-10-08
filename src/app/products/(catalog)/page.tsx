@@ -30,7 +30,7 @@ import {
   removeCatalogFilterHref,
   type CatalogFilterKey,
   type CatalogQuery,
-} from "./catalog-query";
+} from "../catalog-query";
 
 export const metadata: Metadata = {
   title: "Catálogo",
