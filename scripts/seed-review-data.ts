@@ -27,6 +27,8 @@ export const REVIEW_ACCOUNTS_PASSWORD = "Revisao-Demo-2026!";
 export const REVIEW_EMAIL_DOMAIN = "@example.test";
 export const REVIEW_ORDER_PREFIX = "MS-REVIEW-";
 const APP_BASE_URL = "http://localhost:3001";
+// The DATABASE_URL in .env.local is also read by production (motoshopbrasil.com.br). Never publish demo
+// stores there: set REVIEW_PUBLISH_STORES=true only against an isolated database.
 
 config({ path: ".env.local", quiet: true });
 
@@ -453,7 +455,9 @@ async function ensureStores(userIds: Record<UserKey, string>) {
       const seller = await db.seller.create({
         data: {
           type: definition.sellerType,
-          status: definition.sellerStatus,
+          // AGENTS.md: demo stores stay PENDING while the deployed code lacks the isDemo purchase block.
+          // Publish them only on a database that no public deployment reads (e.g. a Neon review branch).
+          status: process.env.REVIEW_PUBLISH_STORES === "true" ? definition.sellerStatus : "PENDING",
           commissionBpsOverride: definition.commissionBpsOverride,
           createdAt: key === "pendente" ? daysAgo(1) : daysAgo(60),
         },

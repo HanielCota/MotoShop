@@ -23,6 +23,7 @@
     "db:studio": "prisma studio",
     "db:seed:review": "tsx scripts/seed-review-data.ts",
     "db:remove:review": "tsx scripts/remove-review-data.ts",
+    "db:hide:review": "tsx scripts/hide-review-stores.ts",
     "inngest:dev": "pnpm dlx inngest-cli@latest dev"
   },
   "dependencies": {
