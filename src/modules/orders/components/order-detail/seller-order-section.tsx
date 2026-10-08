@@ -15,6 +15,7 @@ import { getStatusLabel } from "@/shared/presentation/status-labels";
 
 import { ShipmentTracking } from "./shipment-tracking";
 import type { CustomerOrderItem, CustomerSellerOrder } from "./types";
+import { Disclosure } from "@/components/ui/disclosure";
 
 type SellerOrderSectionProps = {
   orderNumber: string;
@@ -114,7 +115,9 @@ export function SellerOrderSection({
               <RequestCancellationForm orderNumber={orderNumber} sellerOrderId={sellerOrder.id} {...tokenProps} />
             ) : null}
             {disputeAllowed ? (
-              <RequestDisputeForm orderNumber={orderNumber} sellerOrderId={sellerOrder.id} {...tokenProps} />
+              <Disclosure summary="Abrir disputa">
+                <RequestDisputeForm orderNumber={orderNumber} sellerOrderId={sellerOrder.id} {...tokenProps} />
+              </Disclosure>
             ) : null}
           </div>
         ) : null}
@@ -165,16 +168,26 @@ function OrderItemRow({
           ) : null}
         </div>
       </div>
-      {returnAllowed ? (
-        <RequestReturnForm
-          orderNumber={orderNumber}
-          orderItemId={item.id}
-          maxQuantity={getReturnableQuantity(item)}
-          idempotencyKey={randomUUID()}
-          {...tokenProps}
-        />
+      {returnAllowed || showReview ? (
+        <div className="flex flex-col gap-3">
+          {showReview ? (
+            <Disclosure summary="Avaliar produto">
+              <ReviewForm orderItemId={item.id} sellerAlreadyReviewed={sellerAlreadyReviewed} />
+            </Disclosure>
+          ) : null}
+          {returnAllowed ? (
+            <Disclosure summary="Solicitar devolução">
+              <RequestReturnForm
+                orderNumber={orderNumber}
+                orderItemId={item.id}
+                maxQuantity={getReturnableQuantity(item)}
+                idempotencyKey={randomUUID()}
+                {...tokenProps}
+              />
+            </Disclosure>
+          ) : null}
+        </div>
       ) : null}
-      {showReview ? <ReviewForm orderItemId={item.id} sellerAlreadyReviewed={sellerAlreadyReviewed} /> : null}
     </li>
   );
 }
