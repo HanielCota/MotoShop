@@ -1,11 +1,18 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
+import { buildSecurityHeaders } from "./src/config/security-headers";
+
 const imageKitPublicUrl = process.env.IMAGEKIT_URL_ENDPOINT ? new URL(process.env.IMAGEKIT_URL_ENDPOINT) : undefined;
 
 const nextConfig: NextConfig = {
   ...(process.env.NEXT_TEST_DIST_DIR ? { distDir: process.env.NEXT_TEST_DIST_DIR } : {}),
   typedRoutes: true,
+  async headers() {
+    return [
+      { source: "/:path*", headers: buildSecurityHeaders({ development: process.env.NODE_ENV !== "production" }) },
+    ];
+  },
   images: {
     remotePatterns: [
       {
