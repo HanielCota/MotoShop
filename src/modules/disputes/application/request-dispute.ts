@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Prisma } from "@/generated/prisma/client";
+import { type Dispute, Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
 import { ApplicationError } from "@/shared/errors/application-error";
 
@@ -17,8 +17,26 @@ export type RequestDisputeInput = {
   identity: DisputeIdentity;
 };
 
+type AuthorizedSellerOrder = NonNullable<Awaited<ReturnType<typeof findAuthorizedSellerOrder>>>;
+
+type DisputeClient = Pick<Prisma.TransactionClient, "dispute">;
+
 export async function requestDispute(input: RequestDisputeInput) {
-  const sellerOrder = await db.sellerOrder.findFirst({
+  const sellerOrder = await findAuthorizedSellerOrder(input);
+  if (!sellerOrder) throw new ApplicationError({ code: "NOT_FOUND", message: "Pedido da loja não encontrado." });
+  const existing = await findDisputeByIdempotencyKey(db, input.idempotencyKey);
+  if (existing) return replayDispute(existing, sellerOrder.id);
+  assertDisputeAllowed(sellerOrder);
+
+  try {
+    return await db.$transaction(async (tx) => createDisputeWithLocks(tx, input, sellerOrder));
+  } catch (error) {
+    return recoverConcurrentDispute(error, input.idempotencyKey, sellerOrder.id);
+  }
+}
+
+async function findAuthorizedSellerOrder(input: RequestDisputeInput) {
+  return db.sellerOrder.findFirst({
     where: {
       id: input.sellerOrderId,
       order: {
@@ -30,12 +48,26 @@ export async function requestDispute(input: RequestDisputeInput) {
     },
     include: { disputes: { where: { status: { in: ["OPEN", "UNDER_REVIEW"] } } } },
   });
-  if (!sellerOrder) throw new ApplicationError({ code: "NOT_FOUND", message: "Pedido da loja não encontrado." });
-  const existing = await db.dispute.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
-  if (existing) {
-    assertTarget(existing.sellerOrderId, sellerOrder.id);
-    return existing;
-  }
+}
+
+async function findDisputeByIdempotencyKey(client: DisputeClient, idempotencyKey: string): Promise<Dispute | null> {
+  return client.dispute.findUnique({ where: { idempotencyKey } });
+}
+
+function replayDispute(dispute: Dispute, sellerOrderId: string): Dispute {
+  assertTarget(dispute.sellerOrderId, sellerOrderId);
+  return dispute;
+}
+
+async function recoverConcurrentDispute(error: unknown, idempotencyKey: string, sellerOrderId: string) {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") throw error;
+
+  const concurrent = await findDisputeByIdempotencyKey(db, idempotencyKey);
+  if (!concurrent) throw error;
+  return replayDispute(concurrent, sellerOrderId);
+}
+
+function assertDisputeAllowed(sellerOrder: AuthorizedSellerOrder): void {
   if (!isSellerOrderEligibleForDispute(sellerOrder.status)) {
     throw new ApplicationError({
       code: "CONFLICT",
@@ -50,48 +82,52 @@ export async function requestDispute(input: RequestDisputeInput) {
       statusCode: 409,
     });
   }
+}
 
-  try {
-    return await db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM "orders" WHERE id = ${sellerOrder.orderId} FOR UPDATE`;
-      await tx.$queryRaw`SELECT id FROM "seller_orders" WHERE id = ${sellerOrder.id} FOR UPDATE`;
-      const replay = await tx.dispute.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
-      if (replay) {
-        assertTarget(replay.sellerOrderId, sellerOrder.id);
-        return replay;
-      }
-      const current = await tx.sellerOrder.findUnique({ where: { id: sellerOrder.id }, select: { status: true } });
-      if (!current || !isSellerOrderEligibleForDispute(current.status)) {
-        throw new ApplicationError({ code: "CONFLICT", message: "O status do pedido mudou durante a solicitação." });
-      }
-      const active = await tx.dispute.count({
-        where: { sellerOrderId: sellerOrder.id, status: { in: ["OPEN", "UNDER_REVIEW"] } },
-      });
-      if (active > 0)
-        throw new ApplicationError({ code: "CONFLICT", message: "Já existe uma disputa aberta para este pedido." });
-      return tx.dispute.create({
-        data: {
-          status: "OPEN",
-          reason: input.reason,
-          description: input.description,
-          idempotencyKey: input.idempotencyKey,
-          orderId: sellerOrder.orderId,
-          sellerOrderId: sellerOrder.id,
-          sellerId: sellerOrder.sellerId,
-          ...("userId" in input.identity ? { requesterUserId: input.identity.userId } : {}),
-        },
-      });
-    });
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      const concurrent = await db.dispute.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
-      if (concurrent) {
-        assertTarget(concurrent.sellerOrderId, sellerOrder.id);
-        return concurrent;
-      }
-    }
-    throw error;
-  }
+async function createDisputeWithLocks(
+  tx: Prisma.TransactionClient,
+  input: RequestDisputeInput,
+  sellerOrder: AuthorizedSellerOrder,
+): Promise<Dispute> {
+  await tx.$queryRaw`SELECT id FROM "orders" WHERE id = ${sellerOrder.orderId} FOR UPDATE`;
+  await tx.$queryRaw`SELECT id FROM "seller_orders" WHERE id = ${sellerOrder.id} FOR UPDATE`;
+  const replay = await findDisputeByIdempotencyKey(tx, input.idempotencyKey);
+  if (replay) return replayDispute(replay, sellerOrder.id);
+
+  await assertLockedSellerOrderEligible(tx, sellerOrder.id);
+  await assertNoActiveDispute(tx, sellerOrder.id);
+  return tx.dispute.create({ data: buildDisputeData(input, sellerOrder) });
+}
+
+async function assertLockedSellerOrderEligible(tx: Prisma.TransactionClient, sellerOrderId: string): Promise<void> {
+  const current = await tx.sellerOrder.findUnique({ where: { id: sellerOrderId }, select: { status: true } });
+  if (current && isSellerOrderEligibleForDispute(current.status)) return;
+
+  throw new ApplicationError({ code: "CONFLICT", message: "O status do pedido mudou durante a solicitação." });
+}
+
+async function assertNoActiveDispute(tx: Prisma.TransactionClient, sellerOrderId: string): Promise<void> {
+  const active = await tx.dispute.count({
+    where: { sellerOrderId, status: { in: ["OPEN", "UNDER_REVIEW"] } },
+  });
+  if (active > 0)
+    throw new ApplicationError({ code: "CONFLICT", message: "Já existe uma disputa aberta para este pedido." });
+}
+
+function buildDisputeData(
+  input: RequestDisputeInput,
+  sellerOrder: AuthorizedSellerOrder,
+): Prisma.DisputeUncheckedCreateInput {
+  return {
+    status: "OPEN",
+    reason: input.reason,
+    description: input.description,
+    idempotencyKey: input.idempotencyKey,
+    orderId: sellerOrder.orderId,
+    sellerOrderId: sellerOrder.id,
+    sellerId: sellerOrder.sellerId,
+    ...("userId" in input.identity ? { requesterUserId: input.identity.userId } : {}),
+  };
 }
 
 function assertTarget(actual: string, expected: string) {
