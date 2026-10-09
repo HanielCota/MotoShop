@@ -60,16 +60,20 @@ export function createMelhorEnvioAuthorizationUrl(input: { userId: string; selle
   return { url: url.toString(), state };
 }
 
+function tryDecodeBase64Url(value: string): Buffer | null {
+  try {
+    return Buffer.from(value, "base64url");
+  } catch {
+    return null;
+  }
+}
+
 export function verifyMelhorEnvioState(value: string): OAuthState | null {
   const [encoded, signature, extra] = value.split(".");
   if (!encoded || !signature || extra) return null;
   const expected = createHmac("sha256", env.BETTER_AUTH_SECRET).update(encoded).digest();
-  let received: Buffer;
-  try {
-    received = Buffer.from(signature, "base64url");
-  } catch {
-    return null;
-  }
+  const received = tryDecodeBase64Url(signature);
+  if (!received) return null;
   if (received.length !== expected.length || !timingSafeEqual(received, expected)) return null;
   try {
     const parsed = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as OAuthState;

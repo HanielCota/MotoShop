@@ -102,15 +102,11 @@ async function mergeGuestItems(tx: Prisma.TransactionClient, userCartId: string,
   const { availableByVariant, currentByVariant } = await loadMergeQuantities(tx, userCartId, variantIds);
 
   let mergedVariants = 0;
-  let skippedVariants = 0;
   for (const item of guestItems) {
     const available = availableByVariant.get(item.variantId);
     const current = currentByVariant.get(item.variantId) ?? 0;
     const target = Math.min(current + item.quantity, MAX_CART_ITEM_QUANTITY, available ?? 0);
-    if (available === undefined || target <= current) {
-      skippedVariants += 1;
-      continue;
-    }
+    if (available === undefined || target <= current) continue;
     await tx.cartItem.upsert({
       where: { cartId_variantId: { cartId: userCartId, variantId: item.variantId } },
       create: { cartId: userCartId, variantId: item.variantId, quantity: target },
@@ -119,7 +115,7 @@ async function mergeGuestItems(tx: Prisma.TransactionClient, userCartId: string,
     currentByVariant.set(item.variantId, target);
     mergedVariants += 1;
   }
-  return { mergedVariants, skippedVariants };
+  return { mergedVariants, skippedVariants: guestItems.length - mergedVariants };
 }
 
 /** Available stock of purchasable variants and the quantities already in the user's cart. */

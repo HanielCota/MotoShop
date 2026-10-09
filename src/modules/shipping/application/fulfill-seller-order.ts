@@ -316,25 +316,9 @@ async function addPurchaseCartItem(input: {
 }) {
   if (!input.quotedVolumes) throw new Error("Melhor Envio volumes must be quoted before creating a cart item");
   const volumes = input.quotedVolumes.volumes;
-  let metadata = input.metadata;
-  let cart: Awaited<ReturnType<typeof melhorEnvioProvider.addToCart>>;
-  try {
-    cart = await melhorEnvioProvider.addToCart(
-      {
-        sellerOrderId: input.sellerOrderId,
-        serviceCode: input.serviceCode,
-        ...input.shipmentData,
-        volumes,
-        ...(input.tags ? { tags: input.tags } : { tags: [{ tag: input.orderNumber }] }),
-      },
-      input.accessToken,
-    );
-  } catch (error) {
-    await recordPurchaseFailure({ shipmentId: input.shipmentId, sellerOrderId: input.sellerOrderId, error, metadata });
-    throw error;
-  }
+  const cart = await requestPurchaseCartItem(input, volumes);
   const cartItemId = cart.cartItemId;
-  metadata = withPurchaseCart(metadata, {
+  const metadata = withPurchaseCart(input.metadata, {
     step: "CART_CREATED",
     cartItemId,
     serviceCode: input.serviceCode,
@@ -358,6 +342,33 @@ async function addPurchaseCartItem(input: {
     });
   }
   return { cartItemId, metadata };
+}
+
+/** Adds the shipment to the Melhor Envio cart, recording the purchase failure before rethrowing. */
+async function requestPurchaseCartItem(
+  input: Parameters<typeof addPurchaseCartItem>[0],
+  volumes: QuotedVolumes["volumes"],
+) {
+  try {
+    return await melhorEnvioProvider.addToCart(
+      {
+        sellerOrderId: input.sellerOrderId,
+        serviceCode: input.serviceCode,
+        ...input.shipmentData,
+        volumes,
+        ...(input.tags ? { tags: input.tags } : { tags: [{ tag: input.orderNumber }] }),
+      },
+      input.accessToken,
+    );
+  } catch (error) {
+    await recordPurchaseFailure({
+      shipmentId: input.shipmentId,
+      sellerOrderId: input.sellerOrderId,
+      error,
+      metadata: input.metadata,
+    });
+    throw error;
+  }
 }
 
 /**

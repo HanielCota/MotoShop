@@ -42,14 +42,24 @@ export async function createProductAction(
     return { error: "Cada variação precisa ter um SKU diferente." };
   }
 
-  let createdProductId: string;
+  const created = await createProductAndRevalidate(
+    { sellerId: context.seller.id, storeId: context.store.id, userId: context.session.user.id },
+    parsed.data,
+  );
+  if ("error" in created) return created;
+
+  redirect(`/seller/products/${created.productId}/edit`);
+}
+
+/** Creates the product and revalidates its pages; the redirect stays outside so Next.js can throw it freely. */
+async function createProductAndRevalidate(
+  ...args: Parameters<typeof createSellerProduct>
+): Promise<{ productId: string } | { error: string }> {
   try {
-    createdProductId = await createSellerProduct(
-      { sellerId: context.seller.id, storeId: context.store.id, userId: context.session.user.id },
-      parsed.data,
-    );
+    const productId = await createSellerProduct(...args);
     revalidateSellerCatalog();
     revalidatePath("/products");
+    return { productId };
   } catch (error) {
     const applicationError = asApplicationError(error);
     return {
@@ -59,7 +69,6 @@ export async function createProductAction(
           : applicationError.message,
     };
   }
-  redirect(`/seller/products/${createdProductId}/edit`);
 }
 
 export async function submitProductAction(productId: string): Promise<ProductActionState> {

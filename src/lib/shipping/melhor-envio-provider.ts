@@ -326,11 +326,10 @@ function toOptionalInteger(value: unknown): number | undefined {
 }
 
 function readNestedString(value: Record<string, unknown>, path: string[]): string | undefined {
-  let current: unknown = value;
-  for (const key of path) {
-    if (typeof current !== "object" || current === null) return undefined;
-    current = (current as Record<string, unknown>)[key];
-  }
+  const current = path.reduce<unknown>(
+    (node, key) => (typeof node === "object" && node !== null ? (node as Record<string, unknown>)[key] : undefined),
+    value,
+  );
   return typeof current === "string" && current.length > 0 ? current : undefined;
 }
 

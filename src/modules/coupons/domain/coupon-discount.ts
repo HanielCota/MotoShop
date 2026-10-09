@@ -78,15 +78,11 @@ export function allocateDiscountAcrossSubtotals(
     const numerator = BigInt(discountInCents) * BigInt(subtotal);
     return { index, amount: Number(numerator / BigInt(total)), remainder: numerator % BigInt(total) };
   });
-  let remaining = discountInCents - shares.reduce((sum, share) => sum + share.amount, 0);
+  const remaining = discountInCents - shares.reduce((sum, share) => sum + share.amount, 0);
   // Largest remainders preserve the total without assigning more than a line's subtotal.
   const ranked = [...shares].sort((a, b) =>
     a.remainder === b.remainder ? a.index - b.index : a.remainder > b.remainder ? -1 : 1,
   );
-  for (const share of ranked) {
-    if (remaining === 0) break;
-    share.amount += 1;
-    remaining -= 1;
-  }
+  for (const share of ranked.slice(0, remaining)) share.amount += 1;
   return shares.map((share) => share.amount);
 }

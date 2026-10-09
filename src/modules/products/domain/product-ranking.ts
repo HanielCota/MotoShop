@@ -21,12 +21,10 @@ function nameMatchScore(normalizedName: string, normalizedQuery: string) {
 export function productRankingScore(product: RankableProduct, query?: string) {
   const normalizedQuery = query ? normalize(query) : "";
   const normalizedName = normalize(product.name);
-  let score = nameMatchScore(normalizedName, normalizedQuery);
-
-  score += product.isInStock ? 10 : 0;
-  score += Math.min(product.reviewCount, 5);
-  score += product.isVip ? 5 : 0;
-  return score;
+  const availabilityScore = product.isInStock ? 10 : 0;
+  const reputationScore = Math.min(product.reviewCount, 5);
+  const vipScore = product.isVip ? 5 : 0;
+  return nameMatchScore(normalizedName, normalizedQuery) + availabilityScore + reputationScore + vipScore;
 }
 
 export function rankProducts<T extends RankableProduct>(products: T[], query?: string) {
