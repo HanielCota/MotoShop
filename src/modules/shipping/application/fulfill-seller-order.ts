@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Prisma } from "@/generated/prisma/client";
+import type { SellerOrderStatus } from "@/generated/prisma/enums";
 import { db } from "@/lib/database";
 import { logger } from "@/lib/logger";
 import { melhorEnvioProvider } from "@/lib/shipping/melhor-envio-provider";
@@ -19,6 +20,7 @@ import {
   volumesFromQuotedPackages,
 } from "@/modules/shipping/domain/shipment-payload";
 import {
+  type PurchaseCart,
   getPurchaseCartDiscardReason,
   readPurchaseCart,
   withPurchaseCart,
@@ -43,93 +45,48 @@ export type FulfillSellerOrderInput = {
   tags?: Array<{ tag: string; url?: string }>;
 };
 
+type SellerOrderForFulfillment = Awaited<ReturnType<typeof getSellerOrderForFulfillment>>;
+type ShipmentRecord = NonNullable<SellerOrderForFulfillment["shipment"]>;
+type QuotedVolumes = { volumes: ShippingVolume[]; quotedPriceInCents: number };
+
 export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput) {
   const sellerOrder = await getSellerOrderForFulfillment(input.sellerOrderId, input.sellerId);
   assertIntegratedShipment(sellerOrder.shipment?.provider);
   assertShipmentOperationAllowed(sellerOrder.status, "PURCHASE");
-  if (!sellerOrder.shipment?.serviceCode) {
-    throw new ApplicationError({ code: "CONFIGURATION_ERROR", message: "O serviço de frete não foi salvo no pedido." });
-  }
-  const shipment = sellerOrder.shipment;
-  const serviceCode = sellerOrder.shipment.serviceCode;
+  const { shipment, serviceCode } = requireContractedShipment(sellerOrder.shipment);
   const accessToken = await requireSellerShippingToken(sellerOrder.sellerId, ["cart-write", "shipping-checkout"]);
   if (shipment.status !== "CANCELLED" && shipment.externalShipmentId) return shipment;
 
-  let metadata: unknown =
+  const initialMetadata: unknown =
     shipment.status === "CANCELLED"
       ? await resetCancelledShipmentForRepurchase(input, shipment.id)
       : shipment.providerMetadata;
-  if (shipment.purchaseState) {
-    throw new ApplicationError({
-      code: "CONFLICT",
-      message:
-        shipment.purchaseState === "IN_PROGRESS"
-          ? "A compra da etiqueta já foi iniciada. Aguarde ou solicite a conferência antes de tentar novamente."
-          : "O resultado da compra da etiqueta é incerto. Confira os envios no Melhor Envio antes de tentar novamente.",
-      statusCode: 409,
-    });
-  }
+  assertNoPurchaseInFlight(shipment.purchaseState);
 
   const shipmentData = buildShipmentData(sellerOrder);
-
-  // Item de carrinho criado por uma tentativa anterior cujo pagamento foi recusado de forma
-  // definitiva: a nova tentativa paga o mesmo item em vez de inserir outro no carrinho.
-  let pendingCart = readPurchaseCart(metadata);
-  if (pendingCart) {
-    const discardReason = getPurchaseCartDiscardReason(pendingCart, serviceCode);
-    if (discardReason) {
-      metadata = withoutPurchaseCart(metadata, { reason: discardReason });
-      const discarded = await db.shipment.updateMany({
-        where: { id: shipment.id, externalShipmentId: null, purchaseState: null },
-        data: { providerMetadata: metadata as Prisma.InputJsonValue },
-      });
-      if (discarded.count !== 1) {
-        throw new ApplicationError({
-          code: "CONFLICT",
-          message: "A compra da etiqueta já está em andamento ou precisa de conferência manual.",
-          statusCode: 409,
-        });
-      }
-      logger.warn(
-        {
-          event: "shipment.purchase_cart_discarded",
-          sellerOrderId: input.sellerOrderId,
-          cartItemId: pendingCart.cartItemId,
-          reason: discardReason,
-        },
-        "Stored Melhor Envio cart item can no longer be paid; a new one will be created",
-      );
-      pendingCart = null;
-    }
-  }
+  const { pendingCart, metadata } = await discardUnpayablePurchaseCart({
+    sellerOrderId: input.sellerOrderId,
+    shipmentId: shipment.id,
+    serviceCode,
+    metadata: initialMetadata,
+  });
 
   // Cotação somente leitura, fora de transação, para obter os pacotes calculados pelo provedor.
   const quotedVolumes = pendingCart
     ? null
-    : await quotePurchaseVolumes({
-        sellerOrderId: input.sellerOrderId,
-        fromPostalCode: sellerOrder.store?.originPostalCode ?? "",
-        toPostalCode: sellerOrder.order.shippingAddress?.postalCode ?? "",
-        products: shipmentData.products,
-        serviceCode,
-        contractedCarrier: shipment.carrier,
-        contractedPriceInCents: shipment.priceInCents,
-        accessToken,
-      });
+    : await quotePurchaseVolumes(
+        buildPurchaseQuoteInput({
+          sellerOrderId: input.sellerOrderId,
+          sellerOrder,
+          shipment,
+          serviceCode,
+          products: shipmentData.products,
+          accessToken,
+        }),
+      );
 
-  const claim = await db.shipment.updateMany({
-    where: { id: shipment.id, externalShipmentId: null, purchaseState: null },
-    data: { purchaseState: "IN_PROGRESS", purchaseError: null },
-  });
-  if (claim.count !== 1) {
-    const current = await db.shipment.findUnique({ where: { id: shipment.id } });
-    if (current?.externalShipmentId) return current;
-    throw new ApplicationError({
-      code: "CONFLICT",
-      message: "A compra da etiqueta já está em andamento ou precisa de conferência manual.",
-      statusCode: 409,
-    });
-  }
+  const alreadyPurchased = await claimShipmentPurchase(shipment.id);
+  if (alreadyPurchased) return alreadyPurchased;
 
   // Passo 1: inserir no carrinho (não idempotente no provedor) e persistir o id imediatamente.
   const cartStep = pendingCart
@@ -145,56 +102,162 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
         accessToken,
         metadata,
       });
-  const cartItemId = cartStep.cartItemId;
-  metadata = cartStep.metadata;
 
   // Passo 2: pagar o item de carrinho persistido.
-  let result: Awaited<ReturnType<typeof melhorEnvioProvider.checkoutCart>>;
-  try {
-    result = await melhorEnvioProvider.checkoutCart(cartItemId, accessToken);
-  } catch (error) {
-    await recordPurchaseFailure({
-      shipmentId: shipment.id,
-      sellerOrderId: input.sellerOrderId,
-      error,
-      metadata,
-      cartItemId,
-    });
-    throw error;
-  }
+  const result = await checkoutPurchaseCart({
+    shipmentId: shipment.id,
+    sellerOrderId: input.sellerOrderId,
+    cartItemId: cartStep.cartItemId,
+    metadata: cartStep.metadata,
+    accessToken,
+  });
   const purchasedMetadata: Record<string, unknown> = {
-    ...withoutPurchaseCart(metadata),
+    ...withoutPurchaseCart(cartStep.metadata),
     ...result.providerMetadata,
   };
 
-  // A chamada externa acontece fora da transação (AGENTS.md §36). O pedido pode ter sido
-  // cancelado enquanto isso: revalida o status com o registro travado antes de avançar o envio.
+  return persistPurchasedShipment(input, shipment.id, result.externalShipmentId, purchasedMetadata);
+}
+
+function requireContractedShipment(shipment: SellerOrderForFulfillment["shipment"]) {
+  if (!shipment?.serviceCode) {
+    throw new ApplicationError({ code: "CONFIGURATION_ERROR", message: "O serviço de frete não foi salvo no pedido." });
+  }
+
+  return { shipment, serviceCode: shipment.serviceCode };
+}
+
+function assertNoPurchaseInFlight(purchaseState: ShipmentRecord["purchaseState"]) {
+  if (!purchaseState) return;
+  throw new ApplicationError({
+    code: "CONFLICT",
+    message:
+      purchaseState === "IN_PROGRESS"
+        ? "A compra da etiqueta já foi iniciada. Aguarde ou solicite a conferência antes de tentar novamente."
+        : "O resultado da compra da etiqueta é incerto. Confira os envios no Melhor Envio antes de tentar novamente.",
+    statusCode: 409,
+  });
+}
+
+function purchaseClaimConflict() {
+  return new ApplicationError({
+    code: "CONFLICT",
+    message: "A compra da etiqueta já está em andamento ou precisa de conferência manual.",
+    statusCode: 409,
+  });
+}
+
+/**
+ * Item de carrinho criado por uma tentativa anterior cujo pagamento foi recusado de forma
+ * definitiva: a nova tentativa paga o mesmo item em vez de inserir outro no carrinho. Itens que
+ * não podem mais ser pagos são descartados do metadado para que um novo seja criado.
+ */
+async function discardUnpayablePurchaseCart(input: {
+  sellerOrderId: string;
+  shipmentId: string;
+  serviceCode: string;
+  metadata: unknown;
+}): Promise<{ pendingCart: PurchaseCart | null; metadata: unknown }> {
+  const pendingCart = readPurchaseCart(input.metadata);
+  if (!pendingCart) return { pendingCart: null, metadata: input.metadata };
+  const discardReason = getPurchaseCartDiscardReason(pendingCart, input.serviceCode);
+  if (!discardReason) return { pendingCart, metadata: input.metadata };
+
+  const metadata = withoutPurchaseCart(input.metadata, { reason: discardReason });
+  const discarded = await db.shipment.updateMany({
+    where: { id: input.shipmentId, externalShipmentId: null, purchaseState: null },
+    data: { providerMetadata: metadata as Prisma.InputJsonValue },
+  });
+  if (discarded.count !== 1) throw purchaseClaimConflict();
+  logger.warn(
+    {
+      event: "shipment.purchase_cart_discarded",
+      sellerOrderId: input.sellerOrderId,
+      cartItemId: pendingCart.cartItemId,
+      reason: discardReason,
+    },
+    "Stored Melhor Envio cart item can no longer be paid; a new one will be created",
+  );
+  return { pendingCart: null, metadata };
+}
+
+function buildPurchaseQuoteInput(input: {
+  sellerOrderId: string;
+  sellerOrder: SellerOrderForFulfillment;
+  shipment: ShipmentRecord;
+  serviceCode: string;
+  products: ShippingProduct[];
+  accessToken: string;
+}): Parameters<typeof quotePurchaseVolumes>[0] {
+  return {
+    sellerOrderId: input.sellerOrderId,
+    fromPostalCode: input.sellerOrder.store?.originPostalCode ?? "",
+    toPostalCode: input.sellerOrder.order.shippingAddress?.postalCode ?? "",
+    products: input.products,
+    serviceCode: input.serviceCode,
+    contractedCarrier: input.shipment.carrier,
+    contractedPriceInCents: input.shipment.priceInCents,
+    accessToken: input.accessToken,
+  };
+}
+
+/** Reserva a compra; se outra requisição já concluiu a compra, devolve o envio comprado. */
+async function claimShipmentPurchase(shipmentId: string) {
+  const claim = await db.shipment.updateMany({
+    where: { id: shipmentId, externalShipmentId: null, purchaseState: null },
+    data: { purchaseState: "IN_PROGRESS", purchaseError: null },
+  });
+  if (claim.count === 1) return null;
+
+  const current = await db.shipment.findUnique({ where: { id: shipmentId } });
+  if (current?.externalShipmentId) return current;
+  throw purchaseClaimConflict();
+}
+
+async function checkoutPurchaseCart(input: {
+  shipmentId: string;
+  sellerOrderId: string;
+  cartItemId: string;
+  metadata: unknown;
+  accessToken: string;
+}) {
+  try {
+    return await melhorEnvioProvider.checkoutCart(input.cartItemId, input.accessToken);
+  } catch (error) {
+    await recordPurchaseFailure({
+      shipmentId: input.shipmentId,
+      sellerOrderId: input.sellerOrderId,
+      error,
+      metadata: input.metadata,
+      cartItemId: input.cartItemId,
+    });
+    throw error;
+  }
+}
+
+/**
+ * A chamada externa acontece fora da transação (AGENTS.md §36). O pedido pode ter sido
+ * cancelado enquanto isso: revalida o status com o registro travado antes de avançar o envio.
+ */
+async function persistPurchasedShipment(
+  input: FulfillSellerOrderInput,
+  shipmentId: string,
+  externalShipmentId: string,
+  purchasedMetadata: Record<string, unknown>,
+) {
   const outcome = await db.$transaction(async (tx) => {
     const currentStatus = await lockSellerOrderStatus(tx, input.sellerOrderId);
     if (!canRunShipmentOperation(currentStatus, "PURCHASE")) {
-      // A etiqueta já foi paga no provedor: guarda o id externo para estorno/cancelamento,
-      // sem marcar o envio como pronto nem alterar o status do pedido. Se o cancelamento já foi
-      // concluído, sinaliza a etiqueta para a fila de conferência do Admin.
       const updatedShipment = await tx.shipment.update({
-        where: { id: shipment.id },
-        data: {
-          externalShipmentId: result.externalShipmentId,
-          purchaseState: null,
-          purchaseError: STALE_PURCHASE_MESSAGE,
-          ...(currentStatus === "CANCELLED"
-            ? {
-                status: "CANCELLED" as const,
-                providerMetadata: withLabelCancellationFlag(purchasedMetadata, "PURCHASED_AFTER_CANCELLATION"),
-              }
-            : { providerMetadata: purchasedMetadata as Prisma.InputJsonValue }),
-        },
+        where: { id: shipmentId },
+        data: buildStalePurchaseData(currentStatus, externalShipmentId, purchasedMetadata),
       });
       return { shipment: updatedShipment, staleStatus: currentStatus };
     }
     const updatedShipment = await tx.shipment.update({
-      where: { id: shipment.id },
+      where: { id: shipmentId },
       data: {
-        externalShipmentId: result.externalShipmentId,
+        externalShipmentId,
         status: "READY_TO_SHIP",
         purchaseState: null,
         purchaseError: null,
@@ -204,18 +267,40 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
     await syncFulfillmentStatuses(tx, input.sellerOrderId, "READY_TO_SHIP", input.actorUserId);
     return { shipment: updatedShipment, staleStatus: null };
   });
-  if (outcome.staleStatus) {
-    logger.error(
-      {
-        event: "shipment.purchased_for_inactive_order",
-        sellerOrderId: input.sellerOrderId,
-        status: outcome.staleStatus,
-      },
-      "Shipment was purchased after the seller order left the fulfillment flow; manual label cancellation required",
-    );
-    throw new ApplicationError({ code: "CONFLICT", message: STALE_PURCHASE_MESSAGE, statusCode: 409 });
-  }
-  return outcome.shipment;
+  if (!outcome.staleStatus) return outcome.shipment;
+
+  logger.error(
+    {
+      event: "shipment.purchased_for_inactive_order",
+      sellerOrderId: input.sellerOrderId,
+      status: outcome.staleStatus,
+    },
+    "Shipment was purchased after the seller order left the fulfillment flow; manual label cancellation required",
+  );
+  throw new ApplicationError({ code: "CONFLICT", message: STALE_PURCHASE_MESSAGE, statusCode: 409 });
+}
+
+/**
+ * A etiqueta já foi paga no provedor: guarda o id externo para estorno/cancelamento,
+ * sem marcar o envio como pronto nem alterar o status do pedido. Se o cancelamento já foi
+ * concluído, sinaliza a etiqueta para a fila de conferência do Admin.
+ */
+function buildStalePurchaseData(
+  currentStatus: SellerOrderStatus,
+  externalShipmentId: string,
+  purchasedMetadata: Record<string, unknown>,
+): Prisma.ShipmentUpdateInput {
+  return {
+    externalShipmentId,
+    purchaseState: null,
+    purchaseError: STALE_PURCHASE_MESSAGE,
+    ...(currentStatus === "CANCELLED"
+      ? {
+          status: "CANCELLED" as const,
+          providerMetadata: withLabelCancellationFlag(purchasedMetadata, "PURCHASED_AFTER_CANCELLATION"),
+        }
+      : { providerMetadata: purchasedMetadata as Prisma.InputJsonValue }),
+  };
 }
 
 async function addPurchaseCartItem(input: {
@@ -224,7 +309,7 @@ async function addPurchaseCartItem(input: {
   orderNumber: string;
   serviceCode: string;
   shipmentData: ReturnType<typeof buildShipmentData>;
-  quotedVolumes: { volumes: ShippingVolume[]; quotedPriceInCents: number } | null;
+  quotedVolumes: QuotedVolumes | null;
   tags: FulfillSellerOrderInput["tags"];
   accessToken: string;
   metadata: unknown;
@@ -289,7 +374,7 @@ async function quotePurchaseVolumes(input: {
   contractedCarrier: string;
   contractedPriceInCents: number;
   accessToken: string;
-}): Promise<{ volumes: ShippingVolume[]; quotedPriceInCents: number }> {
+}): Promise<QuotedVolumes> {
   const quotes = await melhorEnvioProvider.quote(
     {
       fromPostalCode: input.fromPostalCode,
@@ -412,57 +497,11 @@ async function resetCancelledShipmentForRepurchase(
   return db.$transaction(async (tx) => {
     const status = await lockSellerOrderStatus(tx, input.sellerOrderId);
     assertShipmentOperationAllowed(status, "PURCHASE");
-    await tx.$queryRaw`SELECT id FROM "shipments" WHERE id = ${shipmentId} FOR UPDATE`;
-    const current = await tx.shipment.findUnique({
-      where: { id: shipmentId },
-      select: {
-        status: true,
-        purchaseState: true,
-        externalShipmentId: true,
-        generationState: true,
-        trackingCode: true,
-        providerMetadata: true,
-      },
-    });
-    if (!current || current.status !== "CANCELLED" || current.purchaseState) {
-      throw new ApplicationError({
-        code: "CONFLICT",
-        message: "O envio foi atualizado por outra operação. Recarregue o pedido antes de tentar novamente.",
-        statusCode: 409,
-      });
-    }
-    if (hasLabelCancellationFlag(current.providerMetadata)) {
-      throw new ApplicationError({
-        code: "CONFLICT",
-        message: "A etiqueta anterior ainda precisa ter o cancelamento conferido no Melhor Envio.",
-        statusCode: 409,
-      });
-    }
-    const metadata = readProviderMetadata(current.providerMetadata);
-    const previousLabels = Array.isArray(metadata.previousLabels) ? metadata.previousLabels : [];
-    const archivedLabel = {
-      externalShipmentId: current.externalShipmentId,
-      generationState: current.generationState,
-      trackingCode: current.trackingCode,
-      archivedAt: new Date().toISOString(),
-    };
-    const resetMetadata = { previousLabels: [...previousLabels, archivedLabel] };
+    const current = await lockCancelledShipmentForRepurchase(tx, shipmentId);
+    const resetMetadata = archiveCurrentLabel(current);
     await tx.shipment.update({
       where: { id: shipmentId },
-      data: {
-        status: "PENDING",
-        externalShipmentId: null,
-        purchaseState: null,
-        purchaseError: null,
-        generationState: null,
-        generationError: null,
-        generatedAt: null,
-        trackingCode: null,
-        trackingUrl: null,
-        shippedAt: null,
-        deliveredAt: null,
-        providerMetadata: resetMetadata as Prisma.InputJsonValue,
-      },
+      data: buildRepurchaseResetData(resetMetadata),
     });
     await tx.auditLog.create({
       data: {
@@ -477,10 +516,95 @@ async function resetCancelledShipmentForRepurchase(
   });
 }
 
+async function lockCancelledShipmentForRepurchase(tx: Prisma.TransactionClient, shipmentId: string) {
+  await tx.$queryRaw`SELECT id FROM "shipments" WHERE id = ${shipmentId} FOR UPDATE`;
+  const current = await tx.shipment.findUnique({
+    where: { id: shipmentId },
+    select: {
+      status: true,
+      purchaseState: true,
+      externalShipmentId: true,
+      generationState: true,
+      trackingCode: true,
+      providerMetadata: true,
+    },
+  });
+  if (!current || current.status !== "CANCELLED" || current.purchaseState) {
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "O envio foi atualizado por outra operação. Recarregue o pedido antes de tentar novamente.",
+      statusCode: 409,
+    });
+  }
+  if (hasLabelCancellationFlag(current.providerMetadata)) {
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "A etiqueta anterior ainda precisa ter o cancelamento conferido no Melhor Envio.",
+      statusCode: 409,
+    });
+  }
+
+  return current;
+}
+
+function archiveCurrentLabel(
+  current: Awaited<ReturnType<typeof lockCancelledShipmentForRepurchase>>,
+): Record<string, unknown> {
+  const metadata = readProviderMetadata(current.providerMetadata);
+  const previousLabels = Array.isArray(metadata.previousLabels) ? metadata.previousLabels : [];
+  const archivedLabel = {
+    externalShipmentId: current.externalShipmentId,
+    generationState: current.generationState,
+    trackingCode: current.trackingCode,
+    archivedAt: new Date().toISOString(),
+  };
+  return { previousLabels: [...previousLabels, archivedLabel] };
+}
+
+function buildRepurchaseResetData(resetMetadata: Record<string, unknown>): Prisma.ShipmentUpdateInput {
+  return {
+    status: "PENDING",
+    externalShipmentId: null,
+    purchaseState: null,
+    purchaseError: null,
+    generationState: null,
+    generationError: null,
+    generatedAt: null,
+    trackingCode: null,
+    trackingUrl: null,
+    shippedAt: null,
+    deliveredAt: null,
+    providerMetadata: resetMetadata as Prisma.InputJsonValue,
+  };
+}
+
 export async function generateSellerOrderShipment(sellerOrderId: string, sellerId: string, actorUserId: string) {
   const { shipment, status } = await getShipment(sellerOrderId, sellerId);
   assertIntegratedShipment(shipment.provider);
   assertShipmentOperationAllowed(status, "GENERATE");
+  const externalShipmentId = requirePurchasedLabel(shipment);
+  if (shipment.generationState === "GENERATED") return shipment;
+  assertNoGenerationInFlight(shipment.generationState);
+
+  const accessToken = await requireSellerShippingToken(sellerId, ["shipping-generate"]);
+  const alreadyGenerated = await claimShipmentGeneration(shipment.id, externalShipmentId);
+  if (alreadyGenerated) return alreadyGenerated;
+
+  const result = await requestShipmentGeneration({
+    shipmentId: shipment.id,
+    sellerOrderId,
+    externalShipmentId,
+    accessToken,
+  });
+  return persistGeneratedShipment({
+    shipmentId: shipment.id,
+    sellerOrderId,
+    actorUserId,
+    providerMetadata: result.providerMetadata,
+  });
+}
+
+function requirePurchasedLabel(shipment: ShipmentRecord): string {
   if (!shipment.externalShipmentId)
     throw new ApplicationError({ code: "CONFLICT", message: "A etiqueta ainda não foi comprada." });
   if (shipment.status === "CANCELLED")
@@ -489,105 +613,137 @@ export async function generateSellerOrderShipment(sellerOrderId: string, sellerI
       message: "A etiqueta foi cancelada. Compre uma nova etiqueta antes de gerar.",
       statusCode: 409,
     });
-  if (shipment.generationState === "GENERATED") return shipment;
-  if (shipment.generationState) {
-    throw new ApplicationError({
-      code: "CONFLICT",
-      message:
-        shipment.generationState === "IN_PROGRESS"
-          ? "A geração da etiqueta já foi iniciada. Aguarde antes de tentar novamente."
-          : "O resultado da geração é incerto. Peça a conferência administrativa antes de tentar novamente.",
-      statusCode: 409,
-    });
-  }
 
-  const accessToken = await requireSellerShippingToken(sellerId, ["shipping-generate"]);
+  return shipment.externalShipmentId;
+}
+
+function assertNoGenerationInFlight(generationState: ShipmentRecord["generationState"]) {
+  if (!generationState) return;
+  throw new ApplicationError({
+    code: "CONFLICT",
+    message:
+      generationState === "IN_PROGRESS"
+        ? "A geração da etiqueta já foi iniciada. Aguarde antes de tentar novamente."
+        : "O resultado da geração é incerto. Peça a conferência administrativa antes de tentar novamente.",
+    statusCode: 409,
+  });
+}
+
+/** Reserva a geração; se outra requisição já gerou a etiqueta, devolve o envio gerado. */
+async function claimShipmentGeneration(shipmentId: string, externalShipmentId: string) {
   const claim = await db.shipment.updateMany({
-    where: { id: shipment.id, externalShipmentId: shipment.externalShipmentId, generationState: null },
+    where: { id: shipmentId, externalShipmentId, generationState: null },
     data: { generationState: "IN_PROGRESS", generationError: null },
   });
-  if (claim.count !== 1) {
-    const current = await db.shipment.findUnique({ where: { id: shipment.id } });
-    if (current?.generationState === "GENERATED") return current;
-    throw new ApplicationError({
-      code: "CONFLICT",
-      message: "A geração da etiqueta já está em andamento ou precisa de conferência administrativa.",
-      statusCode: 409,
-    });
-  }
+  if (claim.count === 1) return null;
 
-  let result: Awaited<ReturnType<typeof melhorEnvioProvider.generateShipment>>;
+  const current = await db.shipment.findUnique({ where: { id: shipmentId } });
+  if (current?.generationState === "GENERATED") return current;
+  throw new ApplicationError({
+    code: "CONFLICT",
+    message: "A geração da etiqueta já está em andamento ou precisa de conferência administrativa.",
+    statusCode: 409,
+  });
+}
+
+async function requestShipmentGeneration(input: {
+  shipmentId: string;
+  sellerOrderId: string;
+  externalShipmentId: string;
+  accessToken: string;
+}) {
   try {
-    result = await melhorEnvioProvider.generateShipment(shipment.externalShipmentId, accessToken);
+    return await melhorEnvioProvider.generateShipment(input.externalShipmentId, input.accessToken);
   } catch (error) {
-    if (isDefinitiveProviderRejection(error)) {
-      await db.shipment.updateMany({
-        where: { id: shipment.id, generationState: "IN_PROGRESS" },
-        data: { generationState: null, generationError: error.message },
-      });
-      logger.warn(
-        { event: "shipment.generation_rejected", sellerOrderId, providerStatus: error.providerStatus },
-        "Shipping provider rejected the label generation; retry released",
-      );
-      throw error;
-    }
-    await db.shipment.updateMany({
-      where: { id: shipment.id, generationState: "IN_PROGRESS" },
-      data: {
-        generationState: "OUTCOME_UNKNOWN",
-        generationError: "O provedor não confirmou a geração; confira antes de tentar novamente.",
-      },
-    });
-    logger.error(
-      {
-        event: "shipment.generation_outcome_unknown",
-        sellerOrderId,
-        errorName: error instanceof Error ? error.name : "UnknownError",
-      },
-      "Shipment generation outcome is unknown; automatic retry is blocked",
-    );
+    await recordGenerationFailure(input.shipmentId, input.sellerOrderId, error);
     throw error;
   }
+}
+
+/**
+ * Recusa explícita (4xx exceto 408/409/429) libera nova tentativa; demais falhas deixam o
+ * resultado incerto e bloqueiam novas tentativas até a conferência administrativa.
+ */
+async function recordGenerationFailure(shipmentId: string, sellerOrderId: string, error: unknown) {
+  const where = { id: shipmentId, generationState: "IN_PROGRESS" as const };
+  if (isDefinitiveProviderRejection(error)) {
+    await db.shipment.updateMany({ where, data: { generationState: null, generationError: error.message } });
+    logger.warn(
+      { event: "shipment.generation_rejected", sellerOrderId, providerStatus: error.providerStatus },
+      "Shipping provider rejected the label generation; retry released",
+    );
+    return;
+  }
+  await db.shipment.updateMany({
+    where,
+    data: {
+      generationState: "OUTCOME_UNKNOWN",
+      generationError: "O provedor não confirmou a geração; confira antes de tentar novamente.",
+    },
+  });
+  logger.error(
+    {
+      event: "shipment.generation_outcome_unknown",
+      sellerOrderId,
+      errorName: error instanceof Error ? error.name : "UnknownError",
+    },
+    "Shipment generation outcome is unknown; automatic retry is blocked",
+  );
+}
+
+async function persistGeneratedShipment(input: {
+  shipmentId: string;
+  sellerOrderId: string;
+  actorUserId: string;
+  providerMetadata: Record<string, unknown>;
+}) {
+  const where = { id: input.shipmentId, generationState: "IN_PROGRESS" as const };
   const outcome = await db.$transaction(async (tx) => {
-    const currentStatus = await lockSellerOrderStatus(tx, sellerOrderId);
+    const currentStatus = await lockSellerOrderStatus(tx, input.sellerOrderId);
     if (!canRunShipmentOperation(currentStatus, "GENERATE")) {
       const updatedShipment = await tx.shipment.update({
-        where: { id: shipment.id, generationState: "IN_PROGRESS" },
-        data: {
-          generationState: "GENERATED",
-          generatedAt: new Date(),
-          generationError: STALE_GENERATION_MESSAGE,
-          ...(currentStatus === "CANCELLED"
-            ? {
-                status: "CANCELLED" as const,
-                providerMetadata: withLabelCancellationFlag(result.providerMetadata, "GENERATED_AFTER_CANCELLATION"),
-              }
-            : { providerMetadata: result.providerMetadata as Prisma.InputJsonValue }),
-        },
+        where,
+        data: buildStaleGenerationData(currentStatus, input.providerMetadata),
       });
       return { updatedShipment, staleStatus: currentStatus };
     }
     const updatedShipment = await tx.shipment.update({
-      where: { id: shipment.id, generationState: "IN_PROGRESS" },
+      where,
       data: {
         status: "READY_TO_SHIP",
         generationState: "GENERATED",
         generatedAt: new Date(),
         generationError: null,
-        providerMetadata: result.providerMetadata as Prisma.InputJsonValue,
+        providerMetadata: input.providerMetadata as Prisma.InputJsonValue,
       },
     });
-    await syncFulfillmentStatuses(tx, sellerOrderId, "READY_TO_SHIP", actorUserId);
+    await syncFulfillmentStatuses(tx, input.sellerOrderId, "READY_TO_SHIP", input.actorUserId);
     return { updatedShipment, staleStatus: null };
   });
-  if (outcome.staleStatus) {
-    logger.error(
-      { event: "shipment.generated_for_inactive_order", sellerOrderId, status: outcome.staleStatus },
-      "Shipment label was generated after the seller order left the fulfillment flow",
-    );
-    throw new ApplicationError({ code: "CONFLICT", message: STALE_GENERATION_MESSAGE, statusCode: 409 });
-  }
-  return outcome.updatedShipment;
+  if (!outcome.staleStatus) return outcome.updatedShipment;
+
+  logger.error(
+    { event: "shipment.generated_for_inactive_order", sellerOrderId: input.sellerOrderId, status: outcome.staleStatus },
+    "Shipment label was generated after the seller order left the fulfillment flow",
+  );
+  throw new ApplicationError({ code: "CONFLICT", message: STALE_GENERATION_MESSAGE, statusCode: 409 });
+}
+
+function buildStaleGenerationData(
+  currentStatus: SellerOrderStatus,
+  providerMetadata: Record<string, unknown>,
+): Prisma.ShipmentUpdateInput {
+  return {
+    generationState: "GENERATED",
+    generatedAt: new Date(),
+    generationError: STALE_GENERATION_MESSAGE,
+    ...(currentStatus === "CANCELLED"
+      ? {
+          status: "CANCELLED" as const,
+          providerMetadata: withLabelCancellationFlag(providerMetadata, "GENERATED_AFTER_CANCELLATION"),
+        }
+      : { providerMetadata: providerMetadata as Prisma.InputJsonValue }),
+  };
 }
 
 export async function refreshSellerOrderTracking(sellerOrderId: string, sellerId: string, actorUserId: string) {

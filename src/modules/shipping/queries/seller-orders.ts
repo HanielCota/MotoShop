@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
 import { parseDateFilter } from "@/lib/date-filter";
 
@@ -9,54 +10,21 @@ type SellerOrderFilterStatus = (typeof sellerOrderStatusValues)[number];
 type ShipmentFilterStatus = (typeof shipmentStatusValues)[number];
 type SellerOrderSort = (typeof sellerOrderSortValues)[number];
 
-export async function listSellerOrders(
-  sellerId: string,
-  input: {
-    q?: string | null;
-    from?: string | null;
-    to?: string | null;
-    sort: SellerOrderSort;
-    status: SellerOrderFilterStatus;
-    shipmentStatus: ShipmentFilterStatus;
-    page: number;
-  },
-) {
-  const pageSize = 20;
+type SellerOrderListInput = {
+  q?: string | null;
+  from?: string | null;
+  to?: string | null;
+  sort: SellerOrderSort;
+  status: SellerOrderFilterStatus;
+  shipmentStatus: ShipmentFilterStatus;
+  page: number;
+};
+
+const pageSize = 20;
+
+export async function listSellerOrders(sellerId: string, input: SellerOrderListInput) {
   const page = Math.max(input.page, 1);
-  const query = input.q?.trim();
-  const from = parseDateFilter(input.from, false);
-  const to = parseDateFilter(input.to, true);
-  const where = {
-    sellerId,
-    ...(from || to ? { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) } } : {}),
-    ...(input.status !== "ALL" ? { status: input.status } : {}),
-    ...(input.shipmentStatus !== "ALL" ? { shipment: { status: input.shipmentStatus } } : {}),
-    ...(query
-      ? {
-          OR: [
-            {
-              order: {
-                OR: [
-                  { orderNumber: { contains: query, mode: "insensitive" as const } },
-                  { customerName: { contains: query, mode: "insensitive" as const } },
-                  { customerEmail: { contains: query, mode: "insensitive" as const } },
-                ],
-              },
-            },
-            {
-              items: {
-                some: {
-                  OR: [
-                    { productNameSnapshot: { contains: query, mode: "insensitive" as const } },
-                    { skuSnapshot: { contains: query, mode: "insensitive" as const } },
-                  ],
-                },
-              },
-            },
-          ],
-        }
-      : {}),
-  };
+  const where = buildSellerOrderWhere(sellerId, input);
   const [total, orders] = await Promise.all([
     db.sellerOrder.count({ where }),
     db.sellerOrder.findMany({
@@ -73,4 +41,41 @@ export async function listSellerOrders(
   ]);
   const pageCount = Math.max(Math.ceil(total / pageSize), 1);
   return { orders, total, page: Math.min(page, pageCount), pageCount };
+}
+
+/** O `sellerId` é sempre o primeiro filtro: os demais apenas restringem pedidos da própria loja. */
+function buildSellerOrderWhere(sellerId: string, input: SellerOrderListInput) {
+  const query = input.q?.trim();
+  return {
+    sellerId,
+    ...buildCreatedAtFilter(input.from, input.to),
+    ...(input.status !== "ALL" ? { status: input.status } : {}),
+    ...(input.shipmentStatus !== "ALL" ? { shipment: { status: input.shipmentStatus } } : {}),
+    ...(query ? { OR: buildSellerOrderSearch(query) } : {}),
+  } satisfies Prisma.SellerOrderWhereInput;
+}
+
+function buildCreatedAtFilter(fromValue: string | null | undefined, toValue: string | null | undefined) {
+  const from = parseDateFilter(fromValue, false);
+  const to = parseDateFilter(toValue, true);
+  if (!from && !to) return {};
+  return { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) } };
+}
+
+function buildSellerOrderSearch(query: string) {
+  const contains = { contains: query, mode: "insensitive" as const };
+  return [
+    {
+      order: {
+        OR: [{ orderNumber: contains }, { customerName: contains }, { customerEmail: contains }],
+      },
+    },
+    {
+      items: {
+        some: {
+          OR: [{ productNameSnapshot: contains }, { skuSnapshot: contains }],
+        },
+      },
+    },
+  ];
 }

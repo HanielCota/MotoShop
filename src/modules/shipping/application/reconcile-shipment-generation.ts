@@ -18,86 +18,36 @@ import {
 
 const generationClaimTimeoutMs = 5 * 60 * 1000;
 
-export async function reconcileShipmentGeneration(input: {
+type GenerationReconciliationInput = {
   shipmentId: string;
   actorUserId: string;
   confirmedOrderNumber: string;
   decision: "CONFIRMED_GENERATED" | "CONFIRMED_NOT_GENERATED";
-}): Promise<void> {
-  const shipment = await db.shipment.findUnique({
-    where: { id: input.shipmentId },
-    include: { sellerOrder: { select: { sellerId: true, order: { select: { orderNumber: true } } } } },
-  });
-  if (!shipment || shipment.provider !== "MELHOR_ENVIO" || !shipment.externalShipmentId) {
-    throw new ApplicationError({ code: "NOT_FOUND", message: "Geração de etiqueta não encontrada." });
-  }
-  if (!shipment.generationState || shipment.generationState === "GENERATED") {
-    throw new ApplicationError({
-      code: "CONFLICT",
-      message: "Esta tentativa não está aguardando reconciliação.",
-      statusCode: 409,
-    });
-  }
-  if (input.confirmedOrderNumber !== shipment.sellerOrder.order.orderNumber) {
-    throw new ApplicationError({
-      code: "VALIDATION_ERROR",
-      message: "Digite exatamente o número do pedido exibido para confirmar a conferência.",
-    });
-  }
+};
 
+type GenerationAwaitingReconciliation = Awaited<ReturnType<typeof findGenerationAwaitingReconciliation>>;
+
+type GenerationReconciliationUpdate = {
+  data: Prisma.ShipmentUpdateManyMutationInput;
+  syncStatus: ShipmentStatus | null;
+  staleSellerOrderStatus: string | null;
+};
+
+export async function reconcileShipmentGeneration(input: GenerationReconciliationInput): Promise<void> {
+  const shipment = await findGenerationAwaitingReconciliation(input);
   const now = new Date();
-  const staleCutoff = new Date(now.getTime() - generationClaimTimeoutMs);
-  if (shipment.generationState === "IN_PROGRESS" && shipment.updatedAt > staleCutoff) {
-    throw new ApplicationError({
-      code: "CONFLICT",
-      message: "A chamada ainda pode estar em andamento. Aguarde cinco minutos antes de reconciliar.",
-      statusCode: 409,
-    });
-  }
-
+  const staleCutoff = assertGenerationClaimExpired(shipment, now);
   if (input.decision === "CONFIRMED_GENERATED") {
-    const accessToken = await getSellerMelhorEnvioAccessTokenWithScopes(shipment.sellerOrder.sellerId, ["orders-read"]);
-    if (!accessToken) {
-      throw new ApplicationError({
-        code: "CONFIGURATION_ERROR",
-        message: "A loja precisa reconectar o Melhor Envio antes de conferir esta etiqueta.",
-        statusCode: 409,
-      });
-    }
-    await melhorEnvioProvider.getShipmentDetails(shipment.externalShipmentId, accessToken);
+    await assertGeneratedShipmentReadable(shipment.sellerOrder.sellerId, shipment.externalShipmentId);
   }
 
   await db.$transaction(async (tx) => {
-    let data: Prisma.ShipmentUpdateManyMutationInput = {
-      generationState: null,
-      generatedAt: null,
-      generationError: null,
-    };
-    let syncStatus: ShipmentStatus | null = null;
-    let staleSellerOrderStatus: string | null = null;
-
-    if (input.decision === "CONFIRMED_GENERATED") {
-      // Mesmo travamento/revalidação da geração normal antes de avançar o envio.
-      const sellerOrderStatus = await lockSellerOrderStatus(tx, shipment.sellerOrderId);
-      await tx.$queryRaw`SELECT id FROM "shipments" WHERE id = ${shipment.id} FOR UPDATE`;
-      const current = await tx.shipment.findUnique({
-        where: { id: shipment.id },
-        select: { status: true, providerMetadata: true },
-      });
-      if (!current) throw new ApplicationError({ code: "NOT_FOUND", message: "Geração de etiqueta não encontrada." });
-
-      ({ data, syncStatus, staleSellerOrderStatus } = confirmedGenerationUpdate(sellerOrderStatus, current, now));
-    }
-
+    const { data, syncStatus, staleSellerOrderStatus } =
+      input.decision === "CONFIRMED_GENERATED"
+        ? await lockAndBuildConfirmedGenerationUpdate(tx, shipment, now)
+        : releasedGenerationUpdate();
     const updated = await tx.shipment.updateMany({
-      where: {
-        id: shipment.id,
-        provider: "MELHOR_ENVIO",
-        externalShipmentId: shipment.externalShipmentId,
-        ...(shipment.generationState === "OUTCOME_UNKNOWN"
-          ? { generationState: "OUTCOME_UNKNOWN" }
-          : { generationState: "IN_PROGRESS", updatedAt: { lte: staleCutoff } }),
-      },
+      where: buildGenerationReconciliationWhere(shipment, staleCutoff),
       data,
     });
     if (updated.count !== 1)
@@ -120,15 +70,101 @@ export async function reconcileShipmentGeneration(input: {
   });
 }
 
+async function findGenerationAwaitingReconciliation(input: GenerationReconciliationInput) {
+  const shipment = await db.shipment.findUnique({
+    where: { id: input.shipmentId },
+    include: { sellerOrder: { select: { sellerId: true, order: { select: { orderNumber: true } } } } },
+  });
+  if (!shipment || shipment.provider !== "MELHOR_ENVIO" || !shipment.externalShipmentId) {
+    throw new ApplicationError({ code: "NOT_FOUND", message: "Geração de etiqueta não encontrada." });
+  }
+  if (!shipment.generationState || shipment.generationState === "GENERATED") {
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "Esta tentativa não está aguardando reconciliação.",
+      statusCode: 409,
+    });
+  }
+  if (input.confirmedOrderNumber !== shipment.sellerOrder.order.orderNumber) {
+    throw new ApplicationError({
+      code: "VALIDATION_ERROR",
+      message: "Digite exatamente o número do pedido exibido para confirmar a conferência.",
+    });
+  }
+
+  return { ...shipment, externalShipmentId: shipment.externalShipmentId, generationState: shipment.generationState };
+}
+
+/** Uma geração `IN_PROGRESS` só pode ser reconciliada depois do tempo limite da chamada. */
+function assertGenerationClaimExpired(shipment: { generationState: string; updatedAt: Date }, now: Date): Date {
+  const staleCutoff = new Date(now.getTime() - generationClaimTimeoutMs);
+  if (shipment.generationState === "IN_PROGRESS" && shipment.updatedAt > staleCutoff) {
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "A chamada ainda pode estar em andamento. Aguarde cinco minutos antes de reconciliar.",
+      statusCode: 409,
+    });
+  }
+
+  return staleCutoff;
+}
+
+async function assertGeneratedShipmentReadable(sellerId: string, externalShipmentId: string): Promise<void> {
+  const accessToken = await getSellerMelhorEnvioAccessTokenWithScopes(sellerId, ["orders-read"]);
+  if (!accessToken) {
+    throw new ApplicationError({
+      code: "CONFIGURATION_ERROR",
+      message: "A loja precisa reconectar o Melhor Envio antes de conferir esta etiqueta.",
+      statusCode: 409,
+    });
+  }
+  await melhorEnvioProvider.getShipmentDetails(externalShipmentId, accessToken);
+}
+
+function releasedGenerationUpdate(): GenerationReconciliationUpdate {
+  return {
+    data: { generationState: null, generatedAt: null, generationError: null },
+    syncStatus: null,
+    staleSellerOrderStatus: null,
+  };
+}
+
+/** Mesmo travamento/revalidação da geração normal antes de avançar o envio. */
+async function lockAndBuildConfirmedGenerationUpdate(
+  tx: Prisma.TransactionClient,
+  shipment: GenerationAwaitingReconciliation,
+  now: Date,
+): Promise<GenerationReconciliationUpdate> {
+  const sellerOrderStatus = await lockSellerOrderStatus(tx, shipment.sellerOrderId);
+  await tx.$queryRaw`SELECT id FROM "shipments" WHERE id = ${shipment.id} FOR UPDATE`;
+  const current = await tx.shipment.findUnique({
+    where: { id: shipment.id },
+    select: { status: true, providerMetadata: true },
+  });
+  if (!current) throw new ApplicationError({ code: "NOT_FOUND", message: "Geração de etiqueta não encontrada." });
+
+  return confirmedGenerationUpdate(sellerOrderStatus, current, now);
+}
+
+function buildGenerationReconciliationWhere(
+  shipment: GenerationAwaitingReconciliation,
+  staleCutoff: Date,
+): Prisma.ShipmentWhereInput {
+  return {
+    id: shipment.id,
+    provider: "MELHOR_ENVIO",
+    externalShipmentId: shipment.externalShipmentId,
+    ...(shipment.generationState === "OUTCOME_UNKNOWN"
+      ? { generationState: "OUTCOME_UNKNOWN" }
+      : { generationState: "IN_PROGRESS", updatedAt: { lte: staleCutoff } }),
+  };
+}
+
 function confirmedGenerationUpdate(
   sellerOrderStatus: Awaited<ReturnType<typeof lockSellerOrderStatus>>,
   current: { status: ShipmentStatus; providerMetadata: Parameters<typeof readProviderMetadata>[0] },
   now: Date,
-): {
-  data: Prisma.ShipmentUpdateManyMutationInput;
-  syncStatus: ShipmentStatus | null;
-  staleSellerOrderStatus: string | null;
-} {
+): GenerationReconciliationUpdate {
   if (canRunShipmentOperation(sellerOrderStatus, "GENERATE")) {
     const status = resolveShipmentStatus(current.status, "READY_TO_SHIP");
     return {

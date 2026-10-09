@@ -133,85 +133,111 @@ export async function getSellerMelhorEnvioAccessToken(
   if (integration.accessTokenExpiresAt.getTime() > refreshBefore) {
     return decryptToken(integration.accessTokenEncrypted);
   }
-  if (integration.refreshTokenExpiresAt.getTime() <= Date.now()) {
-    throw new ApplicationError({
-      code: "CONFIGURATION_ERROR",
-      message: "A autorização do Melhor Envio expirou. Reconecte a conta da loja.",
-      statusCode: 409,
-    });
-  }
+  assertRefreshTokenNotExpired(integration.refreshTokenExpiresAt);
 
+  const leaseAcquired = await acquireRefreshLease(integration.id);
+  if (!leaseAcquired) return waitForConcurrentRefresh(sellerId, refreshBefore);
+
+  return refreshAccessTokenWithLease({ integrationId: integration.id, sellerId, refreshBefore, oauth });
+}
+
+type OAuthConfig = ReturnType<typeof requireOAuthConfig>;
+
+function assertRefreshTokenNotExpired(refreshTokenExpiresAt: Date): void {
+  if (refreshTokenExpiresAt.getTime() > Date.now()) return;
+  throw new ApplicationError({
+    code: "CONFIGURATION_ERROR",
+    message: "A autorização do Melhor Envio expirou. Reconecte a conta da loja.",
+    statusCode: 409,
+  });
+}
+
+async function acquireRefreshLease(integrationId: string): Promise<boolean> {
   const leaseUntil = new Date(Date.now() + 20_000);
   const lease = await db.sellerShippingIntegration.updateMany({
     where: {
-      id: integration.id,
+      id: integrationId,
       OR: [{ refreshLeaseUntil: null }, { refreshLeaseUntil: { lte: new Date() } }],
     },
     data: { refreshLeaseUntil: leaseUntil },
   });
-  if (lease.count === 0) {
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 250));
-      const updated = await db.sellerShippingIntegration.findUnique({ where: { sellerId } });
-      if (!updated) return null;
-      if (updated.accessTokenExpiresAt.getTime() > refreshBefore) return decryptToken(updated.accessTokenEncrypted);
-      if (!updated.refreshLeaseUntil || updated.refreshLeaseUntil.getTime() <= Date.now()) break;
-    }
-    throw new ApplicationError({
-      code: "CONFLICT",
-      message: "A renovação do acesso ao Melhor Envio está em andamento. Tente novamente em instantes.",
-      statusCode: 503,
-    });
-  }
+  return lease.count !== 0;
+}
 
+/** Outra requisição detém o lease: aguarda o token renovado por ela, sem renovar em paralelo. */
+async function waitForConcurrentRefresh(sellerId: string, refreshBefore: number): Promise<string | null> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const updated = await db.sellerShippingIntegration.findUnique({ where: { sellerId } });
+    if (!updated) return null;
+    if (updated.accessTokenExpiresAt.getTime() > refreshBefore) return decryptToken(updated.accessTokenEncrypted);
+    if (!updated.refreshLeaseUntil || updated.refreshLeaseUntil.getTime() <= Date.now()) break;
+  }
+  throw new ApplicationError({
+    code: "CONFLICT",
+    message: "A renovação do acesso ao Melhor Envio está em andamento. Tente novamente em instantes.",
+    statusCode: 503,
+  });
+}
+
+async function refreshAccessTokenWithLease(input: {
+  integrationId: string;
+  sellerId: string;
+  refreshBefore: number;
+  oauth: OAuthConfig;
+}): Promise<string | null> {
   try {
     // Outra requisição pode ter renovado o token entre a leitura inicial e a obtenção do lease:
     // relê a integração para não gastar (e invalidar) o refresh token já rotacionado.
-    const current = await db.sellerShippingIntegration.findUnique({ where: { sellerId } });
+    const current = await db.sellerShippingIntegration.findUnique({ where: { sellerId: input.sellerId } });
     if (!current) {
-      await releaseRefreshLease(integration.id, sellerId);
+      await releaseRefreshLease(input.integrationId, input.sellerId);
       return null;
     }
-    if (current.accessTokenExpiresAt.getTime() > refreshBefore) {
-      await releaseRefreshLease(integration.id, sellerId);
+    if (current.accessTokenExpiresAt.getTime() > input.refreshBefore) {
+      await releaseRefreshLease(input.integrationId, input.sellerId);
       return decryptToken(current.accessTokenEncrypted);
     }
-    const refreshToken = decryptToken(current.refreshTokenEncrypted);
-    const response = await fetch(`${env.MELHOR_ENVIO_API_URL ?? DEFAULT_API_URL}/oauth/token`, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": env.MELHOR_ENVIO_USER_AGENT ?? "O Moto Shop (suporte@motoshopbrasil.com.br)",
-      },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        client_id: oauth.clientId,
-        client_secret: oauth.clientSecret,
-        refresh_token: refreshToken,
-      }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(15_000),
-    });
-    const raw: unknown = await response.json().catch(() => null);
-    const parsed = tokenResponseSchema.safeParse(raw);
-    if (!response.ok || !parsed.success) {
-      throw new ApplicationError({
-        code: "CONFLICT",
-        message: "Não foi possível renovar a conexão do Melhor Envio. Reconecte a conta da loja.",
-        statusCode: response.status >= 500 ? 502 : 409,
-      });
-    }
-    const data = toStoredTokenData(parsed.data);
+    const token = await requestRefreshedToken(input.oauth, decryptToken(current.refreshTokenEncrypted));
     await db.sellerShippingIntegration.update({
-      where: { id: integration.id },
-      data: { ...data, refreshLeaseUntil: null },
+      where: { id: input.integrationId },
+      data: { ...toStoredTokenData(token), refreshLeaseUntil: null },
     });
-    return parsed.data.access_token;
+    return token.access_token;
   } catch (error) {
-    await releaseRefreshLease(integration.id, sellerId);
+    await releaseRefreshLease(input.integrationId, input.sellerId);
     throw error;
   }
+}
+
+async function requestRefreshedToken(oauth: OAuthConfig, refreshToken: string) {
+  const response = await fetch(`${env.MELHOR_ENVIO_API_URL ?? DEFAULT_API_URL}/oauth/token`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/x-www-form-urlencoded",
+      "User-Agent": env.MELHOR_ENVIO_USER_AGENT ?? "O Moto Shop (suporte@motoshopbrasil.com.br)",
+    },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: oauth.clientId,
+      client_secret: oauth.clientSecret,
+      refresh_token: refreshToken,
+    }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
+  });
+  const raw: unknown = await response.json().catch(() => null);
+  const parsed = tokenResponseSchema.safeParse(raw);
+  if (!response.ok || !parsed.success) {
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "Não foi possível renovar a conexão do Melhor Envio. Reconecte a conta da loja.",
+      statusCode: response.status >= 500 ? 502 : 409,
+    });
+  }
+
+  return parsed.data;
 }
 
 async function releaseRefreshLease(integrationId: string, sellerId: string): Promise<void> {
