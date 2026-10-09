@@ -11,3 +11,11 @@ export function parseDateBoundary(value: string | null | undefined, endOfDay: bo
   if (endOfDay) date.setUTCDate(date.getUTCDate() + 1);
   return date;
 }
+
+/** Filtro `createdAt` com limites UTC: `from` inclusivo e `to` exclusivo no dia seguinte. */
+export function buildCreatedAtBoundaryFilter(fromValue: string | null | undefined, toValue: string | null | undefined) {
+  const from = parseDateBoundary(fromValue, false);
+  const to = parseDateBoundary(toValue, true);
+  if (!from && !to) return {};
+  return { createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lt: to } : {}) } };
+}

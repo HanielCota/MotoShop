@@ -23,60 +23,97 @@ const assetSchema = z.object({
 const uploadEndpoint = "https://upload.imagekit.io/api/v2/files/upload";
 const managementEndpoint = "https://api.imagekit.io/v1/files";
 
+const uploadContentTypeSchema = z.enum([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+]);
+
+type UploadContentType = z.infer<typeof uploadContentTypeSchema>;
+
+const expectedExtensionByContentType: Record<UploadContentType, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+};
+
+type UploadRequest = {
+  maxSizeInBytes: number;
+  contentType: UploadContentType;
+  expiresInSeconds: number;
+  separator: number;
+};
+
+/** Validates size, type, expiry and key in that order, so error precedence is stable. */
+function parseUploadRequest(input: CreateUploadUrlInput): UploadRequest {
+  const maxSizeInBytes = z
+    .number()
+    .int()
+    .positive()
+    .max(20 * 1024 * 1024)
+    .parse(input.maxSizeInBytes);
+  const contentType = uploadContentTypeSchema.parse(input.contentType);
+  const expiresInSeconds = z
+    .number()
+    .int()
+    .positive()
+    .max(3599)
+    .parse(input.expiresInSeconds ?? 300);
+  const separator = assertUploadKey(input.key, contentType);
+  return { maxSizeInBytes, contentType, expiresInSeconds, separator };
+}
+
+/** Returns the position of the last "/" that splits folder and file name. */
+function assertUploadKey(key: string, contentType: UploadContentType) {
+  const separator = key.lastIndexOf("/");
+  if (separator < 0 || !/^[a-zA-Z0-9_/-]+\/[a-zA-Z0-9_-]+\.(jpg|png|webp|mp4|webm|mov)$/.test(key))
+    throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Caminho de arquivo inválido." });
+  if (!key.endsWith(`.${expectedExtensionByContentType[contentType]}`))
+    throw new ApplicationError({
+      code: "VALIDATION_ERROR",
+      message: "A extensão não corresponde ao tipo do arquivo.",
+    });
+  return separator;
+}
+
+function buildUploadPayload(key: string, request: UploadRequest) {
+  return {
+    fileName: key.slice(request.separator + 1),
+    folder: `/${key.slice(0, request.separator)}`,
+    useUniqueFileName: false,
+    overwriteFile: false,
+    checks: `"file.mime" IN ["${request.contentType}"] AND "file.size" <= ${request.maxSizeInBytes}`,
+  };
+}
+
+/**
+ * V1 signs only token/expiry, allowing a client to change the destination or
+ * overwrite flag. V2 authenticates the upload parameters as well.
+ */
+function signUploadToken(config: { publicKey: string; privateKey: string }, claims: Record<string, unknown>) {
+  const encodedHeader = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT", kid: config.publicKey })).toString(
+    "base64url",
+  );
+  const encodedClaims = Buffer.from(JSON.stringify(claims)).toString("base64url");
+  const signingInput = `${encodedHeader}.${encodedClaims}`;
+  const signature = createHmac("sha256", config.privateKey).update(signingInput).digest("base64url");
+  return `${signingInput}.${signature}`;
+}
+
 export class ImageKitStorageProvider implements StorageProvider {
   async createUploadUrl(input: CreateUploadUrlInput): Promise<CreateUploadUrlResult> {
     const config = this.getConfig();
-    const maxSizeInBytes = z
-      .number()
-      .int()
-      .positive()
-      .max(20 * 1024 * 1024)
-      .parse(input.maxSizeInBytes);
-    const contentType = z
-      .enum(["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/quicktime"])
-      .parse(input.contentType);
-    const expectedExtensionByContentType: Record<typeof contentType, string> = {
-      "image/jpeg": "jpg",
-      "image/png": "png",
-      "image/webp": "webp",
-      "video/mp4": "mp4",
-      "video/webm": "webm",
-      "video/quicktime": "mov",
-    };
-    const expiresInSeconds = z
-      .number()
-      .int()
-      .positive()
-      .max(3599)
-      .parse(input.expiresInSeconds ?? 300);
+    const request = parseUploadRequest(input);
     const issuedAt = Math.floor(Date.now() / 1000);
-    const expire = issuedAt + expiresInSeconds;
-    const separator = input.key.lastIndexOf("/");
-    if (separator < 0 || !/^[a-zA-Z0-9_/-]+\/[a-zA-Z0-9_-]+\.(jpg|png|webp|mp4|webm|mov)$/.test(input.key))
-      throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Caminho de arquivo inválido." });
-    if (!input.key.endsWith(`.${expectedExtensionByContentType[contentType]}`))
-      throw new ApplicationError({
-        code: "VALIDATION_ERROR",
-        message: "A extensão não corresponde ao tipo do arquivo.",
-      });
-    const payload = {
-      fileName: input.key.slice(separator + 1),
-      folder: `/${input.key.slice(0, separator)}`,
-      useUniqueFileName: false,
-      overwriteFile: false,
-      checks: `"file.mime" IN ["${contentType}"] AND "file.size" <= ${maxSizeInBytes}`,
-    };
-    // V1 signs only token/expiry, allowing a client to change the destination or
-    // overwrite flag. V2 authenticates the upload parameters as well.
-    const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT", kid: config.publicKey })).toString(
-      "base64url",
-    );
-    const claims = Buffer.from(JSON.stringify({ ...payload, iat: issuedAt, exp: expire, jti: randomUUID() })).toString(
-      "base64url",
-    );
-    const signingInput = `${header}.${claims}`;
-    const signature = createHmac("sha256", config.privateKey).update(signingInput).digest("base64url");
-    const token = `${signingInput}.${signature}`;
+    const expire = issuedAt + request.expiresInSeconds;
+    const payload = buildUploadPayload(input.key, request);
+    const token = signUploadToken(config, { ...payload, iat: issuedAt, exp: expire, jti: randomUUID() });
 
     return {
       key: input.key,
