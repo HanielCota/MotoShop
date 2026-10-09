@@ -1520,6 +1520,16 @@ em entradas externas e validar.
 
 Não duplicar tipos que podem ser derivados de schemas quando isso reduzir inconsistência.
 
+## Padrões de código (regras do responsável)
+
+- **Nunca usar `else`.** Tratar o caso especial primeiro e retornar cedo; em laços, usar `continue`; quando os dois caminhos calculam um valor, usar ternário curto ou extrair uma função com retornos antecipados.
+- **Código assíncrono sempre com `async`/`await`.** Nada de `.then()`; o único `.catch` aceito é o fallback de uma linha sobre uma promessa aguardada (`await response.json().catch(() => ({}))`). Funções puras e síncronas (cálculo de preço, formatação, componentes de cliente, hooks) continuam síncronas: transformá-las em `async` mudaria o contrato e quebraria React.
+- **Preferir retorno antecipado (early return)** para validações, permissões e casos vazios, mantendo o caminho principal sem aninhamento.
+- **Sempre fazer null checks.** Não usar a afirmação de não nulo do TypeScript (`valor!`); checar explicitamente e retornar cedo, lançar um erro claro ou usar um valor padrão. Variáveis de ambiente obrigatórias são lidas por uma função que falha com mensagem quando faltam.
+- **Revisar espaçamento e indentação.** O Prettier define indentação e quebras; além dele, separar blocos lógicos (validação, consulta, efeito, retorno) com uma linha em branco e não deixar linhas em branco duplicadas.
+
+O ESLint aplica as três primeiras regras verificáveis (`no-restricted-syntax` para `else` e `.then()`, `@typescript-eslint/no-non-null-assertion`); `pnpm lint` falha se forem violadas.
+
 ---
 
 # 47. Naming

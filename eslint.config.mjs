@@ -5,6 +5,23 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // Regras de estilo do projeto (AGENTS.md, "Padrões de código").
+  {
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "IfStatement[alternate]",
+          message: "Não use else: retorne cedo (early return), use continue em laços ou extraia uma função.",
+        },
+        {
+          selector: "CallExpression[callee.property.name='then']",
+          message: "Use async/await em vez de .then().",
+        },
+      ],
+      "@typescript-eslint/no-non-null-assertion": "error",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
