@@ -32,6 +32,7 @@ import {
   viewerCartId,
   viewerSavedMotorcycleId,
 } from "./review-seed-ids";
+import { must } from "./must";
 
 // ---------------------------------------------------------------------------------------------
 // Tipos e utilitários
@@ -135,6 +136,11 @@ const BRAND = "#fe6900";
 const BRAND_STRONG = "#a63a0b";
 const FONT = "Arial, Helvetica, sans-serif";
 
+/** Picks an item from a non-empty list, wrapping the index around its length. */
+function cycle<T>(items: readonly T[], index: number): T {
+  return must(items[index % items.length], `item ${index} of a ${items.length}-item list`);
+}
+
 function escapeXml(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
@@ -146,7 +152,9 @@ function wrapText(text: string, maxChars: number, maxLines: number) {
     if (`${current} ${word}`.trim().length > maxChars && current) {
       lines.push(current);
       current = word;
-    } else current = `${current} ${word}`.trim();
+      continue;
+    }
+    current = `${current} ${word}`.trim();
   }
   if (current) lines.push(current);
   if (lines.length > maxLines) {
@@ -180,7 +188,7 @@ export async function renderProductImage(
   storageKey: string,
   input: { label: string; title: string; caption: string; variant: number },
 ) {
-  const background = PRODUCT_BACKGROUNDS[input.variant % PRODUCT_BACKGROUNDS.length]!;
+  const background = cycle(PRODUCT_BACKGROUNDS, input.variant);
   const text = background.dark ? "#fafaf9" : INK;
   const secondary = background.dark ? "#d6d3d1" : "#44403c";
   const muted = background.dark ? "#a8a29e" : "#78716c";
@@ -216,7 +224,7 @@ export async function renderStoreLogo(storageKey: string, storeName: string) {
     .split(/\s+/)
     .filter((word) => /^[A-Za-zÀ-ú0-9]/.test(word))
     .slice(0, 2)
-    .map((word) => word[0]!.toUpperCase())
+    .map((word) => word.charAt(0).toUpperCase())
     .join("");
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
   <rect width="400" height="400" fill="${INK}"/>
@@ -399,7 +407,7 @@ async function seedCatalog(input: ExpandedSeedInput) {
     for (const [optionIndex, option] of template.options.entries()) {
       const sku = `REVIEW-${SKU_PREFIX[template.store]}-${template.key.toUpperCase()}-${optionIndex + 1}`;
       const price = template.priceInCents + (template.priceSteps?.[optionIndex] ?? 0);
-      const stock = soldOut ? 0 : STOCK_PATTERN[(index * 3 + optionIndex) % STOCK_PATTERN.length]!;
+      const stock = soldOut ? 0 : cycle(STOCK_PATTERN, index * 3 + optionIndex);
       const attributes: Record<string, string> = template.color
         ? { cor: template.color, [template.axis]: option }
         : { [template.axis]: option };
@@ -468,16 +476,16 @@ async function seedCatalog(input: ExpandedSeedInput) {
           copyFileSync(join(process.cwd(), "public/images/demo", photo), target);
           return true;
         });
-      } else {
-        pendingImages.push(() =>
-          renderProductImage(storageKey, {
-            label: categoryLabels[template.categorySlug] ?? "Produto",
-            title: template.name,
-            caption: GALLERY_CAPTIONS[imageIndex] ?? "Foto",
-            variant: (index + imageIndex) % PRODUCT_BACKGROUNDS.length,
-          }),
-        );
+        continue;
       }
+      pendingImages.push(() =>
+        renderProductImage(storageKey, {
+          label: categoryLabels[template.categorySlug] ?? "Produto",
+          title: template.name,
+          caption: GALLERY_CAPTIONS[imageIndex] ?? "Foto",
+          variant: (index + imageIndex) % PRODUCT_BACKGROUNDS.length,
+        }),
+      );
     }
 
     if (template.fitment && fitments.length > 0) {
@@ -498,13 +506,19 @@ async function seedCatalog(input: ExpandedSeedInput) {
 
   // Segurança: nenhuma chave natural pode pertencer a linhas que não são deste seed.
   const conflictingProducts = await db.product.findMany({
-    where: { slug: { in: productRows.map((row) => row.slug) }, id: { notIn: productRows.map((row) => row.id!) } },
+    where: {
+      slug: { in: productRows.map((row) => row.slug) },
+      id: { notIn: productRows.map((row) => must(row.id, `product ${row.slug} id`)) },
+    },
     select: { slug: true },
   });
-  if (conflictingProducts.length > 0)
-    throw new Error(`Refusing to touch unrelated product ${conflictingProducts[0]!.slug}`);
+  const [conflictingProduct] = conflictingProducts;
+  if (conflictingProduct) throw new Error(`Refusing to touch unrelated product ${conflictingProduct.slug}`);
   const conflictingVariants = await db.productVariant.findMany({
-    where: { sku: { in: variantRows.map((row) => row.sku) }, id: { notIn: variantRows.map((row) => row.id!) } },
+    where: {
+      sku: { in: variantRows.map((row) => row.sku) },
+      id: { notIn: variantRows.map((row) => must(row.id, `variant ${row.sku} id`)) },
+    },
     select: { sku: true, sellerId: true },
   });
   const unsafeVariant = conflictingVariants.find((variant) =>
@@ -514,12 +528,12 @@ async function seedCatalog(input: ExpandedSeedInput) {
   const conflictingImages = await db.productImage.findMany({
     where: {
       storageKey: { in: imageRows.map((row) => row.storageKey) },
-      id: { notIn: imageRows.map((row) => row.id!) },
+      id: { notIn: imageRows.map((row) => must(row.id, `image ${row.storageKey} id`)) },
     },
     select: { storageKey: true },
   });
-  if (conflictingImages.length > 0)
-    throw new Error(`Image key ${conflictingImages[0]!.storageKey} belongs to another product`);
+  const [conflictingImage] = conflictingImages;
+  if (conflictingImage) throw new Error(`Image key ${conflictingImage.storageKey} belongs to another product`);
 
   let generatedFiles = 0;
   for (const render of pendingImages) if (await render()) generatedFiles += 1;
@@ -624,7 +638,9 @@ function allocate(total: number, weights: number[]) {
   const sum = weights.reduce((acc, weight) => acc + weight, 0);
   if (sum === 0 || total === 0) return weights.map(() => 0);
   const result = weights.map((weight) => Math.floor((total * weight) / sum));
-  result[result.length - 1]! += total - result.reduce((acc, value) => acc + value, 0);
+  const lastIndex = result.length - 1;
+  result[lastIndex] =
+    must(result[lastIndex], "last allocation") + (total - result.reduce((acc, value) => acc + value, 0));
   return result;
 }
 
@@ -726,7 +742,7 @@ function buildPlans(
         reviews: "most",
       });
     }
-    const extra = other[c % other.length]!;
+    const extra = cycle(other, c);
     plans.push({
       orderNumber: `MS-REVIEW-C${n}-${String(delivered + 1).padStart(4, "0")}`,
       daysAgo: extra.daysAgo,
@@ -758,7 +774,7 @@ function buildPlans(
     { status: "CANCELLED", store: "racing", daysAgo: 7, cancelledBeforePayment: true },
   ];
   for (const [index, entry] of guestStatuses.entries()) {
-    const guest = guestCustomers[index % guestCustomers.length]!;
+    const guest = cycle(guestCustomers, index);
     plans.push({
       orderNumber: `MS-REVIEW-G-${String(index + 1).padStart(4, "0")}`,
       daysAgo: entry.daysAgo,
@@ -993,7 +1009,7 @@ async function seedOrders(
     const couponApplied = Boolean(coupon) && discounts.some((value) => value > 0);
 
     const statuses = parts.map((p) => p.status);
-    const partTotals = parts.map((p, index) => p.subtotal - discounts[index]! + p.shipping.price);
+    const partTotals = parts.map((p, index) => p.subtotal - must(discounts[index], "part discount") + p.shipping.price);
     const itemsSubtotal = parts.reduce((sum, p) => sum + p.subtotal, 0);
     const discountTotal = discounts.reduce((sum, value) => sum + value, 0);
     const shippingTotal = parts.reduce((sum, p) => sum + p.shipping.price, 0);
@@ -1039,7 +1055,7 @@ async function seedOrders(
     let returnedItemId: string | null = null;
     for (const p of parts) {
       const sellerOrderId = reviewId("seller-order", `${plan.orderNumber}:${p.part.store}`);
-      const discount = discounts[p.partIndex]!;
+      const discount = must(discounts[p.partIndex], "part discount");
       const commissionInCents = input.commission(p.subtotal, p.store.commissionBps);
       const sellerFunded = coupon?.fundedBy === "SELLER" ? discount : 0;
       rows.sellerOrders.push({
@@ -1098,6 +1114,7 @@ async function seedOrders(
         const itemId = reviewId("order-item", `${plan.orderNumber}:${line.variant.sku}`);
         itemIds.push(itemId);
         const gross = line.variant.priceInCents * line.quantity;
+        const itemDiscount = must(itemDiscounts[lineIndex], "item discount");
         rows.items.push({
           id: itemId,
           sellerOrderId,
@@ -1114,8 +1131,8 @@ async function seedOrders(
           lengthInMillimetersSnapshot: line.variant.dimensions[2],
           unitPriceInCents: line.variant.priceInCents,
           quantity: line.quantity,
-          discountAmountInCents: itemDiscounts[lineIndex]!,
-          totalAmountInCents: gross - itemDiscounts[lineIndex]!,
+          discountAmountInCents: itemDiscount,
+          totalAmountInCents: gross - itemDiscount,
           createdAt: placedAt,
         });
 
@@ -1129,7 +1146,8 @@ async function seedOrders(
             at: clamp(plus(placedAt, 1)),
             type: "RESERVATION_RELEASE",
           });
-        else if (isPaid) events.push({ ...base, key: `${itemId}:SALE`, at: paidAt, type: "SALE" });
+        if (!plan.cancelledBeforePayment && isPaid)
+          events.push({ ...base, key: `${itemId}:SALE`, at: paidAt, type: "SALE" });
         if (p.partIndex === 0 && (plan.cancellation === "REFUNDED" || plan.cancellation === "APPROVED"))
           events.push({ ...base, key: `${itemId}:CANCELLATION`, at: clamp(plus(placedAt, 0.8)), type: "CANCELLATION" });
         if (p.partIndex === 0 && lineIndex === 0 && plan.returnStatus) {
@@ -1160,7 +1178,7 @@ async function seedOrders(
               : plan.cancellation === "REQUESTED"
                 ? null
                 : "Cancelamento aprovado antes do envio.",
-          amountInCents: partTotals[0]!,
+          amountInCents: must(partTotals[0], "first part total"),
           previousSellerOrderStatus: plan.cancellation === "REJECTED" ? "PROCESSING" : "PAID",
           orderId,
           sellerOrderId,
@@ -1172,7 +1190,7 @@ async function seedOrders(
       }
       if (p.partIndex === 0 && plan.returnStatus && deliveredAt && returnedItemId) {
         const id = reviewId("return", plan.orderNumber);
-        const line = p.lines[0]!;
+        const line = must(p.lines[0], "first order line");
         rows.returns.push({
           id,
           idempotencyKey: `review-return-${plan.orderNumber}`,
@@ -1183,7 +1201,7 @@ async function seedOrders(
             "Produto com defeito",
             "Não é compatível com a minha moto",
           ]),
-          amountInCents: line.variant.priceInCents * line.quantity - itemDiscounts[0]!,
+          amountInCents: line.variant.priceInCents * line.quantity - must(itemDiscounts[0], "first item discount"),
           customerMessage: "Recebi o produto, mas ele não atendeu ao que eu precisava. Envio fotos se necessário.",
           adminNote:
             plan.returnStatus === "REJECTED" ? "Produto com sinais de uso fora do prazo de arrependimento." : null,
@@ -1241,7 +1259,7 @@ async function seedOrders(
         let starSum = 0;
         let reviewed = 0;
         for (const [lineIndex, line] of p.lines.entries()) {
-          const itemId = itemIds[lineIndex]!;
+          const itemId = must(itemIds[lineIndex], "order item id");
           if (itemId === returnedItemId) continue;
           if (plan.reviews === "most" && reviewRng() > 0.93) continue;
           const roll = reviewRng();
@@ -1322,7 +1340,7 @@ async function seedOrders(
     });
     const refundAmount =
       plan.cancellation === "REFUNDED" || plan.cancellation === "APPROVED"
-        ? partTotals[0]!
+        ? must(partTotals[0], "first part total")
         : plan.returnStatus === "REFUNDED"
           ? (rows.returns.at(-1)?.amountInCents ?? 0)
           : 0;
@@ -1371,7 +1389,9 @@ async function seedOrders(
     ).map((inventory) => inventory.variantId),
   );
   const newOrderIds = new Set(
-    rows.orders.filter((order) => !existingByNumber.has(order.orderNumber)).map((order) => order.id!),
+    rows.orders
+      .filter((order) => !existingByNumber.has(order.orderNumber))
+      .map((order) => must(order.id, `order ${order.orderNumber} id`)),
   );
   const inventoryRows: Prisma.InventoryCreateManyInput[] = [];
   const movementRows: Prisma.InventoryMovementCreateManyInput[] = [];
@@ -1425,19 +1445,22 @@ async function seedOrders(
       });
     let available = start + buffer;
     let reservedNow = 0;
-    if (available > 0)
-      movement("initial", {
-        type: "MANUAL_IN",
-        quantityChange: available,
-        availableQuantityAfter: available,
-        reservedQuantityAfter: 0,
-        referenceType: "REVIEW_SEED",
-        referenceId: variant.productId,
-        reason: "Estoque inicial (dados de revisão)",
-        actorUserId: owner,
-        createdAt: variant.createdAt,
-      });
-    else {
+    const recordInitialStock = (quantity: number) => {
+      if (quantity > 0) {
+        movement("initial", {
+          type: "MANUAL_IN",
+          quantityChange: quantity,
+          availableQuantityAfter: quantity,
+          reservedQuantityAfter: 0,
+          referenceType: "REVIEW_SEED",
+          referenceId: variant.productId,
+          reason: "Estoque inicial (dados de revisão)",
+          actorUserId: owner,
+          createdAt: variant.createdAt,
+        });
+        return;
+      }
+
       movement("initial", {
         type: "MANUAL_IN",
         quantityChange: 2,
@@ -1460,7 +1483,8 @@ async function seedOrders(
         actorUserId: owner,
         createdAt: new Date(variant.createdAt.getTime() + 10 * DAY),
       });
-    }
+    };
+    recordInitialStock(available);
     let last = variant.createdAt;
     for (const event of variantEvents) {
       const effect = effects(event.type, event.quantity);
@@ -1604,8 +1628,8 @@ async function seedQuestions(
   const approved = catalog.products.filter((product) => product.approved);
   const rows: Prisma.ProductQuestionCreateManyInput[] = [];
   for (let q = 0; q < 60; q += 1) {
-    const product = approved[(q * 7) % approved.length]!;
-    const customer = extraCustomers[q % extraCustomers.length]!;
+    const product = cycle(approved, q * 7);
+    const customer = cycle(extraCustomers, q);
     const askedByUserId = customerIds.get(customer.email);
     if (!askedByUserId) continue;
     const sizeCategory = ["equipment-helmets", "equipment-boots", "apparel", "equipment"].includes(
@@ -1616,8 +1640,8 @@ async function seedQuestions(
     const createdAt = new Date(now.getTime() - (2 + ((q * 37) % 110)) * DAY);
     rows.push({
       id: reviewId("question", `${product.slug}:${q}`),
-      question: questionPool[kind][q % questionPool[kind].length]!,
-      answer: answered ? answerPool[kind][q % answerPool[kind].length]! : null,
+      question: cycle(questionPool[kind], q),
+      answer: answered ? cycle(answerPool[kind], q) : null,
       answeredAt: answered ? new Date(createdAt.getTime() + 0.6 * DAY) : null,
       productId: product.id,
       sellerId: stores[product.store].sellerId,
@@ -1853,7 +1877,7 @@ async function seedOperations(
       actor: adminUserId,
       action: "PUBLIC_CONTENT_HIDDEN",
       entityType: "ProductReview",
-      entityId: review.id!,
+      entityId: must(review.id, "hidden review id"),
       metadata: meta({ reason: "Linguagem inadequada" }),
       at: review.hiddenAt as Date,
     });
@@ -2082,7 +2106,7 @@ async function seedViewers(
       trackMany,
       "Favorite",
       [0, 6, 13, 21, 30]
-        .map((index) => approvedProducts[index % approvedProducts.length]!)
+        .map((index) => cycle(approvedProducts, index))
         .map((product) => ({
           id: reviewId("viewer-favorite", `${viewer.id}:${product.id}`),
           userId: viewer.id,
@@ -2099,27 +2123,28 @@ async function seedViewers(
     if (activeCart && activeCart.id !== viewerCartId(viewer.id)) {
       console.log(`Carrinho ativo existente para uma conta de visualização; itens de demonstração não adicionados.`);
       trackMany("Cart (skipped)", 0, 1);
-    } else {
-      if (!activeCart)
-        await db.cart.create({ data: { id: viewerCartId(viewer.id), userId: viewer.id, status: "ACTIVE" } });
-      trackMany("Cart", activeCart ? 0 : 1, 1);
-      const picks = [
-        inStock.find((variant) => variant.store === "garagem"),
-        inStock.find((variant) => variant.store === "trilha"),
-        inStock.find((variant) => variant.store === "cross" && variant.priceInCents < 50000),
-      ].filter((variant): variant is NewVariant => Boolean(variant));
-      await insertMany(
-        trackMany,
-        "CartItem",
-        picks.map((variant, index) => ({
-          id: reviewId("viewer-cart-item", `${viewer.id}:${variant.id}`),
-          cartId: viewerCartId(viewer.id),
-          variantId: variant.id,
-          quantity: index === 1 ? 2 : 1,
-        })),
-        (chunk) => db.cartItem.createMany({ data: chunk, skipDuplicates: true }),
-      );
+      continue;
     }
+
+    if (!activeCart)
+      await db.cart.create({ data: { id: viewerCartId(viewer.id), userId: viewer.id, status: "ACTIVE" } });
+    trackMany("Cart", activeCart ? 0 : 1, 1);
+    const picks = [
+      inStock.find((variant) => variant.store === "garagem"),
+      inStock.find((variant) => variant.store === "trilha"),
+      inStock.find((variant) => variant.store === "cross" && variant.priceInCents < 50000),
+    ].filter((variant): variant is NewVariant => Boolean(variant));
+    await insertMany(
+      trackMany,
+      "CartItem",
+      picks.map((variant, index) => ({
+        id: reviewId("viewer-cart-item", `${viewer.id}:${variant.id}`),
+        cartId: viewerCartId(viewer.id),
+        variantId: variant.id,
+        quantity: index === 1 ? 2 : 1,
+      })),
+      (chunk) => db.cartItem.createMany({ data: chunk, skipDuplicates: true }),
+    );
   }
 }
 
@@ -2240,8 +2265,11 @@ export async function seedExpandedData(input: ExpandedSeedInput) {
   const viewers: Array<{ id: string; email: string; name: string }> = [];
   for (const email of input.viewerCustomerEmails) {
     const user = await input.db.user.findUnique({ where: { email }, select: { id: true, email: true, name: true } });
-    if (!user) console.warn("Conta de visualização (cliente) não encontrada; nada foi criado para ela.");
-    else viewers.push({ id: user.id, email: user.email, name: user.name || "Cliente" });
+    if (!user) {
+      console.warn("Conta de visualização (cliente) não encontrada; nada foi criado para ela.");
+      continue;
+    }
+    viewers.push({ id: user.id, email: user.email, name: user.name || "Cliente" });
   }
 
   const catalog = await seedCatalog(input);

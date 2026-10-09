@@ -30,6 +30,7 @@ import { join } from "node:path";
 import { PrismaClient, type Prisma } from "../src/generated/prisma/client";
 import type { ReviewStoreCode } from "./review-seed-content";
 import { renderStoreBanner, renderStoreLogo, seedExpandedData } from "./review-seed-expanded";
+import { must } from "./must";
 import { parseEmailList } from "./review-seed-ids";
 
 /** Senha compartilhada por todas as contas de revisão (somente ambiente de desenvolvimento). */
@@ -708,17 +709,66 @@ async function ensureUsers(passwordHash: string) {
     track("User", !existing);
     ids[key] = user.id;
 
-    const account = await db.account.findFirst({ where: { userId: user.id, providerId: "credential" } });
-    if (account) {
-      await db.account.update({ where: { id: account.id }, data: { password: passwordHash } });
-    } else {
-      await db.account.create({
-        data: { userId: user.id, providerId: "credential", accountId: user.id, password: passwordHash },
-      });
-    }
-    track("Account", !account);
+    track("Account", await ensureCredentialAccount(user.id, passwordHash));
   }
   return ids;
+}
+
+/** Sets the review password on the user's credential account; returns true when the account was created. */
+async function ensureCredentialAccount(userId: string, passwordHash: string) {
+  const account = await db.account.findFirst({ where: { userId, providerId: "credential" } });
+  if (account) {
+    await db.account.update({ where: { id: account.id }, data: { password: passwordHash } });
+    return false;
+  }
+
+  await db.account.create({
+    data: { userId, providerId: "credential", accountId: userId, password: passwordHash },
+  });
+  return true;
+}
+
+async function findOrCreateReviewStore(key: StoreKey, definition: (typeof storeDefinitions)[StoreKey]) {
+  const store = await db.store.findUnique({
+    where: { slug: definition.slug },
+    include: { seller: { select: { status: true } } },
+  });
+  if (store && store.name !== definition.name) throw new Error(`Refusing to touch unrelated store ${definition.slug}`);
+  if (store) {
+    track("Seller", false);
+    track("Store", false);
+    // Publishing later (second run with the flag) only promotes demo stores still PENDING.
+    if (PUBLISH_STORES && store.seller.status === "PENDING" && PUBLIC_STORE_STATUSES.has(definition.sellerStatus)) {
+      await db.seller.update({ where: { id: store.sellerId }, data: { status: definition.sellerStatus } });
+      track("SellerPublished", true);
+    }
+    return store;
+  }
+
+  const seller = await db.seller.create({
+    data: {
+      type: definition.sellerType,
+      // AGENTS.md: demo stores stay PENDING unless REVIEW_PUBLISH_STORES=true (explicit owner decision).
+      status: initialSellerStatus(definition.sellerStatus),
+      commissionBpsOverride: definition.commissionBpsOverride,
+      createdAt: ["pendente", "nova"].includes(key)
+        ? daysAgo(key === "nova" ? 3 : 1)
+        : daysAgo(key === "garagem" || key === "box77" ? 60 : 150),
+    },
+  });
+  const created = await db.store.create({
+    data: {
+      slug: definition.slug,
+      name: definition.name,
+      description: definition.description,
+      sellerId: seller.id,
+      ...definition.extra,
+    },
+    include: { seller: { select: { status: true } } },
+  });
+  track("Seller", true);
+  track("Store", true);
+  return created;
 }
 
 async function ensureStores(userIds: Record<UserKey, string>) {
@@ -729,48 +779,11 @@ async function ensureStores(userIds: Record<UserKey, string>) {
   for (const [key, definition] of Object.entries(storeDefinitions) as Array<
     [StoreKey, (typeof storeDefinitions)[StoreKey]]
   >) {
-    let store = await db.store.findUnique({
-      where: { slug: definition.slug },
-      include: { seller: { select: { status: true } } },
-    });
-    if (store && store.name !== definition.name)
-      throw new Error(`Refusing to touch unrelated store ${definition.slug}`);
-    if (!store) {
-      const seller = await db.seller.create({
-        data: {
-          type: definition.sellerType,
-          // AGENTS.md: demo stores stay PENDING unless REVIEW_PUBLISH_STORES=true (explicit owner decision).
-          status: initialSellerStatus(definition.sellerStatus),
-          commissionBpsOverride: definition.commissionBpsOverride,
-          createdAt: ["pendente", "nova"].includes(key)
-            ? daysAgo(key === "nova" ? 3 : 1)
-            : daysAgo(key === "garagem" || key === "box77" ? 60 : 150),
-        },
-      });
-      store = await db.store.create({
-        data: {
-          slug: definition.slug,
-          name: definition.name,
-          description: definition.description,
-          sellerId: seller.id,
-          ...definition.extra,
-        },
-        include: { seller: { select: { status: true } } },
-      });
-      track("Seller", true);
-      track("Store", true);
-    } else {
-      track("Seller", false);
-      track("Store", false);
-      // Publishing later (second run with the flag) only promotes demo stores still PENDING.
-      if (PUBLISH_STORES && store.seller.status === "PENDING" && PUBLIC_STORE_STATUSES.has(definition.sellerStatus)) {
-        await db.seller.update({ where: { id: store.sellerId }, data: { status: definition.sellerStatus } });
-        track("SellerPublished", true);
-      }
-    }
+    const store = await findOrCreateReviewStore(key, definition);
 
     // Logo e banner gerados localmente (public/images/demo, ignorado pelo git) só para lojas de revisão.
-    if (!store.logoStorageKey || !store.bannerStorageKey) {
+    const needsBranding = !store.logoStorageKey || !store.bannerStorageKey;
+    if (needsBranding) {
       const base = definition.slug.replace(/^review-/, "");
       const logoKey = `demo/review-loja-${base}-logo.webp`;
       const bannerKey = `demo/review-loja-${base}-banner.webp`;
@@ -783,8 +796,8 @@ async function ensureStores(userIds: Record<UserKey, string>) {
           bannerStorageKey: store.bannerStorageKey ?? bannerKey,
         },
       });
-      track("StoreBranding", true);
-    } else track("StoreBranding", false);
+    }
+    track("StoreBranding", needsBranding);
 
     const members: Array<[UserKey, "OWNER" | "CATALOG"]> = [[definition.owner, "OWNER"]];
     if (key === "garagem") members.push(["catalogo", "CATALOG"]);
@@ -1025,6 +1038,7 @@ async function ensureProducts(stores: Awaited<ReturnType<typeof ensureStores>>, 
         where: { sellerId_sku: { sellerId: store.sellerId, sku: entry.sku } },
       });
       if (variant && variant.productId !== product.id) throw new Error(`SKU ${entry.sku} belongs to another product`);
+      track("ProductVariant", !variant);
       if (!variant) {
         variant = await db.productVariant.create({
           data: {
@@ -1039,10 +1053,10 @@ async function ensureProducts(stores: Awaited<ReturnType<typeof ensureStores>>, 
             promotionEndsAt: entry.promotionalPriceInCents ? (definition.promotion?.endsAt ?? null) : null,
           },
         });
-        track("ProductVariant", true);
-      } else track("ProductVariant", false);
+      }
 
       let inventory = await db.inventory.findUnique({ where: { variantId: variant.id } });
+      track("Inventory", !inventory);
       if (!inventory) {
         const initial = entry.stock + 3;
         inventory = await db.inventory.create({
@@ -1081,10 +1095,9 @@ async function ensureProducts(stores: Awaited<ReturnType<typeof ensureStores>>, 
             },
           ],
         });
-        track("Inventory", true);
         track("InventoryMovement", true);
         track("InventoryMovement", true);
-      } else track("Inventory", false);
+      }
 
       variants.set(entry.sku, {
         id: variant.id,
@@ -1172,7 +1185,7 @@ async function ensureCustomerData(
   }
 
   for (const slug of ["review-capacete-apex-pro", "review-kit-relacao-crf-250r", "review-luva-box77-grip"]) {
-    const productId = productIds.get(slug)!;
+    const productId = must(productIds.get(slug), `product ${slug}`);
     const where = { userId_productId: { userId: clienteId, productId } };
     const existing = await db.favorite.findUnique({ where });
     if (!existing) await db.favorite.create({ data: { userId: clienteId, productId } });
@@ -1187,7 +1200,7 @@ async function ensureCustomerData(
     ["REVIEW-GMX-PROT-LARANJA", 2],
     ["REVIEW-B77-PASTILHA-DIANT", 1],
   ] as const) {
-    const variantId = variants.get(sku)!.id;
+    const variantId = must(variants.get(sku), `variant ${sku}`).id;
     const where = { cartId_variantId: { cartId: cart.id, variantId } };
     const existing = await db.cartItem.findUnique({ where });
     if (!existing) await db.cartItem.create({ data: { cartId: cart.id, variantId, quantity } });
@@ -1515,9 +1528,10 @@ async function ensureOrders(
       track("Order", false);
       const sellerOrders = new Map<StoreKey, { id: string; itemIds: Map<string, string>; amount: number }>();
       for (const so of existing.sellerOrders) {
-        const key = (Object.keys(storeDefinitions) as StoreKey[]).find(
-          (k) => storeDefinitions[k].slug === so.store.slug,
-        )!;
+        const key = must(
+          (Object.keys(storeDefinitions) as StoreKey[]).find((k) => storeDefinitions[k].slug === so.store.slug),
+          `store key for ${so.store.slug}`,
+        );
         sellerOrders.set(key, {
           id: so.id,
           itemIds: new Map(so.items.map((item) => [item.skuSnapshot, item.id])),
@@ -1537,7 +1551,7 @@ async function ensureOrders(
     const guestToken = spec.guest ? randomBytes(32).toString("hex") : null;
     const partTotals = spec.parts.map((part) => {
       const lines = part.items.map((item) => {
-        const variant = variants.get(item.sku)!;
+        const variant = must(variants.get(item.sku), `variant ${item.sku}`);
         const unit = item.unitPriceInCents ?? variant.priceInCents;
         const gross = unit * item.quantity;
         const discount = item.discountInCents ?? 0;
@@ -1703,7 +1717,7 @@ async function ensureOrders(
         if (spec.couponCode) {
           await tx.couponRedemption.create({
             data: {
-              couponId: couponIds.get(spec.couponCode)!,
+              couponId: must(couponIds.get(spec.couponCode), `coupon ${spec.couponCode}`),
               orderId: order.id,
               userId: spec.guest ? null : clienteId,
               customerEmailSnapshot: spec.guest?.email ?? cliente.email,
@@ -1761,15 +1775,15 @@ async function ensurePostSale(
 ) {
   const clienteId = userIds.cliente;
   const garagem = stores.garagem;
-  const delivered = orderRefs.get("MS-REVIEW-0005")!;
-  const deliveredSo = delivered.sellerOrders.get("garagem")!;
-  const paid = orderRefs.get("MS-REVIEW-0002")!;
-  const paidSo = paid.sellerOrders.get("garagem")!;
-  const shipped = orderRefs.get("MS-REVIEW-0004")!;
-  const shippedSo = shipped.sellerOrders.get("garagem")!;
+  const delivered = must(orderRefs.get("MS-REVIEW-0005"), "order MS-REVIEW-0005");
+  const deliveredSo = must(delivered.sellerOrders.get("garagem"), "garagem seller order");
+  const paid = must(orderRefs.get("MS-REVIEW-0002"), "order MS-REVIEW-0002");
+  const paidSo = must(paid.sellerOrders.get("garagem"), "garagem seller order");
+  const shipped = must(orderRefs.get("MS-REVIEW-0004"), "order MS-REVIEW-0004");
+  const shippedSo = must(shipped.sellerOrders.get("garagem"), "garagem seller order");
 
   // Devolução solicitada (por item) no pedido entregue.
-  const discoItemId = deliveredSo.itemIds.get("REVIEW-GMX-ONDA-260")!;
+  const discoItemId = must(deliveredSo.itemIds.get("REVIEW-GMX-ONDA-260"), "order item REVIEW-GMX-ONDA-260");
   const returnKey = "review-return-MS-REVIEW-0005";
   const existingReturn = await db.returnRequest.findUnique({ where: { idempotencyKey: returnKey } });
   if (!existingReturn)
@@ -1833,7 +1847,7 @@ async function ensurePostSale(
   track("Dispute", !existingDispute);
 
   // Avaliações de compra verificada.
-  const helmetItemId = deliveredSo.itemIds.get("REVIEW-GMX-APEX-M")!;
+  const helmetItemId = must(deliveredSo.itemIds.get("REVIEW-GMX-APEX-M"), "order item REVIEW-GMX-APEX-M");
   const existingProductReview = await db.productReview.findUnique({ where: { orderItemId: helmetItemId } });
   if (!existingProductReview)
     await db.productReview.create({
@@ -1841,7 +1855,7 @@ async function ensurePostSale(
         ratingTenths: 45,
         title: "Confortável e bem ventilado",
         comment: "Usei em duas baterias com calor forte e a ventilação deu conta. O tamanho M ficou certinho.",
-        productId: productIds.get("review-capacete-apex-pro")!,
+        productId: must(productIds.get("review-capacete-apex-pro"), "product review-capacete-apex-pro"),
         sellerId: garagem.sellerId,
         orderId: delivered.orderId,
         orderItemId: helmetItemId,
@@ -1883,7 +1897,7 @@ async function ensurePostSale(
     },
   ];
   for (const entry of questions) {
-    const productId = productIds.get(entry.slug)!;
+    const productId = must(productIds.get(entry.slug), `product ${entry.slug}`);
     const existing = await db.productQuestion.findFirst({
       where: { productId, askedByUserId: clienteId, question: entry.question },
     });
@@ -1948,7 +1962,7 @@ async function ensurePostSale(
       actor: "admin",
       action: "PRODUCT_APPROVED",
       entityType: "Product",
-      entityId: productIds.get("review-capacete-apex-pro")!,
+      entityId: must(productIds.get("review-capacete-apex-pro"), "product review-capacete-apex-pro"),
       metadata: { source: "review-seed" },
       daysAgo: 38,
     },
@@ -1956,7 +1970,7 @@ async function ensurePostSale(
       actor: "admin",
       action: "PRODUCT_REJECTED",
       entityType: "Product",
-      entityId: productIds.get("review-pedaleira-rejeitada")!,
+      entityId: must(productIds.get("review-pedaleira-rejeitada"), "product review-pedaleira-rejeitada"),
       metadata: { source: "review-seed", reason: "Fotos insuficientes" },
       daysAgo: 38,
     },
@@ -1964,7 +1978,7 @@ async function ensurePostSale(
       actor: "lojista",
       action: "PRODUCT_ARCHIVED",
       entityType: "Product",
-      entityId: productIds.get("review-guidao-arquivado")!,
+      entityId: must(productIds.get("review-guidao-arquivado"), "product review-guidao-arquivado"),
       metadata: { source: "review-seed" },
       daysAgo: 20,
     },
