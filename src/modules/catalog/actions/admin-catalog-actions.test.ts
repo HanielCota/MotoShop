@@ -64,7 +64,7 @@ beforeEach(() => {
     }),
   );
   for (const find of [mocks.findCategory, mocks.findBrand, mocks.findManufacturer, mocks.findModel]) {
-    find.mockResolvedValue({ id: "reference-a", active: true });
+    find.mockResolvedValue({ id: "creference01", active: true });
   }
   for (const update of [mocks.updateCategory, mocks.updateBrand, mocks.updateManufacturer, mocks.updateModel]) {
     update.mockResolvedValue({ count: 1 });
@@ -77,7 +77,7 @@ beforeEach(() => {
     mocks.createFitment,
   ]) {
     create.mockResolvedValue({
-      id: "reference-a",
+      id: "creference01",
       name: "Referência",
       parentId: null,
       manufacturerId: "manufacturer-a",
@@ -129,7 +129,7 @@ describe("admin catalog creations", () => {
       expect(mocks.transaction).toHaveBeenCalledOnce();
       expect(create).toHaveBeenCalledOnce();
       expect(mocks.auditCreate).toHaveBeenCalledWith({
-        data: expect.objectContaining({ action: auditAction, actorUserId: "admin-a", entityId: "reference-a" }),
+        data: expect.objectContaining({ action: auditAction, actorUserId: "admin-a", entityId: "creference01" }),
       });
     },
   );
@@ -151,15 +151,15 @@ describe("admin catalog status transitions", () => {
   it.each(cases)(
     "changes %s only from its observed state and audits in the transaction",
     async (_name, action, update, auditAction) => {
-      await action("reference-a", false);
+      await action("creference01", false);
 
       expect(mocks.transaction).toHaveBeenCalledOnce();
       expect(update).toHaveBeenCalledWith({
-        where: { id: "reference-a", active: true },
+        where: { id: "creference01", active: true },
         data: { active: false },
       });
       expect(mocks.auditCreate).toHaveBeenCalledWith({
-        data: expect.objectContaining({ action: auditAction, actorUserId: "admin-a", entityId: "reference-a" }),
+        data: expect.objectContaining({ action: auditAction, actorUserId: "admin-a", entityId: "creference01" }),
       });
     },
   );
@@ -167,7 +167,7 @@ describe("admin catalog status transitions", () => {
   it.each(cases)("rejects a stale %s decision without writing an audit record", async (_name, action, update) => {
     update.mockResolvedValue({ count: 0 });
 
-    await expect(action("reference-a", false)).rejects.toMatchObject({ code: "CONFLICT", statusCode: 409 });
+    await expect(action("creference01", false)).rejects.toMatchObject({ code: "CONFLICT", statusCode: 409 });
     expect(mocks.auditCreate).not.toHaveBeenCalled();
   });
 
@@ -175,7 +175,7 @@ describe("admin catalog status transitions", () => {
     "treats a repeated %s decision (double click) as a no-op instead of flipping it back",
     async (_name, action, update) => {
       // The entry is already inactive, which is exactly what the admin asked for again.
-      await action("reference-a", true);
+      await action("creference01", true);
 
       expect(update).not.toHaveBeenCalled();
       expect(mocks.auditCreate).not.toHaveBeenCalled();
@@ -192,16 +192,26 @@ describe("admin catalog status transitions", () => {
   it.each(missingCases)("rejects a missing %s without reporting success", async (_name, action, find, update) => {
     find.mockResolvedValue(null);
 
-    await expect(action("reference-a", false)).rejects.toMatchObject({ code: "NOT_FOUND", statusCode: 404 });
+    await expect(action("creference01", false)).rejects.toMatchObject({ code: "NOT_FOUND", statusCode: 404 });
     expect(update).not.toHaveBeenCalled();
     expect(mocks.auditCreate).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
+  it.each(cases)("rejects a malformed %s id before opening a transaction", async (_name, action, update) => {
+    await expect(action("../x", false)).rejects.toMatchObject({
+      code: "VALIDATION_ERROR",
+      message: "Item do catálogo inválido.",
+    });
+
+    expect(mocks.transaction).not.toHaveBeenCalled();
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it("denies mutation before reading the catalog when admin authorization fails", async () => {
     mocks.adminAccess.mockRejectedValue(new Error("FORBIDDEN"));
 
-    await expect(toggleCategoryAction("reference-a", false)).rejects.toThrow("FORBIDDEN");
+    await expect(toggleCategoryAction("creference01", false)).rejects.toThrow("FORBIDDEN");
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
 });

@@ -24,7 +24,7 @@ vi.mock("@/modules/auth/application/authorization", () => ({
 import { retryWebhookEventAction } from "./webhook-actions";
 
 const event = {
-  id: "webhook-a",
+  id: "cwebhook0001",
   provider: "MERCADO_PAGO",
   externalId: "external-a",
   type: "payment.updated",
@@ -113,6 +113,17 @@ describe("retryWebhookEventAction", () => {
       data: expect.objectContaining({ metadata: expect.objectContaining({ previousStatus: "PROCESSING" }) }),
     });
     expect(mocks.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a malformed event id before reading the database", async () => {
+    await expect(retryWebhookEventAction("../x")).rejects.toMatchObject({
+      code: "VALIDATION_ERROR",
+      message: "Evento inválido.",
+    });
+
+    expect(mocks.findFirst).not.toHaveBeenCalled();
+    expect(mocks.transaction).not.toHaveBeenCalled();
+    expect(mocks.send).not.toHaveBeenCalled();
   });
 
   it("does nothing when the event is not failed", async () => {

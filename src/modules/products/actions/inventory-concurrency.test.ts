@@ -35,9 +35,9 @@ beforeEach(() => {
   mocks.read.mockResolvedValue({ id: "inv", availableQuantity: 3, reservedQuantity: 2 });
 });
 it("locks before reading and updating an inventory balance", async () => {
-  await expect(adjustInventoryAction("variant", 2)).resolves.toHaveProperty("success");
+  await expect(adjustInventoryAction("cvariant0001", 2)).resolves.toHaveProperty("success");
   expect(mocks.lock.mock.invocationCallOrder[0]).toBeLessThan(firstCall(mocks.read));
-  expect(mocks.read).toHaveBeenCalledWith({ where: { variantId: "variant", sellerId: "seller-a" } });
+  expect(mocks.read).toHaveBeenCalledWith({ where: { variantId: "cvariant0001", sellerId: "seller-a" } });
   expect(mocks.update).toHaveBeenCalledWith({
     where: { id: "inv" },
     data: { availableQuantity: 5, version: { increment: 1 } },
@@ -48,28 +48,34 @@ it("locks before reading and updating an inventory balance", async () => {
 });
 it("does not change another seller's inventory", async () => {
   mocks.read.mockResolvedValue(null);
-  expect((await adjustInventoryAction("other-variant", 2)).error).toContain("não encontrado");
+  expect((await adjustInventoryAction("cvariant0002", 2)).error).toContain("não encontrado");
   expect(mocks.update).not.toHaveBeenCalled();
 });
 
 it("invalidates open editors of an editable product before locking the inventory", async () => {
-  await expect(adjustInventoryAction("variant", 2)).resolves.toHaveProperty("success");
+  await expect(adjustInventoryAction("cvariant0001", 2)).resolves.toHaveProperty("success");
   expect(mocks.bumpProduct).toHaveBeenCalledWith({
     where: {
       sellerId: "seller-a",
       status: { in: ["DRAFT", "REJECTED"] },
-      variants: { some: { id: "variant", sellerId: "seller-a" } },
+      variants: { some: { id: "cvariant0001", sellerId: "seller-a" } },
     },
     data: { updatedAt: expect.any(Date) },
   });
   expect(mocks.bumpProduct.mock.invocationCallOrder[0]).toBeLessThan(firstCall(mocks.lock));
 });
 it("explains rejected adjustments in Portuguese", async () => {
-  expect((await adjustInventoryAction("variant", -4)).error).toBe(
+  expect((await adjustInventoryAction("cvariant0001", -4)).error).toBe(
     "O ajuste deixaria o estoque negativo ou acima do limite permitido.",
   );
-  expect((await adjustInventoryAction("variant", 2 ** 31)).error).toBe(
+  expect((await adjustInventoryAction("cvariant0001", 2 ** 31)).error).toBe(
     "O ajuste deixaria o estoque negativo ou acima do limite permitido.",
   );
+  expect(mocks.update).not.toHaveBeenCalled();
+});
+it("rejects a malformed variant id before touching the inventory", async () => {
+  expect(await adjustInventoryAction("../x", 2)).toEqual({ error: "Variação inválida." });
+  expect(mocks.lock).not.toHaveBeenCalled();
+  expect(mocks.read).not.toHaveBeenCalled();
   expect(mocks.update).not.toHaveBeenCalled();
 });

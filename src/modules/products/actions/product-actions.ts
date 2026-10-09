@@ -137,7 +137,7 @@ export async function restoreProductAction(productId: string): Promise<void> {
 
 export async function adjustInventoryAction(variantId: string, quantityChange: number): Promise<ProductActionState> {
   const context = await requireSellerAccess("PRODUCT_UPDATE");
-  if (typeof variantId !== "string" || variantId.length === 0) return { error: "Variação inválida." };
+  if (!productIdSchema.safeParse(variantId).success) return { error: "Variação inválida." };
   if (!Number.isSafeInteger(quantityChange) || quantityChange === 0)
     return { error: "Informe um ajuste inteiro diferente de zero." };
   try {
@@ -161,6 +161,7 @@ export async function adjustInventoryAction(variantId: string, quantityChange: n
 
 export async function approveProductAction(productId: string): Promise<ProductActionState> {
   const session = await requireAdminAccess();
+  if (!productIdSchema.safeParse(productId).success) return { error: "Produto inválido." };
   const result = await approveSubmittedProduct({ userId: session.user.id }, productId);
   if (!result.ok) return { error: result.error };
   revalidatePath("/admin", "layout");
@@ -172,6 +173,7 @@ const MAX_REJECTION_REASON_LENGTH = 1000;
 
 export async function rejectProductAction(productId: string, formData: FormData): Promise<ProductActionState> {
   const session = await requireAdminAccess();
+  if (!productIdSchema.safeParse(productId).success) return { error: "Produto inválido." };
   const cleanReason = String(formData.get("reason") ?? "").trim();
   if (cleanReason.length < 5) return { error: "Informe o motivo da rejeição." };
   // O motivo é exibido ao lojista e copiado para a auditoria: sem limite, um payload forjado grava megabytes.
