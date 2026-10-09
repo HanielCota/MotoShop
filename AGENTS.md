@@ -1528,7 +1528,9 @@ Não duplicar tipos que podem ser derivados de schemas quando isso reduzir incon
 - **Sempre fazer null checks.** Não usar a afirmação de não nulo do TypeScript (`valor!`); checar explicitamente e retornar cedo, lançar um erro claro ou usar um valor padrão. Variáveis de ambiente obrigatórias são lidas por uma função que falha com mensagem quando faltam.
 - **Revisar espaçamento e indentação.** O Prettier define indentação e quebras; além dele, separar blocos lógicos (validação, consulta, efeito, retorno) com uma linha em branco e não deixar linhas em branco duplicadas.
 
-O ESLint aplica as três primeiras regras verificáveis (`no-restricted-syntax` para `else` e `.then()`, `@typescript-eslint/no-non-null-assertion`); `pnpm lint` falha se forem violadas.
+- **No máximo 3 níveis de blocos aninhados** (`if`/`for`/`try`) por função; acima disso, extrair uma função.
+
+O ESLint aplica as regras verificáveis (`no-restricted-syntax` para `else` e `.then()`, `@typescript-eslint/no-non-null-assertion`, `max-depth: 3`); `pnpm lint` falha se forem violadas.
 
 ---
 

@@ -20,6 +20,7 @@ const eslintConfig = defineConfig([
         },
       ],
       "@typescript-eslint/no-non-null-assertion": "error",
+      "max-depth": ["error", 3],
     },
   },
   // Override default ignores of eslint-config-next.

@@ -943,6 +943,111 @@ async function seedOrders(
     payments: [] as Array<{ orderNumber: string; externalId: string | null; status: string; at: Date; email: string }>,
   };
 
+  // Estoque: reserva no pedido, baixa no pagamento, devolução ao estoque em cancelamento/devolução.
+  const lineInventoryEvents = (input: {
+    base: Pick<InventoryEvent, "variantId" | "quantity" | "orderId" | "orderNumber">;
+    itemId: string;
+    plan: OrderPlan;
+    placedAt: Date;
+    paidAt: Date;
+    deliveredAt: Date | null;
+    isPaid: boolean;
+    isFirstPart: boolean;
+    isReturnedLine: boolean;
+  }): InventoryEvent[] => {
+    const { base, itemId, plan, placedAt } = input;
+    const lineEvents: InventoryEvent[] = [{ ...base, key: `${itemId}:RESERVATION`, at: placedAt, type: "RESERVATION" }];
+    if (plan.cancelledBeforePayment) {
+      lineEvents.push({
+        ...base,
+        key: `${itemId}:RESERVATION_RELEASE`,
+        at: clamp(plus(placedAt, 1)),
+        type: "RESERVATION_RELEASE",
+      });
+    }
+    if (!plan.cancelledBeforePayment && input.isPaid) {
+      lineEvents.push({ ...base, key: `${itemId}:SALE`, at: input.paidAt, type: "SALE" });
+    }
+    if (input.isFirstPart && (plan.cancellation === "REFUNDED" || plan.cancellation === "APPROVED")) {
+      lineEvents.push({ ...base, key: `${itemId}:CANCELLATION`, at: clamp(plus(placedAt, 0.8)), type: "CANCELLATION" });
+    }
+
+    const returnedToStock = plan.returnStatus === "RETURNED" || plan.returnStatus === "REFUNDED";
+    if (input.isReturnedLine && returnedToStock && input.deliveredAt) {
+      lineEvents.push({ ...base, key: `${itemId}:RETURN`, at: clamp(plus(input.deliveredAt, 6)), type: "RETURN" });
+    }
+
+    return lineEvents;
+  };
+
+  // Avaliações de compra verificada (somente pedidos entregues com conta).
+  const addPurchaseReviews = (input: {
+    plan: OrderPlan;
+    userId: string;
+    orderId: string;
+    sellerId: string;
+    sellerOrderId: string;
+    deliveredAt: Date;
+    lines: ReadonlyArray<{ variant: { productId: string } }>;
+    itemIds: readonly string[];
+    returnedItemId: string | null;
+  }) => {
+    const { plan, deliveredAt } = input;
+    const reviewRng = rngFor(`${input.sellerOrderId}:reviews`);
+    let starSum = 0;
+    let reviewed = 0;
+    for (const [lineIndex, line] of input.lines.entries()) {
+      const itemId = must(input.itemIds[lineIndex], "order item id");
+      if (itemId === input.returnedItemId) continue;
+      if (plan.reviews === "most" && reviewRng() > 0.93) continue;
+      const roll = reviewRng();
+      const star = (
+        plan.reviews === "all"
+          ? roll < 0.6
+            ? 5
+            : 4
+          : roll < 0.45
+            ? 5
+            : roll < 0.75
+              ? 4
+              : roll < 0.87
+                ? 3
+                : roll < 0.94
+                  ? 2
+                  : 1
+      ) as 1 | 2 | 3 | 4 | 5;
+      const tenths = star * 10 - (star > 1 && star < 5 && reviewRng() < 0.3 ? 5 : 0);
+      const text = pick(reviewRng, reviewTexts[star]);
+      starSum += star;
+      reviewed += 1;
+      rows.productReviews.push({
+        id: reviewId("product-review", itemId),
+        ratingTenths: tenths,
+        title: text.title,
+        comment: text.comment,
+        productId: line.variant.productId,
+        sellerId: input.sellerId,
+        orderId: input.orderId,
+        orderItemId: itemId,
+        userId: input.userId,
+        createdAt: clamp(plus(deliveredAt, 1 + reviewRng() * 4)),
+      });
+    }
+
+    if (plan.reviews !== "all" && reviewRng() >= 0.6) return;
+
+    const star = (reviewed > 0 ? Math.max(1, Math.min(5, Math.round(starSum / reviewed))) : 5) as 1 | 2 | 3 | 4 | 5;
+    rows.sellerReviews.push({
+      id: reviewId("seller-review", input.sellerOrderId),
+      rating: star,
+      comment: pick(reviewRng, sellerReviewTexts[star]),
+      sellerId: input.sellerId,
+      orderId: input.orderId,
+      userId: input.userId,
+      createdAt: clamp(plus(deliveredAt, 2 + reviewRng() * 3)),
+    });
+  };
+
   for (const plan of plans) {
     const rng = rngFor(`${plan.orderNumber}:items`);
     const orderId = reviewId("order", plan.orderNumber);
@@ -1136,25 +1241,21 @@ async function seedOrders(
           createdAt: placedAt,
         });
 
-        // Estoque: reserva no pedido, baixa no pagamento, devolução ao estoque em cancelamento/devolução.
-        const base = { variantId: line.variant.id, quantity: line.quantity, orderId, orderNumber: plan.orderNumber };
-        events.push({ ...base, key: `${itemId}:RESERVATION`, at: placedAt, type: "RESERVATION" });
-        if (plan.cancelledBeforePayment)
-          events.push({
-            ...base,
-            key: `${itemId}:RESERVATION_RELEASE`,
-            at: clamp(plus(placedAt, 1)),
-            type: "RESERVATION_RELEASE",
-          });
-        if (!plan.cancelledBeforePayment && isPaid)
-          events.push({ ...base, key: `${itemId}:SALE`, at: paidAt, type: "SALE" });
-        if (p.partIndex === 0 && (plan.cancellation === "REFUNDED" || plan.cancellation === "APPROVED"))
-          events.push({ ...base, key: `${itemId}:CANCELLATION`, at: clamp(plus(placedAt, 0.8)), type: "CANCELLATION" });
-        if (p.partIndex === 0 && lineIndex === 0 && plan.returnStatus) {
-          returnedItemId = itemId;
-          if ((plan.returnStatus === "RETURNED" || plan.returnStatus === "REFUNDED") && deliveredAt)
-            events.push({ ...base, key: `${itemId}:RETURN`, at: clamp(plus(deliveredAt, 6)), type: "RETURN" });
-        }
+        const isReturnedLine = p.partIndex === 0 && lineIndex === 0 && Boolean(plan.returnStatus);
+        returnedItemId = isReturnedLine ? itemId : returnedItemId;
+        events.push(
+          ...lineInventoryEvents({
+            base: { variantId: line.variant.id, quantity: line.quantity, orderId, orderNumber: plan.orderNumber },
+            itemId,
+            plan,
+            placedAt,
+            paidAt,
+            deliveredAt,
+            isPaid,
+            isFirstPart: p.partIndex === 0,
+            isReturnedLine,
+          }),
+        );
       }
 
       // Pós-venda.
@@ -1253,61 +1354,18 @@ async function seedOrders(
         refs.disputes.push({ id, status: plan.dispute, store: p.part.store, orderNumber: plan.orderNumber });
       }
 
-      // Avaliações de compra verificada (somente pedidos entregues com conta).
       if (p.status === "DELIVERED" && deliveredAt && plan.buyer.userId && plan.reviews !== "none") {
-        const reviewRng = rngFor(`${sellerOrderId}:reviews`);
-        let starSum = 0;
-        let reviewed = 0;
-        for (const [lineIndex, line] of p.lines.entries()) {
-          const itemId = must(itemIds[lineIndex], "order item id");
-          if (itemId === returnedItemId) continue;
-          if (plan.reviews === "most" && reviewRng() > 0.93) continue;
-          const roll = reviewRng();
-          const star = (
-            plan.reviews === "all"
-              ? roll < 0.6
-                ? 5
-                : 4
-              : roll < 0.45
-                ? 5
-                : roll < 0.75
-                  ? 4
-                  : roll < 0.87
-                    ? 3
-                    : roll < 0.94
-                      ? 2
-                      : 1
-          ) as 1 | 2 | 3 | 4 | 5;
-          const tenths = star * 10 - (star > 1 && star < 5 && reviewRng() < 0.3 ? 5 : 0);
-          const text = pick(reviewRng, reviewTexts[star]);
-          starSum += star;
-          reviewed += 1;
-          rows.productReviews.push({
-            id: reviewId("product-review", itemId),
-            ratingTenths: tenths,
-            title: text.title,
-            comment: text.comment,
-            productId: line.variant.productId,
-            sellerId: p.store.sellerId,
-            orderId,
-            orderItemId: itemId,
-            userId: plan.buyer.userId,
-            createdAt: clamp(plus(deliveredAt, 1 + reviewRng() * 4)),
-          });
-        }
-        if (plan.reviews === "all" || reviewRng() < 0.6) {
-          const star = (reviewed > 0 ? Math.max(1, Math.min(5, Math.round(starSum / reviewed))) : 5) as
-            1 | 2 | 3 | 4 | 5;
-          rows.sellerReviews.push({
-            id: reviewId("seller-review", sellerOrderId),
-            rating: star,
-            comment: pick(reviewRng, sellerReviewTexts[star]),
-            sellerId: p.store.sellerId,
-            orderId,
-            userId: plan.buyer.userId,
-            createdAt: clamp(plus(deliveredAt, 2 + reviewRng() * 3)),
-          });
-        }
+        addPurchaseReviews({
+          plan,
+          userId: plan.buyer.userId,
+          orderId,
+          sellerId: p.store.sellerId,
+          sellerOrderId,
+          deliveredAt,
+          lines: p.lines,
+          itemIds,
+          returnedItemId,
+        });
       }
     }
 
