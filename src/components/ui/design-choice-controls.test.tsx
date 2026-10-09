@@ -16,7 +16,7 @@ describe("design choice controls", () => {
         </label>
       </form>,
     );
-    const form = container.querySelector("form")!;
+    const form = defined(container.querySelector("form"));
     expect(new FormData(form).has("emailOrderUpdatesEnabled")).toBe(false);
     fireEvent.click(screen.getByRole("checkbox", { name: /Atualizações por e-mail/ }));
     expect(new FormData(form).get("emailOrderUpdatesEnabled")).toBe("on");
@@ -35,8 +35,13 @@ describe("design choice controls", () => {
         </DesignRadioGroup>
       </form>,
     );
-    const form = container.querySelector("form")!;
+    const form = defined(container.querySelector("form"));
     expect(new FormData(form).getAll("paymentType")).toEqual(["pix"]);
     expect(screen.getByRole("radio", { name: /Cartão/ })).toHaveAttribute("aria-disabled", "true");
   });
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

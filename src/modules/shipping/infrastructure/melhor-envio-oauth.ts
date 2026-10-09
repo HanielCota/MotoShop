@@ -45,15 +45,15 @@ export function isMelhorEnvioOAuthConfigured(): boolean {
 }
 
 export function createMelhorEnvioAuthorizationUrl(input: { userId: string; sellerId: string }) {
-  assertOAuthConfigured();
+  const oauth = requireOAuthConfig();
   const state = signState({
     ...input,
     nonce: randomBytes(24).toString("base64url"),
     expiresAt: Date.now() + 10 * 60_000,
   });
   const url = new URL("/oauth/authorize", env.MELHOR_ENVIO_API_URL ?? DEFAULT_API_URL);
-  url.searchParams.set("client_id", env.MELHOR_ENVIO_CLIENT_ID!);
-  url.searchParams.set("redirect_uri", env.MELHOR_ENVIO_REDIRECT_URI!);
+  url.searchParams.set("client_id", oauth.clientId);
+  url.searchParams.set("redirect_uri", oauth.redirectUri);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("state", state);
   url.searchParams.set("scope", REQUESTED_SCOPES.join(" "));
@@ -89,7 +89,7 @@ export function verifyMelhorEnvioState(value: string): OAuthState | null {
 }
 
 export async function exchangeMelhorEnvioAuthorizationCode(code: string) {
-  assertOAuthConfigured();
+  const oauth = requireOAuthConfig();
   const response = await fetch(`${env.MELHOR_ENVIO_API_URL ?? DEFAULT_API_URL}/oauth/token`, {
     method: "POST",
     headers: {
@@ -99,9 +99,9 @@ export async function exchangeMelhorEnvioAuthorizationCode(code: string) {
     },
     body: new URLSearchParams({
       grant_type: "authorization_code",
-      client_id: env.MELHOR_ENVIO_CLIENT_ID!,
-      client_secret: env.MELHOR_ENVIO_CLIENT_SECRET!,
-      redirect_uri: env.MELHOR_ENVIO_REDIRECT_URI!,
+      client_id: oauth.clientId,
+      client_secret: oauth.clientSecret,
+      redirect_uri: oauth.redirectUri,
       code,
     }),
     cache: "no-store",
@@ -126,7 +126,7 @@ export async function getSellerMelhorEnvioAccessToken(
 ): Promise<string | null> {
   const integration = await db.sellerShippingIntegration.findUnique({ where: { sellerId } });
   if (!integration) return null;
-  assertOAuthConfigured();
+  const oauth = requireOAuthConfig();
   assertRequiredScopes(integration.scopes, requiredScopes);
 
   const refreshBefore = Date.now() + 2 * 60_000;
@@ -186,8 +186,8 @@ export async function getSellerMelhorEnvioAccessToken(
       },
       body: new URLSearchParams({
         grant_type: "refresh_token",
-        client_id: env.MELHOR_ENVIO_CLIENT_ID!,
-        client_secret: env.MELHOR_ENVIO_CLIENT_SECRET!,
+        client_id: oauth.clientId,
+        client_secret: oauth.clientSecret,
         refresh_token: refreshToken,
       }),
       cache: "no-store",
@@ -299,14 +299,19 @@ function toStoredTokenData(token: z.infer<typeof tokenResponseSchema>) {
   };
 }
 
-function assertOAuthConfigured(): void {
-  if (!isMelhorEnvioOAuthConfigured()) {
+function requireOAuthConfig(): { clientId: string; clientSecret: string; redirectUri: string } {
+  const clientId = env.MELHOR_ENVIO_CLIENT_ID;
+  const clientSecret = env.MELHOR_ENVIO_CLIENT_SECRET;
+  const redirectUri = env.MELHOR_ENVIO_REDIRECT_URI;
+  if (!isMelhorEnvioOAuthConfigured() || !clientId || !clientSecret || !redirectUri) {
     throw new ApplicationError({
       code: "CONFIGURATION_ERROR",
       message: "A integração do Melhor Envio ainda não está configurada neste ambiente.",
       statusCode: 503,
     });
   }
+
+  return { clientId, clientSecret, redirectUri };
 }
 
 function getEncryptionKey(): Buffer {

@@ -231,7 +231,7 @@ export async function listApprovedProducts(input: PublicProductFilter = {}) {
         reviewCount: product._count.productReviews,
         isVip: product.seller.subscriptions.length > 0,
       }))
-      .sort((a, b) => positions.get(a.id)! - positions.get(b.id)!),
+      .sort((a, b) => (positions.get(a.id) ?? 0) - (positions.get(b.id) ?? 0)),
     total: page.total,
     page: page.page,
     pageCount: page.pageCount,

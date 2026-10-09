@@ -65,15 +65,22 @@ export function QuantityStepper({
     if (event.key === "Enter") {
       event.preventDefault();
       commitDraft();
-    } else if (event.key === "ArrowUp") {
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
       event.preventDefault();
       commit(value + 1);
-    } else if (event.key === "ArrowDown") {
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
       event.preventDefault();
       commit(value - 1);
-    } else if (event.key === "Escape") {
-      setDraft(String(value));
+      return;
     }
+
+    if (event.key === "Escape") setDraft(String(value));
   }
 
   return (

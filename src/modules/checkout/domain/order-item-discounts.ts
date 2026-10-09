@@ -6,9 +6,13 @@ export function applyOrderItemDiscounts<T extends { totalAmountInCents: number }
     lines.map((line) => line.totalAmountInCents),
     discountInCents,
   );
-  return lines.map((line, index) => ({
-    ...line,
-    discountAmountInCents: discounts[index]!,
-    totalAmountInCents: line.totalAmountInCents - discounts[index]!,
-  }));
+  return lines.map((line, index) => {
+    const discountAmountInCents = discounts[index];
+    if (discountAmountInCents === undefined) throw new Error("Missing discount allocation for order item.");
+    return {
+      ...line,
+      discountAmountInCents,
+      totalAmountInCents: line.totalAmountInCents - discountAmountInCents,
+    };
+  });
 }

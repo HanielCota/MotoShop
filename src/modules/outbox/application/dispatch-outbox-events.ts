@@ -78,7 +78,7 @@ export async function dispatchPendingOutboxEvents(now = new Date()) {
         data: { status: OutboxEventStatus.DISPATCHED, claimedAt: null, dispatchedAt: new Date(), lastError: null },
       });
       if (completed.count === 1) dispatched++;
-      else skipped++;
+      if (completed.count !== 1) skipped++;
     } catch (error) {
       const attempts = candidate.attempts + 1;
       const terminal = attempts >= maximumAttempts;

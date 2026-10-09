@@ -10,16 +10,18 @@ function normalize(value: string) {
   return value.trim().toLocaleLowerCase("pt-BR");
 }
 
+function nameMatchScore(normalizedName: string, normalizedQuery: string) {
+  if (!normalizedQuery) return 0;
+  if (normalizedName === normalizedQuery) return 100;
+  if (normalizedName.startsWith(normalizedQuery)) return 50;
+  if (normalizedName.includes(normalizedQuery)) return 20;
+  return 0;
+}
+
 export function productRankingScore(product: RankableProduct, query?: string) {
   const normalizedQuery = query ? normalize(query) : "";
   const normalizedName = normalize(product.name);
-  let score = 0;
-
-  if (normalizedQuery) {
-    if (normalizedName === normalizedQuery) score += 100;
-    else if (normalizedName.startsWith(normalizedQuery)) score += 50;
-    else if (normalizedName.includes(normalizedQuery)) score += 20;
-  }
+  let score = nameMatchScore(normalizedName, normalizedQuery);
 
   score += product.isInStock ? 10 : 0;
   score += Math.min(product.reviewCount, 5);

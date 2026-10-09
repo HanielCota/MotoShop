@@ -25,13 +25,18 @@ vi.mock("@/lib/database", () => ({
   },
 }));
 import { adjustInventoryAction } from "./product-actions";
+function firstCall(mock: { mock: { invocationCallOrder: number[] } }) {
+  const order = mock.mock.invocationCallOrder[0];
+  if (order === undefined) throw new Error("Expected the mock to have been called");
+  return order;
+}
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.read.mockResolvedValue({ id: "inv", availableQuantity: 3, reservedQuantity: 2 });
 });
 it("locks before reading and updating an inventory balance", async () => {
   await expect(adjustInventoryAction("variant", 2)).resolves.toHaveProperty("success");
-  expect(mocks.lock.mock.invocationCallOrder[0]).toBeLessThan(mocks.read.mock.invocationCallOrder[0]!);
+  expect(mocks.lock.mock.invocationCallOrder[0]).toBeLessThan(firstCall(mocks.read));
   expect(mocks.read).toHaveBeenCalledWith({ where: { variantId: "variant", sellerId: "seller-a" } });
   expect(mocks.update).toHaveBeenCalledWith({
     where: { id: "inv" },
@@ -57,7 +62,7 @@ it("invalidates open editors of an editable product before locking the inventory
     },
     data: { updatedAt: expect.any(Date) },
   });
-  expect(mocks.bumpProduct.mock.invocationCallOrder[0]).toBeLessThan(mocks.lock.mock.invocationCallOrder[0]!);
+  expect(mocks.bumpProduct.mock.invocationCallOrder[0]).toBeLessThan(firstCall(mocks.lock));
 });
 it("explains rejected adjustments in Portuguese", async () => {
   expect((await adjustInventoryAction("variant", -4)).error).toBe(

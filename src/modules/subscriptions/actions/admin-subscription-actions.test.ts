@@ -21,7 +21,7 @@ it("locks the seller before checking VIP state and rejects an unavailable seller
   form.set("sellerId", "seller");
   form.set("months", "1");
   expect((await activateVipSubscriptionAction({}, form)).error).toContain("não encontrada");
-  expect(mocks.lock.mock.invocationCallOrder[0]).toBeLessThan(mocks.seller.mock.invocationCallOrder[0]!);
+  expect(mocks.lock.mock.invocationCallOrder[0]).toBeLessThan(defined(mocks.seller.mock.invocationCallOrder[0]));
   expect(mocks.subscription).not.toHaveBeenCalled();
 });
 it.each(["0", "13", "1.5", "abc"])("refuses %s months with a Portuguese message before locking", async (months) => {
@@ -32,3 +32,8 @@ it.each(["0", "13", "1.5", "abc"])("refuses %s months with a Portuguese message 
   expect((await activateVipSubscriptionAction({}, form)).error).toBe("Informe a duração em meses, de 1 a 12.");
   expect(mocks.lock).not.toHaveBeenCalled();
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

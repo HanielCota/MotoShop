@@ -20,7 +20,7 @@ it.each(["body", "main"])("limits extension-attribute suppression to body: %s", 
     </RootLayout>
   );
   const doc = new DOMParser().parseFromString(renderToString(page), "text/html");
-  doc.querySelector(target)!.setAttribute("cz-shortcut-listen", "true");
+  defined(doc.querySelector(target)).setAttribute("cz-shortcut-listen", "true");
   const error = vi.spyOn(console, "error").mockImplementation(() => {});
   const recover = vi.fn();
   let root: Root | undefined;
@@ -30,12 +30,17 @@ it.each(["body", "main"])("limits extension-attribute suppression to body: %s", 
     });
     const messages = error.mock.calls.flat().join(" ");
     if (target === "body") expect(messages).not.toMatch(/hydration|hydrated|didn't match/i);
-    else expect(messages).toMatch(/hydrated/);
+    if (target !== "body") expect(messages).toMatch(/hydrated/);
     expect(recover).not.toHaveBeenCalled();
-    expect(doc.querySelector(target)!.getAttribute("cz-shortcut-listen")).toBe("true");
+    expect(defined(doc.querySelector(target)).getAttribute("cz-shortcut-listen")).toBe("true");
     expect(doc.querySelector("main")?.textContent).toBe("Página de teste");
   } finally {
     await act(async () => root?.unmount());
     error.mockRestore();
   }
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

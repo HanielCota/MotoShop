@@ -194,11 +194,9 @@ async function rejectCancellation(input: {
       where: { sellerOrderId: input.sellerOrderId },
       select: { status: true },
     });
-    if (shipment) {
-      await syncFulfillmentStatuses(tx, input.sellerOrderId, shipment.status, input.actorUserId);
-    } else {
-      await syncOrderStatusFromSellerOrders(tx, input.orderId, "CANCELLATION", input.actorUserId);
-    }
+    await (shipment
+      ? syncFulfillmentStatuses(tx, input.sellerOrderId, shipment.status, input.actorUserId)
+      : syncOrderStatusFromSellerOrders(tx, input.orderId, "CANCELLATION", input.actorUserId));
     await tx.auditLog.create({
       data: {
         action: "CANCELLATION_REJECTED",

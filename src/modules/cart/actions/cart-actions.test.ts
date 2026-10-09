@@ -39,7 +39,7 @@ it("enforces the limit on the combined quantity, not just the incoming increment
   expect((await addToCartAction(id, 1)).error).toContain("99");
   expect(mocks.tx.cartItem.upsert).not.toHaveBeenCalled();
   expect(mocks.tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
-    mocks.tx.cartItem.findUnique.mock.invocationCallOrder[0]!,
+    defined(mocks.tx.cartItem.findUnique.mock.invocationCallOrder[0]),
   );
 });
 it("does not add items after checkout converted the cart", async () => {
@@ -79,7 +79,7 @@ it("clears only the current owner's active cart, after locking it", async () => 
     where: { cartId: "cart", cart: { userId: "buyer", status: "ACTIVE" } },
   });
   expect(mocks.tx.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
-    mocks.tx.cartItem.deleteMany.mock.invocationCallOrder[0]!,
+    defined(mocks.tx.cartItem.deleteMany.mock.invocationCallOrder[0]),
   );
 });
 it("does nothing when there is no active cart to clear", async () => {
@@ -87,3 +87,8 @@ it("does nothing when there is no active cart to clear", async () => {
   expect((await clearCartAction()).success).toBe("Carrinho limpo.");
   expect(mocks.tx.cartItem.deleteMany).not.toHaveBeenCalled();
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

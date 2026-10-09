@@ -123,6 +123,19 @@ export async function setSellerCouponActiveAction(couponId: string, active: bool
   revalidatePath("/seller", "layout");
 }
 
+/** O tipo escolhido define qual valor de desconto é obrigatório. */
+function readDiscountAmount(
+  data: z.infer<typeof couponSchema>,
+): { percentageBps: number } | { fixedAmountInCents: number } | { error: string } {
+  if (data.discountType === "PERCENTAGE") {
+    if (data.percentageBps === undefined) return { error: "Informe o percentual de desconto." };
+    return { percentageBps: data.percentageBps };
+  }
+
+  if (data.fixedAmountInCents === undefined) return { error: "Informe o valor do desconto em reais." };
+  return { fixedAmountInCents: data.fixedAmountInCents };
+}
+
 async function createCoupon(
   formData: FormData,
   owner: {
@@ -134,19 +147,15 @@ async function createCoupon(
 ): Promise<CouponActionState> {
   const parsed = couponSchema.safeParse(readCouponFormInput(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os dados do cupom." };
-  if (parsed.data.discountType === "PERCENTAGE" && parsed.data.percentageBps === undefined)
-    return { error: "Informe o percentual de desconto." };
-  if (parsed.data.discountType === "FIXED_AMOUNT" && parsed.data.fixedAmountInCents === undefined)
-    return { error: "Informe o valor do desconto em reais." };
+  const discountAmount = readDiscountAmount(parsed.data);
+  if ("error" in discountAmount) return { error: discountAmount.error };
 
   try {
     const data = {
       code: parsed.data.code,
       ownerType: owner.ownerType,
       discountType: parsed.data.discountType,
-      ...(parsed.data.discountType === "PERCENTAGE"
-        ? { percentageBps: parsed.data.percentageBps! }
-        : { fixedAmountInCents: parsed.data.fixedAmountInCents! }),
+      ...discountAmount,
       minimumPurchaseInCents: parsed.data.minimumPurchaseInCents,
       ...(parsed.data.globalUsageLimit !== undefined ? { globalUsageLimit: parsed.data.globalUsageLimit } : {}),
       ...(parsed.data.perCustomerUsageLimit !== undefined
@@ -180,8 +189,7 @@ async function createCoupon(
         },
       });
     });
-    if (owner.ownerType === "MARKETPLACE") revalidatePath("/admin", "layout");
-    else revalidatePath("/seller", "layout");
+    revalidatePath(owner.ownerType === "MARKETPLACE" ? "/admin" : "/seller", "layout");
     return { success: `Cupom ${parsed.data.code} criado.` };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

@@ -28,13 +28,13 @@ it("recovers the login button after a network rejection", async () => {
   render(<AuthForm emailEnabled verificationRequired={false} />);
   fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "buyer@example.test" } });
   fireEvent.change(screen.getByLabelText("Senha"), { target: { value: "test-password" } });
-  fireEvent.submit(screen.getByRole("button", { name: "Entrar" }).closest("form")!);
+  fireEvent.submit(defined(screen.getByRole("button", { name: "Entrar" }).closest("form")));
   expect(await screen.findByRole("alert")).toHaveTextContent("conexão");
   expect(screen.getByRole("button", { name: "Entrar" })).toBeEnabled();
 });
 it("shows a localized inline validation error without submitting an empty login", async () => {
   render(<AuthForm emailEnabled verificationRequired={false} />);
-  fireEvent.submit(screen.getByRole("button", { name: "Entrar" }).closest("form")!);
+  fireEvent.submit(defined(screen.getByRole("button", { name: "Entrar" }).closest("form")));
   const emailInput = screen.getByLabelText("E-mail");
   expect(emailInput).toHaveAttribute("aria-invalid", "true");
   expect(emailInput).toHaveAccessibleDescription("Informe um e-mail válido.");
@@ -72,7 +72,7 @@ it("clears the login password when changing modes but keeps the email", () => {
 it("recovers the password recovery form after network rejection", async () => {
   render(<PasswordRecoveryForm />);
   fireEvent.change(screen.getByLabelText("E-mail da conta"), { target: { value: "buyer@example.test" } });
-  fireEvent.submit(screen.getByRole("button", { name: "Enviar link de recuperação" }).closest("form")!);
+  fireEvent.submit(defined(screen.getByRole("button", { name: "Enviar link de recuperação" }).closest("form")));
   expect(await screen.findByRole("alert")).toHaveTextContent("conexão");
   expect(screen.getByRole("button", { name: "Enviar link de recuperação" })).toBeEnabled();
 });
@@ -80,8 +80,13 @@ it("does not display success after a failed password reset", async () => {
   render(<ResetPasswordForm token="test-only-token" />);
   fireEvent.change(screen.getByLabelText(/^Nova senha/), { target: { value: "new-password" } });
   fireEvent.change(screen.getByLabelText(/^Confirme a nova senha/), { target: { value: "new-password" } });
-  fireEvent.submit(screen.getByRole("button", { name: "Salvar nova senha" }).closest("form")!);
+  fireEvent.submit(defined(screen.getByRole("button", { name: "Salvar nova senha" }).closest("form")));
   expect(await screen.findByRole("alert")).toHaveTextContent("conexão");
   expect(screen.queryByRole("status")).toBeNull();
   expect(screen.getByRole("button", { name: "Salvar nova senha" })).toBeEnabled();
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

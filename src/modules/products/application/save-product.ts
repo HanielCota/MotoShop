@@ -158,58 +158,7 @@ export async function updateSellerProduct(
     const existingVariantsById = new Map(product.variants.map((variant) => [variant.id, variant]));
     const submittedVariantIds = new Set<string>();
     for (const variantInput of input.variants) {
-      if (variantInput.id) {
-        const variant = existingVariantsById.get(variantInput.id);
-        if (!variant || submittedVariantIds.has(variant.id)) {
-          throw new ApplicationError({
-            code: "VALIDATION_ERROR",
-            message: "Uma ou mais variações não pertencem a este produto.",
-            statusCode: 400,
-          });
-        }
-        submittedVariantIds.add(variant.id);
-        await tx.productVariant.update({
-          where: { id: variant.id },
-          data: {
-            sku: variantInput.sku,
-            title: variantInput.title,
-            priceInCents: variantInput.priceInCents,
-            ...getVariantCommercialFields(variantInput),
-            active: true,
-          },
-        });
-        await tx.$queryRaw`SELECT id FROM "inventories" WHERE "variantId" = ${variant.id} AND "sellerId" = ${actor.sellerId} FOR UPDATE`;
-        const inventory = await tx.inventory.findFirst({
-          where: { variantId: variant.id, sellerId: actor.sellerId },
-        });
-        if (!inventory)
-          throw new ApplicationError({
-            code: "NOT_FOUND",
-            message: "Estoque não encontrado para uma variação.",
-            statusCode: 404,
-          });
-        const quantityChange = variantInput.stock - inventory.availableQuantity;
-        if (quantityChange !== 0) {
-          const balance = adjustAvailableInventory(inventory, quantityChange);
-          await tx.inventory.update({
-            where: { id: inventory.id },
-            data: { availableQuantity: balance.availableQuantity, version: { increment: 1 } },
-          });
-          await tx.inventoryMovement.create({
-            data: {
-              type: quantityChange > 0 ? "MANUAL_IN" : "MANUAL_OUT",
-              quantityChange,
-              availableQuantityAfter: balance.availableQuantity,
-              reservedQuantityAfter: balance.reservedQuantity,
-              reason: "Atualização da variação pelo seller",
-              inventoryId: inventory.id,
-              variantId: variant.id,
-              sellerId: actor.sellerId,
-              actorUserId: actor.userId,
-            },
-          });
-        }
-      } else {
+      if (!variantInput.id) {
         const variant = await tx.productVariant.create({
           data: {
             productId: product.id,
@@ -238,6 +187,58 @@ export async function updateSellerProduct(
             },
           });
         }
+        continue;
+      }
+
+      const variant = existingVariantsById.get(variantInput.id);
+      if (!variant || submittedVariantIds.has(variant.id)) {
+        throw new ApplicationError({
+          code: "VALIDATION_ERROR",
+          message: "Uma ou mais variações não pertencem a este produto.",
+          statusCode: 400,
+        });
+      }
+      submittedVariantIds.add(variant.id);
+      await tx.productVariant.update({
+        where: { id: variant.id },
+        data: {
+          sku: variantInput.sku,
+          title: variantInput.title,
+          priceInCents: variantInput.priceInCents,
+          ...getVariantCommercialFields(variantInput),
+          active: true,
+        },
+      });
+      await tx.$queryRaw`SELECT id FROM "inventories" WHERE "variantId" = ${variant.id} AND "sellerId" = ${actor.sellerId} FOR UPDATE`;
+      const inventory = await tx.inventory.findFirst({
+        where: { variantId: variant.id, sellerId: actor.sellerId },
+      });
+      if (!inventory)
+        throw new ApplicationError({
+          code: "NOT_FOUND",
+          message: "Estoque não encontrado para uma variação.",
+          statusCode: 404,
+        });
+      const quantityChange = variantInput.stock - inventory.availableQuantity;
+      if (quantityChange !== 0) {
+        const balance = adjustAvailableInventory(inventory, quantityChange);
+        await tx.inventory.update({
+          where: { id: inventory.id },
+          data: { availableQuantity: balance.availableQuantity, version: { increment: 1 } },
+        });
+        await tx.inventoryMovement.create({
+          data: {
+            type: quantityChange > 0 ? "MANUAL_IN" : "MANUAL_OUT",
+            quantityChange,
+            availableQuantityAfter: balance.availableQuantity,
+            reservedQuantityAfter: balance.reservedQuantity,
+            reason: "Atualização da variação pelo seller",
+            inventoryId: inventory.id,
+            variantId: variant.id,
+            sellerId: actor.sellerId,
+            actorUserId: actor.userId,
+          },
+        });
       }
     }
     const variantsToDeactivate = product.variants

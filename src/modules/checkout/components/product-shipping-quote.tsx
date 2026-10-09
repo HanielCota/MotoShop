@@ -24,8 +24,12 @@ export function ProductShippingQuote({ options }: { options: Option[] }) {
     setPending(true);
     try {
       const result = await quoteProductShippingAction({ variantId, postalCode });
-      if (result.error) setMessage(result.error);
-      else setQuotes(result.quotes);
+      if (result.error) {
+        setMessage(result.error);
+        return;
+      }
+
+      setQuotes(result.quotes);
     } catch {
       setMessage("Não foi possível calcular o frete agora. Tente novamente.");
     } finally {

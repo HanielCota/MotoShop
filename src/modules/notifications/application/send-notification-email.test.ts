@@ -31,7 +31,7 @@ it("locks the event before claiming and sends a stable provider idempotency key"
   await sendNotificationEmail(input);
   const key = mocks.send.mock.calls[0]?.[0].idempotencyKey;
   expect(key).toMatch(/^[a-f0-9]{64}$/);
-  expect(mocks.lock.mock.invocationCallOrder[0]).toBeLessThan(mocks.find.mock.invocationCallOrder[0]!);
+  expect(mocks.lock.mock.invocationCallOrder[0]).toBeLessThan(defined(mocks.find.mock.invocationCallOrder[0]));
   await sendNotificationEmail(input);
   expect(mocks.send.mock.calls[1]?.[0].idempotencyKey).toBe(key);
 });
@@ -58,3 +58,8 @@ it("reclaims a PROCESSING delivery whose lease expired after a worker crash", as
     expect.objectContaining({ where: { id: "delivery" }, data: expect.objectContaining({ status: "PROCESSING" }) }),
   );
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

@@ -33,14 +33,14 @@ export async function ingestMercadoPagoWebhook(input: {
       },
     });
   } catch (error) {
-    if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
-      duplicate = true;
-      webhookEvent = await db.webhookEvent.findUnique({
-        where: { provider_externalId: { provider: "MERCADO_PAGO", externalId: input.notificationId } },
-      });
-    } else {
+    if (!(typeof error === "object" && error !== null && "code" in error && error.code === "P2002")) {
       return { outcome: "PERSISTENCE_FAILED" };
     }
+
+    duplicate = true;
+    webhookEvent = await db.webhookEvent.findUnique({
+      where: { provider_externalId: { provider: "MERCADO_PAGO", externalId: input.notificationId } },
+    });
   }
 
   if (!webhookEvent) return { outcome: "PERSISTENCE_FAILED" };

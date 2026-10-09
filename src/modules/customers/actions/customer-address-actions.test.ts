@@ -40,7 +40,7 @@ it.each([setDefaultCustomerAddressAction, deleteCustomerAddressAction])(
   async (execute) => {
     mocks.find.mockResolvedValue(null);
     expect((await execute(addressId)).error).toContain("não encontrado");
-    expect(mocks.lock.mock.invocationCallOrder[0]).toBeLessThan(mocks.find.mock.invocationCallOrder[0]!);
+    expect(mocks.lock.mock.invocationCallOrder[0]).toBeLessThan(defined(mocks.find.mock.invocationCallOrder[0]));
     expect(mocks.find).toHaveBeenCalledWith({ where: { id: addressId, userId: "buyer" } });
     expect(mocks.update).not.toHaveBeenCalled();
     expect(mocks.remove).not.toHaveBeenCalled();
@@ -61,7 +61,7 @@ it("decides the initial default address only after locking the customer", async 
   }))
     form.set(key, value);
   expect((await createCustomerAddressAction({}, form)).success).toBeTruthy();
-  expect(mocks.lock.mock.invocationCallOrder[0]).toBeLessThan(mocks.count.mock.invocationCallOrder[0]!);
+  expect(mocks.lock.mock.invocationCallOrder[0]).toBeLessThan(defined(mocks.count.mock.invocationCallOrder[0]));
   expect(mocks.create).toHaveBeenCalledWith(
     expect.objectContaining({ data: expect.objectContaining({ isDefault: true, userId: "buyer" }) }),
   );
@@ -93,3 +93,8 @@ it.each(["ZZ", "12", "S"])("rejects the invalid state code %s", async (state) =>
   expect((await createCustomerAddressAction({}, form)).error).toBe("Informe uma UF válida, como SP ou RJ.");
   expect(mocks.create).not.toHaveBeenCalled();
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

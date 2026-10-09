@@ -38,7 +38,12 @@ describe("fitment options", () => {
   });
 
   it("formats variant labels without empty parts", () => {
-    expect(formatFitmentVariantLabel(fitments[2]!)).toBe("2025 · 250 cc");
-    expect(formatFitmentVariantLabel(fitments[0]!)).toBe("2025 · R · 250 cc");
+    expect(formatFitmentVariantLabel(defined(fitments[2]))).toBe("2025 · 250 cc");
+    expect(formatFitmentVariantLabel(defined(fitments[0]))).toBe("2025 · R · 250 cc");
   });
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

@@ -20,7 +20,15 @@ export function calculateCouponDiscount(coupon: CouponDiscountDefinition, subtot
     });
   }
 
-  let rawDiscountInCents: number;
+  const rawDiscountInCents = calculateRawCouponDiscount(coupon, subtotalInCents);
+  const discount = Math.min(rawDiscountInCents, subtotalInCents);
+  if (discount <= 0) {
+    throw new ApplicationError({ code: "CONFLICT", message: "O cupom não gera desconto válido.", statusCode: 409 });
+  }
+  return discount;
+}
+
+function calculateRawCouponDiscount(coupon: CouponDiscountDefinition, subtotalInCents: number): number {
   if (coupon.discountType === "PERCENTAGE") {
     const percentageBps = coupon.percentageBps;
     if (
@@ -32,25 +40,20 @@ export function calculateCouponDiscount(coupon: CouponDiscountDefinition, subtot
     ) {
       throw invalidCouponConfiguration();
     }
-    rawDiscountInCents = Number((BigInt(subtotalInCents) * BigInt(percentageBps)) / BigInt(10_000));
-  } else {
-    const fixedAmountInCents = coupon.fixedAmountInCents;
-    if (
-      fixedAmountInCents === null ||
-      !Number.isSafeInteger(fixedAmountInCents) ||
-      fixedAmountInCents < 1 ||
-      fixedAmountInCents > 2_147_483_647 ||
-      coupon.percentageBps !== null
-    ) {
-      throw invalidCouponConfiguration();
-    }
-    rawDiscountInCents = fixedAmountInCents;
+    return Number((BigInt(subtotalInCents) * BigInt(percentageBps)) / BigInt(10_000));
   }
-  const discount = Math.min(rawDiscountInCents, subtotalInCents);
-  if (discount <= 0) {
-    throw new ApplicationError({ code: "CONFLICT", message: "O cupom não gera desconto válido.", statusCode: 409 });
+
+  const fixedAmountInCents = coupon.fixedAmountInCents;
+  if (
+    fixedAmountInCents === null ||
+    !Number.isSafeInteger(fixedAmountInCents) ||
+    fixedAmountInCents < 1 ||
+    fixedAmountInCents > 2_147_483_647 ||
+    coupon.percentageBps !== null
+  ) {
+    throw invalidCouponConfiguration();
   }
-  return discount;
+  return fixedAmountInCents;
 }
 
 function invalidCouponConfiguration() {

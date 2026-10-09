@@ -102,7 +102,10 @@ export function SecureCardFields({ publicKey, ref }: { publicKey: string; ref: R
         });
         field.mount(`motoshop-${type}`);
       }
-      fields[0]!.on("binChange", ({ bin }) => {
+
+      const [cardNumberField, , securityCodeField] = fields;
+      if (!cardNumberField || !securityCodeField) throw new Error("Secure fields were not created");
+      cardNumberField.on("binChange", ({ bin }) => {
         cardVersion.current++;
         const current = ++generation;
         method.current = null;
@@ -120,8 +123,8 @@ export function SecureCardFields({ publicKey, ref }: { publicKey: string; ref: R
             if (!selected) throw new Error("Unsupported card");
             const settings = selected.settings[0];
             if (settings) {
-              fields[0]!.update({ settings: settings.card_number });
-              fields[2]!.update({ settings: settings.security_code });
+              cardNumberField.update({ settings: settings.card_number });
+              securityCodeField.update({ settings: settings.security_code });
             }
             const available = await client.getIssuers({ bin, paymentMethodId: selected.id });
             if (disposed || current !== generation) return;

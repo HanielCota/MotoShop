@@ -75,17 +75,18 @@ export function StoreBrandingManager({ initialImages }: { initialImages: StoreBr
         throw attachError;
       }
       if ("error" in attached) throw new Error(attached.error);
-      if (attached.image.url) {
-        setImages((current) => ({
-          ...current,
-          [imageType === "logo" ? "logoUrl" : "bannerUrl"]: attached.image.url,
-        }));
-        setSuccess(`${imageType === "logo" ? "Logo" : "Banner"} atualizado.`);
-      } else {
+      if (!attached.image.url) {
         setSuccess(
           `${imageType === "logo" ? "Logo" : "Banner"} associado. Configure IMAGEKIT_URL_ENDPOINT para exibi-lo na vitrine.`,
         );
+        return;
       }
+
+      setImages((current) => ({
+        ...current,
+        [imageType === "logo" ? "logoUrl" : "bannerUrl"]: attached.image.url,
+      }));
+      setSuccess(`${imageType === "logo" ? "Logo" : "Banner"} atualizado.`);
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Não foi possível enviar a imagem.");
     } finally {

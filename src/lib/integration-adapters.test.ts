@@ -72,9 +72,12 @@ it("signs a direct ImageKit upload without exposing the private key", async () =
     folder: "/products/seller-1/product-1",
     fileName: "photo.webp",
   });
-  const [header, payload, signature] = result.fields.token!.split(".");
-  expect(JSON.parse(Buffer.from(header!, "base64url").toString())).toMatchObject({ alg: "HS256", kid: "public_test" });
-  const claims = JSON.parse(Buffer.from(payload!, "base64url").toString());
+  const [header, payload, signature] = defined(result.fields.token).split(".");
+  expect(JSON.parse(Buffer.from(defined(header), "base64url").toString())).toMatchObject({
+    alg: "HS256",
+    kid: "public_test",
+  });
+  const claims = JSON.parse(Buffer.from(defined(payload), "base64url").toString());
   expect(claims).toMatchObject({
     folder: result.fields.folder,
     fileName: result.fields.fileName,
@@ -221,3 +224,8 @@ it("maps a Melhor Envio sandbox quote into cents without exposing provider detai
   ]);
   expect(fetchMock.mock.calls[0]?.[0]).toBe("https://sandbox.melhorenvio.com.br/api/v2/me/shipment/calculate");
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

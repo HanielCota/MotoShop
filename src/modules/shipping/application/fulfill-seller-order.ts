@@ -53,12 +53,12 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
   const shipment = sellerOrder.shipment;
   const serviceCode = sellerOrder.shipment.serviceCode;
   const accessToken = await requireSellerShippingToken(sellerOrder.sellerId, ["cart-write", "shipping-checkout"]);
-  let metadata: unknown = shipment.providerMetadata;
-  if (shipment.status === "CANCELLED") {
-    metadata = await resetCancelledShipmentForRepurchase(input, shipment.id);
-  } else if (shipment.externalShipmentId) {
-    return shipment;
-  }
+  if (shipment.status !== "CANCELLED" && shipment.externalShipmentId) return shipment;
+
+  let metadata: unknown =
+    shipment.status === "CANCELLED"
+      ? await resetCancelledShipmentForRepurchase(input, shipment.id)
+      : shipment.providerMetadata;
   if (shipment.purchaseState) {
     throw new ApplicationError({
       code: "CONFLICT",
@@ -132,52 +132,21 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
   }
 
   // Passo 1: inserir no carrinho (não idempotente no provedor) e persistir o id imediatamente.
-  let cartItemId: string;
-  if (pendingCart) {
-    cartItemId = pendingCart.cartItemId;
-  } else {
-    const volumes = quotedVolumes!.volumes;
-    let cart: Awaited<ReturnType<typeof melhorEnvioProvider.addToCart>>;
-    try {
-      cart = await melhorEnvioProvider.addToCart(
-        {
-          sellerOrderId: input.sellerOrderId,
-          serviceCode,
-          ...shipmentData,
-          volumes,
-          ...(input.tags ? { tags: input.tags } : { tags: [{ tag: sellerOrder.order.orderNumber }] }),
-        },
+  const cartStep = pendingCart
+    ? { cartItemId: pendingCart.cartItemId, metadata }
+    : await addPurchaseCartItem({
+        sellerOrderId: input.sellerOrderId,
+        shipmentId: shipment.id,
+        orderNumber: sellerOrder.order.orderNumber,
+        serviceCode,
+        shipmentData,
+        quotedVolumes,
+        tags: input.tags,
         accessToken,
-      );
-    } catch (error) {
-      await recordPurchaseFailure({ shipmentId: shipment.id, sellerOrderId: input.sellerOrderId, error, metadata });
-      throw error;
-    }
-    cartItemId = cart.cartItemId;
-    metadata = withPurchaseCart(metadata, {
-      step: "CART_CREATED",
-      cartItemId,
-      serviceCode,
-      createdAt: new Date().toISOString(),
-      volumeCount: volumes.length,
-      quotedPriceInCents: quotedVolumes!.quotedPriceInCents,
-    });
-    const saved = await db.shipment.updateMany({
-      where: { id: shipment.id, purchaseState: "IN_PROGRESS", externalShipmentId: null },
-      data: { providerMetadata: metadata as Prisma.InputJsonValue },
-    });
-    if (saved.count !== 1) {
-      logger.error(
-        { event: "shipment.purchase_cart_not_persisted", sellerOrderId: input.sellerOrderId, cartItemId },
-        "Melhor Envio cart item was created but the shipment claim changed; manual reconciliation required",
-      );
-      throw new ApplicationError({
-        code: "CONFLICT",
-        message: "A compra da etiqueta precisa de conferência manual antes de uma nova tentativa.",
-        statusCode: 409,
+        metadata,
       });
-    }
-  }
+  const cartItemId = cartStep.cartItemId;
+  metadata = cartStep.metadata;
 
   // Passo 2: pagar o item de carrinho persistido.
   let result: Awaited<ReturnType<typeof melhorEnvioProvider.checkoutCart>>;
@@ -247,6 +216,63 @@ export async function purchaseSellerOrderShipment(input: FulfillSellerOrderInput
     throw new ApplicationError({ code: "CONFLICT", message: STALE_PURCHASE_MESSAGE, statusCode: 409 });
   }
   return outcome.shipment;
+}
+
+async function addPurchaseCartItem(input: {
+  sellerOrderId: string;
+  shipmentId: string;
+  orderNumber: string;
+  serviceCode: string;
+  shipmentData: ReturnType<typeof buildShipmentData>;
+  quotedVolumes: { volumes: ShippingVolume[]; quotedPriceInCents: number } | null;
+  tags: FulfillSellerOrderInput["tags"];
+  accessToken: string;
+  metadata: unknown;
+}) {
+  if (!input.quotedVolumes) throw new Error("Melhor Envio volumes must be quoted before creating a cart item");
+  const volumes = input.quotedVolumes.volumes;
+  let metadata = input.metadata;
+  let cart: Awaited<ReturnType<typeof melhorEnvioProvider.addToCart>>;
+  try {
+    cart = await melhorEnvioProvider.addToCart(
+      {
+        sellerOrderId: input.sellerOrderId,
+        serviceCode: input.serviceCode,
+        ...input.shipmentData,
+        volumes,
+        ...(input.tags ? { tags: input.tags } : { tags: [{ tag: input.orderNumber }] }),
+      },
+      input.accessToken,
+    );
+  } catch (error) {
+    await recordPurchaseFailure({ shipmentId: input.shipmentId, sellerOrderId: input.sellerOrderId, error, metadata });
+    throw error;
+  }
+  const cartItemId = cart.cartItemId;
+  metadata = withPurchaseCart(metadata, {
+    step: "CART_CREATED",
+    cartItemId,
+    serviceCode: input.serviceCode,
+    createdAt: new Date().toISOString(),
+    volumeCount: volumes.length,
+    quotedPriceInCents: input.quotedVolumes.quotedPriceInCents,
+  });
+  const saved = await db.shipment.updateMany({
+    where: { id: input.shipmentId, purchaseState: "IN_PROGRESS", externalShipmentId: null },
+    data: { providerMetadata: metadata as Prisma.InputJsonValue },
+  });
+  if (saved.count !== 1) {
+    logger.error(
+      { event: "shipment.purchase_cart_not_persisted", sellerOrderId: input.sellerOrderId, cartItemId },
+      "Melhor Envio cart item was created but the shipment claim changed; manual reconciliation required",
+    );
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "A compra da etiqueta precisa de conferência manual antes de uma nova tentativa.",
+      statusCode: 409,
+    });
+  }
+  return { cartItemId, metadata };
 }
 
 /**

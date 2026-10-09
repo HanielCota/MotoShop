@@ -70,25 +70,26 @@ export async function activateVipSubscriptionAction(
             } as Prisma.InputJsonValue,
           },
         });
-      } else {
-        const subscription = await tx.sellerSubscription.create({
-          data: { sellerId: seller.id, startsAt, endsAt, plan: "VIP", status: "ACTIVE" },
-        });
-        await tx.auditLog.create({
-          data: {
-            action: "SELLER_VIP_ACTIVATED",
-            entityType: "SELLER_SUBSCRIPTION",
-            entityId: subscription.id,
-            actorUserId: session.user.id,
-            metadata: {
-              sellerId: seller.id,
-              months: parsed.data.months,
-              startsAt: startsAt.toISOString(),
-              endsAt: endsAt.toISOString(),
-            } as Prisma.InputJsonValue,
-          },
-        });
+        return;
       }
+
+      const subscription = await tx.sellerSubscription.create({
+        data: { sellerId: seller.id, startsAt, endsAt, plan: "VIP", status: "ACTIVE" },
+      });
+      await tx.auditLog.create({
+        data: {
+          action: "SELLER_VIP_ACTIVATED",
+          entityType: "SELLER_SUBSCRIPTION",
+          entityId: subscription.id,
+          actorUserId: session.user.id,
+          metadata: {
+            sellerId: seller.id,
+            months: parsed.data.months,
+            startsAt: startsAt.toISOString(),
+            endsAt: endsAt.toISOString(),
+          } as Prisma.InputJsonValue,
+        },
+      });
     });
 
     revalidatePath("/admin", "layout");

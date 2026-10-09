@@ -86,27 +86,7 @@ export async function reconcileShipmentGeneration(input: {
       });
       if (!current) throw new ApplicationError({ code: "NOT_FOUND", message: "Geração de etiqueta não encontrada." });
 
-      if (canRunShipmentOperation(sellerOrderStatus, "GENERATE")) {
-        const status = resolveShipmentStatus(current.status, "READY_TO_SHIP");
-        data = { generationState: "GENERATED", generatedAt: now, generationError: null, status };
-        syncStatus = status;
-      } else {
-        staleSellerOrderStatus = sellerOrderStatus;
-        data = {
-          generationState: "GENERATED",
-          generatedAt: now,
-          generationError: STALE_GENERATION_MESSAGE,
-          ...(sellerOrderStatus === "CANCELLED"
-            ? {
-                status: "CANCELLED",
-                providerMetadata: withLabelCancellationFlag(
-                  readProviderMetadata(current.providerMetadata),
-                  "GENERATED_AFTER_CANCELLATION",
-                ),
-              }
-            : {}),
-        };
-      }
+      ({ data, syncStatus, staleSellerOrderStatus } = confirmedGenerationUpdate(sellerOrderStatus, current, now));
     }
 
     const updated = await tx.shipment.updateMany({
@@ -138,4 +118,42 @@ export async function reconcileShipmentGeneration(input: {
       },
     });
   });
+}
+
+function confirmedGenerationUpdate(
+  sellerOrderStatus: Awaited<ReturnType<typeof lockSellerOrderStatus>>,
+  current: { status: ShipmentStatus; providerMetadata: Parameters<typeof readProviderMetadata>[0] },
+  now: Date,
+): {
+  data: Prisma.ShipmentUpdateManyMutationInput;
+  syncStatus: ShipmentStatus | null;
+  staleSellerOrderStatus: string | null;
+} {
+  if (canRunShipmentOperation(sellerOrderStatus, "GENERATE")) {
+    const status = resolveShipmentStatus(current.status, "READY_TO_SHIP");
+    return {
+      data: { generationState: "GENERATED", generatedAt: now, generationError: null, status },
+      syncStatus: status,
+      staleSellerOrderStatus: null,
+    };
+  }
+
+  return {
+    data: {
+      generationState: "GENERATED",
+      generatedAt: now,
+      generationError: STALE_GENERATION_MESSAGE,
+      ...(sellerOrderStatus === "CANCELLED"
+        ? {
+            status: "CANCELLED",
+            providerMetadata: withLabelCancellationFlag(
+              readProviderMetadata(current.providerMetadata),
+              "GENERATED_AFTER_CANCELLATION",
+            ),
+          }
+        : {}),
+    },
+    syncStatus: null,
+    staleSellerOrderStatus: sellerOrderStatus,
+  };
 }
