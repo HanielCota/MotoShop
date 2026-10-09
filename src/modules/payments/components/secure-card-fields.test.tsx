@@ -27,7 +27,7 @@ function setup() {
         mount: vi.fn(),
         unmount: fieldUnmount,
         update: vi.fn(),
-        on: (event: string, fn: (event: { bin?: string }) => void) => listeners.set(`${type}:${event}`, fn),
+        on: (event: string, listener: (event: { bin?: string }) => void) => listeners.set(`${type}:${event}`, listener),
       }),
       createCardToken: token,
     },
