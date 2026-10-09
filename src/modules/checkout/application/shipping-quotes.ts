@@ -9,7 +9,7 @@ import { melhorEnvioProvider } from "@/lib/shipping/melhor-envio-provider";
 import { getSellerMelhorEnvioAccessToken } from "@/modules/shipping/infrastructure/melhor-envio-oauth";
 import { ApplicationError } from "@/shared/errors/application-error";
 import { consumeRateLimit } from "@/shared/rate-limit/consume-rate-limit";
-import type { ShippingQuote, ShippingQuoteInput } from "@/shared/shipping/shipping-provider";
+import type { ShippingProduct, ShippingQuote, ShippingQuoteInput } from "@/shared/shipping/shipping-provider";
 
 import { getActiveCart } from "@/modules/cart/queries/cart";
 import { purchasableVariantWhere } from "@/modules/products/application/purchasable-variant";
@@ -54,67 +54,34 @@ export async function quoteShippingForActiveCart(postalCode: string): Promise<Se
 }
 
 export async function quoteShippingForVariant(variantId: string, postalCode: string): Promise<SellerShippingQuotes[]> {
-  const variant = await db.productVariant.findFirst({
-    where: purchasableVariantWhere(variantId, { requireStock: true }),
-    include: { inventory: true, product: { include: { store: true } } },
-  });
-  if (!variant?.product)
-    throw new ApplicationError({ code: "NOT_FOUND", message: "Esta opção não está disponível para entrega." });
-
+  const variant = await findQuotableVariant(variantId);
   const { product } = variant;
   const sellerId = product.sellerId;
   const fromPostalCode = product.store?.originPostalCode ?? env.MELHOR_ENVIO_ORIGIN_POSTAL_CODE;
-  const methods = await db.sellerShippingMethod.findMany({ where: { sellerId, active: true } });
-  const ownQuotes = quoteOwnShipping(methods, postalCode);
+  const ownQuotes = await quoteSellerOwnShipping(sellerId, postalCode);
   const measurements = getPackageMeasurements(variant, product);
-  const shippingIntegration = fromPostalCode
-    ? await db.sellerShippingIntegration.findUnique({ where: { sellerId }, select: { id: true } })
-    : null;
-  if (shippingIntegration && !measurements && ownQuotes.length === 0) {
+  const hasIntegration = await hasShippingIntegration(sellerId, fromPostalCode);
+  if (hasIntegration && !measurements && ownQuotes.length === 0) {
     throw new ApplicationError({
       code: "CONFIGURATION_ERROR",
       message: "A loja ainda precisa informar o peso e as dimensões para calcular o frete integrado.",
     });
   }
 
-  const accessToken =
-    shippingIntegration && fromPostalCode && measurements ? await getSellerMelhorEnvioAccessToken(sellerId) : null;
-  const providerQuotes =
-    accessToken && fromPostalCode && measurements
-      ? await quoteIntegratedShipping(
-          sellerId,
-          {
-            fromPostalCode,
-            toPostalCode: postalCode,
-            products: [
-              {
-                id: variant.sku,
-                ...measurements,
-                insuranceValueInCents: getCurrentPriceInCents(variant),
-                quantity: 1,
-              },
-            ],
-          },
-          accessToken,
-          { enforceSellerBudget: true },
-        ).catch((error: unknown) => {
-          if (ownQuotes.length === 0) throw error;
-          logger.warn({ event: "shipping.integrated_quote_unavailable", sellerId });
-          return [];
-        })
-      : [];
+  const products = measurements
+    ? [{ id: variant.sku, ...measurements, insuranceValueInCents: getCurrentPriceInCents(variant), quantity: 1 }]
+    : null;
+  const providerQuotes = await quoteProviderShipping({
+    sellerId,
+    hasIntegration,
+    fromPostalCode,
+    toPostalCode: postalCode,
+    products,
+    ownQuotes,
+    options: { enforceSellerBudget: true },
+  });
 
-  const quotes: CheckoutShippingQuote[] = [
-    ...ownQuotes,
-    ...providerQuotes.map((quote) => ({
-      provider: quote.provider,
-      serviceCode: quote.serviceCode,
-      carrier: quote.carrier,
-      service: quote.service,
-      priceInCents: quote.priceInCents,
-      ...(quote.estimatedDeliveryDays !== undefined ? { estimatedDeliveryDays: quote.estimatedDeliveryDays } : {}),
-    })),
-  ];
+  const quotes: CheckoutShippingQuote[] = [...ownQuotes, ...providerQuotes.map(toCheckoutShippingQuote)];
   if (quotes.length === 0)
     throw new ApplicationError({
       code: "CONFLICT",
@@ -135,72 +102,7 @@ export async function quoteShippingForCart(
 
   const groups = Map.groupBy(cart.items, (item) => item.variant.product.sellerId);
   const quotes = await Promise.all(
-    Array.from(groups.entries()).map(async ([sellerId, items]) => {
-      const firstItem = items[0];
-      const store = firstItem?.variant.product.store;
-      const fromPostalCode = store?.originPostalCode ?? env.MELHOR_ENVIO_ORIGIN_POSTAL_CODE;
-      const methods = await db.sellerShippingMethod.findMany({ where: { sellerId, active: true } });
-      const ownQuotes = quoteOwnShipping(methods, postalCode);
-      const measuredProducts = items.map((item) => {
-        const measurements = getPackageMeasurements(item.variant, item.variant.product);
-        return measurements
-          ? {
-              id: item.variant.sku,
-              ...measurements,
-              // Valor UNITÁRIO: o Melhor Envio multiplica o `insurance_value` pela `quantity`.
-              insuranceValueInCents: getCurrentPriceInCents(item.variant),
-              quantity: item.quantity,
-            }
-          : null;
-      });
-      const products = measuredProducts.filter((product) => product !== null);
-      const completeMeasurements = products.length === items.length;
-      const shippingIntegration = fromPostalCode
-        ? await db.sellerShippingIntegration.findUnique({ where: { sellerId }, select: { id: true } })
-        : null;
-      if (shippingIntegration && !completeMeasurements && ownQuotes.length === 0) {
-        throw new ApplicationError({
-          code: "CONFIGURATION_ERROR",
-          message: "Uma loja precisa completar o peso e as medidas dos produtos antes de oferecer frete integrado.",
-        });
-      }
-
-      const accessToken =
-        shippingIntegration && fromPostalCode && completeMeasurements
-          ? await getSellerMelhorEnvioAccessToken(sellerId)
-          : null;
-      const providerQuotes =
-        accessToken && fromPostalCode && completeMeasurements
-          ? await quoteIntegratedShipping(
-              sellerId,
-              { fromPostalCode, toPostalCode: postalCode, products },
-              accessToken,
-              options,
-            ).catch((error: unknown) => {
-              if (ownQuotes.length === 0) throw error;
-              logger.warn({ event: "shipping.integrated_quote_unavailable", sellerId });
-              return [];
-            })
-          : [];
-
-      return {
-        sellerId,
-        storeName: store?.name ?? "Loja",
-        quotes: [
-          ...ownQuotes,
-          ...providerQuotes.map((quote) => ({
-            provider: quote.provider,
-            serviceCode: quote.serviceCode,
-            carrier: quote.carrier,
-            service: quote.service,
-            priceInCents: quote.priceInCents,
-            ...(quote.estimatedDeliveryDays !== undefined
-              ? { estimatedDeliveryDays: quote.estimatedDeliveryDays }
-              : {}),
-          })),
-        ],
-      } satisfies SellerShippingQuotes;
-    }),
+    Array.from(groups.entries()).map(([sellerId, items]) => quoteSellerCartItems(sellerId, items, postalCode, options)),
   );
 
   if (quotes.some((seller) => seller.quotes.length === 0)) {
@@ -210,4 +112,121 @@ export async function quoteShippingForCart(
     });
   }
   return quotes;
+}
+
+type ShippingCartItem = NonNullable<Awaited<ReturnType<typeof getActiveCart>>>["items"][number];
+
+async function quoteSellerCartItems(
+  sellerId: string,
+  items: ShippingCartItem[],
+  postalCode: string,
+  options: QuoteOptions,
+): Promise<SellerShippingQuotes> {
+  const store = items[0]?.variant.product.store;
+  const fromPostalCode = store?.originPostalCode ?? env.MELHOR_ENVIO_ORIGIN_POSTAL_CODE;
+  const ownQuotes = await quoteSellerOwnShipping(sellerId, postalCode);
+  const products = items
+    .map(toMeasuredShippingProduct)
+    .filter((product): product is ShippingProduct => product !== null);
+  const completeMeasurements = products.length === items.length;
+  const hasIntegration = await hasShippingIntegration(sellerId, fromPostalCode);
+  if (hasIntegration && !completeMeasurements && ownQuotes.length === 0) {
+    throw new ApplicationError({
+      code: "CONFIGURATION_ERROR",
+      message: "Uma loja precisa completar o peso e as medidas dos produtos antes de oferecer frete integrado.",
+    });
+  }
+
+  const providerQuotes = await quoteProviderShipping({
+    sellerId,
+    hasIntegration,
+    fromPostalCode,
+    toPostalCode: postalCode,
+    products: completeMeasurements ? products : null,
+    ownQuotes,
+    options,
+  });
+
+  return {
+    sellerId,
+    storeName: store?.name ?? "Loja",
+    quotes: [...ownQuotes, ...providerQuotes.map(toCheckoutShippingQuote)],
+  };
+}
+
+function toMeasuredShippingProduct(item: ShippingCartItem): ShippingProduct | null {
+  const measurements = getPackageMeasurements(item.variant, item.variant.product);
+  if (!measurements) return null;
+  return {
+    id: item.variant.sku,
+    ...measurements,
+    // Valor UNITÁRIO: o Melhor Envio multiplica o `insurance_value` pela `quantity`.
+    insuranceValueInCents: getCurrentPriceInCents(item.variant),
+    quantity: item.quantity,
+  };
+}
+
+async function findQuotableVariant(variantId: string) {
+  const variant = await db.productVariant.findFirst({
+    where: purchasableVariantWhere(variantId, { requireStock: true }),
+    include: { inventory: true, product: { include: { store: true } } },
+  });
+  if (!variant?.product)
+    throw new ApplicationError({ code: "NOT_FOUND", message: "Esta opção não está disponível para entrega." });
+  return variant;
+}
+
+async function quoteSellerOwnShipping(sellerId: string, postalCode: string): Promise<CheckoutShippingQuote[]> {
+  const methods = await db.sellerShippingMethod.findMany({ where: { sellerId, active: true } });
+  return quoteOwnShipping(methods, postalCode);
+}
+
+async function hasShippingIntegration(sellerId: string, fromPostalCode: string | null | undefined): Promise<boolean> {
+  if (!fromPostalCode) return false;
+  const integration = await db.sellerShippingIntegration.findUnique({ where: { sellerId }, select: { id: true } });
+  return integration !== null;
+}
+
+/**
+ * Quotes through the seller's Melhor Envio account when it is connected and every product is
+ * measured. A provider failure only surfaces when the seller has no own shipping to fall back on.
+ */
+async function quoteProviderShipping(input: {
+  sellerId: string;
+  hasIntegration: boolean;
+  fromPostalCode: string | null | undefined;
+  toPostalCode: string;
+  products: ShippingProduct[] | null;
+  ownQuotes: readonly CheckoutShippingQuote[];
+  options: QuoteOptions;
+}): Promise<ShippingQuote[]> {
+  const { sellerId, fromPostalCode, products } = input;
+  if (!input.hasIntegration || !fromPostalCode || !products) return [];
+
+  const accessToken = await getSellerMelhorEnvioAccessToken(sellerId);
+  if (!accessToken) return [];
+
+  try {
+    return await quoteIntegratedShipping(
+      sellerId,
+      { fromPostalCode, toPostalCode: input.toPostalCode, products },
+      accessToken,
+      input.options,
+    );
+  } catch (error) {
+    if (input.ownQuotes.length === 0) throw error;
+    logger.warn({ event: "shipping.integrated_quote_unavailable", sellerId });
+    return [];
+  }
+}
+
+function toCheckoutShippingQuote(quote: ShippingQuote): CheckoutShippingQuote {
+  return {
+    provider: quote.provider,
+    serviceCode: quote.serviceCode,
+    carrier: quote.carrier,
+    service: quote.service,
+    priceInCents: quote.priceInCents,
+    ...(quote.estimatedDeliveryDays !== undefined ? { estimatedDeliveryDays: quote.estimatedDeliveryDays } : {}),
+  };
 }

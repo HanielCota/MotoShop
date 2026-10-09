@@ -47,46 +47,22 @@ import { quoteShippingForCart } from "./shipping-quotes";
  */
 export type CheckoutResult = { orderNumber: string; guestAccessToken?: string; paymentDeclined?: true };
 
+type CheckoutRequest = { data: CheckoutInput; identity: CartIdentity; session: CheckoutSession };
+
 export async function executeCheckout(
-  input: { data: CheckoutInput; identity: CartIdentity; session: CheckoutSession },
+  input: CheckoutRequest,
   paymentProvider: PaymentProvider = mercadoPagoProvider,
 ): Promise<CheckoutResult> {
   // One instant for the whole checkout: every price is evaluated at `now`.
   const now = new Date();
   // The injected provider is server-side only; no request or environment flag enables fake payments.
-  const guestAccessToken =
-    "guestAccessTokenHash" in input.identity
-      ? createHmac("sha256", env.BETTER_AUTH_SECRET)
-          .update(`checkout:${input.identity.guestAccessTokenHash}:${input.data.checkoutIdempotencyKey}`)
-          .digest("hex")
-      : undefined;
-  const result = (orderNumber: string, paymentDeclined: boolean): CheckoutResult => ({
-    orderNumber,
-    ...(guestAccessToken ? { guestAccessToken } : {}),
-    ...(paymentDeclined ? { paymentDeclined: true as const } : {}),
-  });
+  const guestAccessToken = createGuestAccessToken(input.identity, input.data.checkoutIdempotencyKey);
   const existingOrder = await findExistingOrder(input.data.checkoutIdempotencyKey, input.identity, guestAccessToken);
-  if (existingOrder) return result(existingOrder.orderNumber, existingOrder.paymentDeclined);
+  if (existingOrder)
+    return createCheckoutResult(existingOrder.orderNumber, guestAccessToken, existingOrder.paymentDeclined);
   assertPaymentConfigured(paymentProvider, input.data.paymentMethodId);
 
-  const selections = parseShippingSelections(input.data.shippingSelections);
-  const cart = await loadCheckoutCart(input.identity);
-  const coupon = await findActiveCoupon(input.data.couponCode, input.data.customerEmail, input.session?.user.id, now);
-  const quoteGroups = await quoteShippingForCart(cart, input.data.postalCode);
-  const marketplaceConfig = await db.marketplaceConfiguration.findUnique({ where: { key: "default" } });
-  if (!marketplaceConfig)
-    throw new ApplicationError({
-      code: "CONFIGURATION_ERROR",
-      message: "A comissão padrão do marketplace ainda não foi configurada.",
-    });
-  const sellerCharges = calculateSellerCharges({
-    items: cart.items,
-    quoteGroups,
-    selections,
-    coupon,
-    defaultCommissionBps: marketplaceConfig.defaultCommissionBps,
-    now,
-  });
+  const { cart, coupon, sellerCharges } = await calculateCheckoutCharges(input, now);
   assertPaymentCanHandleSellers(sellerCharges.length, paymentProvider);
 
   const orderNumber = createOrderNumber(now);
@@ -104,16 +80,90 @@ export async function executeCheckout(
   // charge provably never reached the provider and recovery may release the order.
   const requestSentAt = await markPaymentRequestSent(order, new Date());
 
-  let outcome: PendingOrderPaymentOutcome | undefined;
+  const outcome = await requestCheckoutPayment({
+    paymentProvider,
+    data: input.data,
+    order,
+    orderNumber,
+    sellerCharges,
+    requestSentAt,
+  });
+  return createCheckoutResult(orderNumber, guestAccessToken, outcome === "CANCELLED");
+}
+
+function createGuestAccessToken(identity: CartIdentity, checkoutIdempotencyKey: string): string | undefined {
+  if (!("guestAccessTokenHash" in identity)) return undefined;
+  return createHmac("sha256", env.BETTER_AUTH_SECRET)
+    .update(`checkout:${identity.guestAccessTokenHash}:${checkoutIdempotencyKey}`)
+    .digest("hex");
+}
+
+function createCheckoutResult(
+  orderNumber: string,
+  guestAccessToken: string | undefined,
+  paymentDeclined: boolean,
+): CheckoutResult {
+  return {
+    orderNumber,
+    ...(guestAccessToken ? { guestAccessToken } : {}),
+    ...(paymentDeclined ? { paymentDeclined: true as const } : {}),
+  };
+}
+
+/** Loads the cart, coupon, shipping quotes and commission, then computes the per-seller charges at `now`. */
+async function calculateCheckoutCharges(input: CheckoutRequest, now: Date) {
+  const selections = parseShippingSelections(input.data.shippingSelections);
+  const cart = await loadCheckoutCart(input.identity);
+  const coupon = await findActiveCoupon(input.data.couponCode, input.data.customerEmail, input.session?.user.id, now);
+  const quoteGroups = await quoteShippingForCart(cart, input.data.postalCode);
+  const defaultCommissionBps = await loadDefaultCommissionBps();
+  const sellerCharges = calculateSellerCharges({
+    items: cart.items,
+    quoteGroups,
+    selections,
+    coupon,
+    defaultCommissionBps,
+    now,
+  });
+  return { cart, coupon, sellerCharges };
+}
+
+async function loadDefaultCommissionBps(): Promise<number> {
+  const marketplaceConfig = await db.marketplaceConfiguration.findUnique({ where: { key: "default" } });
+  if (!marketplaceConfig)
+    throw new ApplicationError({
+      code: "CONFIGURATION_ERROR",
+      message: "A comissão padrão do marketplace ainda não foi configurada.",
+    });
+  return marketplaceConfig.defaultCommissionBps;
+}
+
+type CheckoutPaymentRequest = {
+  paymentProvider: PaymentProvider;
+  data: CheckoutInput;
+  order: PendingOrder;
+  orderNumber: string;
+  sellerCharges: ReadonlyArray<{ commissionInCents: number }>;
+  requestSentAt: Date;
+};
+
+/**
+ * Sends the charge and settles the order with the answer. Errors never escape: the order
+ * either settles or stays pending for reconciliation.
+ */
+async function requestCheckoutPayment(
+  request: CheckoutPaymentRequest,
+): Promise<PendingOrderPaymentOutcome | undefined> {
+  const { data, order, sellerCharges } = request;
   try {
-    const paymentResult = await paymentProvider.createPayment({
-      orderNumber,
+    const paymentResult = await request.paymentProvider.createPayment({
+      orderNumber: request.orderNumber,
       amountInCents: order.totalAmountInCents,
-      payerEmail: input.data.customerEmail,
-      payerTaxId: input.data.customerTaxId,
-      paymentMethodId: input.data.paymentMethodId,
-      ...(input.data.paymentToken ? { paymentToken: input.data.paymentToken } : {}),
-      ...(input.data.issuerId ? { issuerId: input.data.issuerId } : {}),
+      payerEmail: data.customerEmail,
+      payerTaxId: data.customerTaxId,
+      paymentMethodId: data.paymentMethodId,
+      ...(data.paymentToken ? { paymentToken: data.paymentToken } : {}),
+      ...(data.issuerId ? { issuerId: data.issuerId } : {}),
       installments: 1,
       // TODO(regra-de-negócio): a taxa do marketplace (application_fee) é a soma das comissões e não
       // desconta o cupom financiado pelo MARKETPLACE. Como o cliente paga o total já com desconto, o
@@ -121,51 +171,68 @@ export async function executeCheckout(
       // marketplace. Definir com produto se a fee deve ser reduzida pelo marketplaceDiscountInCents.
       // Enquanto isso, calculateSellerCharges recusa cedo (erro do cupom) qualquer fee > total do seller.
       applicationFeeInCents: sumMoneyInCents(sellerCharges.map((charge) => charge.commissionInCents)),
-      idempotencyKey: input.data.checkoutIdempotencyKey,
+      idempotencyKey: data.checkoutIdempotencyKey,
       sellerCount: sellerCharges.length,
     });
-    outcome = await settleCheckoutPayment(order, paymentResult, "Payment declined");
+    return await settleCheckoutPayment(order, paymentResult, "Payment declined");
   } catch (error) {
-    const definitive = error instanceof PaymentProviderError && error.details.outcome === "DEFINITIVE_REJECTION";
-    // A timeout can happen AFTER the provider accepted a charge. Keep the order and
-    // reservation pending for reconciliation instead of allowing a second charge.
-    if (error instanceof PaymentProviderError && definitive) {
-      const rejectionMetadata = rejectedPaymentRequestMetadata({
-        sentAt: requestSentAt,
-        rejectedAt: new Date(),
-        httpStatus: error.details.httpStatus,
-      });
-      try {
-        // Persist the definitive rejection first: if the settlement below fails, the
-        // recovery workflow can still release stock and coupon from this marker.
-        await db.paymentTransaction.updateMany({
-          where: { id: order.paymentTransactionId, status: "PENDING" },
-          data: { providerMetadata: rejectionMetadata as Prisma.InputJsonValue },
-        });
-        outcome = await settleCheckoutPayment(
-          order,
-          { status: "FAILED", providerMetadata: rejectionMetadata, failedAt: new Date() },
-          "Payment request rejected by provider",
-        );
-      } catch (settlementError) {
-        logger.error({
-          event: "checkout.payment_rejection_settlement_failed",
-          orderId: order.orderId,
-          errorType: settlementError instanceof Error ? settlementError.name : "UnknownError",
-        });
-      }
-    }
-    logger.error({
-      event: definitive ? "checkout.payment.rejected" : "checkout.payment_confirmation_pending",
-      orderId: order.orderId,
-      errorType: error instanceof Error ? error.name : "UnknownError",
-      ...(error instanceof PaymentProviderError
-        ? { providerHttpStatus: error.details.httpStatus, providerCode: error.details.providerCode }
-        : {}),
-    });
+    return handlePaymentRequestFailure(error, order, request.requestSentAt);
   }
+}
 
-  return result(orderNumber, outcome === "CANCELLED");
+async function handlePaymentRequestFailure(
+  error: unknown,
+  order: PendingOrder,
+  requestSentAt: Date,
+): Promise<PendingOrderPaymentOutcome | undefined> {
+  const definitive = error instanceof PaymentProviderError && error.details.outcome === "DEFINITIVE_REJECTION";
+  // A timeout can happen AFTER the provider accepted a charge. Keep the order and
+  // reservation pending for reconciliation instead of allowing a second charge.
+  const outcome =
+    error instanceof PaymentProviderError && definitive
+      ? await settleDefinitiveRejection(order, requestSentAt, error.details.httpStatus)
+      : undefined;
+  logger.error({
+    event: definitive ? "checkout.payment.rejected" : "checkout.payment_confirmation_pending",
+    orderId: order.orderId,
+    errorType: error instanceof Error ? error.name : "UnknownError",
+    ...(error instanceof PaymentProviderError
+      ? { providerHttpStatus: error.details.httpStatus, providerCode: error.details.providerCode }
+      : {}),
+  });
+  return outcome;
+}
+
+async function settleDefinitiveRejection(
+  order: PendingOrder,
+  requestSentAt: Date,
+  httpStatus: PaymentProviderError["details"]["httpStatus"],
+): Promise<PendingOrderPaymentOutcome | undefined> {
+  const rejectionMetadata = rejectedPaymentRequestMetadata({
+    sentAt: requestSentAt,
+    rejectedAt: new Date(),
+    httpStatus,
+  });
+  try {
+    // Persist the definitive rejection first: if the settlement below fails, the
+    // recovery workflow can still release stock and coupon from this marker.
+    await db.paymentTransaction.updateMany({
+      where: { id: order.paymentTransactionId, status: "PENDING" },
+      data: { providerMetadata: rejectionMetadata as Prisma.InputJsonValue },
+    });
+    return await settleCheckoutPayment(
+      order,
+      { status: "FAILED", providerMetadata: rejectionMetadata, failedAt: new Date() },
+      "Payment request rejected by provider",
+    );
+  } catch (settlementError) {
+    logger.error({
+      event: "checkout.payment_rejection_settlement_failed",
+      orderId: order.orderId,
+      errorType: settlementError instanceof Error ? settlementError.name : "UnknownError",
+    });
+    return undefined;
+  }
 }
 
 /**
