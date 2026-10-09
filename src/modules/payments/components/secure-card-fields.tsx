@@ -1,5 +1,6 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import Script from "next/script";
 import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 
@@ -137,7 +138,8 @@ export function SecureCardFields({ publicKey, ref }: { publicKey: string; ref: R
           }
         })();
       });
-    } catch {
+    } catch (error) {
+      Sentry.captureException(error);
       fail();
     }
     const timeout = window.setTimeout(() => {
