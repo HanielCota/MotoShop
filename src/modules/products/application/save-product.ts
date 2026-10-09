@@ -1,4 +1,5 @@
 import "server-only";
+import { Prisma } from "@/generated/prisma/client";
 import { ProductStatus } from "@/generated/prisma/enums";
 import { db } from "@/lib/database";
 import { adjustAvailableInventory } from "@/modules/inventory/domain/inventory-balance";
@@ -11,6 +12,11 @@ import {
 import type { ProductInput } from "../schemas/product-input";
 
 type ProductActor = { sellerId: string; storeId: string; userId: string };
+type VariantInput = ProductInput["variants"][number];
+type EditableProduct = NonNullable<Awaited<ReturnType<typeof findEditableProduct>>>;
+type ExistingVariant = EditableProduct["variants"][number];
+
+const EDITABLE_PRODUCT_STATUSES = [ProductStatus.DRAFT, ProductStatus.REJECTED];
 
 async function getValidFitmentIds(ids: string[]) {
   const uniqueIds = [...new Set(ids)];
@@ -31,7 +37,7 @@ async function getValidFitmentIds(ids: string[]) {
   return uniqueIds;
 }
 
-export async function createSellerProduct(actor: ProductActor, input: ProductInput): Promise<string> {
+async function requireActiveCategoryAndBrand(input: ProductInput) {
   const [category, brand] = await Promise.all([
     db.category.findFirst({ where: { id: input.categoryId, active: true } }),
     db.brand.findFirst({ where: { id: input.brandId, active: true } }),
@@ -43,6 +49,11 @@ export async function createSellerProduct(actor: ProductActor, input: ProductInp
       statusCode: 400,
     });
 
+  return { category, brand };
+}
+
+export async function createSellerProduct(actor: ProductActor, input: ProductInput): Promise<string> {
+  const { category, brand } = await requireActiveCategoryAndBrand(input);
   const fitmentIds = await getValidFitmentIds(input.motorcycleFitmentIds);
 
   const createdProductId = await db.$transaction(async (tx) => {
@@ -59,44 +70,9 @@ export async function createSellerProduct(actor: ProductActor, input: ProductInp
       },
     });
     for (const variantInput of input.variants) {
-      const variant = await tx.productVariant.create({
-        data: {
-          productId: product.id,
-          sellerId: actor.sellerId,
-          sku: variantInput.sku,
-          title: variantInput.title,
-          priceInCents: variantInput.priceInCents,
-          ...getVariantCommercialFields(variantInput),
-        },
-      });
-      const inventory = await tx.inventory.create({
-        data: { variantId: variant.id, sellerId: actor.sellerId, availableQuantity: variantInput.stock },
-      });
-      if (variantInput.stock > 0) {
-        await tx.inventoryMovement.create({
-          data: {
-            type: "MANUAL_IN",
-            quantityChange: variantInput.stock,
-            availableQuantityAfter: variantInput.stock,
-            reservedQuantityAfter: 0,
-            reason: "Estoque inicial do produto",
-            inventoryId: inventory.id,
-            variantId: variant.id,
-            sellerId: actor.sellerId,
-            actorUserId: actor.userId,
-          },
-        });
-      }
+      await createVariantWithInventory(tx, actor, product.id, variantInput, "Estoque inicial do produto");
     }
-    if (fitmentIds.length > 0) {
-      await tx.productCompatibility.createMany({
-        data: fitmentIds.map((motorcycleFitmentId) => ({
-          productId: product.id,
-          motorcycleFitmentId,
-          sellerId: actor.sellerId,
-        })),
-      });
-    }
+    await createCompatibilities(tx, actor, product.id, fitmentIds);
     return product.id;
   });
 
@@ -109,14 +85,7 @@ export async function updateSellerProduct(
   input: ProductInput,
   options: { revision?: Date } = {},
 ): Promise<string> {
-  const product = await db.product.findFirst({
-    where: {
-      id: productId,
-      sellerId: actor.sellerId,
-      status: { in: [ProductStatus.DRAFT, ProductStatus.REJECTED] },
-    },
-    include: { variants: { orderBy: { createdAt: "asc" } } },
-  });
+  const product = await findEditableProduct(actor, productId);
   if (!product)
     throw new ApplicationError({
       code: "NOT_FOUND",
@@ -128,119 +97,12 @@ export async function updateSellerProduct(
   const revision = options.revision ?? product.updatedAt;
   if (revision.getTime() !== product.updatedAt.getTime()) throw productChangedConflict();
 
-  const [category, brand] = await Promise.all([
-    db.category.findFirst({ where: { id: input.categoryId, active: true } }),
-    db.brand.findFirst({ where: { id: input.brandId, active: true } }),
-  ]);
-  if (!category || !brand)
-    throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Categoria ou marca inválida.", statusCode: 400 });
-
+  await requireActiveCategoryAndBrand(input);
   const fitmentIds = await getValidFitmentIds(input.motorcycleFitmentIds);
 
   await db.$transaction(async (tx) => {
-    const updated = await tx.product.updateMany({
-      where: {
-        id: product.id,
-        sellerId: actor.sellerId,
-        updatedAt: revision,
-        status: { in: [ProductStatus.DRAFT, ProductStatus.REJECTED] },
-      },
-      data: {
-        ...getMeasurements(input),
-        name: input.name,
-        slug: input.slug,
-        description: input.description,
-        categoryId: input.categoryId,
-        brandId: input.brandId,
-      },
-    });
-    if (updated.count !== 1) throw productChangedConflict();
-    const existingVariantsById = new Map(product.variants.map((variant) => [variant.id, variant]));
-    const submittedVariantIds = new Set<string>();
-    for (const variantInput of input.variants) {
-      if (!variantInput.id) {
-        const variant = await tx.productVariant.create({
-          data: {
-            productId: product.id,
-            sellerId: actor.sellerId,
-            sku: variantInput.sku,
-            title: variantInput.title,
-            priceInCents: variantInput.priceInCents,
-            ...getVariantCommercialFields(variantInput),
-          },
-        });
-        const inventory = await tx.inventory.create({
-          data: { variantId: variant.id, sellerId: actor.sellerId, availableQuantity: variantInput.stock },
-        });
-        if (variantInput.stock > 0) {
-          await tx.inventoryMovement.create({
-            data: {
-              type: "MANUAL_IN",
-              quantityChange: variantInput.stock,
-              availableQuantityAfter: variantInput.stock,
-              reservedQuantityAfter: 0,
-              reason: "Nova variação adicionada pelo seller",
-              inventoryId: inventory.id,
-              variantId: variant.id,
-              sellerId: actor.sellerId,
-              actorUserId: actor.userId,
-            },
-          });
-        }
-        continue;
-      }
-
-      const variant = existingVariantsById.get(variantInput.id);
-      if (!variant || submittedVariantIds.has(variant.id)) {
-        throw new ApplicationError({
-          code: "VALIDATION_ERROR",
-          message: "Uma ou mais variações não pertencem a este produto.",
-          statusCode: 400,
-        });
-      }
-      submittedVariantIds.add(variant.id);
-      await tx.productVariant.update({
-        where: { id: variant.id },
-        data: {
-          sku: variantInput.sku,
-          title: variantInput.title,
-          priceInCents: variantInput.priceInCents,
-          ...getVariantCommercialFields(variantInput),
-          active: true,
-        },
-      });
-      await tx.$queryRaw`SELECT id FROM "inventories" WHERE "variantId" = ${variant.id} AND "sellerId" = ${actor.sellerId} FOR UPDATE`;
-      const inventory = await tx.inventory.findFirst({
-        where: { variantId: variant.id, sellerId: actor.sellerId },
-      });
-      if (!inventory)
-        throw new ApplicationError({
-          code: "NOT_FOUND",
-          message: "Estoque não encontrado para uma variação.",
-          statusCode: 404,
-        });
-      const quantityChange = variantInput.stock - inventory.availableQuantity;
-      if (quantityChange !== 0) {
-        const balance = adjustAvailableInventory(inventory, quantityChange);
-        await tx.inventory.update({
-          where: { id: inventory.id },
-          data: { availableQuantity: balance.availableQuantity, version: { increment: 1 } },
-        });
-        await tx.inventoryMovement.create({
-          data: {
-            type: quantityChange > 0 ? "MANUAL_IN" : "MANUAL_OUT",
-            quantityChange,
-            availableQuantityAfter: balance.availableQuantity,
-            reservedQuantityAfter: balance.reservedQuantity,
-            reason: "Atualização da variação pelo seller",
-            inventoryId: inventory.id,
-            variantId: variant.id,
-            sellerId: actor.sellerId,
-            actorUserId: actor.userId,
-          },
-        });
-      }
-    }
+    await updateProductFields(tx, actor, product.id, revision, input);
+    const submittedVariantIds = await saveSubmittedVariants(tx, actor, product, input.variants);
     const variantsToDeactivate = product.variants
       .filter((variant) => !submittedVariantIds.has(variant.id))
       .map((variant) => variant.id);
@@ -253,25 +115,205 @@ export async function updateSellerProduct(
         metadata: { previous: commercialAuditSnapshot(product), next: commercialAuditSnapshot(input) },
       },
     });
-    if (variantsToDeactivate.length > 0) {
-      await tx.productVariant.updateMany({
-        where: { id: { in: variantsToDeactivate }, productId: product.id, sellerId: actor.sellerId },
-        data: { active: false },
-      });
-    }
+    await deactivateVariants(tx, actor, product.id, variantsToDeactivate);
     await tx.productCompatibility.deleteMany({ where: { productId: product.id, sellerId: actor.sellerId } });
-    if (fitmentIds.length > 0) {
-      await tx.productCompatibility.createMany({
-        data: fitmentIds.map((motorcycleFitmentId) => ({
-          productId: product.id,
-          motorcycleFitmentId,
-          sellerId: actor.sellerId,
-        })),
-      });
-    }
+    await createCompatibilities(tx, actor, product.id, fitmentIds);
   });
 
   return product.id;
+}
+
+async function findEditableProduct(actor: ProductActor, productId: string) {
+  return db.product.findFirst({
+    where: {
+      id: productId,
+      sellerId: actor.sellerId,
+      status: { in: EDITABLE_PRODUCT_STATUSES },
+    },
+    include: { variants: { orderBy: { createdAt: "asc" } } },
+  });
+}
+
+async function updateProductFields(
+  tx: Prisma.TransactionClient,
+  actor: ProductActor,
+  productId: string,
+  revision: Date,
+  input: ProductInput,
+) {
+  const updated = await tx.product.updateMany({
+    where: {
+      id: productId,
+      sellerId: actor.sellerId,
+      updatedAt: revision,
+      status: { in: EDITABLE_PRODUCT_STATUSES },
+    },
+    data: {
+      ...getMeasurements(input),
+      name: input.name,
+      slug: input.slug,
+      description: input.description,
+      categoryId: input.categoryId,
+      brandId: input.brandId,
+    },
+  });
+  if (updated.count !== 1) throw productChangedConflict();
+}
+
+/** Creates new variants and updates existing ones in submission order; returns the ids kept. */
+async function saveSubmittedVariants(
+  tx: Prisma.TransactionClient,
+  actor: ProductActor,
+  product: EditableProduct,
+  variantInputs: VariantInput[],
+) {
+  const existingVariantsById = new Map(product.variants.map((variant) => [variant.id, variant]));
+  const submittedVariantIds = new Set<string>();
+  for (const variantInput of variantInputs) {
+    if (!variantInput.id) {
+      await createVariantWithInventory(tx, actor, product.id, variantInput, "Nova variação adicionada pelo seller");
+      continue;
+    }
+
+    const variant = existingVariantsById.get(variantInput.id);
+    if (!variant || submittedVariantIds.has(variant.id)) {
+      throw new ApplicationError({
+        code: "VALIDATION_ERROR",
+        message: "Uma ou mais variações não pertencem a este produto.",
+        statusCode: 400,
+      });
+    }
+    submittedVariantIds.add(variant.id);
+    await updateExistingVariant(tx, actor, variant, variantInput);
+  }
+
+  return submittedVariantIds;
+}
+
+async function createVariantWithInventory(
+  tx: Prisma.TransactionClient,
+  actor: ProductActor,
+  productId: string,
+  variantInput: VariantInput,
+  reason: string,
+) {
+  const variant = await tx.productVariant.create({
+    data: {
+      productId,
+      sellerId: actor.sellerId,
+      sku: variantInput.sku,
+      title: variantInput.title,
+      priceInCents: variantInput.priceInCents,
+      ...getVariantCommercialFields(variantInput),
+    },
+  });
+  const inventory = await tx.inventory.create({
+    data: { variantId: variant.id, sellerId: actor.sellerId, availableQuantity: variantInput.stock },
+  });
+  if (variantInput.stock <= 0) return;
+
+  await tx.inventoryMovement.create({
+    data: {
+      type: "MANUAL_IN",
+      quantityChange: variantInput.stock,
+      availableQuantityAfter: variantInput.stock,
+      reservedQuantityAfter: 0,
+      reason,
+      inventoryId: inventory.id,
+      variantId: variant.id,
+      sellerId: actor.sellerId,
+      actorUserId: actor.userId,
+    },
+  });
+}
+
+async function updateExistingVariant(
+  tx: Prisma.TransactionClient,
+  actor: ProductActor,
+  variant: ExistingVariant,
+  variantInput: VariantInput,
+) {
+  await tx.productVariant.update({
+    where: { id: variant.id },
+    data: {
+      sku: variantInput.sku,
+      title: variantInput.title,
+      priceInCents: variantInput.priceInCents,
+      ...getVariantCommercialFields(variantInput),
+      active: true,
+    },
+  });
+  await adjustVariantStock(tx, actor, variant.id, variantInput.stock);
+}
+
+async function adjustVariantStock(
+  tx: Prisma.TransactionClient,
+  actor: ProductActor,
+  variantId: string,
+  targetStock: number,
+) {
+  await tx.$queryRaw`SELECT id FROM "inventories" WHERE "variantId" = ${variantId} AND "sellerId" = ${actor.sellerId} FOR UPDATE`;
+  const inventory = await tx.inventory.findFirst({
+    where: { variantId, sellerId: actor.sellerId },
+  });
+  if (!inventory)
+    throw new ApplicationError({
+      code: "NOT_FOUND",
+      message: "Estoque não encontrado para uma variação.",
+      statusCode: 404,
+    });
+  const quantityChange = targetStock - inventory.availableQuantity;
+  if (quantityChange === 0) return;
+
+  const balance = adjustAvailableInventory(inventory, quantityChange);
+  await tx.inventory.update({
+    where: { id: inventory.id },
+    data: { availableQuantity: balance.availableQuantity, version: { increment: 1 } },
+  });
+  await tx.inventoryMovement.create({
+    data: {
+      type: quantityChange > 0 ? "MANUAL_IN" : "MANUAL_OUT",
+      quantityChange,
+      availableQuantityAfter: balance.availableQuantity,
+      reservedQuantityAfter: balance.reservedQuantity,
+      reason: "Atualização da variação pelo seller",
+      inventoryId: inventory.id,
+      variantId,
+      sellerId: actor.sellerId,
+      actorUserId: actor.userId,
+    },
+  });
+}
+
+async function deactivateVariants(
+  tx: Prisma.TransactionClient,
+  actor: ProductActor,
+  productId: string,
+  variantIds: string[],
+) {
+  if (variantIds.length === 0) return;
+
+  await tx.productVariant.updateMany({
+    where: { id: { in: variantIds }, productId, sellerId: actor.sellerId },
+    data: { active: false },
+  });
+}
+
+async function createCompatibilities(
+  tx: Prisma.TransactionClient,
+  actor: ProductActor,
+  productId: string,
+  fitmentIds: string[],
+) {
+  if (fitmentIds.length === 0) return;
+
+  await tx.productCompatibility.createMany({
+    data: fitmentIds.map((motorcycleFitmentId) => ({
+      productId,
+      motorcycleFitmentId,
+      sellerId: actor.sellerId,
+    })),
+  });
 }
 
 function productChangedConflict() {
