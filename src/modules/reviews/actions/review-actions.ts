@@ -11,30 +11,9 @@ import { asApplicationError, ApplicationError } from "@/shared/errors/applicatio
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 import { ImageKitStorageProvider } from "@/lib/storage/imagekit-storage-provider";
 
+import { createReview } from "../application/create-review";
+import { readReviewFormInput, reviewMediaTypes, reviewSchema, uploadedReviewMediaSchema } from "../schemas/review";
 import { reviewEligibleOrderItemWhere } from "./review-eligibility";
-
-const mediaTypes = {
-  "image/jpeg": { extension: "jpg", mediaType: "image" as const, maxSizeInBytes: 5 * 1024 * 1024 },
-  "image/png": { extension: "png", mediaType: "image" as const, maxSizeInBytes: 5 * 1024 * 1024 },
-  "image/webp": { extension: "webp", mediaType: "image" as const, maxSizeInBytes: 5 * 1024 * 1024 },
-  "video/mp4": { extension: "mp4", mediaType: "video" as const, maxSizeInBytes: 10 * 1024 * 1024 },
-  "video/webm": { extension: "webm", mediaType: "video" as const, maxSizeInBytes: 10 * 1024 * 1024 },
-  "video/quicktime": { extension: "mov", mediaType: "video" as const, maxSizeInBytes: 10 * 1024 * 1024 },
-} as const;
-
-const uploadedMediaSchema = z.object({
-  key: z.string().min(1).max(300),
-  fileId: z.string().regex(/^[a-f0-9]{24}$/i),
-  contentType: z.enum(Object.keys(mediaTypes) as [keyof typeof mediaTypes, ...(keyof typeof mediaTypes)[]]),
-});
-
-const reviewSchema = z.object({
-  orderItemId: z.cuid(),
-  productRatingTenths: z.coerce.number().int().min(1).max(50),
-  sellerRating: z.coerce.number().int().min(1).max(5).optional(),
-  comment: z.string().trim().max(1000).optional(),
-  media: z.array(uploadedMediaSchema).max(3),
-});
 
 export type ReviewActionState = { error?: string; success?: string };
 
@@ -50,7 +29,7 @@ export async function createReviewUploadUrlAction(input: {
   const parsed = z
     .object({
       orderItemId: z.cuid(),
-      contentType: uploadedMediaSchema.shape.contentType,
+      contentType: uploadedReviewMediaSchema.shape.contentType,
       sizeInBytes: z.number().int().positive(),
     })
     .safeParse(input);
@@ -65,7 +44,7 @@ export async function createReviewUploadUrlAction(input: {
     if (!item)
       throw new ApplicationError({ code: "NOT_FOUND", message: "Compra elegível para avaliação não encontrada." });
 
-    const mediaConfig = mediaTypes[parsed.data.contentType];
+    const mediaConfig = reviewMediaTypes[parsed.data.contentType];
     if (parsed.data.sizeInBytes > mediaConfig.maxSizeInBytes)
       return { error: `Este arquivo excede o limite de ${mediaConfig.maxSizeInBytes / 1024 / 1024} MB.` };
 
@@ -117,122 +96,15 @@ export async function createReviewAction(
   formData: FormData,
 ): Promise<ReviewActionState> {
   const session = await requireAuthenticatedUser("/orders");
-  const parsed = reviewSchema.safeParse({
-    orderItemId: formData.get("orderItemId"),
-    productRatingTenths: formData.get("productRatingTenths"),
-    sellerRating: formData.get("sellerRating") || undefined,
-    comment: formData.get("comment") || undefined,
-    media: (() => {
-      const raw = formData.get("media");
-      if (typeof raw !== "string") return [];
-      try {
-        const value: unknown = JSON.parse(raw);
-        return Array.isArray(value) ? value : null;
-      } catch {
-        return null;
-      }
-    })(),
-  });
+  const parsed = reviewSchema.safeParse(readReviewFormInput(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira sua avaliação." };
 
   try {
     await assertRateLimit({ key: `review:${session.user.id}`, windowSeconds: 60, max: 5 });
-    const orderItem = await db.orderItem.findFirst({
-      where: reviewEligibleOrderItemWhere(parsed.data.orderItemId, session.user.id),
-      include: {
-        sellerOrder: { include: { order: { select: { orderNumber: true } } } },
-        product: true,
-      },
-    });
-    if (!orderItem?.product) {
-      throw new ApplicationError({ code: "NOT_FOUND", message: "Compra elegível para avaliação não encontrada." });
-    }
-    const product = orderItem.product;
+    const review = await createReview(session.user.id, parsed.data);
 
-    const media: {
-      mediaType: "image" | "video";
-      contentType: string;
-      sizeInBytes: number;
-      storageKey: string;
-      sortOrder: number;
-    }[] = [];
-    const uniqueKeys = new Set<string>();
-    let totalMediaBytes = 0;
-    for (const upload of parsed.data.media) {
-      const config = mediaTypes[upload.contentType];
-      const expectedPrefix = `reviews/${session.user.id}/${orderItem.id}/`;
-      if (
-        !upload.key.startsWith(expectedPrefix) ||
-        !new RegExp(`^[a-f0-9-]+\\.${config.extension}$`, "i").test(upload.key.slice(expectedPrefix.length)) ||
-        uniqueKeys.has(upload.key)
-      ) {
-        throw new ApplicationError({
-          code: "VALIDATION_ERROR",
-          message: "Um dos arquivos não pertence a esta compra.",
-        });
-      }
-      uniqueKeys.add(upload.key);
-      const verified = await new ImageKitStorageProvider().verifyAsset({
-        key: upload.key,
-        fileId: upload.fileId,
-        maxSizeInBytes: config.maxSizeInBytes,
-        contentTypes: [upload.contentType],
-      });
-      totalMediaBytes += verified.sizeInBytes;
-      if (totalMediaBytes > 20 * 1024 * 1024)
-        throw new ApplicationError({
-          code: "VALIDATION_ERROR",
-          message: "Os anexos juntos devem ter no máximo 20 MB.",
-        });
-      media.push({ ...verified, storageKey: upload.key, sortOrder: media.length });
-    }
-
-    await db.$transaction(async (tx) => {
-      const eligibleItem = await tx.orderItem.findFirst({
-        where: reviewEligibleOrderItemWhere(orderItem.id, session.user.id),
-        select: { id: true },
-      });
-      if (!eligibleItem)
-        throw new ApplicationError({ code: "CONFLICT", message: "Esta compra não está mais elegível para avaliação." });
-      const existingSellerReview = await tx.sellerReview.findUnique({
-        where: {
-          orderId_sellerId_userId: {
-            orderId: orderItem.sellerOrder.orderId,
-            sellerId: orderItem.sellerId,
-            userId: session.user.id,
-          },
-        },
-      });
-      if (!existingSellerReview && parsed.data.sellerRating === undefined) {
-        throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Informe também a nota para o lojista." });
-      }
-
-      await tx.productReview.create({
-        data: {
-          ratingTenths: parsed.data.productRatingTenths,
-          ...(parsed.data.comment ? { comment: parsed.data.comment } : {}),
-          productId: product.id,
-          sellerId: orderItem.sellerId,
-          orderId: orderItem.sellerOrder.orderId,
-          orderItemId: orderItem.id,
-          userId: session.user.id,
-          ...(media.length > 0 ? { media: { create: media } } : {}),
-        },
-      });
-      if (!existingSellerReview && parsed.data.sellerRating !== undefined) {
-        await tx.sellerReview.create({
-          data: {
-            rating: parsed.data.sellerRating,
-            ...(parsed.data.comment ? { comment: parsed.data.comment } : {}),
-            sellerId: orderItem.sellerId,
-            orderId: orderItem.sellerOrder.orderId,
-            userId: session.user.id,
-          },
-        });
-      }
-    });
-    revalidatePath(`/products/${product.slug}`);
-    revalidatePath(`/orders/${orderItem.sellerOrder.order.orderNumber}`);
+    revalidatePath(`/products/${review.productSlug}`);
+    revalidatePath(`/orders/${review.orderNumber}`);
     return { success: "Avaliação publicada. Obrigado pelo feedback." };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
