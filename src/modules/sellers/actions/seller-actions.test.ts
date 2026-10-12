@@ -54,6 +54,7 @@ vi.mock("@/modules/auth/application/authorization", () => ({
   })),
 }));
 
+import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { createSellerAction, updateShippingOriginAction } from "./seller-actions";
 
 function onboardingForm() {
@@ -154,6 +155,26 @@ describe("shipping origin update", () => {
       next: { originName: "Loja Teste", originDocument: "*********01" },
     });
     expect(JSON.stringify(audit.data.metadata)).not.toContain("12345678901");
+  });
+
+  it("does not update or audit a store outside the seller scope", async () => {
+    mocks.storeFindFirst.mockResolvedValue(null);
+
+    const result = await updateShippingOriginAction({}, originForm());
+
+    expect(result.error).toBe("Loja não encontrada.");
+    expect(mocks.storeUpdate).not.toHaveBeenCalled();
+    expect(mocks.auditCreate).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("requires SELLER_MANAGE before reading the shipping origin", async () => {
+    vi.mocked(requireSellerAccess).mockRejectedValueOnce(new Error("FORBIDDEN"));
+
+    await expect(updateShippingOriginAction({}, originForm())).rejects.toThrow("FORBIDDEN");
+
+    expect(requireSellerAccess).toHaveBeenCalledWith("SELLER_MANAGE");
+    expect(mocks.transaction).not.toHaveBeenCalled();
   });
 });
 
