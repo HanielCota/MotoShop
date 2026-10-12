@@ -409,6 +409,11 @@ async function main() {
 
   console.log(dryRun ? "DRY RUN: nada foi removido. Contagem do que seria removido:" : "Removido:");
   console.log(JSON.stringify({ ...counts, localImageFiles: files }, null, 2));
+  // The generated images are versioned while the site is a demo: deleting them locally is not enough.
+  if (!dryRun && files > 0)
+    console.log(
+      "As imagens public/images/demo/review-*.webp são versionadas: commite a remoção (git add -A public/images/demo).",
+    );
 }
 
 try {

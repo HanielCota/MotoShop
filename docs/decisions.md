@@ -225,6 +225,7 @@ Filtros e ordenações já existentes, todos sob a regra acima:
 ## 9. Dados de demonstração
 
 - Exceção explícita aprovada para apresentação antes do catálogo oficial: produtos marcados `isDemo` podem existir no banco com fotos locais geradas e valores/estoque ilustrativos. Devem ser identificados como demonstração no storefront, nunca entrar no carrinho/checkout (checagem server-side), não emitir Product JSON-LD nem entrar no sitemap. O seed é isolado por slugs `demo-*` e deve permanecer idempotente; nenhuma loja ou produto real pode ser sobrescrito. As lojas demo ficam `PENDING` até o código de bloqueio estar publicado.
+- As imagens geradas pelo seed de revisão (`public/images/demo/review-*.webp`) são versionadas no git apenas enquanto o site público for demonstração, para não darem 404 no deploy. Saem antes do lançamento junto com os dados demo, via `pnpm db:remove:review`; como o script só apaga os arquivos localmente, a remoção precisa ser commitada.
 - IDs determinísticos do seed de revisão usam o prefixo `czrvw` para passar na validação `z.cuid()` das Server Actions.
 
 ---
