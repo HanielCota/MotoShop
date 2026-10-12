@@ -4,6 +4,7 @@ import { cache } from "react";
 
 import { Prisma, ProductStatus } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
+import { parseDateFilter } from "@/lib/date-filter";
 
 import { buildRatingDistribution } from "../domain/review-distribution";
 import { normalizeRequestedPage, resolvePage } from "../domain/pagination";
@@ -11,14 +12,6 @@ import { netUnitsSold, SALE_REVERSING_RETURN_STATUSES, SOLD_SELLER_ORDER_STATUSE
 
 import { findPublicProductPage, type PublicProductFilter } from "./public-product-page";
 import type { SellerProductSort, SellerProductStatus, SellerProductStock } from "../seller-search-params";
-
-function parseProductReviewDate(value: string | null | undefined, endOfDay: boolean) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
-  const date = new Date(`${value}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime())) return undefined;
-  if (endOfDay) date.setUTCDate(date.getUTCDate() + 1);
-  return date;
-}
 
 export async function listProductCategories() {
   return db.category.findMany({
@@ -187,8 +180,8 @@ export async function listProductReviewQueue(input: ProductReviewQueueInput = {}
 function buildProductReviewQueueWhere(input: ProductReviewQueueInput): Prisma.ProductWhereInput {
   const status = input.status && input.status !== "ALL" ? input.status : undefined;
   const query = input.q?.trim().slice(0, 100);
-  const from = parseProductReviewDate(input.from, false);
-  const to = parseProductReviewDate(input.to, true);
+  const from = parseDateFilter(input.from, false);
+  const to = parseDateFilter(input.to, true);
   return {
     status: status ?? { in: [ProductStatus.SUBMITTED, ProductStatus.REJECTED] },
     ...(input.categoryId ? { categoryId: input.categoryId } : {}),
