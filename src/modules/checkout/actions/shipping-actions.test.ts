@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const quotes = vi.hoisted(() => vi.fn());
 const cartQuotes = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("../application/shipping-quotes", () => ({
   quoteShippingForActiveCart: cartQuotes,
   quoteShippingForVariant: quotes,

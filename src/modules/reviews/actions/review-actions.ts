@@ -7,7 +7,8 @@ import { z } from "zod";
 
 import { db } from "@/lib/database";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
-import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 import { ImageKitStorageProvider } from "@/lib/storage/imagekit-storage-provider";
 
@@ -56,7 +57,7 @@ export async function createReviewUploadUrlAction(input: {
     });
     return { url: upload.url, key: upload.key, expiresAt: upload.expiresAt.toISOString(), fields: upload.fields };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "createReviewUploadUrlAction").message };
   }
 }
 
@@ -87,7 +88,7 @@ export async function removeReviewUploadAction(input: {
     await new ImageKitStorageProvider().deleteObject({ key: parsed.data.key });
     return {};
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "removeReviewUploadAction").message };
   }
 }
 
@@ -110,6 +111,6 @@ export async function createReviewAction(
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return { error: "Este item já foi avaliado." };
     }
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "createReviewAction").message };
   }
 }

@@ -5,7 +5,8 @@ import { z } from "zod";
 
 import { db } from "@/lib/database";
 import { requireAuthenticatedUser, requireSellerAccess } from "@/modules/auth/application/authorization";
-import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 const questionSchema = z.object({ question: z.string().trim().min(5, "Escreva uma pergunta maior.").max(500) });
@@ -48,7 +49,7 @@ export async function askProductQuestionAction(
     revalidatePath("/seller/questions");
     return { success: "Pergunta enviada ao lojista." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "askProductQuestionAction").message };
   }
 }
 
@@ -104,6 +105,6 @@ export async function answerProductQuestionAction(
     revalidatePath("/seller/questions");
     return { success: edited ? "Resposta atualizada." : "Resposta publicada." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "answerProductQuestionAction").message };
   }
 }

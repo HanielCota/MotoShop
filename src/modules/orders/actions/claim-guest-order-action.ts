@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { claimGuestOrder } from "@/modules/orders/application/claim-guest-order";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 const schema = z.object({
@@ -39,6 +39,6 @@ export async function claimGuestOrderAction(
     revalidatePath(`/orders/${parsed.data.orderNumber}`);
     return { success: true };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "claimGuestOrderAction").message };
   }
 }

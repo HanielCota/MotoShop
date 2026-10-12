@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { db } from "@/lib/database";
-import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
+import { logActionFailure, toActionError } from "@/shared/errors/action-error";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 
 import {
@@ -33,7 +34,7 @@ export async function addToCartAction(variantId: string, quantity: number): Prom
     revalidatePath("/cart");
     return { success: "Produto adicionado ao carrinho." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "addToCartAction").message };
   }
 }
 
@@ -51,7 +52,7 @@ export async function updateCartItemAction(cartItemId: string, quantity: number)
     revalidatePath("/checkout");
     return { success: "Carrinho atualizado." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "updateCartItemAction").message };
   }
 }
 
@@ -97,7 +98,8 @@ export async function getCartPreviewAction(): Promise<{
       itemCount: items.reduce((total, item) => total + item.quantity, 0),
       subtotalInCents: items.reduce((total, item) => total + item.unitPriceInCents * item.quantity, 0),
     };
-  } catch {
+  } catch (error) {
+    logActionFailure("getCartPreviewAction", error);
     return { items: [], itemCount: 0, subtotalInCents: 0, error: "Não foi possível carregar o carrinho." };
   }
 }
@@ -111,6 +113,6 @@ export async function clearCartAction(): Promise<CartActionState> {
     revalidatePath("/checkout");
     return { success: "Carrinho limpo." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "clearCartAction").message };
   }
 }

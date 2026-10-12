@@ -7,6 +7,7 @@ import { z } from "zod";
 import { ProductStatus } from "@/generated/prisma/enums";
 import { db } from "@/lib/database";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
+import { logActionFailure } from "@/shared/errors/action-error";
 
 const productIdSchema = z.cuid();
 
@@ -47,6 +48,7 @@ export async function toggleFavoriteAction(productId: string): Promise<FavoriteA
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return { error: "Este produto já está nos seus favoritos." };
     }
+    logActionFailure("toggleFavoriteAction", error);
     return { error: "Não foi possível atualizar seus favoritos." };
   }
 }

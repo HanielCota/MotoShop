@@ -5,7 +5,8 @@ import { z } from "zod";
 
 import { db } from "@/lib/database";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
-import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 import { isBrazilianStateCode } from "../domain/brazilian-address";
 
@@ -71,7 +72,7 @@ export async function createCustomerAddressAction(
     revalidatePath("/checkout");
     return { success: "Endereço salvo." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "createCustomerAddressAction").message };
   }
 }
 
@@ -91,7 +92,7 @@ export async function setDefaultCustomerAddressAction(addressId: string): Promis
     revalidatePath("/checkout");
     return { success: "Endereço padrão atualizado." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "setDefaultCustomerAddressAction").message };
   }
 }
 
@@ -117,6 +118,6 @@ export async function deleteCustomerAddressAction(addressId: string): Promise<Cu
     revalidatePath("/checkout");
     return { success: "Endereço removido." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "deleteCustomerAddressAction").message };
   }
 }

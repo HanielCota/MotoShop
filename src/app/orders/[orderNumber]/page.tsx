@@ -10,20 +10,24 @@ import { OrderSummary } from "@/modules/orders/components/order-detail/order-sum
 import { PaymentSection } from "@/modules/orders/components/order-detail/payment-section";
 import { SellerOrderSection } from "@/modules/orders/components/order-detail/seller-order-section";
 import { getCustomerOrder } from "@/modules/returns/queries/customer-orders";
+import { optionalTextSearchParam, parseSearchParams, type RawSearchParams } from "@/shared/validation/search-params";
 
 export const metadata: Metadata = {
   title: "Acompanhar pedido",
   robots: { index: false, follow: false },
 };
 
+const orderSearchParams = { accessToken: optionalTextSearchParam(200) };
+
 export default async function CustomerOrderPage({
   params,
   searchParams,
 }: {
   params: Promise<{ orderNumber: string }>;
-  searchParams: Promise<{ accessToken?: string }>;
+  searchParams: Promise<RawSearchParams>;
 }) {
-  const [{ orderNumber }, { accessToken }] = await Promise.all([params, searchParams]);
+  const [{ orderNumber }, rawSearchParams] = await Promise.all([params, searchParams]);
+  const { accessToken } = parseSearchParams(orderSearchParams, rawSearchParams);
   const session = await getCurrentSession();
   // Mesma regra das actions de pós-venda: token do link seguro primeiro, depois a sessão.
   const identity = await resolveCustomerOrderIdentity({ orderNumber, accessToken, userId: session?.user.id });

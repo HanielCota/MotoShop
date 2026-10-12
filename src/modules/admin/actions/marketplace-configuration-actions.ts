@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/database";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
+import { logActionFailure } from "@/shared/errors/action-error";
 
 const commissionSchema = z.object({
   defaultCommissionBps: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(0).max(10_000)),
@@ -47,7 +48,8 @@ export async function updateMarketplaceCommissionAction(
     );
     revalidatePath("/admin", "layout");
     return { success: "Comissão padrão atualizada." };
-  } catch {
+  } catch (error) {
+    logActionFailure("updateMarketplaceCommissionAction", error);
     return { error: "Não foi possível atualizar a comissão padrão." };
   }
 }

@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   revalidate: vi.fn(),
 }));
 
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("@/modules/auth/application/authorization", () => ({ requireAdminAccess: mocks.authorize }));
 vi.mock("@/lib/database", () => ({

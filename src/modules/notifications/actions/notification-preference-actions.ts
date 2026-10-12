@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/database";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 export type NotificationPreferenceActionState = { error?: string; success?: string };
 
@@ -22,6 +22,6 @@ export async function updateNotificationPreferencesAction(
     revalidatePath("/account/notifications");
     return { success: "Preferências de e-mail atualizadas." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "updateNotificationPreferencesAction").message };
   }
 }
