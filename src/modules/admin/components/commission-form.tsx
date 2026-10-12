@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 
 import { useActionState } from "react";
 
+import { formatPriceInputFromCents } from "@/modules/products/domain/price-input";
+
 import {
   updateMarketplaceCommissionAction,
   type CommissionActionState,
@@ -17,14 +19,13 @@ export function CommissionForm({ defaultCommissionBps }: { defaultCommissionBps:
   return (
     <form action={formAction} className="flex flex-col gap-3 sm:flex-row sm:items-end">
       <label className="flex flex-1 flex-col gap-1 text-sm font-medium">
-        Comissão padrão (bps)
+        Comissão padrão (%)
         <Input
-          name="defaultCommissionBps"
-          type="number"
-          min="0"
-          max="10000"
-          required
-          defaultValue={defaultCommissionBps ?? ""}
+          name="commissionPercent"
+          inputMode="decimal"
+          autoComplete="off"
+          defaultValue={defaultCommissionBps === null ? "" : formatPriceInputFromCents(defaultCommissionBps)}
+          placeholder="Ex.: 12,00"
           className="h-9"
         />
       </label>
