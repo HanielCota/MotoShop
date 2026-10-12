@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MessageSquareOff } from "lucide-react";
+import { z } from "zod";
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -10,6 +11,7 @@ import { AdminCard } from "@/modules/admin/components/admin-ui";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { ModerateContentButton } from "@/modules/moderation/components/moderate-content-button";
 import { listModerationQueue, type ModerationKind } from "@/modules/moderation/queries/moderation-queue";
+import { parseSearchParams, searchParam, type RawSearchParams } from "@/shared/validation/search-params";
 
 export const metadata = { title: "Moderação · Admin" };
 
@@ -19,15 +21,14 @@ const kinds: { value: ModerationKind; label: string }[] = [
   { value: "seller-review", label: "Avaliações de lojas" },
 ];
 
-export default async function AdminModerationPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ kind?: string; page?: string }>;
-}) {
+const moderationSearchParams = {
+  kind: searchParam(z.enum(["question", "product-review", "seller-review"] satisfies ModerationKind[]), "question"),
+  page: searchParam(z.coerce.number().int().min(1), 1),
+};
+
+export default async function AdminModerationPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
   await requireAdminAccess();
-  const params = await searchParams;
-  const kind = kinds.find((item) => item.value === params.kind)?.value ?? "question";
-  const requestedPage = Number(params.page ?? 1);
+  const { kind, page: requestedPage } = parseSearchParams(moderationSearchParams, await searchParams);
   const result = await listModerationQueue(kind, requestedPage);
   const href = (page: number) => `/admin/moderation?kind=${kind}&page=${page}` as const;
   const kindLabel = kinds.find((item) => item.value === kind)?.label ?? "Conteúdo";
