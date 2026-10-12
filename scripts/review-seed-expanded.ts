@@ -2269,6 +2269,12 @@ async function ensureExtraCustomers(input: ExpandedSeedInput) {
     select: { userId: true },
   });
   const withAccount = new Set(accounts.map((account) => account.userId));
+  // Same rule as the base seed: existing review accounts get the current shared password on every run.
+  await db.account.updateMany({
+    where: { userId: { in: [...withAccount] }, providerId: "credential" },
+    data: { password: passwordHash },
+  });
+
   await insertMany(
     trackMany,
     "Account",
