@@ -37,7 +37,7 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
   }
 
   return (
-    <form action={formAction} className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2">
+    <form action={formAction} noValidate className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2">
       <FormField id={`${ownerType}-coupon-code`} label="Código do cupom" required hint="Letras, números, _ ou -.">
         {(field) => (
           <Input

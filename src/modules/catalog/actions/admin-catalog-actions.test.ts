@@ -229,3 +229,38 @@ describe("admin catalog names", () => {
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
 });
+
+describe("admin catalog validation messages", () => {
+  it.each([
+    ["an empty motorcycle model", createMotorcycleModelAction, { name: "CRF 250R" }, "Escolha o fabricante."],
+    [
+      "a fitment without model",
+      createMotorcycleFitmentAction,
+      { displacementCc: "250", year: "2025" },
+      "Escolha o modelo da moto.",
+    ],
+    [
+      "a fitment without displacement",
+      createMotorcycleFitmentAction,
+      { motorcycleModelId: "cmf8w8m4p0000s6o5zj2q8v3k", year: "2025" },
+      "Informe a cilindrada em cc, de 1 a 10000.",
+    ],
+    [
+      "a fitment with an impossible year",
+      createMotorcycleFitmentAction,
+      { motorcycleModelId: "cmf8w8m4p0000s6o5zj2q8v3k", displacementCc: "250", year: "20" },
+      "Informe o ano entre 1900 e 2200.",
+    ],
+    [
+      "a category with a negative order",
+      createCategoryAction,
+      { name: "Capacetes", sortOrder: "-1" },
+      "Informe a ordem de exibição como número inteiro, de 0 a 100000.",
+    ],
+  ] as const)("answers %s in Portuguese without writing", async (_name, action, values, message) => {
+    const result = await action({}, creationForm(values));
+
+    expect(result.error).toBe(message);
+    expect(mocks.transaction).not.toHaveBeenCalled();
+  });
+});

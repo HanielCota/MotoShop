@@ -21,7 +21,11 @@ const initialState: CatalogActionState = {};
 function Feedback({ state }: { state: CatalogActionState }) {
   return (
     <>
-      {state.error ? <p className="text-destructive text-sm">{state.error}</p> : null}
+      {state.error ? (
+        <p role="alert" className="text-destructive text-sm">
+          {state.error}
+        </p>
+      ) : null}
       {state.success ? (
         <p role="status" className="text-success-foreground text-sm">
           {state.success}
@@ -43,7 +47,7 @@ function FormShell({
   pending: boolean;
 }) {
   return (
-    <form action={action} className="space-y-3 rounded-lg border p-4">
+    <form action={action} noValidate className="space-y-3 rounded-lg border p-4">
       {children}
       <Button type="submit" disabled={pending} className="rounded-md font-semibold">
         {pending ? "Salvando..." : "Adicionar"}
