@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function ProductLoading() {
+export function ProductDetailSkeleton() {
   return (
     <div
       role="status"

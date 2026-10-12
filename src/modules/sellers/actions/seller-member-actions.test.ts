@@ -21,6 +21,7 @@ vi.mock("@/modules/auth/application/authorization", () => ({
   })),
 }));
 
+import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { addSellerMemberAction, removeSellerMemberAction, updateSellerMemberRoleAction } from "./seller-member-actions";
 
 beforeEach(() => {
@@ -121,6 +122,35 @@ describe("seller member audit transactions", () => {
     expect(mocks.memberUpdate).not.toHaveBeenCalled();
     expect(mocks.memberDelete).not.toHaveBeenCalled();
     expect(mocks.auditCreate).not.toHaveBeenCalled();
+  });
+
+  it("does not change or remove a member that belongs to another seller", async () => {
+    mocks.memberFind.mockResolvedValue(null);
+    const form = new FormData();
+    form.set("role", "ADMIN");
+
+    await updateSellerMemberRoleAction("cmemberlinkb0000000000003", form);
+    await removeSellerMemberAction("cmemberlinkb0000000000003");
+
+    expect(mocks.memberFind).toHaveBeenCalledWith({ where: { id: "cmemberlinkb0000000000003", sellerId: "seller-a" } });
+    expect(mocks.memberUpdate).not.toHaveBeenCalled();
+    expect(mocks.memberDelete).not.toHaveBeenCalled();
+    expect(mocks.auditCreate).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("requires SELLER_MANAGE before opening a member transaction", async () => {
+    vi.mocked(requireSellerAccess)
+      .mockRejectedValueOnce(new Error("FORBIDDEN"))
+      .mockRejectedValueOnce(new Error("FORBIDDEN"));
+    const form = new FormData();
+    form.set("role", "ADMIN");
+
+    await expect(updateSellerMemberRoleAction("cmemberlinka0000000000001", form)).rejects.toThrow("FORBIDDEN");
+    await expect(removeSellerMemberAction("cmemberlinka0000000000001")).rejects.toThrow("FORBIDDEN");
+
+    expect(requireSellerAccess).toHaveBeenCalledWith("SELLER_MANAGE");
+    expect(mocks.transaction).not.toHaveBeenCalled();
   });
 });
 

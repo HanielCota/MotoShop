@@ -5,6 +5,10 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * `attention` colore só o número e o ícone: com várias filas pendentes ao mesmo tempo, cards inteiros em
+ * laranja deixariam de chamar atenção.
+ */
 type StatCardProps = {
   label: string;
   value: ReactNode;
@@ -27,14 +31,15 @@ export function StatCard({ label, value, hint, href, icon: Icon, tone = "default
           />
         ) : null}
       </div>
-      <p className="font-heading text-3xl font-bold tabular-nums">{value}</p>
+      <p className={cn("font-heading text-3xl font-bold tabular-nums", tone === "attention" && "text-brand-strong")}>
+        {value}
+      </p>
       {hint ? <p className="text-muted-foreground text-xs">{hint}</p> : null}
     </>
   );
 
   const classes = cn(
     "bg-card ring-foreground/10 flex flex-col gap-2 rounded-xl p-4 ring-1",
-    tone === "attention" && "ring-moto-brand/40 bg-moto-brand-surface",
     href && "hover:ring-foreground/25 focus-visible:ring-ring transition-shadow",
     className,
   );

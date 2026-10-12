@@ -5,8 +5,8 @@ import {
   CircleCheck,
   Disc3,
   MapPin,
-  PackageCheck,
   Shield,
+  UserRoundCheck,
   ShieldCheck,
   Wrench,
   type LucideIcon,
@@ -57,11 +57,11 @@ export const essentials: { title: string; description: string; href: Route; icon
   { title: "Pneus e câmaras", description: "Aderência para pista e trilha", icon: Bike, href: "/products?q=pneu" },
 ];
 
-export const trustItems: { title: string; text: string; icon: LucideIcon }[] = [
-  { icon: BadgeCheck, title: "Lojistas parceiros", text: "Lojas aprovadas pelo Moto Shop" },
-  { icon: PackageCheck, title: "Peças compatíveis", text: "Confira se a peça serve na sua moto" },
-  { icon: MapPin, title: "Frete por loja", text: "Opções e prazos no checkout" },
-  { icon: ShieldCheck, title: "Pedido acompanhado", text: "Status de pagamento e entrega" },
+/** Garantias curtas exibidas logo abaixo da busca por moto, no hero. */
+export const heroAssurances: { text: string; icon: LucideIcon }[] = [
+  { icon: BadgeCheck, text: "Lojas aprovadas pelo Moto Shop" },
+  { icon: UserRoundCheck, text: "Compre sem criar conta" },
+  { icon: MapPin, text: "Frete e prazo de cada loja no checkout" },
 ];
 
 /** Links de categoria só aparecem quando a categoria existe e está ativa. */
