@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/database";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 const addMemberSchema = z.object({
   email: z.email("Informe um e-mail válido.").transform((value) => value.toLowerCase()),
@@ -64,7 +64,7 @@ export async function addSellerMemberAction(
     revalidatePath("/seller", "layout");
     return result;
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "addSellerMemberAction").message };
   }
 }
 
@@ -104,7 +104,7 @@ export async function updateSellerMemberRoleAction(memberId: string, formData: F
     });
     if (updated) revalidatePath("/seller", "layout");
   } catch (error) {
-    throw asApplicationError(error);
+    throw toActionError(error, "updateSellerMemberRoleAction");
   }
 }
 
@@ -137,6 +137,6 @@ export async function removeSellerMemberAction(memberId: string): Promise<void> 
     });
     if (removed) revalidatePath("/seller", "layout");
   } catch (error) {
-    throw asApplicationError(error);
+    throw toActionError(error, "removeSellerMemberAction");
   }
 }

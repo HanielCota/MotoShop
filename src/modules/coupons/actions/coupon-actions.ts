@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/database";
 import { requireAdminAccess, requireSellerAccess } from "@/modules/auth/application/authorization";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 import { createCoupon, type CouponOwner } from "../application/create-coupon";
 import { readCouponFormInput } from "../domain/coupon-form-input";
@@ -156,6 +156,6 @@ async function createCouponForOwner(formData: FormData, owner: CouponOwner): Pro
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return { error: "Já existe um cupom com este código." };
     }
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "createCouponForOwner").message };
   }
 }

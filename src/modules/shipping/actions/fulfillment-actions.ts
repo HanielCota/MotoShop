@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 import {
   generateSellerOrderShipment,
@@ -34,7 +34,7 @@ export async function purchaseSellerOrderShipmentAction(input: unknown): Promise
     revalidateSellerOrderPaths(parsed.data.sellerOrderId);
     return { success: "Frete comprado e associado ao pedido.", shipmentId: shipment.id };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "purchaseSellerOrderShipmentAction").message };
   }
 }
 
@@ -52,7 +52,7 @@ export async function generateSellerOrderShipmentAction(input: unknown): Promise
     revalidateSellerOrderPaths(parsed.data.sellerOrderId);
     return { success: "Etiqueta gerada.", shipmentId: shipment.id };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "generateSellerOrderShipmentAction").message };
   }
 }
 
@@ -70,7 +70,7 @@ export async function refreshSellerOrderTrackingAction(input: unknown): Promise<
     revalidateSellerOrderPaths(parsed.data.sellerOrderId);
     return { success: "Rastreamento atualizado.", shipmentId: shipment.id };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "refreshSellerOrderTrackingAction").message };
   }
 }
 

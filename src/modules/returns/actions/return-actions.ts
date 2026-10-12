@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { resolveCustomerOrderIdentity } from "@/modules/orders/application/resolve-customer-order-access";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 import { requestReturn, type ReturnRequestResult } from "../application/request-return";
 
@@ -51,6 +51,6 @@ export async function requestReturnAction(input: unknown): Promise<ReturnActionS
     revalidatePath(`/orders/${parsed.data.orderNumber}`);
     return { success: "Solicitação de devolução registrada.", result };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "requestReturnAction").message };
   }
 }

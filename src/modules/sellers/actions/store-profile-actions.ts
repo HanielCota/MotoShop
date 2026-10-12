@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { slugify } from "@/lib/utils";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 import { updateStoreProfile } from "../application/update-store-profile";
 import { storeProfileSchema } from "../schemas/store-profile";
@@ -34,7 +34,7 @@ export async function updateStoreProfileAction(
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return { error: "Este identificador de loja já está em uso." };
     }
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "updateStoreProfileAction").message };
   }
 }
 

@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { moderateContent } from "@/modules/moderation/application/moderate-content";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 const schema = z.object({
   kind: z.enum(["question", "product-review", "seller-review"]),
@@ -33,6 +33,6 @@ export async function moderateContentAction(
     revalidatePath("/admin/moderation");
     return { success: parsed.data.hide === "true" ? "Conteúdo ocultado." : "Conteúdo restaurado." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "moderateContentAction").message };
   }
 }

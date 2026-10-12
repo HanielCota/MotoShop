@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/database";
 import { requireAuthenticatedUser, requireSellerAccess } from "@/modules/auth/application/authorization";
-import { ApplicationError, asApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 import { updateShippingOrigin } from "../application/update-shipping-origin";
 import { sellerOnboardingSchema } from "../schemas/seller-onboarding";
@@ -55,7 +56,7 @@ export async function createSellerAction(
     revalidatePath("/seller", "layout");
     return { success: "Solicitação enviada. O Moto Shop precisa aprovar sua loja antes do cadastro de produtos." };
   } catch (error) {
-    const applicationError = asApplicationError(error);
+    const applicationError = toActionError(error, "createSellerAction");
     if (applicationError.code === "INTERNAL_ERROR") {
       return { error: "Não foi possível criar a loja. Verifique se o identificador já está em uso." };
     }
@@ -79,7 +80,7 @@ export async function updateShippingOriginAction(
     revalidatePath("/seller/orders");
     return { success: "Dados de envio atualizados." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "updateShippingOriginAction").message };
   }
 }
 

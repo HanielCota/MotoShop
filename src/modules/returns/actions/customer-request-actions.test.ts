@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   requestCancellation: vi.fn(),
   requestDispute: vi.fn(),
 }));
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/modules/auth/application/authorization", () => ({ getCurrentSession: mocks.session }));

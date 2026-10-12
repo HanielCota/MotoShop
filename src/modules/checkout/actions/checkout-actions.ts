@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getCartIdentity } from "@/modules/cart/infrastructure/cart-access";
-import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 import { executeCheckout, type CheckoutResult } from "../application/checkout-service";
@@ -67,6 +68,6 @@ export async function createCheckoutAction(
       };
     return result;
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "createCheckoutAction").message };
   }
 }

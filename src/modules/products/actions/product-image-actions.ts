@@ -17,7 +17,8 @@ import {
   SAFE_IMAGE_NAME,
 } from "@/shared/storage/attach-verified-asset";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
-import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 const uploadInputSchema = z.object({
   productId: z.string().cuid(),
@@ -82,7 +83,7 @@ export async function createProductImageUploadUrlAction(input: unknown): Promise
       contentType: parsed.contentType,
     });
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "createProductImageUploadUrlAction").message };
   }
 }
 
@@ -103,7 +104,7 @@ export async function discardProductImageUploadAction(input: unknown): Promise<P
     if (!attachedImage) await new ImageKitStorageProvider().deleteObject({ key: parsed.storageKey });
     return {};
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "discardProductImageUploadAction").message };
   }
 }
 
@@ -145,7 +146,7 @@ export async function attachProductImageAction(input: unknown): Promise<ProductI
     revalidatePath("/products");
     return { image: { ...image, url: getPublicStorageUrl(image.storageKey) } };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "attachProductImageAction").message };
   }
 }
 
@@ -178,7 +179,7 @@ export async function reorderProductImagesAction(input: unknown): Promise<Produc
     revalidateProductImagePaths(parsed.productId);
     return { success: "Ordem das imagens atualizada." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "reorderProductImagesAction").message };
   }
 }
 
@@ -217,7 +218,7 @@ export async function removeProductImageAction(input: unknown): Promise<ProductI
     revalidateProductImagePaths(image.productId, image.product.slug);
     return { success: "Imagem removida." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "removeProductImageAction").message };
   }
 }
 

@@ -4,7 +4,8 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { getCartIdentity } from "@/modules/cart/infrastructure/cart-access";
-import { ApplicationError, asApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 import { consumeRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 import {
@@ -56,7 +57,7 @@ export async function quoteShippingAction(postalCode: unknown): Promise<Shipping
     await assertShippingQuoteRateLimit(false);
     return { quotes: await quoteShippingForActiveCart(parsed.data) };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "quoteShippingAction").message };
   }
 }
 
@@ -79,6 +80,6 @@ export async function quoteProductShippingAction(input: {
     await assertShippingQuoteRateLimit(true);
     return { quotes: await quoteShippingForVariant(parsed.data.variantId, parsed.data.postalCode) };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "quoteProductShippingAction").message };
   }
 }
