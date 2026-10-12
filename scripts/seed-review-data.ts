@@ -11,6 +11,9 @@
  * Idempotente: pode ser executado várias vezes. Nunca apaga nem altera dados que não
  * foram criados por este script. Para remover: `scripts/remove-review-data.ts`.
  *
+ * Variável obrigatória:
+ * - REVIEW_ACCOUNTS_PASSWORD  senha de todas as contas `review.*`; é regravada a cada execução.
+ *
  * Variáveis opcionais:
  * - REVIEW_PUBLISH_STORES=true  publica as lojas aprovadas/ativas (padrão: PENDING, invisíveis);
  * - REVIEW_VIEWER_CUSTOMER_EMAILS  contas EXISTENTES que recebem histórico de cliente fictício
@@ -30,11 +33,8 @@ import { join } from "node:path";
 import { PrismaClient, type Prisma } from "../src/generated/prisma/client";
 import type { ReviewStoreCode } from "./review-seed-content";
 import { renderStoreBanner, renderStoreLogo, seedExpandedData } from "./review-seed-expanded";
-import { must } from "./must";
+import { must, requireEnv } from "./must";
 import { parseEmailList } from "./review-seed-ids";
-
-/** Senha compartilhada por todas as contas de revisão (somente ambiente de desenvolvimento). */
-export const REVIEW_ACCOUNTS_PASSWORD = "Revisao-Demo-2026!";
 
 export const REVIEW_EMAIL_DOMAIN = "@example.test";
 export const REVIEW_ORDER_PREFIX = "MS-REVIEW-";
@@ -2064,7 +2064,7 @@ async function ensurePostSale(
 }
 
 async function main() {
-  const passwordHash = await hashPassword(REVIEW_ACCOUNTS_PASSWORD);
+  const passwordHash = await hashPassword(requireEnv("REVIEW_ACCOUNTS_PASSWORD"));
   const userIds = await ensureUsers(passwordHash);
   const stores = await ensureStores(userIds);
   const { variants, productIds, findFitment } = await ensureProducts(stores, userIds);
@@ -2111,7 +2111,7 @@ async function main() {
       .map((user) => user.email)
       .join(", ")}`,
   );
-  console.log("Senha: constante REVIEW_ACCOUNTS_PASSWORD em scripts/seed-review-data.ts");
+  console.log("Senha: valor de REVIEW_ACCOUNTS_PASSWORD (.env.local).");
   if (!adminEmails.includes(users.admin.email))
     console.log(
       `Admin: adicione ${users.admin.email} em ADMIN_EMAILS (.env.local) e reinicie o servidor para acessar /admin.`,

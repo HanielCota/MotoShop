@@ -12,7 +12,7 @@ Roteiro para revisar todas as telas com dados de demonstração. Tudo o que apar
 
 0. **Banco isolado para a revisão (recomendado).** No console da Neon, crie um branch a partir do principal (por exemplo, `review`) e copie a connection string dele. Use essa URL em `DATABASE_URL` e `DIRECT_URL` só enquanto durar a revisão: nada do que acontecer ali afeta o site. Apague o branch ao final.
 
-1. No `.env.local`, deixe `BETTER_AUTH_URL="http://localhost:3001"` e inclua `review.admin@example.test` em `ADMIN_EMAILS` (separado por vírgula). Sem isso, o login falha na porta 3001 e o Admin fica bloqueado.
+1. No `.env.local`, deixe `BETTER_AUTH_URL="http://localhost:3001"` e inclua `review.admin@example.test` em `ADMIN_EMAILS` (separado por vírgula). Sem isso, o login falha na porta 3001 e o Admin fica bloqueado. Defina também `REVIEW_ACCOUNTS_PASSWORD` com a senha das contas de demonstração (veja a seção 2).
 
 2. Na pasta do projeto, crie os dados de demonstração (pode rodar quantas vezes quiser; não duplica nada). Publique as lojas de demonstração com a variável `REVIEW_PUBLISH_STORES`:
 
@@ -55,7 +55,7 @@ Roteiro para revisar todas as telas com dados de demonstração. Tudo o que apar
 
 ## 2. Contas de demonstração
 
-Todas usam a mesma senha: o valor de `REVIEW_ACCOUNTS_PASSWORD`, no início de `scripts/seed-review-data.ts`. Entre em **/login**. Para trocar de conta, use **Sair** no menu do ícone de usuário (loja) ou no topo da Central do Lojista/Admin.
+Todas usam a mesma senha: o valor da variável `REVIEW_ACCOUNTS_PASSWORD` no `.env.local` de quem rodou o seed (peça a quem administra a demonstração; a senha não fica no código nem nesta documentação). O seed falha se a variável faltar e regrava a senha de todas as contas `review.*` a cada execução. Entre em **/login**. Para trocar de conta, use **Sair** no menu do ícone de usuário (loja) ou no topo da Central do Lojista/Admin.
 
 | Perfil                       | E-mail                                              | O que mostra                                                                                                   |
 | ---------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
