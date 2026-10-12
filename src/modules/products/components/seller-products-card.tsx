@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { archiveProductAction, restoreProductAction } from "@/modules/products/actions/product-actions";
 import { InventoryAdjustForm } from "@/modules/products/components/inventory-adjust-form";
+import { formatPriceInputFromCents } from "@/modules/products/domain/price-input";
 import { ProductSubmissionAction } from "@/modules/products/components/product-submission-action";
 import { listProductBrands, listProductCategories, listSellerProducts } from "@/modules/products/queries/products";
 import {
@@ -109,23 +110,23 @@ export async function SellerProductsCard({
               </DesignSelect>
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Preço mín. (centavos)
+              Preço mín. (R$)
               <Input
                 name="productMinPrice"
-                type="number"
-                min="0"
-                defaultValue={params.productMinPrice ?? ""}
-                placeholder="Ex.: 5000"
+                inputMode="decimal"
+                autoComplete="off"
+                defaultValue={formatOptionalPrice(params.productMinPrice)}
+                placeholder="Ex.: 50,00"
               />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
-              Preço máx. (centavos)
+              Preço máx. (R$)
               <Input
                 name="productMaxPrice"
-                type="number"
-                min="0"
-                defaultValue={params.productMaxPrice ?? ""}
-                placeholder="Ex.: 100000"
+                inputMode="decimal"
+                autoComplete="off"
+                defaultValue={formatOptionalPrice(params.productMaxPrice)}
+                placeholder="Ex.: 1000,00"
               />
             </label>
             <label className="flex flex-col gap-1 text-sm font-medium">
@@ -275,4 +276,9 @@ export async function SellerProductsCard({
       </CardContent>
     </Card>
   );
+}
+
+function formatOptionalPrice(cents: number | null) {
+  if (cents === null) return "";
+  return formatPriceInputFromCents(cents);
 }
