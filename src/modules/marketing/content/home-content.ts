@@ -3,6 +3,7 @@ import {
   BadgeCheck,
   Bike,
   CircleCheck,
+  Clock,
   Disc3,
   MapPin,
   Shield,
@@ -57,12 +58,29 @@ export const essentials: { title: string; description: string; href: Route; icon
   { title: "Pneus e câmaras", description: "Aderência para pista e trilha", icon: Bike, href: "/products?q=pneu" },
 ];
 
-/** Garantias curtas exibidas logo abaixo da busca por moto, no hero. */
-export const heroAssurances: { text: string; icon: LucideIcon }[] = [
-  { icon: BadgeCheck, text: "Lojas aprovadas pelo Moto Shop" },
-  { icon: UserRoundCheck, text: "Compre sem criar conta" },
-  { icon: MapPin, text: "Frete e prazo de cada loja no checkout" },
-];
+type HeroAssurance = { text: string; icon: LucideIcon };
+
+const approvedStoresAssurance: HeroAssurance = { icon: BadgeCheck, text: "Lojas aprovadas pelo Moto Shop" };
+
+/**
+ * Garantias curtas exibidas logo abaixo da busca por moto, no hero. Enquanto o pagamento não está
+ * liberado, nenhuma delas promete compra ou checkout.
+ */
+export function getHeroAssurances(paymentAvailable: boolean): HeroAssurance[] {
+  if (!paymentAvailable) {
+    return [
+      approvedStoresAssurance,
+      { icon: Clock, text: "Compras em breve" },
+      { icon: MapPin, text: "Frete e prazo definidos por cada loja" },
+    ];
+  }
+
+  return [
+    approvedStoresAssurance,
+    { icon: UserRoundCheck, text: "Compre sem criar conta" },
+    { icon: MapPin, text: "Frete e prazo de cada loja no checkout" },
+  ];
+}
 
 /** Links de categoria só aparecem quando a categoria existe e está ativa. */
 export function isCategoryHrefActive(href: string, categories: { slug: string }[]) {
