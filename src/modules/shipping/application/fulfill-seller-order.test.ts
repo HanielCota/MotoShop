@@ -369,6 +369,21 @@ describe("generateSellerOrderShipment retry safety", () => {
     expect(mocks.getSellerAccessToken).not.toHaveBeenCalled();
     expect(mocks.generateShipment).not.toHaveBeenCalled();
   });
+
+  it("does not load or refresh tracking for another seller's shipment", async () => {
+    mocks.findUnique.mockResolvedValueOnce(null);
+
+    await expect(refreshSellerOrderTracking("seller-order-1", "seller-2", "seller-user-2")).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+
+    expect(mocks.findUnique).toHaveBeenCalledWith({
+      where: { id: "seller-order-1", sellerId: "seller-2" },
+      select: { status: true, shipment: true },
+    });
+    expect(mocks.getSellerAccessToken).not.toHaveBeenCalled();
+    expect(mocks.track).not.toHaveBeenCalled();
+  });
 });
 
 function lockedStatus(status: string) {
