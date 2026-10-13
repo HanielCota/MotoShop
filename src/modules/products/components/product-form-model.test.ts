@@ -35,6 +35,34 @@ describe("product form model", () => {
     });
   });
 
+  it("sends gender, color and size through the same FormData contract", () => {
+    const values = toProductFormValues({
+      name: "Camisa de motocross",
+      slug: "",
+      description: "Camisa leve para trilha e motocross.",
+      categoryId,
+      brandId,
+      variants: [
+        {
+          title: "M / Preto",
+          sku: "CAMISA-M",
+          priceInCents: 19990,
+          stock: 2,
+          gender: "UNISEX",
+          color: "Preto",
+          size: "M",
+        },
+        { title: "G", sku: "CAMISA-G", priceInCents: 19990, stock: 1 },
+      ],
+    });
+
+    expect(productFormSchema.safeParse(values).success).toBe(true);
+    expect(parseProductForm(toProductFormData(values)).data?.variants).toMatchObject([
+      { gender: "UNISEX", color: "Preto", size: "M" },
+      { gender: null, color: null, size: null },
+    ]);
+  });
+
   it("reports schema errors on the matching form field paths", () => {
     const values = validValues();
     values.description = "curta";

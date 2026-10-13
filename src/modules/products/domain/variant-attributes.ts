@@ -10,6 +10,10 @@ export const variantGenderLabels: Record<VariantGenderValue, string> = {
 
 export const VARIANT_ATTRIBUTE_MAX_LENGTH = 50;
 
+export function isVariantGender(value: unknown): value is VariantGenderValue {
+  return typeof value === "string" && (variantGenderValues as readonly string[]).includes(value);
+}
+
 export type VariantAttributes = {
   gender?: VariantGenderValue | null | undefined;
   color?: string | null | undefined;
