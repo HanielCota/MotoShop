@@ -8,6 +8,7 @@ import { DesignSelect } from "@/components/ui/design-select";
 import { useActionState } from "react";
 
 import { createSellerAction, type SellerActionState } from "@/modules/sellers/actions/seller-actions";
+import { STORE_SLUG_EXAMPLE } from "@/modules/sellers/schemas/store-slug";
 
 const initialState: SellerActionState = {};
 
@@ -22,7 +23,16 @@ export function SellerOnboardingForm() {
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium">
         Identificador da loja
-        <Input name="storeSlug" placeholder="racing-parts" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" required />
+        <Input
+          name="storeSlug"
+          placeholder="racing-parts"
+          pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+          required
+          aria-describedby="store-slug-help"
+        />
+        <span id="store-slug-help" className="text-muted-foreground text-xs font-normal">
+          {STORE_SLUG_EXAMPLE}
+        </span>
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
         CEP de origem dos envios

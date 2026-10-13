@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useActionState } from "react";
 
 import { updateStoreProfileAction, type StoreProfileActionState } from "../actions/store-profile-actions";
+import { STORE_SLUG_EXAMPLE } from "../schemas/store-slug";
 
 type StoreProfileFormProps = {
   store: {
@@ -42,6 +43,8 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
           aria-describedby="store-slug-help"
         />
         <span id="store-slug-help" className="text-muted-foreground text-xs font-normal">
+          {STORE_SLUG_EXAMPLE}
+          <br />
           URL pública: /loja/{store.slug}. Acentos e espaços são convertidos automaticamente.
         </span>
       </label>
