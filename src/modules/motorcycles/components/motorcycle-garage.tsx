@@ -64,7 +64,7 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
         <div className="bg-moto-brand-surface text-brand-strong flex size-12 shrink-0 items-center justify-center rounded-xl">
           <Bike aria-hidden="true" className="size-6" />
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="@container min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="font-sans text-lg font-semibold tracking-normal">
               {saved.manufacturer} {saved.model}
@@ -161,7 +161,10 @@ function MotorcycleDetails({ saved }: { saved: SavedMotorcycle }) {
   ];
 
   return (
-    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+    // Sized by the card, not the screen: beside the account menu and the "Adicionar moto" form the
+    // card can be narrow, and "FABRICANTE" would overflow into the next label. One column below
+    // 16rem, two above; never four.
+    <dl className="mt-3 grid grid-cols-1 gap-y-3 @[16rem]:grid-cols-2 @[16rem]:gap-x-6">
       {details.map((detail) => (
         <div key={detail.label} className="min-w-0">
           <dt className="text-muted-foreground text-xs font-semibold tracking-[0.08em] uppercase">{detail.label}</dt>
