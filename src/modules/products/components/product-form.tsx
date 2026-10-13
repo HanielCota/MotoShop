@@ -22,6 +22,11 @@ import { slugify } from "@/lib/utils";
 import { createProductAction, type ProductActionState } from "@/modules/products/actions/product-actions";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import type { ProductInput } from "@/modules/products/schemas/product-input";
+import {
+  VARIANT_ATTRIBUTE_MAX_LENGTH,
+  variantGenderLabels,
+  variantGenderValues,
+} from "@/modules/products/domain/variant-attributes";
 
 import { MeasurementFields } from "./measurement-fields";
 import {
@@ -303,6 +308,7 @@ function VariantsEditor({
                 />
               )}
             </FormField>
+            <VariantAttributeFields control={control} register={register} errors={variantErrors} index={index} />
             <details
               open={Boolean(
                 field.promotionalPriceInCents ||
@@ -395,5 +401,67 @@ function hasMeasurements(values: MeasurementLike) {
 function hasMeasurementErrors(errors: FieldErrors<ProductFormValues>) {
   return Boolean(
     errors.weightInGrams || errors.heightInMillimeters || errors.widthInMillimeters || errors.lengthInMillimeters,
+  );
+}
+
+function VariantAttributeFields({
+  control,
+  register,
+  errors,
+  index,
+}: {
+  control: Control<ProductFormValues, unknown, ProductInput>;
+  register: UseFormRegister<ProductFormValues>;
+  errors: NonNullable<FieldErrors<ProductFormValues>["variants"]>[number] | undefined;
+  index: number;
+}) {
+  const fieldId = (name: "gender" | "color" | "size") => `product-variant-${index}-${name}`;
+  const optionalLabel = (label: string) => (
+    <>
+      {label} <span className="text-muted-foreground font-normal">(opcional)</span>
+    </>
+  );
+
+  return (
+    <div className="grid min-w-0 gap-3 sm:col-span-4 sm:grid-cols-3">
+      <FormField id={fieldId("gender")} label={optionalLabel("Gênero")} error={errors?.gender?.message}>
+        {(field) => (
+          <Controller
+            control={control}
+            name={`variants.${index}.gender`}
+            render={({ field: { value, onChange } }) => (
+              <DesignSelect {...field} value={value} onValueChange={(next) => onChange(String(next))}>
+                <option value="">Não informado</option>
+                {variantGenderValues.map((gender) => (
+                  <option key={gender} value={gender}>
+                    {variantGenderLabels[gender]}
+                  </option>
+                ))}
+              </DesignSelect>
+            )}
+          />
+        )}
+      </FormField>
+      <FormField id={fieldId("color")} label={optionalLabel("Cor")} error={errors?.color?.message}>
+        {(field) => (
+          <Input
+            {...field}
+            {...register(`variants.${index}.color`)}
+            maxLength={VARIANT_ATTRIBUTE_MAX_LENGTH}
+            placeholder="Preto/laranja"
+          />
+        )}
+      </FormField>
+      <FormField id={fieldId("size")} label={optionalLabel("Tamanho")} error={errors?.size?.message}>
+        {(field) => (
+          <Input
+            {...field}
+            {...register(`variants.${index}.size`)}
+            maxLength={VARIANT_ATTRIBUTE_MAX_LENGTH}
+            placeholder="M ou 40"
+          />
+        )}
+      </FormField>
+    </div>
   );
 }

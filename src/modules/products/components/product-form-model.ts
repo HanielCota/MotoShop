@@ -8,6 +8,7 @@ import {
   parsePromotionDate,
   type Measurements,
 } from "@/modules/products/domain/product-commercial-fields";
+import { isVariantGender } from "@/modules/products/domain/variant-attributes";
 import { productInputSchema } from "@/modules/products/schemas/product-input";
 
 type MeasurementName = (typeof measurementFields)[number]["name"];
@@ -26,6 +27,9 @@ export type VariantFormValues = MeasurementValues & {
   promotionalPriceInCents: string;
   promotionStartsAt: string;
   promotionEndsAt: string;
+  gender: string;
+  color: string;
+  size: string;
 };
 
 export type ProductFormValues = MeasurementValues & {
@@ -48,6 +52,9 @@ export type VariantDraft = Measurements & {
   promotionalPriceInCents?: number | null;
   promotionStartsAt?: string;
   promotionEndsAt?: string;
+  gender?: string | null;
+  color?: string | null;
+  size?: string | null;
 };
 
 function measurementValues(values: Measurements = {}): MeasurementValues {
@@ -71,6 +78,9 @@ export function toVariantFormValues(variant?: VariantDraft): VariantFormValues {
       variant?.promotionalPriceInCents == null ? "" : formatPriceInputFromCents(variant.promotionalPriceInCents),
     promotionStartsAt: variant?.promotionStartsAt ?? "",
     promotionEndsAt: variant?.promotionEndsAt ?? "",
+    gender: variant?.gender ?? "",
+    color: variant?.color ?? "",
+    size: variant?.size ?? "",
   };
 }
 
@@ -126,6 +136,9 @@ function toProductInput(values: ProductFormValues): z.input<typeof productInputS
         : null,
       promotionStartsAt: parsePromotionDate(variant.promotionStartsAt),
       promotionEndsAt: parsePromotionDate(variant.promotionEndsAt),
+      gender: isVariantGender(variant.gender) ? variant.gender : null,
+      color: variant.color,
+      size: variant.size,
     })),
   };
 }
@@ -170,6 +183,9 @@ export function toProductFormData(values: ProductFormValues, extra: Record<strin
     formData.append("promotionalPrice", variant.promotionalPriceInCents);
     formData.append("promotionStartsAt", variant.promotionStartsAt);
     formData.append("promotionEndsAt", variant.promotionEndsAt);
+    formData.append("variantGender", variant.gender);
+    formData.append("variantColor", variant.color);
+    formData.append("variantSize", variant.size);
     for (const { name } of measurementFields) formData.append(`variant_${name}`, variant[name]);
   }
   return formData;

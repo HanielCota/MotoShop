@@ -37,6 +37,12 @@ enum ProductStatus {
   ARCHIVED
 }
 
+enum VariantGender {
+  MALE
+  FEMALE
+  UNISEX
+}
+
 enum InventoryMovementType {
   SALE
   RESERVATION
@@ -481,6 +487,9 @@ model ProductVariant {
   heightInMillimeters     Int?
   widthInMillimeters      Int?
   lengthInMillimeters     Int?
+  gender                  VariantGender?
+  color                   String?
+  size                    String?
   active                  Boolean             @default(true)
   productId               String
   sellerId                String
@@ -499,6 +508,9 @@ model ProductVariant {
   @@unique([id, sellerId])
   @@index([productId, active])
   @@index([sellerId, active])
+  @@index([gender, active])
+  @@index([color, active])
+  @@index([size, active])
   @@map("product_variants")
 }
 

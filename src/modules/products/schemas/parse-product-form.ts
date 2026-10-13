@@ -8,6 +8,9 @@ export function parseProductForm(formData: FormData) {
   const variantPrices = formData.getAll("price");
   const variantStocks = formData.getAll("stock");
   const variantIds = formData.getAll("variantId");
+  const variantGenders = formData.getAll("variantGender");
+  const variantColors = formData.getAll("variantColor");
+  const variantSizes = formData.getAll("variantSize");
 
   return productInputSchema.safeParse({
     ...Object.fromEntries(measurementFields.map(({ name }) => [name, parseOptionalInteger(formData.get(name))])),
@@ -27,6 +30,9 @@ export function parseProductForm(formData: FormData) {
       promotionEndsAt: parsePromotionDate(formData.getAll("promotionEndsAt")[index]),
       id: typeof variantIds[index] === "string" && variantIds[index] ? variantIds[index] : undefined,
       title: variantTitles[index],
+      gender: variantGenders[index] || null,
+      color: variantColors[index] ?? null,
+      size: variantSizes[index] ?? null,
       sku: variantSkus[index],
       priceInCents: parsePriceInputToCents(variantPrices[index]),
       stock: variantStocks[index],
