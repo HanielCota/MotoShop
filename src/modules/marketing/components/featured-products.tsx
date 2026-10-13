@@ -22,7 +22,7 @@ export function FeaturedProducts({ products }: { products: ProductCardData[] }) 
           action={{ label: "Explorar o catálogo", href: "/products" }}
         />
       ) : (
-        <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
           {products.map((product, index) => (
             <li key={product.id} className="flex min-w-0">
               <ProductCard product={product} eager={index === 0} />
