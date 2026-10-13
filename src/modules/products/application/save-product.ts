@@ -9,6 +9,7 @@ import {
   getMeasurements,
   getVariantCommercialFields,
 } from "../domain/product-commercial-fields";
+import { getVariantAttributes } from "../domain/variant-attributes";
 import type { ProductInput } from "../schemas/product-input";
 
 type ProductActor = { sellerId: string; storeId: string; userId: string };
@@ -205,6 +206,7 @@ async function createVariantWithInventory(
       title: variantInput.title,
       priceInCents: variantInput.priceInCents,
       ...getVariantCommercialFields(variantInput),
+      ...getVariantAttributes(variantInput),
     },
   });
   const inventory = await tx.inventory.create({
@@ -240,6 +242,7 @@ async function updateExistingVariant(
       title: variantInput.title,
       priceInCents: variantInput.priceInCents,
       ...getVariantCommercialFields(variantInput),
+      ...getVariantAttributes(variantInput),
       active: true,
     },
   });
