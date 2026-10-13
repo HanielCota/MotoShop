@@ -109,3 +109,72 @@ it("requires a selected shipping quote for every seller", () => {
     }),
   ).toThrow("frete");
 });
+
+const percentCoupon = (owner: { ownerType: "MARKETPLACE" | "SELLER"; sellerId: string | null }, bps: number) => ({
+  discountType: "PERCENTAGE" as const,
+  percentageBps: bps,
+  fixedAmountInCents: null,
+  minimumPurchaseInCents: 0,
+  ...owner,
+  fundedBy: "SELLER" as const,
+});
+// One unit of R$ 100 (no promotion at this instant) plus R$ 15 shipping, 12% commission.
+const luizScenario = (coupon?: Parameters<typeof calculateSellerCharges>[0]["coupon"]) =>
+  calculateSellerCharges({
+    items: [item("s1", { priceInCents: 10_000, quantity: 1 })],
+    quoteGroups,
+    selections: { s1: "pac" },
+    coupon,
+    defaultCommissionBps: 1_200,
+    now: new Date("2026-10-08T00:00:00.000Z"),
+  })[0];
+
+it("charges commission on the gross items subtotal when there is no coupon, leaving shipping out", () => {
+  const charge = luizScenario();
+
+  expect(charge?.totals.totalAmountInCents).toBe(11_500);
+  expect(charge?.commissionInCents).toBe(1_200);
+  expect(charge?.sellerNetAmountInCents).toBe(10_000 - 1_200);
+});
+
+it("charges commission on the net value after a seller coupon (R$ 100 with 5% → base R$ 95)", () => {
+  const charge = luizScenario(percentCoupon({ ownerType: "SELLER", sellerId: "s1" }, 500));
+
+  expect(charge?.sellerDiscountInCents).toBe(500);
+  expect(charge?.commissionInCents).toBe(1_140);
+  expect(charge?.sellerNetAmountInCents).toBe(9_500 - 1_140);
+  expect(charge?.totals.totalAmountInCents).toBe(9_500 + 1_500);
+});
+
+it("charges commission on the net value after a seller-funded Moto Shop coupon", () => {
+  const charge = luizScenario(percentCoupon({ ownerType: "MARKETPLACE", sellerId: null }, 500));
+
+  expect(charge?.sellerDiscountInCents).toBe(500);
+  expect(charge?.marketplaceDiscountInCents).toBe(0);
+  expect(charge?.commissionInCents).toBe(1_140);
+  expect(charge?.sellerNetAmountInCents).toBe(8_360);
+});
+
+it("keeps the gross base when the marketplace pays for the discount, since the seller still sells R$ 100", () => {
+  const charge = luizScenario(marketplaceCoupon(500));
+
+  expect(charge?.marketplaceDiscountInCents).toBe(500);
+  expect(charge?.commissionInCents).toBe(1_200);
+  expect(charge?.sellerNetAmountInCents).toBe(8_800);
+});
+
+it("rounds the net-base commission half up in whole cents", () => {
+  // 3 units of R$ 33,33 = 9_999; R$ 10 seller coupon → base 8_999; 12% = 1_079,88 → 1_080.
+  const [charge] = calculateSellerCharges({
+    items: [item("s1", { priceInCents: 3_333, quantity: 3 })],
+    quoteGroups,
+    selections: { s1: "pac" },
+    coupon: { ...marketplaceCoupon(1_000), ownerType: "SELLER", sellerId: "s1", fundedBy: "SELLER" },
+    defaultCommissionBps: 1_200,
+    now: new Date("2026-10-08T00:00:00.000Z"),
+  });
+
+  expect(charge?.sellerDiscountInCents).toBe(1_000);
+  expect(charge?.commissionInCents).toBe(1_080);
+  expect(Number.isInteger(charge?.commissionInCents)).toBe(true);
+});

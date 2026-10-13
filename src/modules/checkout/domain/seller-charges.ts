@@ -142,11 +142,11 @@ function completeSellerCharge<Item extends SellerChargeItem, Quote extends Selle
     shippingAmountInCents: charge.shipping.priceInCents,
   });
   const commissionBps = charge.items[0]?.variant.product.seller.commissionBpsOverride ?? defaultCommissionBps;
-  // TODO(regra-de-negócio): a comissão incide sobre o subtotal BRUTO dos itens (antes do cupom).
-  // Para cupom financiado pelo seller isso significa comissão sobre um valor que o cliente não pagou.
-  // Confirmar com produto se a base deve ser o subtotal líquido (itemsSubtotal - desconto do seller).
-  const commissionInCents = calculateCommissionInCents(totals.itemsSubtotalInCents, commissionBps);
   const sellerFundedDiscount = coupon?.fundedBy === "SELLER" ? discountInCents : 0;
+  const commissionInCents = calculateCommissionInCents(
+    commissionBaseInCents(totals.itemsSubtotalInCents, sellerFundedDiscount),
+    commissionBps,
+  );
   const sellerNetAmountInCents = totals.itemsSubtotalInCents - sellerFundedDiscount - commissionInCents;
   assertSellerChargeIsPayable({ charge, totals, commissionInCents, sellerNetAmountInCents, coupon });
 
@@ -159,6 +159,15 @@ function completeSellerCharge<Item extends SellerChargeItem, Quote extends Selle
     sellerDiscountInCents: sellerFundedDiscount,
     sellerNetAmountInCents,
   };
+}
+
+/**
+ * Commission is charged on what the seller actually sells: the items subtotal after the coupon
+ * discount the seller pays for (e.g. R$ 100 with a 5% seller-funded coupon → base R$ 95).
+ * Shipping never enters the base; a discount the marketplace pays for does not reduce it.
+ */
+export function commissionBaseInCents(itemsSubtotalInCents: number, sellerFundedDiscountInCents: number): number {
+  return itemsSubtotalInCents - sellerFundedDiscountInCents;
 }
 
 function assertSellerChargeIsPayable(input: {
