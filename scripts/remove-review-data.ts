@@ -327,6 +327,13 @@ async function main() {
         () => tx.brand.count({ where: brandWhere }),
         () => tx.brand.deleteMany({ where: brandWhere }),
       );
+      // Seller opt-ins to campaigns reference both coupons and sellers of the review scope.
+      const participationWhere = { OR: [{ couponId: { in: couponIds } }, { sellerId: { in: sellerIds } }] };
+      await apply(
+        "CouponSellerParticipation",
+        () => tx.couponSellerParticipation.count({ where: participationWhere }),
+        () => tx.couponSellerParticipation.deleteMany({ where: participationWhere }),
+      );
       const couponWhere = { id: { in: couponIds } };
       await apply(
         "Coupon",
