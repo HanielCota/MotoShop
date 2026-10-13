@@ -28,6 +28,7 @@ import {
 import { ProductFitmentBanner, type FitmentStatus } from "@/modules/products/components/detail/product-fitment-banner";
 import { ProductDetailSkeleton } from "@/modules/products/components/detail/product-detail-skeleton";
 import { ProductGallery } from "@/modules/products/components/detail/product-gallery";
+import { isNewProduct } from "@/modules/products/domain/product-novelty";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 import {
   getProductOfferSummary,
@@ -181,6 +182,9 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
               <Badge className="bg-moto-brand text-moto-brand-foreground border-0">Oferta</Badge>
             ) : null}
             {product.seller.subscriptions.length > 0 ? <Badge variant="brand">Patrocinado · Loja VIP</Badge> : null}
+            {isNewProduct(product, new Date()) ? (
+              <Badge className="bg-foreground text-background">Novidade</Badge>
+            ) : null}
           </div>
           <h1 id="product-title" className="text-foreground mt-5 text-3xl leading-tight sm:text-4xl">
             {product.name}
