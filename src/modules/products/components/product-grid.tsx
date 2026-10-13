@@ -6,6 +6,7 @@ import { ProductCard, type ProductCardData } from "@/components/storefront/produ
 import { EmptyState } from "@/components/ui/empty-state";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { getProductOffer } from "@/modules/products/domain/product-offer";
+import { isNewProduct } from "@/modules/products/domain/product-novelty";
 import { getCurrentPriceInCents, hasActivePromotion } from "@/modules/products/domain/pricing";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 import type { listApprovedProducts } from "@/modules/products/queries/products";
@@ -21,6 +22,8 @@ type CardSourceProduct = {
   name: string;
   isDemo: boolean;
   isVip?: boolean;
+  reviewedAt: Date | null;
+  createdAt: Date;
   category: Parameters<typeof getCategoryLabel>[0] & { slug: string };
   brand: { name: string; slug: string };
   seller: { store: { name: string; slug: string } | null };
@@ -56,6 +59,7 @@ export function toProductCardData(product: CardSourceProduct, now = new Date()):
     availableQuantity: offer.availableQuantity,
     isDemo: product.isDemo,
     sponsored: Boolean(product.isVip),
+    isNew: isNewProduct(product, now),
   };
 }
 

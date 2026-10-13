@@ -8,6 +8,26 @@ import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getPublicStockStatus, publicStockStatusLabel } from "@/modules/products/domain/stock-status";
 
+import { getProductCardBadges, type ProductCardBadge } from "./product-card-badges";
+
+function ProductCardBadgeLabel({ badge }: { badge: ProductCardBadge }) {
+  if (badge === "DEMO")
+    return (
+      <Badge variant="neutral" className="bg-card/95">
+        Demonstração
+      </Badge>
+    );
+  if (badge === "SPONSORED")
+    return (
+      <Badge variant="brand" className="bg-card/95">
+        Patrocinado · Loja VIP
+      </Badge>
+    );
+  if (badge === "SALE") return <Badge>Oferta</Badge>;
+
+  return <Badge className="bg-foreground text-background">Novidade</Badge>;
+}
+
 /** Dados de apresentação do card; derivados no servidor a partir de produtos aprovados. */
 export type ProductCardData = {
   id: string;
@@ -25,6 +45,8 @@ export type ProductCardData = {
   availableQuantity: number;
   isDemo: boolean;
   sponsored: boolean;
+  /** Approved in the last 30 days (computed on the server, see `isNewProduct`). */
+  isNew: boolean;
 };
 
 /**
@@ -50,6 +72,12 @@ export function ProductCard({
     product.compareAtPriceInCents != null &&
     product.priceInCents !== null &&
     product.compareAtPriceInCents > product.priceInCents;
+  const badges = getProductCardBadges({
+    isDemo: product.isDemo,
+    sponsored: product.sponsored,
+    onSale,
+    isNew: product.isNew,
+  });
 
   return (
     <article
@@ -77,19 +105,11 @@ export function ProductCard({
             Imagem não disponível
           </span>
         )}
-        {product.isDemo || product.sponsored || onSale ? (
+        {badges.length > 0 ? (
           <span className="absolute top-2 left-2 flex flex-wrap gap-1">
-            {product.isDemo ? (
-              <Badge variant="neutral" className="bg-card/95">
-                Demonstração
-              </Badge>
-            ) : null}
-            {onSale ? <Badge>Oferta</Badge> : null}
-            {product.sponsored && !product.isDemo ? (
-              <Badge variant="brand" className="bg-card/95">
-                Patrocinado · Loja VIP
-              </Badge>
-            ) : null}
+            {badges.map((badge) => (
+              <ProductCardBadgeLabel key={badge} badge={badge} />
+            ))}
           </span>
         ) : null}
       </Link>

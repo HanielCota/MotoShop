@@ -190,6 +190,7 @@ Filtros e ordenações já existentes, todos sob a regra acima:
 
 ### Página de produto, avaliações e perguntas
 
+- Selo "Novidade" (13/10/2026): produtos aprovados nos últimos 30 dias, pela data de aprovação (`reviewedAt`) ou, sem ela, pela de criação; calculado no servidor (`products/domain/product-novelty.ts`). O card mostra no máximo dois selos, nesta prioridade: Demonstração, Patrocinado, Oferta, Novidade (`product-card-badges.ts`). Na página do produto todos aparecem.
 - Cards públicos de produto podem exibir apenas a primeira `ProductImage` associada; a URL é derivada no servidor e o card sempre mantém fallback textual quando não houver imagem pública.
 - Avaliações e perguntas públicas têm paginação independente; médias e contagens são agregadas no servidor, sem depender apenas da página carregada.
 - O filtro de nota nas avaliações do detalhe público é aplicado no banco, recalculando média, contagem e paginação para o mesmo recorte.

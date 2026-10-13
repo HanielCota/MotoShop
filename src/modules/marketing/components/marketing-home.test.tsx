@@ -51,6 +51,7 @@ function makeProduct(id: string, name: string, overrides: Partial<ProductCardDat
     availableQuantity: 3,
     isDemo: false,
     sponsored: false,
+    isNew: false,
     ...overrides,
   };
 }
