@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 
 import { DesignSelect } from "@/components/ui/design-select";
 
-import { useActionState } from "react";
+import { useActionState, useRef } from "react";
+
+import { slugify } from "@/lib/utils";
 
 import { createSellerAction, type SellerActionState } from "@/modules/sellers/actions/seller-actions";
 import { STORE_SLUG_EXAMPLE } from "@/modules/sellers/schemas/store-slug";
@@ -15,20 +17,38 @@ const initialState: SellerActionState = {};
 
 export function SellerOnboardingForm() {
   const [state, action, pending] = useActionState(createSellerAction, initialState);
+  const slugInput = useRef<HTMLInputElement>(null);
+  // Sugere o identificador a partir do nome até a pessoa editar o identificador à mão.
+  const slugEditedByHand = useRef(false);
+
+  function suggestSlug(storeName: string) {
+    if (slugEditedByHand.current || !slugInput.current) return;
+    slugInput.current.value = slugify(storeName);
+  }
 
   return (
     <form action={action} noValidate className="grid gap-4 sm:grid-cols-2">
       <label className="flex flex-col gap-2 text-sm font-medium">
         Nome da loja
-        <Input name="storeName" placeholder="Racing Parts" defaultValue={state.values?.storeName ?? ""} required />
+        <Input
+          name="storeName"
+          placeholder="Racing Parts"
+          defaultValue={state.values?.storeName ?? ""}
+          onChange={(event) => suggestSlug(event.target.value)}
+          required
+        />
       </label>
       <FormField id="store-slug" label="Identificador da loja" hint={STORE_SLUG_EXAMPLE} error={state.slugError}>
         {(field) => (
           <Input
             {...field}
+            ref={slugInput}
             name="storeSlug"
             placeholder="racing-parts"
             autoComplete="off"
+            onChange={(event) => {
+              slugEditedByHand.current = event.target.value !== "";
+            }}
             defaultValue={state.values?.storeSlug ?? ""}
           />
         )}

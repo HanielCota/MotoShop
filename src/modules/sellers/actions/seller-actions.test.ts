@@ -106,6 +106,31 @@ describe("seller onboarding", () => {
   });
 });
 
+describe("seller onboarding identifier", () => {
+  it("turns a typed store name into a valid identifier instead of refusing it", async () => {
+    const form = onboardingForm();
+    form.set("storeSlug", "Luiz Parts Ação");
+
+    const result = await createSellerAction({}, form);
+
+    expect(result.slugError).toBeUndefined();
+    expect(mocks.storeCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ slug: "luiz-parts-acao" }) }),
+    );
+  });
+
+  it("still refuses an identifier with no letters or numbers in the field", async () => {
+    const form = onboardingForm();
+    form.set("storeSlug", "!!!");
+
+    const result = await createSellerAction({}, form);
+
+    expect(result.slugError).toBe("Informe um identificador para a loja.");
+    expect(result.values?.storeSlug).toBe("!!!");
+    expect(mocks.transaction).not.toHaveBeenCalled();
+  });
+});
+
 describe("shipping origin update", () => {
   function originForm() {
     const form = new FormData();
