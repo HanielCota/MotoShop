@@ -11,6 +11,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { formatMoneyInCents } from "@/lib/format";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { CatalogFiltersPanel } from "@/modules/catalog/components/catalog-filters-panel";
+import { CatalogMotorcycleFields } from "@/modules/catalog/components/catalog-motorcycle-fields";
 import { CatalogSearchBand } from "@/modules/catalog/components/catalog-search-band";
 import { CatalogSortSelect } from "@/modules/catalog/components/catalog-sort-select";
 import {
@@ -18,6 +19,7 @@ import {
   getCategoryOptionLabel,
   sortCategoriesByOptionLabel,
 } from "@/modules/catalog/category-labels";
+import type { FitmentOption } from "@/modules/motorcycles/domain/fitment-options";
 import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/motorcycles";
 import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
 import { PriceFilterInput } from "@/modules/products/components/price-filter-input";
@@ -56,6 +58,17 @@ type FilterOptions = {
   brands: Awaited<ReturnType<typeof listProductBrands>>;
   sellers: Awaited<ReturnType<typeof listPublicSellerOptions>>;
 };
+
+function toFitmentOption(fitment: Fitment): FitmentOption {
+  return {
+    id: fitment.id,
+    manufacturer: fitment.motorcycleModel.manufacturer.name,
+    model: fitment.motorcycleModel.name,
+    version: fitment.version,
+    displacementCc: fitment.displacementCc,
+    year: fitment.year,
+  };
+}
 
 function fitmentLabel(fitment: Fitment) {
   return [
@@ -309,17 +322,11 @@ function CatalogFilterForm({
       {query.sort !== "relevance" ? <input type="hidden" name="sort" value={query.sort} /> : null}
       {/* The search field lives in the band above the results; applying filters keeps the search. */}
       {query.q ? <input type="hidden" name="q" value={query.q} /> : null}
-      <label className={fieldClassName}>
-        Compatibilidade com moto
-        <DesignSelect aria-label="Compatibilidade com moto" name="moto" defaultValue={query.moto || "all"}>
-          <option value="all">Todas as motos</option>
-          {options.fitments.map((fitment) => (
-            <option key={fitment.id} value={fitment.id}>
-              {fitmentLabel(fitment)}
-            </option>
-          ))}
-        </DesignSelect>
-      </label>
+      <CatalogMotorcycleFields
+        fitments={options.fitments.map(toFitmentOption)}
+        defaultFitmentId={query.moto}
+        fieldClassName={fieldClassName}
+      />
       <label className={fieldClassName}>
         Categoria
         <DesignSelect aria-label="Categoria" name="category" defaultValue={query.category ?? ""}>
