@@ -27,3 +27,18 @@ export function getVariantAttributes(value: VariantAttributes) {
     size: value.size ?? null,
   };
 }
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Attributes frozen on the order item: the variant's free-form attributes plus gender, color and size
+ * when set. Variants without them keep exactly the snapshot they had before.
+ */
+export function buildVariantAttributesSnapshot(attributes: unknown, structured: VariantAttributes): unknown {
+  const present = Object.entries(getVariantAttributes(structured)).filter(([, value]) => value !== null);
+  if (present.length === 0) return attributes;
+
+  return { ...(isPlainObject(attributes) ? attributes : {}), ...Object.fromEntries(present) };
+}
