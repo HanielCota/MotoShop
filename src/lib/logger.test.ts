@@ -29,6 +29,18 @@ describe("loggerRedaction", () => {
     expect(entry.order).toEqual({ id: "order-1", customerEmail: "[REDACTED]", customerPhone: "[REDACTED]" });
   });
 
+  it("censors CPF/CNPJ fields named as in the profile and the checkout", () => {
+    const entry = logOnce({
+      taxId: "52998224725",
+      input: { customerTaxId: "52998224725", customerPhone: "11999990000" },
+    });
+
+    expect(entry).toMatchObject({
+      taxId: "[REDACTED]",
+      input: { customerTaxId: "[REDACTED]", customerPhone: "[REDACTED]" },
+    });
+  });
+
   it("keeps censoring secrets", () => {
     const entry = logOnce({ password: "secret", headers: { cookie: "session=1" } });
 
