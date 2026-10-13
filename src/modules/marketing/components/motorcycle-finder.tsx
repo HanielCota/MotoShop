@@ -62,20 +62,20 @@ export function MotorcycleFinder({
         <button
           className={tabClassName}
           type="button"
-          aria-pressed={finderMode === "motorcycle"}
-          aria-controls="marketing-search-panel"
-          onClick={() => setFinderMode("motorcycle")}
-        >
-          Peças por moto
-        </button>
-        <button
-          className={tabClassName}
-          type="button"
           aria-pressed={finderMode === "search"}
           aria-controls="marketing-search-panel"
           onClick={() => setFinderMode("search")}
         >
           Buscar produto
+        </button>
+        <button
+          className={tabClassName}
+          type="button"
+          aria-pressed={finderMode === "motorcycle"}
+          aria-controls="marketing-search-panel"
+          onClick={() => setFinderMode("motorcycle")}
+        >
+          Peças por moto
         </button>
       </div>
 
