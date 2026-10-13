@@ -105,12 +105,20 @@ export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: 
                       <p className="font-semibold break-all">{coupon.code}</p>
                       <p className="text-sm tabular-nums">{couponDiscountLabel(coupon)} de desconto</p>
                     </div>
-                    <Badge variant={coupon.active ? "success" : "neutral"}>{coupon.active ? "Ativo" : "Inativo"}</Badge>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <Badge variant={coupon.active ? "success" : "neutral"}>
+                        {coupon.active ? "Ativo" : "Inativo"}
+                      </Badge>
+                      {coupon.showOnProductPage ? <Badge variant="success">No produto</Badge> : null}
+                    </div>
                   </div>
                   <p className="text-muted-foreground text-xs">
                     {couponUsageLabel(coupon)} · {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "Sem prazo"}
                   </p>
-                  <CouponActiveToggle couponId={coupon.id} active={coupon.active} />
+                  <div className="flex flex-wrap gap-2">
+                    <CouponProductPageToggle couponId={coupon.id} shown={coupon.showOnProductPage} />
+                    <CouponActiveToggle couponId={coupon.id} active={coupon.active} />
+                  </div>
                 </li>
               ))}
             </ul>
