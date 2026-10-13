@@ -15,6 +15,8 @@ export const couponSearchParams = {
   couponPage: parseAsInteger.withDefault(1),
   /** Campanha cujas lojas participantes o Admin está vendo. */
   campaignId: parseAsString,
+  /** Página das campanhas do Moto Shop na Central do Lojista. */
+  campaignPage: parseAsInteger.withDefault(1),
 };
 
 export const loadCouponSearchParams = createLoader(couponSearchParams);
