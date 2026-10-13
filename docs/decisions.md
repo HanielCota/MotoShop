@@ -30,7 +30,13 @@ Decisões pontuais tomadas ao longo do MVP, agrupadas por domínio. Complementam
 
 ### Cupons e descontos
 
+- Tipos de cupom (decisão do responsável com o cliente, 13/10/2026; `coupons/domain/coupon-kind.ts`):
+  - **Cupom Moto Shop** (`ownerType` MARKETPLACE, `fundedBy` MARKETPLACE): pago pelo Moto Shop e válido em todas as lojas; o desconto vai para `marketplaceDiscountInCents`.
+  - **Campanha com adesão** (`ownerType` MARKETPLACE, `fundedBy` SELLER): paga por cada loja que aderir. Vale só nos itens das lojas com adesão ativa em `CouponSellerParticipation` (`leftAt` nulo); o desconto é calculado sobre o subtotal dessas lojas, rateado entre elas e vai para `sellerDiscountInCents`. Sem nenhuma loja aderente no carrinho, o checkout recusa o cupom. É o tipo padrão do formulário do Admin (campo `couponKind`).
+  - **Cupom da loja** (`ownerType` SELLER, `fundedBy` SELLER): pago e válido só na loja dona.
+- A loja adere ou sai de uma campanha com `COUPON_MANAGE`, a qualquer momento, mesmo com a campanha em vigor (`setCouponParticipation`). A mudança trava o cupom, atualiza seu `updatedAt` (o checkout em andamento falha na rechecagem em vez de usar dados antigos), registra `AuditLog` e vale só para checkouts seguintes; sair preserva o registro (`leftAt`). Só é possível aderir a campanha ativa e não expirada.
 - Financiamento de desconto de cupom usa `marketplaceDiscountInCents`/`sellerDiscountInCents` no `SellerOrder`; os campos `marketplaceSubsidyInCents`/`sellerSubsidyInCents` continuam exclusivos de frete grátis.
+- A comissão incide sobre o valor líquido da loja: `itemsSubtotalInCents − sellerDiscountInCents` do `SellerOrder` (ex.: R$ 100 com cupom de 5% pago pela loja → base R$ 95). Frete fica fora da base, e desconto pago pelo Moto Shop não reduz a base. Pedidos já criados mantêm o snapshot da comissão (`commissionBaseInCents` em `checkout/domain/seller-charges.ts`).
 - A taxa do marketplace nunca pode exceder o total cobrado de um seller; o checkout recusa o cupom antes de criar o pedido.
 - Formulários de cupom (lojista e Admin) recebem desconto em % e valores em R$; a conversão para basis points e centavos acontece no servidor (`coupons/domain/coupon-form-input.ts`, sem `float`). Unidades internas nunca aparecem na interface.
 - Ativação ou desativação de cupons valida owner e tenant no servidor e registra auditoria com o usuário autenticado.

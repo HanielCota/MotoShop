@@ -62,6 +62,9 @@ export async function cleanupFixtures(input: {
       await tx.productCompatibility.deleteMany({ where: { sellerId: { in: input.sellerIds } } });
       await tx.productVariant.deleteMany({ where: { sellerId: { in: input.sellerIds } } });
       await tx.product.deleteMany({ where: { sellerId: { in: input.sellerIds } } });
+      await tx.couponSellerParticipation.deleteMany({
+        where: { OR: [{ couponId: { in: input.couponIds ?? [] } }, { sellerId: { in: input.sellerIds } }] },
+      });
       await tx.coupon.deleteMany({ where: { id: { in: input.couponIds ?? [] } } });
       await tx.store.deleteMany({ where: { sellerId: { in: input.sellerIds } } });
       await tx.seller.deleteMany({ where: { id: { in: input.sellerIds } } });
