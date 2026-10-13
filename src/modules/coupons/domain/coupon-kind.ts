@@ -7,6 +7,12 @@
  */
 export type CouponKind = "MARKETPLACE" | "SELLER_FUNDED_CAMPAIGN" | "SELLER";
 
+export const couponKindLabels: Record<CouponKind, string> = {
+  MARKETPLACE: "Cupom Moto Shop",
+  SELLER_FUNDED_CAMPAIGN: "Campanha com adesão",
+  SELLER: "Cupom da loja",
+};
+
 export type CouponOwnership = {
   ownerType: "MARKETPLACE" | "SELLER";
   fundedBy: "MARKETPLACE" | "SELLER";

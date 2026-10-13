@@ -40,3 +40,18 @@ it("offers the product page option only on seller coupons and sends it when tick
   const formData = mocks.create.mock.calls[0]?.[1] as FormData;
   expect(formData.get("showOnProductPage")).toBe("on");
 });
+
+it("sends a seller-funded campaign by default from the Admin form, and no kind from the seller form", async () => {
+  mocks.create.mockResolvedValue({ success: "Cupom criado." });
+  const { unmount } = render(<CouponForm ownerType="MARKETPLACE" />);
+  expect(screen.getByLabelText("Tipo de cupom")).toHaveTextContent("Campanha com adesão");
+  fireEvent.change(screen.getByLabelText(/Código do cupom/), { target: { value: "TRILHA10" } });
+  fireEvent.change(screen.getByLabelText(/Desconto \(%\)/), { target: { value: "10" } });
+  fireEvent.click(screen.getByRole("button", { name: "Criar cupom" }));
+  await screen.findByRole("status");
+  expect((mocks.create.mock.calls[0]?.[1] as FormData).get("couponKind")).toBe("SELLER_FUNDED_CAMPAIGN");
+  unmount();
+
+  render(<CouponForm ownerType="SELLER" />);
+  expect(screen.queryByLabelText("Tipo de cupom")).not.toBeInTheDocument();
+});

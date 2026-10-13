@@ -1,4 +1,6 @@
 import { TicketPercent } from "lucide-react";
+import Link from "next/link";
+import type { Route } from "next";
 
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -6,7 +8,10 @@ import { Pagination } from "@/components/ui/pagination";
 import { formatDate, formatMoneyInCents, formatCount } from "@/lib/format";
 import { setMarketplaceCouponActiveAction } from "@/modules/coupons/actions/coupon-actions";
 import { CouponForm } from "@/modules/coupons/components/coupon-form";
-import { listMarketplaceCoupons } from "@/modules/coupons/queries/coupons";
+import { couponKindLabels, getCouponKind, isSellerFundedCampaign } from "@/modules/coupons/domain/coupon-kind";
+import { listCouponParticipants } from "@/modules/coupons/queries/coupon-participation";
+import { getMarketplaceCoupon, listMarketplaceCoupons } from "@/modules/coupons/queries/coupons";
+import { isRecordId } from "@/shared/validation/record-id";
 import { loadCouponSearchParams } from "@/modules/coupons/search-params";
 
 import { adminHref } from "../../admin-href";
@@ -45,12 +50,15 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
     page: clampAdminPage(params.couponPage),
   });
   const pageHref = (page: number) => adminHref("coupons", { ...params, couponPage: page }, { couponSort: "newest" });
+  const participantsHref = (campaignId: string) =>
+    `${adminHref("coupons", { ...params, campaignId }, { couponSort: "newest" })}#campaign-participants` as Route;
+  const campaign = await loadCampaignParticipants(params.campaignId);
 
   return (
     <AdminCard
       id="admin-coupons"
       title="Cupons do marketplace"
-      description="Crie descontos globais financiados pelo Moto Shop, em percentual ou em reais."
+      description="Crie cupons pagos pelo Moto Shop ou campanhas em que as lojas aderem e pagam o desconto."
     >
       <CouponForm ownerType="MARKETPLACE" />
       <AdminFilterForm resetHref={adminHref("coupons", {})} label="Filtrar cupons">
@@ -68,11 +76,12 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
       ) : (
         <AdminTable
           caption="Cupons do marketplace"
-          columns={["Código", "Desconto", "Status", "Uso", "Validade", "Ação"]}
+          columns={["Código", "Tipo", "Desconto", "Status", "Uso", "Validade", "Ação"]}
         >
           {result.coupons.map((coupon) => (
             <tr key={coupon.id}>
               <td className={`${cellClassName} font-semibold`}>{coupon.code}</td>
+              <td className={`${cellClassName} whitespace-nowrap`}>{couponKindLabels[getCouponKind(coupon)]}</td>
               <td className={`${cellClassName} whitespace-nowrap`}>
                 {coupon.discountType === "PERCENTAGE"
                   ? `${(coupon.percentageBps ?? 0) / 100}%`
@@ -88,7 +97,15 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
               <td className={`${cellClassName} text-muted-foreground whitespace-nowrap`}>
                 {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "Sem prazo"}
               </td>
-              <td className={cellClassName}>
+              <td className={`${cellClassName} space-y-1`}>
+                {isSellerFundedCampaign(coupon) ? (
+                  <Link
+                    href={participantsHref(coupon.id)}
+                    className="text-brand-text block text-xs font-medium whitespace-nowrap underline underline-offset-4"
+                  >
+                    Ver lojas ({coupon._count.sellerParticipations})
+                  </Link>
+                ) : null}
                 <form action={setMarketplaceCouponActiveAction.bind(null, coupon.id, !coupon.active)}>
                   <button type="submit" className="text-brand-text text-xs font-medium underline underline-offset-4">
                     {coupon.active ? "Desativar" : "Ativar"}
@@ -99,6 +116,7 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
           ))}
         </AdminTable>
       )}
+      {campaign ? <CampaignParticipants code={campaign.code} participants={campaign.participants} /> : null}
       {result.pageCount > 1 ? (
         <Pagination
           ariaLabel="Paginação de cupons do marketplace"
@@ -110,5 +128,47 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
         />
       ) : null}
     </AdminCard>
+  );
+}
+
+async function loadCampaignParticipants(campaignId: string | null) {
+  if (!campaignId || !isRecordId(campaignId)) return null;
+  const coupon = await getMarketplaceCoupon(campaignId);
+  if (!coupon || !isSellerFundedCampaign(coupon)) return null;
+  return { code: coupon.code, participants: await listCouponParticipants(coupon.id) };
+}
+
+function CampaignParticipants({
+  code,
+  participants,
+}: {
+  code: string;
+  participants: Awaited<ReturnType<typeof listCouponParticipants>>;
+}) {
+  return (
+    <section id="campaign-participants" aria-labelledby="campaign-participants-title" className="space-y-3">
+      <h3 id="campaign-participants-title" className="text-sm font-semibold">
+        Lojas na campanha {code}
+      </h3>
+      {participants.length === 0 ? (
+        <p className="text-muted-foreground text-sm">Nenhuma loja aderiu a esta campanha ainda.</p>
+      ) : (
+        <AdminTable caption={`Lojas na campanha ${code}`} columns={["Loja", "Entrou em", "Situação"]}>
+          {participants.map((participant) => (
+            <tr key={participant.sellerId}>
+              <td className={`${cellClassName} font-medium`}>{participant.seller.store?.name ?? "Loja sem nome"}</td>
+              <td className={`${cellClassName} whitespace-nowrap`}>{formatDate(participant.joinedAt)}</td>
+              <td className={cellClassName}>
+                {participant.leftAt ? (
+                  <span className="text-muted-foreground">Saiu em {formatDate(participant.leftAt)}</span>
+                ) : (
+                  <Badge variant="success">Participando</Badge>
+                )}
+              </td>
+            </tr>
+          ))}
+        </AdminTable>
+      )}
+    </section>
   );
 }

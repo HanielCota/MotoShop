@@ -66,8 +66,18 @@ async function listCoupons(
               : [{ createdAt: "desc" }, { code: "asc" }],
       skip,
       take: pageSize,
-      include: { _count: { select: { redemptions: true } } },
+      include: {
+        _count: { select: { redemptions: true, sellerParticipations: { where: { leftAt: null } } } },
+      },
     }),
   ]);
   return { coupons, total, page, pageCount };
+}
+
+/** Um cupom do marketplace pelo id, para telas do Admin. */
+export async function getMarketplaceCoupon(couponId: string) {
+  return db.coupon.findFirst({
+    where: { id: couponId, ownerType: "MARKETPLACE", sellerId: null },
+    select: { id: true, code: true, ownerType: true, fundedBy: true },
+  });
 }

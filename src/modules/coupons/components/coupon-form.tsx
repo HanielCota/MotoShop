@@ -14,6 +14,13 @@ import {
   createSellerCouponAction,
   type CouponActionState,
 } from "../actions/coupon-actions";
+import { couponKindLabels } from "../domain/coupon-kind";
+
+type MarketplaceCouponKind = "SELLER_FUNDED_CAMPAIGN" | "MARKETPLACE";
+const couponKindHints: Record<MarketplaceCouponKind, string> = {
+  SELLER_FUNDED_CAMPAIGN: "Vale nas lojas que aderirem, e o desconto sai do valor delas.",
+  MARKETPLACE: "Vale em todas as lojas, e o desconto é pago pelo Moto Shop.",
+};
 
 const initialState: CouponActionState = {};
 const emptyValues = {
@@ -32,6 +39,7 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
   const [state, formAction, pending] = useActionState(action, initialState);
   const [values, setValues] = useState(emptyValues);
   const [showOnProductPage, setShowOnProductPage] = useState(false);
+  const [couponKind, setCouponKind] = useState<MarketplaceCouponKind>("SELLER_FUNDED_CAMPAIGN");
   const percentage = values.discountType === "PERCENTAGE";
 
   function updateValue(name: keyof typeof emptyValues, value: string) {
@@ -40,6 +48,29 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
 
   return (
     <form action={formAction} noValidate className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2">
+      {ownerType === "MARKETPLACE" ? (
+        <FormField
+          id="marketplace-coupon-kind"
+          label="Tipo de cupom"
+          className="sm:col-span-2"
+          hint={couponKindHints[couponKind]}
+        >
+          {(field) => (
+            <DesignSelect
+              id={field.id}
+              aria-label="Tipo de cupom"
+              name="couponKind"
+              value={couponKind}
+              onValueChange={(value) =>
+                setCouponKind(value === "MARKETPLACE" ? "MARKETPLACE" : "SELLER_FUNDED_CAMPAIGN")
+              }
+            >
+              <option value="SELLER_FUNDED_CAMPAIGN">{couponKindLabels.SELLER_FUNDED_CAMPAIGN}</option>
+              <option value="MARKETPLACE">{couponKindLabels.MARKETPLACE}</option>
+            </DesignSelect>
+          )}
+        </FormField>
+      ) : null}
       <FormField id={`${ownerType}-coupon-code`} label="Código do cupom" required hint="Letras, números, _ ou -.">
         {(field) => (
           <Input
