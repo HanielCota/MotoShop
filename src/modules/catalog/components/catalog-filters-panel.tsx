@@ -26,7 +26,7 @@ export function CatalogFiltersPanel({
   return (
     <aside
       aria-labelledby={titleId}
-      className="border-border bg-card min-w-0 rounded-xl border md:sticky md:top-24 md:p-4"
+      className="border-border bg-card min-w-0 rounded-xl border md:sticky md:top-24 md:max-h-[calc(100dvh-7rem)] md:overflow-y-auto md:overscroll-contain md:p-4"
     >
       <h2 id={titleId} className="sr-only md:not-sr-only md:mb-3 md:block md:text-lg">
         Filtrar produtos
