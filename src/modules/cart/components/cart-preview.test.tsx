@@ -37,6 +37,7 @@ it("opens a cart summary and links to the full cart", async () => {
     ],
     itemCount: 2,
     subtotalInCents: 30000,
+    paymentAvailable: true,
   });
   render(<CartPreview />);
 
@@ -46,6 +47,32 @@ it("opens a cart summary and links to the full cart", async () => {
   expect(screen.getByText("Subtotal").parentElement?.querySelector("strong")).toHaveTextContent("300,00");
   expect(screen.getByRole("link", { name: "Ver carrinho" })).toHaveAttribute("href", "/cart");
   expect(screen.getByRole("link", { name: "Finalizar compra" })).toHaveAttribute("href", "/checkout");
+  expect(screen.queryByText("Pagamento ainda não liberado")).not.toBeInTheDocument();
+});
+
+it("offers to review shipping instead of finishing the purchase while payment is unavailable", async () => {
+  actions.preview.mockResolvedValue({
+    items: [
+      {
+        id: "item-1",
+        name: "Capacete off-road",
+        variant: "Preto · M",
+        quantity: 1,
+        availableQuantity: 5,
+        unitPriceInCents: 15000,
+      },
+    ],
+    itemCount: 1,
+    subtotalInCents: 15000,
+    paymentAvailable: false,
+  });
+  render(<CartPreview />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Visualizar carrinho" }));
+
+  expect(await screen.findByText("Pagamento ainda não liberado")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Conferir frete" })).toHaveAttribute("href", "/checkout");
+  expect(screen.queryByRole("link", { name: "Finalizar compra" })).not.toBeInTheDocument();
 });
 
 it("lets the customer remove an item from the preview", async () => {
