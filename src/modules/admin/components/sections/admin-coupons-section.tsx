@@ -6,6 +6,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { formatDate, formatMoneyInCents, formatCount } from "@/lib/format";
 import { setMarketplaceCouponActiveAction } from "@/modules/coupons/actions/coupon-actions";
 import { CouponForm } from "@/modules/coupons/components/coupon-form";
+import { couponKindLabels, getCouponKind } from "@/modules/coupons/domain/coupon-kind";
 import { listMarketplaceCoupons } from "@/modules/coupons/queries/coupons";
 import { loadCouponSearchParams } from "@/modules/coupons/search-params";
 
@@ -50,7 +51,7 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
     <AdminCard
       id="admin-coupons"
       title="Cupons do marketplace"
-      description="Crie descontos globais financiados pelo Moto Shop, em percentual ou em reais."
+      description="Crie cupons pagos pelo Moto Shop ou campanhas em que as lojas aderem e pagam o desconto."
     >
       <CouponForm ownerType="MARKETPLACE" />
       <AdminFilterForm resetHref={adminHref("coupons", {})} label="Filtrar cupons">
@@ -68,11 +69,12 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
       ) : (
         <AdminTable
           caption="Cupons do marketplace"
-          columns={["Código", "Desconto", "Status", "Uso", "Validade", "Ação"]}
+          columns={["Código", "Tipo", "Desconto", "Status", "Uso", "Validade", "Ação"]}
         >
           {result.coupons.map((coupon) => (
             <tr key={coupon.id}>
               <td className={`${cellClassName} font-semibold`}>{coupon.code}</td>
+              <td className={`${cellClassName} whitespace-nowrap`}>{couponKindLabels[getCouponKind(coupon)]}</td>
               <td className={`${cellClassName} whitespace-nowrap`}>
                 {coupon.discountType === "PERCENTAGE"
                   ? `${(coupon.percentageBps ?? 0) / 100}%`
