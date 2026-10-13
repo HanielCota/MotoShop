@@ -23,6 +23,7 @@ type Promotion = (typeof publicCatalogPromotionValues)[number];
 const sortOptions: { value: Sort; label: string }[] = [
   { value: "relevance", label: "Mais relevantes" },
   { value: "newest", label: "Mais recentes" },
+  { value: "recent_offers", label: "Ofertas recentes" },
   { value: "price_asc", label: "Menor preço" },
   { value: "price_desc", label: "Maior preço" },
 ];

@@ -21,6 +21,22 @@ describe("findPublicProductPage", () => {
     expect(statement.sql).toMatch(/o\.price <= \?::bigint/);
     expect(statement.values).toContain(99_999_999_999_999);
   });
+
+  it("orders recent offers by active promotion first, newest offer first", async () => {
+    await findPublicProductPage({ sort: "recent_offers" }, new Date());
+
+    const statement = defined(mocks.queryRaw.mock.calls[1])[0] as { sql: string };
+    expect(statement.sql).toMatch(/bool_or\(o\.sale\) AS "onSale"/);
+    expect(statement.sql).toMatch(/COALESCE\(o\."promotionStartsAt", o\."variantUpdatedAt"\)/);
+    expect(statement.sql).toMatch(/ORDER BY "onSale" DESC, "offerStartedAt" DESC NULLS LAST, "createdAt" DESC, id ASC/);
+  });
+
+  it("keeps relevance as the default order", async () => {
+    await findPublicProductPage({}, new Date());
+
+    const statement = defined(mocks.queryRaw.mock.calls[1])[0] as { sql: string };
+    expect(statement.sql).toMatch(/ORDER BY score DESC, "createdAt" DESC, id ASC/);
+  });
 });
 
 function defined<T>(value: T | null | undefined): T {
