@@ -32,8 +32,6 @@ export function StorefrontNavigation() {
   if (!isStorefrontPath(pathname)) return null;
 
   const catalogActive = pathname === "/products" || pathname.startsWith("/products/");
-  // A listagem já tem a própria busca com filtros; evitamos dois campos concorrentes.
-  const showHeaderSearch = pathname !== "/products";
 
   return (
     <header
@@ -63,11 +61,9 @@ export function StorefrontNavigation() {
           </Link>
         </nav>
 
-        {showHeaderSearch ? (
-          <HeaderSearch id="storefront-search" className="ml-auto hidden max-w-xs flex-1 md:flex" />
-        ) : null}
+        <HeaderSearch id="storefront-search" className="ml-auto hidden max-w-xs flex-1 md:flex" />
 
-        <div className={`flex items-center gap-1 ${showHeaderSearch ? "ml-auto md:ml-0" : "ml-auto"}`}>
+        <div className="ml-auto flex items-center gap-1 md:ml-0">
           <AccountMenu />
           <CartPreview />
           <button
@@ -90,7 +86,7 @@ export function StorefrontNavigation() {
         className="bg-moto-brand-foreground border-t border-white/10 px-4 py-2 md:hidden"
         hidden={!menuOpen}
       >
-        {showHeaderSearch ? <HeaderSearch id="storefront-mobile-search" className="my-2 flex" /> : null}
+        <HeaderSearch id="storefront-mobile-search" className="my-2 flex" />
         <Link
           href="/products"
           onClick={() => setMenuOpen(false)}
