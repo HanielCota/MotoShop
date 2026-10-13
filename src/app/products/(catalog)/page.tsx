@@ -11,6 +11,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { formatMoneyInCents } from "@/lib/format";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { CatalogFiltersPanel } from "@/modules/catalog/components/catalog-filters-panel";
+import { CatalogSearchBand } from "@/modules/catalog/components/catalog-search-band";
 import { CatalogSortSelect } from "@/modules/catalog/components/catalog-sort-select";
 import {
   getCategoryLabel,
@@ -21,13 +22,13 @@ import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/moto
 import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
 import { PriceFilterInput } from "@/modules/products/components/price-filter-input";
 import { ProductGrid } from "@/modules/products/components/product-grid";
-import { ProductSearchCombobox } from "@/modules/products/components/search/product-search-combobox";
 import { listApprovedProducts, listProductBrands, listProductCategories } from "@/modules/products/queries/products";
 import { loadProductsSearchParams, type ProductSort } from "@/modules/products/search-params";
 import { listPublicSellerOptions } from "@/modules/sellers/queries/sellers";
 
 import {
   buildCatalogHref,
+  catalogFormEntries,
   clearCatalogFiltersHref,
   countActiveCatalogFilters,
   normalizeCatalogPrice,
@@ -142,6 +143,12 @@ export default async function ProductsPage({
         activeMoto={activeMoto}
         signedIn={Boolean(session)}
         query={query}
+      />
+
+      <CatalogSearchBand
+        key={query.q ?? ""}
+        defaultValue={query.q ?? ""}
+        preservedEntries={catalogFormEntries(query, { q: null })}
       />
 
       <div className="grid min-w-0 gap-6 md:grid-cols-[260px_minmax(0,1fr)] md:items-start md:gap-8">
@@ -300,16 +307,8 @@ function CatalogFilterForm({
       className="grid min-w-0 content-start gap-4 [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:min-w-0 [&_input]:min-w-0"
     >
       {query.sort !== "relevance" ? <input type="hidden" name="sort" value={query.sort} /> : null}
-      {/* Not wrapped in the label: the suggestion list would become part of the field's name. */}
-      <div className={fieldClassName}>
-        <label htmlFor="catalog-q">Buscar</label>
-        <ProductSearchCombobox
-          id="catalog-q"
-          inputClassName="h-11"
-          defaultValue={query.q ?? ""}
-          placeholder="Produto, SKU, marca ou loja..."
-        />
-      </div>
+      {/* The search field lives in the band above the results; applying filters keeps the search. */}
+      {query.q ? <input type="hidden" name="q" value={query.q} /> : null}
       <label className={fieldClassName}>
         Compatibilidade com moto
         <DesignSelect aria-label="Compatibilidade com moto" name="moto" defaultValue={query.moto || "all"}>

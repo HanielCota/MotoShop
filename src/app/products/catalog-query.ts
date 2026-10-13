@@ -49,6 +49,16 @@ export function buildCatalogHref(query: CatalogQuery, overrides: Partial<Catalog
   return (serialized ? `/products?${serialized}` : "/products") as Route;
 }
 
+/**
+ * Hidden fields for a form that changes only part of the catalog state: the other filters and the
+ * sort are kept, and the page restarts at 1.
+ */
+export function catalogFormEntries(query: CatalogQuery, overrides: Partial<CatalogQuery>): [string, string][] {
+  const href = buildCatalogHref(query, { ...overrides, page: 1 });
+  const search = href.split("?")[1] ?? "";
+  return [...new URLSearchParams(search).entries()];
+}
+
 /** URL sem um filtro específico (volta para a página 1). */
 export function removeCatalogFilterHref(query: CatalogQuery, key: CatalogFilterKey): Route {
   const reset: Partial<CatalogQuery> = { page: 1 };
