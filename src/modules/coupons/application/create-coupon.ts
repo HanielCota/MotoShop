@@ -21,6 +21,8 @@ export type CreateCouponInput = {
   minimumPurchaseInCents: number;
   globalUsageLimit?: number | undefined;
   perCustomerUsageLimit?: number | undefined;
+  /** Só vale para cupom de loja; cupom do Moto Shop nunca é divulgado na página do produto. */
+  showOnProductPage?: boolean | undefined;
 };
 
 /** Creates a coupon for its owner and records the audit entry in the same transaction. */
@@ -49,6 +51,7 @@ function toCouponData(owner: CouponOwner, input: CreateCouponInput, discountAmou
     ...(input.globalUsageLimit !== undefined ? { globalUsageLimit: input.globalUsageLimit } : {}),
     ...(input.perCustomerUsageLimit !== undefined ? { perCustomerUsageLimit: input.perCustomerUsageLimit } : {}),
     fundedBy: owner.fundedBy,
+    showOnProductPage: owner.ownerType === "SELLER" && input.showOnProductPage === true,
   };
 }
 
@@ -74,6 +77,7 @@ async function recordCouponCreatedAudit(
         minimumPurchaseInCents: input.minimumPurchaseInCents,
         globalUsageLimit: input.globalUsageLimit ?? null,
         perCustomerUsageLimit: input.perCustomerUsageLimit ?? null,
+        showOnProductPage: owner.ownerType === "SELLER" && input.showOnProductPage === true,
       },
     },
   });

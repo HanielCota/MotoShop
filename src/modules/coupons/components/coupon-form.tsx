@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DesignCheckbox } from "@/components/ui/design-checkbox";
 import { DesignSelect } from "@/components/ui/design-select";
 import { FormField } from "@/components/ui/form-field";
 import { FormMessage } from "@/components/ui/form-message";
@@ -30,6 +31,7 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
   const action = ownerType === "MARKETPLACE" ? createMarketplaceCouponAction : createSellerCouponAction;
   const [state, formAction, pending] = useActionState(action, initialState);
   const [values, setValues] = useState(emptyValues);
+  const [showOnProductPage, setShowOnProductPage] = useState(false);
   const percentage = values.discountType === "PERCENTAGE";
 
   function updateValue(name: keyof typeof emptyValues, value: string) {
@@ -133,6 +135,22 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
           />
         )}
       </FormField>
+      {ownerType === "SELLER" ? (
+        <label className="flex items-start gap-3 rounded-lg border p-3 text-sm sm:col-span-2">
+          <DesignCheckbox
+            name="showOnProductPage"
+            checked={showOnProductPage}
+            onCheckedChange={setShowOnProductPage}
+            className="mt-0.5"
+          />
+          <span className="flex flex-col gap-1">
+            <span className="font-medium">Mostrar na página do produto</span>
+            <span className="text-muted-foreground text-xs">
+              O código aparece nos produtos da sua loja enquanto o cupom estiver ativo e dentro da validade.
+            </span>
+          </span>
+        </label>
+      ) : null}
       <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
         <Button type="submit" disabled={pending} className="font-semibold">
           {pending ? "Criando..." : "Criar cupom"}

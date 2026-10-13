@@ -43,6 +43,7 @@ import {
   leaveMarketplaceCouponAction,
   setMarketplaceCouponActiveAction,
   setSellerCouponActiveAction,
+  setSellerCouponProductPageAction,
 } from "./coupon-actions";
 
 beforeEach(() => {
@@ -255,5 +256,71 @@ describe("campaign participation", () => {
     expect(await joinMarketplaceCouponAction(campaignId)).toEqual({
       error: "Esta campanha não está mais disponível para adesão.",
     });
+  });
+});
+
+describe("coupon product page opt-in", () => {
+  const couponId = "cmf8w8m4p0000s6o5zj2q8v3k";
+
+  function creationForm(extra: Record<string, string> = {}) {
+    const form = new FormData();
+    form.set("code", "TRILHA10");
+    form.set("discountType", "PERCENTAGE");
+    form.set("discountPercent", "10");
+    for (const [key, value] of Object.entries(extra)) form.set(key, value);
+    return form;
+  }
+
+  it("creates a seller coupon hidden from the product page unless the seller ticks the box", async () => {
+    mocks.couponCreate.mockResolvedValue({ id: couponId });
+
+    await createSellerCouponAction({}, creationForm());
+    await createSellerCouponAction({}, creationForm({ showOnProductPage: "on" }));
+
+    expect(mocks.couponCreate.mock.calls[0]?.[0].data.showOnProductPage).toBe(false);
+    expect(mocks.couponCreate.mock.calls[1]?.[0].data.showOnProductPage).toBe(true);
+  });
+
+  it("never shows a marketplace coupon on the product page", async () => {
+    mocks.couponCreate.mockResolvedValue({ id: couponId });
+
+    await createMarketplaceCouponAction({}, creationForm({ showOnProductPage: "on" }));
+
+    expect(mocks.couponCreate.mock.calls[0]?.[0].data.showOnProductPage).toBe(false);
+  });
+
+  it("toggles only a coupon of the current seller and audits the change", async () => {
+    mocks.findFirst.mockResolvedValue({ id: couponId, code: "TRILHA10" });
+
+    await setSellerCouponProductPageAction(couponId, true);
+
+    expect(mocks.requireSellerAccess).toHaveBeenCalledWith("COUPON_MANAGE");
+    expect(mocks.findFirst).toHaveBeenCalledWith({
+      where: { id: couponId, ownerType: "SELLER", sellerId: "seller-a" },
+    });
+    expect(mocks.updateMany).toHaveBeenCalledWith({
+      where: { id: couponId, ownerType: "SELLER", sellerId: "seller-a", showOnProductPage: false },
+      data: { showOnProductPage: true },
+    });
+    expect(mocks.auditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ action: "SELLER_COUPON_SHOWN_ON_PRODUCT_PAGE", actorUserId: "owner-a" }),
+    });
+  });
+
+  it("does not touch a coupon from another seller", async () => {
+    mocks.findFirst.mockResolvedValue(null);
+
+    await setSellerCouponProductPageAction(couponId, true);
+
+    expect(mocks.updateMany).not.toHaveBeenCalled();
+    expect(mocks.auditCreate).not.toHaveBeenCalled();
+  });
+
+  it("requires COUPON_MANAGE before reading the coupon", async () => {
+    mocks.requireSellerAccess.mockRejectedValueOnce(new Error("FORBIDDEN"));
+
+    await expect(setSellerCouponProductPageAction(couponId, true)).rejects.toThrow("FORBIDDEN");
+
+    expect(mocks.transaction).not.toHaveBeenCalled();
   });
 });

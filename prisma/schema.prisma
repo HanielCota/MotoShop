@@ -1126,6 +1126,7 @@ model Coupon {
   globalUsageLimit       Int?
   perCustomerUsageLimit  Int?
   active                 Boolean                     @default(true)
+  showOnProductPage      Boolean                     @default(false)
   fundedBy               CouponFundingSource
   sellerId               String?
   createdAt              DateTime                    @default(now())
@@ -1135,6 +1136,7 @@ model Coupon {
   sellerParticipations   CouponSellerParticipation[]
 
   @@index([sellerId, active])
+  @@index([sellerId, showOnProductPage, active])
   @@index([active, startsAt, endsAt])
   @@map("coupons")
 }
