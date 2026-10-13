@@ -83,7 +83,12 @@ export function CartPreview() {
         setIsError(true);
         return;
       }
-      setData({ items: [], itemCount: 0, subtotalInCents: 0 });
+      setData((current) => ({
+        items: [],
+        itemCount: 0,
+        subtotalInCents: 0,
+        paymentAvailable: current?.paymentAvailable ?? false,
+      }));
       setConfirmingClear(false);
       setMessage(result.success);
       setIsError(false);
@@ -236,6 +241,9 @@ export function CartPreview() {
                   <span>Subtotal</span>
                   <strong>{formatMoneyInCents(data.subtotalInCents)}</strong>
                 </div>
+                {data.paymentAvailable ? null : (
+                  <p className="text-warning-foreground mt-3 text-xs font-semibold">Pagamento ainda não liberado</p>
+                )}
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   <Link
                     href="/cart"
@@ -247,7 +255,7 @@ export function CartPreview() {
                     href="/checkout"
                     className="bg-moto-brand hover:bg-moto-brand/90 text-moto-brand-foreground flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold transition-colors"
                   >
-                    Finalizar compra
+                    {data.paymentAvailable ? "Finalizar compra" : "Conferir frete"}
                   </Link>
                 </div>
               </>

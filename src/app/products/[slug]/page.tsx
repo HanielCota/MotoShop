@@ -17,6 +17,7 @@ import { ProductMotorcyclePicker } from "@/modules/motorcycles/components/produc
 import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/motorcycles";
 import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
 import { buildProductJsonLd, serializeJsonLd } from "@/modules/products/application/build-product-json-ld";
+import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
 import { ProductBreadcrumb } from "@/modules/products/components/detail/product-breadcrumb";
 import { ProductBuyBox } from "@/modules/products/components/detail/product-buy-box";
 import {
@@ -212,6 +213,7 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
               variants={buyBoxVariants}
               isDemo={product.isDemo}
               hasPriceRange={offer.hasPriceRange}
+              paymentAvailable={getCheckoutPaymentAvailability(1).available}
               fitment={<ProductFitmentBanner status={fitmentStatus} />}
             />
           </div>
