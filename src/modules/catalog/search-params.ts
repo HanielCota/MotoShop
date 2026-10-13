@@ -1,5 +1,7 @@
 import { createLoader, parseAsInteger, parseAsString, parseAsStringLiteral } from "nuqs/server";
 
+import { variantGenderValues } from "@/modules/products/domain/variant-attributes";
+
 export const publicStoreProductSortValues = [
   "relevance",
   "newest",
@@ -27,6 +29,9 @@ export const publicCatalogSearchParams = {
   sort: parseAsStringLiteral(publicCatalogSortValues).withDefault("relevance"),
   availability: parseAsStringLiteral(publicCatalogAvailabilityValues).withDefault("ALL"),
   promotion: parseAsStringLiteral(publicCatalogPromotionValues).withDefault("ALL"),
+  gender: parseAsStringLiteral(variantGenderValues),
+  color: parseAsString,
+  size: parseAsString,
 };
 
 export const loadPublicStoreSearchParams = createLoader(publicStoreSearchParams);

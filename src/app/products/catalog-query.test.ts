@@ -22,6 +22,9 @@ const base: CatalogQuery = {
   minPrice: null,
   maxPrice: null,
   promotion: "ALL",
+  gender: null,
+  color: null,
+  size: null,
   page: 1,
 };
 
@@ -41,6 +44,14 @@ describe("catalog query", () => {
     expect(clearCatalogFiltersHref({ ...base, q: "x", sort: "price_asc", minPrice: 100 })).toBe(
       "/products?moto=all&sort=price_asc",
     );
+  });
+
+  it("keeps variant attributes in the URL and removes them one at a time", () => {
+    const query = { ...base, gender: "FEMALE" as const, color: "Preto", size: "M" };
+    expect(buildCatalogHref(query)).toBe("/products?gender=FEMALE&color=Preto&size=M");
+    expect(removeCatalogFilterHref(query, "color")).toBe("/products?gender=FEMALE&size=M");
+    expect(countActiveCatalogFilters(query)).toBe(3);
+    expect(clearCatalogFiltersHref(query)).toBe("/products?moto=all");
   });
 
   it("counts price range as one filter", () => {

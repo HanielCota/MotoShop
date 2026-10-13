@@ -1,5 +1,6 @@
 import type { Route } from "next";
 
+import type { VariantGenderValue } from "@/modules/products/domain/variant-attributes";
 import type { ProductSort } from "@/modules/products/search-params";
 
 export type CatalogQuery = {
@@ -16,6 +17,9 @@ export type CatalogQuery = {
   minPrice: number | null;
   maxPrice: number | null;
   promotion: "ALL" | "ON_SALE";
+  gender: VariantGenderValue | null;
+  color: string | null;
+  size: string | null;
   page: number;
 };
 
@@ -27,7 +31,8 @@ export function normalizeCatalogPrice(value: number | null | undefined): number 
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
-export type CatalogFilterKey = "q" | "moto" | "category" | "brand" | "seller" | "availability" | "price" | "promotion";
+export type CatalogFilterKey =
+  "q" | "moto" | "category" | "brand" | "seller" | "availability" | "price" | "promotion" | "gender" | "color" | "size";
 
 /** Serializa o estado do catálogo para `/products?...`, omitindo valores padrão. */
 export function buildCatalogHref(query: CatalogQuery, overrides: Partial<CatalogQuery> = {}): Route {
@@ -44,6 +49,9 @@ export function buildCatalogHref(query: CatalogQuery, overrides: Partial<Catalog
   if (next.minPrice !== null) params.set("minPrice", String(next.minPrice));
   if (next.maxPrice !== null) params.set("maxPrice", String(next.maxPrice));
   if (next.promotion !== "ALL") params.set("promotion", next.promotion);
+  if (next.gender) params.set("gender", next.gender);
+  if (next.color) params.set("color", next.color);
+  if (next.size) params.set("size", next.size);
   if (next.page > 1) params.set("page", String(next.page));
   const serialized = params.toString();
   return (serialized ? `/products?${serialized}` : "/products") as Route;
@@ -90,6 +98,9 @@ export function clearCatalogFiltersHref(query: CatalogQuery): Route {
     minPrice: null,
     maxPrice: null,
     promotion: "ALL",
+    gender: null,
+    color: null,
+    size: null,
     page: 1,
   });
 }
@@ -104,5 +115,8 @@ export function countActiveCatalogFilters(query: CatalogQuery) {
     query.availability !== "ALL",
     query.minPrice !== null || query.maxPrice !== null,
     query.promotion !== "ALL",
+    query.gender,
+    query.color,
+    query.size,
   ].filter(Boolean).length;
 }
