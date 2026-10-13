@@ -3,7 +3,7 @@ import { Search } from "lucide-react";
 import type { Metadata } from "next";
 
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ProductSearchCombobox } from "@/modules/products/components/search/product-search-combobox";
 
 export const metadata: Metadata = {
   title: "Página não encontrada",
@@ -25,12 +25,11 @@ export default function NotFound() {
         <label htmlFor="not-found-search" className="sr-only">
           Buscar produtos
         </label>
-        <Input
+        <ProductSearchCombobox
           id="not-found-search"
-          name="q"
-          type="search"
+          className="flex-1"
           placeholder="Ex.: filtro de ar, pastilha de freio"
-          className="bg-card h-11 flex-1"
+          inputClassName="bg-card h-11"
         />
         <Button type="submit" size="lg" className="px-5">
           <Search aria-hidden="true" />

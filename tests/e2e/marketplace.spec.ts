@@ -353,7 +353,7 @@ test("store registration → approval → product → publication → catalog �
     await page.goto(`/loja/${slug}`);
     await expect(page.getByRole("link", { name: productName, exact: true })).toBeVisible();
     // The store search bar sits above the products, outside the collapsible filter panel.
-    const storeSearch = page.getByRole("searchbox", { name: "Buscar nesta loja" });
+    const storeSearch = page.getByRole("combobox", { name: "Buscar nesta loja" });
     await storeSearch.fill("sem-correspondencia-e2e");
     await storeSearch.press("Enter");
     await expect(page.getByRole("status")).toContainText("Nenhum produto corresponde");
