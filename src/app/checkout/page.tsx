@@ -9,6 +9,7 @@ import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getActiveCart } from "@/modules/cart/queries/cart";
 import { VisualCheckoutPreview } from "@/modules/cart/components/visual-preview";
 import { CheckoutForm } from "@/modules/checkout/components/checkout-form";
+import { getCustomerContact } from "@/modules/customers/queries/customer-contact";
 import { listCustomerAddresses } from "@/modules/customers/queries/customer-addresses";
 import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
@@ -48,7 +49,9 @@ export default async function CheckoutPage({
     );
   }
 
-  const savedAddresses = session ? await listCustomerAddresses(session.user.id) : [];
+  const [savedAddresses, customerDefaults] = session
+    ? await Promise.all([listCustomerAddresses(session.user.id), getCustomerContact(session.user.id)])
+    : [[], undefined];
   const now = new Date();
   const items = cart.items.map((item) => ({
     id: item.id,
@@ -78,6 +81,7 @@ export default async function CheckoutPage({
       )}
       <CheckoutForm
         savedAddresses={savedAddresses}
+        customerDefaults={customerDefaults}
         cartSummary={cartSummary}
         items={items}
         paymentAvailable={payment.available}
