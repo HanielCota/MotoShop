@@ -46,6 +46,7 @@ const couponSchema = z.object({
     .max(MAX_INT32, "A compra mínima informada é maior que a permitida."),
   globalUsageLimit: usageLimit.optional(),
   perCustomerUsageLimit: usageLimit.optional(),
+  showOnProductPage: z.boolean().default(false),
 });
 
 export type CouponActionState = { error?: string; success?: string };
@@ -117,6 +118,8 @@ async function setCampaignParticipation(couponId: string, participate: boolean):
   }
 }
 
+const couponProductPageSchema = z.object({ couponId: z.string().cuid(), show: z.boolean() });
+
 export async function setMarketplaceCouponActiveAction(couponId: string, active: boolean): Promise<void> {
   const session = await requireAdminAccess();
   const input = couponStatusSchema.safeParse({ couponId, active });
@@ -167,6 +170,35 @@ export async function setSellerCouponActiveAction(couponId: string, active: bool
     });
   });
   revalidatePath("/seller", "layout");
+}
+
+/** Liga ou desliga a divulgação de um cupom da própria loja na página do produto. */
+export async function setSellerCouponProductPageAction(couponId: string, show: boolean): Promise<void> {
+  const context = await requireSellerAccess("COUPON_MANAGE");
+  const input = couponProductPageSchema.safeParse({ couponId, show });
+  if (!input.success) return;
+  await db.$transaction(async (tx) => {
+    const coupon = await tx.coupon.findFirst({
+      where: { id: couponId, ownerType: "SELLER", sellerId: context.seller.id },
+    });
+    if (!coupon) return;
+    const result = await tx.coupon.updateMany({
+      where: { id: coupon.id, ownerType: "SELLER", sellerId: context.seller.id, showOnProductPage: !show },
+      data: { showOnProductPage: show },
+    });
+    if (result.count !== 1) return;
+    await tx.auditLog.create({
+      data: {
+        action: show ? "SELLER_COUPON_SHOWN_ON_PRODUCT_PAGE" : "SELLER_COUPON_HIDDEN_FROM_PRODUCT_PAGE",
+        entityType: "Coupon",
+        entityId: coupon.id,
+        metadata: { code: coupon.code, showOnProductPage: show },
+        actorUserId: context.session.user.id,
+      },
+    });
+  });
+  revalidatePath("/seller", "layout");
+  revalidatePath("/products", "layout");
 }
 
 /** O tipo escolhido define qual valor de desconto é obrigatório. */

@@ -22,5 +22,6 @@ export function readCouponFormInput(formData: FormData) {
     minimumPurchaseInCents: minimum === undefined ? 0 : parsePriceInputToCents(minimum),
     globalUsageLimit: optional("globalUsageLimit"),
     perCustomerUsageLimit: optional("perCustomerUsageLimit"),
+    showOnProductPage: formData.get("showOnProductPage") === "on",
   };
 }
