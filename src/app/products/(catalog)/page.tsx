@@ -13,7 +13,11 @@ import { formatMoneyInCents } from "@/lib/format";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { CatalogFiltersPanel } from "@/modules/catalog/components/catalog-filters-panel";
 import { CatalogSortSelect } from "@/modules/catalog/components/catalog-sort-select";
-import { getCategoryLabel } from "@/modules/catalog/category-labels";
+import {
+  getCategoryLabel,
+  getCategoryOptionLabel,
+  sortCategoriesByOptionLabel,
+} from "@/modules/catalog/category-labels";
 import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/motorcycles";
 import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
 import { PriceFilterInput } from "@/modules/products/components/price-filter-input";
@@ -321,10 +325,9 @@ function CatalogFilterForm({
         Categoria
         <DesignSelect aria-label="Categoria" name="category" defaultValue={query.category ?? ""}>
           <option value="">Todas as categorias</option>
-          {options.categories.map((category) => (
+          {sortCategoriesByOptionLabel(options.categories).map((category) => (
             <option key={category.id} value={category.id}>
-              {category.parent ? `${getCategoryLabel(category.parent)} / ` : ""}
-              {getCategoryLabel(category)}
+              {getCategoryOptionLabel(category)}
             </option>
           ))}
         </DesignSelect>
