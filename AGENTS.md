@@ -263,6 +263,8 @@ Comissões percentuais usam basis points (12% = 1200 bps; 10,5% = 1050 bps). Cá
 
 O Moto Shop monetiza por comissão sobre vendas. Existe uma comissão global padrão (ex.: `marketplaceDefaultCommissionBps = 1200`) e cada seller pode ter override individual.
 
+A comissão incide sobre o **valor líquido da loja**: subtotal dos itens do `SellerOrder` menos o desconto de cupom que a própria loja paga (ex.: produto de R$ 100 com cupom de 5% pago pela loja → base R$ 95). Frete fica fora da base; desconto pago pelo Moto Shop não reduz a base.
+
 Não hardcodar comissão: a configuração vem do banco. Registrar no pedido a comissão efetivamente usada naquele momento; mudanças futuras não alteram pedidos antigos.
 
 ---
@@ -305,7 +307,11 @@ O frete é calculado por seller, e o cliente escolhe um método por seller (ex.:
 
 # 21. Cupons
 
-Dois tipos: **marketplace coupon** (criado pelo Moto Shop) e **seller coupon** (criado pelo seller).
+Três tipos (modelo Shopee):
+
+- **Cupom Moto Shop**: criado e pago pelo Moto Shop, vale em todas as lojas.
+- **Campanha com adesão**: criada pelo Moto Shop e paga por cada loja que aderir; vale só nos itens das lojas aderentes, e o desconto sai do valor delas. É o padrão ao criar cupom no Admin.
+- **Cupom da loja**: criado e pago pelo seller, vale só nos itens dele.
 
 Registrar claramente owner, desconto, limite, período, escopo e responsável financeiro pelo desconto. Nunca perder a informação de quem subsidiou o desconto.
 
