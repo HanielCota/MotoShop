@@ -23,6 +23,8 @@ const PERSONAL_DATA_KEYS = [
   "recipientEmail",
   "originEmail",
   "cpf",
+  "taxId",
+  "customerTaxId",
   "document",
   "originDocument",
   "phone",
