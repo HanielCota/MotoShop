@@ -1,7 +1,7 @@
 import { Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ProductSearchCombobox } from "@/modules/products/components/search/product-search-combobox";
 
 type StoreProductSearchParams = {
   storeProductQ: string | null;
@@ -16,7 +16,14 @@ type StoreProductSearchParams = {
  * Store-wide search shown right below the store header. A new search starts at the first product page
  * and keeps the other filters, the product sort and the reviews position.
  */
-export function StoreProductSearch({ storeParams }: { storeParams: StoreProductSearchParams }) {
+export function StoreProductSearch({
+  storeParams,
+  sellerId,
+}: {
+  storeParams: StoreProductSearchParams;
+  /** Suggestions while typing stay inside this store. */
+  sellerId: string;
+}) {
   const preservedParams = getPreservedParams(storeParams);
 
   return (
@@ -24,16 +31,18 @@ export function StoreProductSearch({ storeParams }: { storeParams: StoreProductS
       {preservedParams.map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
-      <label className="min-w-0 flex-1">
-        <span className="sr-only">Buscar nesta loja</span>
-        <Input
-          type="search"
-          className="h-12"
-          name="storeProductQ"
-          defaultValue={storeParams.storeProductQ ?? ""}
-          placeholder="Buscar nesta loja: nome, marca, categoria ou SKU"
-        />
+      <label htmlFor="store-product-search" className="sr-only">
+        Buscar nesta loja
       </label>
+      <ProductSearchCombobox
+        id="store-product-search"
+        name="storeProductQ"
+        className="flex-1"
+        inputClassName="h-12"
+        defaultValue={storeParams.storeProductQ ?? ""}
+        placeholder="Buscar nesta loja: nome, marca, categoria ou SKU"
+        sellerId={sellerId}
+      />
       <Button type="submit" size="lg" className="h-12 px-5">
         <Search aria-hidden="true" />
         <span className="max-sm:sr-only">Buscar</span>

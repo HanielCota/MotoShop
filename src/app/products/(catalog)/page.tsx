@@ -6,7 +6,6 @@ import { Bike, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DesignSelect } from "@/components/ui/design-select";
 import { InlineNotice } from "@/components/ui/inline-notice";
-import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
 import { formatMoneyInCents } from "@/lib/format";
@@ -22,6 +21,7 @@ import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/moto
 import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
 import { PriceFilterInput } from "@/modules/products/components/price-filter-input";
 import { ProductGrid } from "@/modules/products/components/product-grid";
+import { ProductSearchCombobox } from "@/modules/products/components/search/product-search-combobox";
 import { listApprovedProducts, listProductBrands, listProductCategories } from "@/modules/products/queries/products";
 import { loadProductsSearchParams, type ProductSort } from "@/modules/products/search-params";
 import { listPublicSellerOptions } from "@/modules/sellers/queries/sellers";
@@ -300,17 +300,16 @@ function CatalogFilterForm({
       className="grid min-w-0 content-start gap-4 [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:min-w-0 [&_input]:min-w-0"
     >
       {query.sort !== "relevance" ? <input type="hidden" name="sort" value={query.sort} /> : null}
-      <label className={fieldClassName} htmlFor="catalog-q">
-        Buscar
-        <Input
+      {/* Not wrapped in the label: the suggestion list would become part of the field's name. */}
+      <div className={fieldClassName}>
+        <label htmlFor="catalog-q">Buscar</label>
+        <ProductSearchCombobox
           id="catalog-q"
-          name="q"
-          type="search"
-          className="h-11"
+          inputClassName="h-11"
           defaultValue={query.q ?? ""}
           placeholder="Produto, SKU, marca ou loja..."
         />
-      </label>
+      </div>
       <label className={fieldClassName}>
         Compatibilidade com moto
         <DesignSelect aria-label="Compatibilidade com moto" name="moto" defaultValue={query.moto || "all"}>

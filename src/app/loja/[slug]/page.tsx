@@ -222,7 +222,11 @@ export default async function PublicStorePage({
         />
       ) : (
         <div id="produtos" className="scroll-mt-24 space-y-6">
-          <StoreProductSearch key={storeParams.storeProductQ ?? ""} storeParams={storeParams} />
+          <StoreProductSearch
+            key={storeParams.storeProductQ ?? ""}
+            storeParams={storeParams}
+            sellerId={store.sellerId}
+          />
           <SectionHeader title="Produtos da vitrine" description="Seleção publicada por esta loja." />
           <div className="grid min-w-0 gap-6 md:grid-cols-[240px_minmax(0,1fr)] md:items-start md:gap-8">
             <CatalogFiltersPanel activeCount={activeProductFilterCount}>
