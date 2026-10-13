@@ -32,6 +32,7 @@ import { join } from "node:path";
 
 import { PrismaClient, type Prisma } from "../src/generated/prisma/client";
 import type { ReviewStoreCode } from "./review-seed-content";
+import { ensureReviewCouponsAndCampaign, ensureReviewVariantColumns } from "./review-seed-catalog-extras";
 import { renderStoreBanner, renderStoreLogo, seedExpandedData } from "./review-seed-expanded";
 import { must, requireEnv } from "./must";
 import { parseEmailList } from "./review-seed-ids";
@@ -2102,6 +2103,14 @@ async function main() {
     viewerCustomerEmails: parseEmailList(process.env.REVIEW_VIEWER_CUSTOMER_EMAILS),
     viewerSellerEmails: parseEmailList(process.env.REVIEW_VIEWER_SELLER_EMAILS),
     notice: NOTICE,
+  });
+
+  // 13/10/2026: variant gender/color/size, coupons shown on the product page and one campaign.
+  await ensureReviewVariantColumns(db, trackMany);
+  await ensureReviewCouponsAndCampaign(db, {
+    sellers: { garagem: stores.garagem.sellerId, box77: stores.box77.sellerId },
+    now,
+    track: trackMany,
   });
 
   const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((email) => email.trim().toLowerCase());
