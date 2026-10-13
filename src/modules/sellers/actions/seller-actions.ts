@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/database";
+import { slugify } from "@/lib/utils";
 import { requireAuthenticatedUser, requireSellerAccess } from "@/modules/auth/application/authorization";
 import { ApplicationError } from "@/shared/errors/application-error";
 import { toActionError } from "@/shared/errors/action-error";
@@ -29,7 +30,8 @@ export async function createSellerAction(
   const session = await requireAuthenticatedUser("/seller");
   const parsed = sellerOnboardingSchema.safeParse({
     storeName: formData.get("storeName"),
-    storeSlug: formData.get("storeSlug"),
+    // Como no perfil da loja: "Luiz Parts" vira "luiz-parts" em vez de ser recusado.
+    storeSlug: slugify(String(formData.get("storeSlug") ?? "")),
     originPostalCode: String(formData.get("originPostalCode") ?? "").replace(/\D/g, ""),
     type: formData.get("type"),
   });
