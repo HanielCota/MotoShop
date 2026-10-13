@@ -1,0 +1,32 @@
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+
+vi.mock("@/modules/sellers/actions/seller-actions", () => ({ createSellerAction: vi.fn(async () => ({})) }));
+
+import { SellerOnboardingForm } from "./seller-onboarding-form";
+
+afterEach(cleanup);
+
+it("suggests the store identifier from the name until the seller edits it", () => {
+  render(<SellerOnboardingForm />);
+  const name = screen.getByLabelText("Nome da loja");
+  const slug = screen.getByLabelText("Identificador da loja");
+
+  fireEvent.change(name, { target: { value: "Luiz Parts Ação" } });
+  expect(slug).toHaveValue("luiz-parts-acao");
+
+  fireEvent.change(slug, { target: { value: "luiz-motos" } });
+  fireEvent.change(name, { target: { value: "Outro nome" } });
+  expect(slug).toHaveValue("luiz-motos");
+});
+
+it("goes back to suggesting when the seller clears the identifier", () => {
+  render(<SellerOnboardingForm />);
+  const slug = screen.getByLabelText("Identificador da loja");
+
+  fireEvent.change(slug, { target: { value: "manual" } });
+  fireEvent.change(slug, { target: { value: "" } });
+  fireEvent.change(screen.getByLabelText("Nome da loja"), { target: { value: "Racing Parts" } });
+
+  expect(slug).toHaveValue("racing-parts");
+});
