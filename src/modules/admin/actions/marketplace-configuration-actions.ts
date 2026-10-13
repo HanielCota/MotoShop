@@ -8,8 +8,11 @@ import { db } from "@/lib/database";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { logActionFailure } from "@/shared/errors/action-error";
 
+import { parseCommissionPercent } from "../schemas/seller-commission";
+
+// O formulário recebe percentual ("12,50"); o banco guarda basis points (1250).
 const commissionSchema = z.object({
-  defaultCommissionBps: z.string().regex(/^\d+$/).transform(Number).pipe(z.number().int().min(0).max(10_000)),
+  defaultCommissionBps: z.number().int().min(0).max(10_000),
 });
 
 export type CommissionActionState = { error?: string; success?: string };
@@ -19,7 +22,9 @@ export async function updateMarketplaceCommissionAction(
   formData: FormData,
 ): Promise<CommissionActionState> {
   const session = await requireAdminAccess();
-  const parsed = commissionSchema.safeParse({ defaultCommissionBps: formData.get("defaultCommissionBps") });
+  const parsed = commissionSchema.safeParse({
+    defaultCommissionBps: parseCommissionPercent(formData.get("commissionPercent")),
+  });
   if (!parsed.success) return { error: "Informe uma comissão entre 0% e 100%." };
 
   try {

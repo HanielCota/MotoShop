@@ -18,7 +18,11 @@ export function VipSubscriptionForm({
   const [state, formAction, pending] = useActionState(activateVipSubscriptionAction, initialState);
 
   return (
-    <form action={formAction} className="grid gap-3 rounded-lg border p-4 sm:grid-cols-[1fr_180px_auto] sm:items-end">
+    <form
+      action={formAction}
+      noValidate
+      className="grid gap-3 rounded-lg border p-4 sm:grid-cols-[1fr_180px_auto] sm:items-end"
+    >
       <label className="flex flex-col gap-2 text-sm font-medium">
         Lojista
         <DesignSelect aria-label="Lojista" name="sellerId" required>
