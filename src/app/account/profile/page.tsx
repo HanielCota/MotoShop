@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { db } from "@/lib/database";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
 import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
+import { CustomerContactForm } from "@/modules/customers/components/customer-contact-form";
 import { CustomerNameForm } from "@/modules/customers/components/customer-name-form";
 import { NotificationPreferencesForm } from "@/modules/notifications/components/notification-preferences-form";
 
@@ -16,7 +17,7 @@ export default async function CustomerProfilePage() {
   const session = await requireAuthenticatedUser("/account/profile");
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { name: true, email: true, emailVerified: true, emailOrderUpdatesEnabled: true },
+    select: { name: true, email: true, emailVerified: true, emailOrderUpdatesEnabled: true, taxId: true, phone: true },
   });
   const name = user?.name ?? session.user.name;
   const email = user?.email ?? session.user.email;
@@ -41,6 +42,9 @@ export default async function CustomerProfilePage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
           <CustomerNameForm defaultName={name} />
+          <div className="border-border border-t pt-5">
+            <CustomerContactForm taxId={user?.taxId ?? null} phone={user?.phone ?? null} />
+          </div>
           <dl className="border-border flex flex-col gap-2 border-t pt-5">
             <dt className="text-base font-medium">E-mail</dt>
             <dd className="flex flex-wrap items-center gap-2 text-base break-all">

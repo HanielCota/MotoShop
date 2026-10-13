@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isValidBrazilianPhone, isValidTaxId, onlyDigits } from "../domain/tax-id";
+
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 
@@ -33,3 +35,22 @@ export const changePasswordSchema = z
   });
 
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+/** Empty input clears the field; otherwise only the digits are kept and validated. */
+const optionalDigits = (validate: (digits: string) => boolean, message: string, maxLength: number) =>
+  z
+    .string()
+    .trim()
+    .max(maxLength, message)
+    .transform((value) => onlyDigits(value))
+    .refine((digits) => digits === "" || validate(digits), message)
+    .transform((digits) => (digits === "" ? null : digits));
+
+/** CPF/CNPJ and phone are optional; the checkout reuses them only as prefill. */
+export const customerContactSchema = z.object({
+  taxId: optionalDigits(isValidTaxId, "Informe um CPF ou CNPJ válido.", 20),
+  phone: optionalDigits(isValidBrazilianPhone, "Informe um telefone com DDD, ex.: (11) 98765-4321.", 20),
+});
+
+export type CustomerContactFormInput = z.input<typeof customerContactSchema>;
+export type CustomerContactInput = z.output<typeof customerContactSchema>;
