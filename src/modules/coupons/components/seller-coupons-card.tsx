@@ -9,7 +9,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { formatDate, formatMoneyInCents } from "@/lib/format";
-import { setSellerCouponActiveAction } from "@/modules/coupons/actions/coupon-actions";
+import {
+  setSellerCouponActiveAction,
+  setSellerCouponProductPageAction,
+} from "@/modules/coupons/actions/coupon-actions";
 import { CouponForm } from "@/modules/coupons/components/coupon-form";
 import { listSellerCoupons } from "@/modules/coupons/queries/coupons";
 import { loadCouponSearchParams, serializeCouponSearchParams } from "@/modules/coupons/search-params";
@@ -142,16 +145,22 @@ export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: 
                       <td className="py-3 pr-3 font-semibold">{coupon.code}</td>
                       <td className="py-3 pr-3 tabular-nums">{couponDiscountLabel(coupon)}</td>
                       <td className="py-3 pr-3">
-                        <Badge variant={coupon.active ? "success" : "neutral"}>
-                          {coupon.active ? "Ativo" : "Inativo"}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant={coupon.active ? "success" : "neutral"}>
+                            {coupon.active ? "Ativo" : "Inativo"}
+                          </Badge>
+                          {coupon.showOnProductPage ? <Badge variant="success">No produto</Badge> : null}
+                        </div>
                       </td>
                       <td className="py-3 pr-3 tabular-nums">{couponUsageLabel(coupon)}</td>
                       <td className="text-muted-foreground py-3 pr-3">
                         {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "Sem prazo"}
                       </td>
                       <td className="py-3 text-right">
-                        <CouponActiveToggle couponId={coupon.id} active={coupon.active} />
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <CouponProductPageToggle couponId={coupon.id} shown={coupon.showOnProductPage} />
+                          <CouponActiveToggle couponId={coupon.id} active={coupon.active} />
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -198,6 +207,16 @@ function CouponActiveToggle({ couponId, active }: { couponId: string; active: bo
     <form action={setSellerCouponActiveAction.bind(null, couponId, !active)}>
       <Button type="submit" variant="outline" size="sm">
         {active ? "Desativar" : "Ativar"}
+      </Button>
+    </form>
+  );
+}
+
+function CouponProductPageToggle({ couponId, shown }: { couponId: string; shown: boolean }) {
+  return (
+    <form action={setSellerCouponProductPageAction.bind(null, couponId, !shown)}>
+      <Button type="submit" variant="outline" size="sm">
+        {shown ? "Ocultar do produto" : "Mostrar no produto"}
       </Button>
     </form>
   );
