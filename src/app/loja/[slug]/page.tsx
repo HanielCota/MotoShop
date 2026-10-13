@@ -10,6 +10,7 @@ import Image from "next/image";
 import { Store } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { BRAND_SITE_NAME } from "@/config/brand";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionHeader } from "@/components/ui/page-header";
@@ -36,10 +37,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const store = await getPublicStoreBySlug(slug);
   if (!store) return { title: "Loja não encontrada" };
+  const description = store.description ?? `Produtos da loja ${store.name} no marketplace do Moto Shop.`;
+  // Link de uma loja: a aba e o preview do link mostram só o nome da loja, sem o sufixo do site.
   return {
-    title: store.name,
-    description: store.description ?? `Produtos da loja ${store.name} no marketplace do Moto Shop.`,
+    title: { absolute: store.name },
+    description,
     alternates: { canonical: `/loja/${store.slug}` },
+    openGraph: {
+      type: "website",
+      siteName: BRAND_SITE_NAME,
+      title: store.name,
+      description,
+      url: `/loja/${store.slug}`,
+    },
   };
 }
 

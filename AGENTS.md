@@ -10,6 +10,8 @@
 
 **O Moto Shop** é um marketplace vertical focado exclusivamente no ecossistema de motocross. Nasce como **marketplace multi-lojista**, não como e-commerce de loja única.
 
+Marca: nos textos do site, "O Moto Shop"; nos títulos de aba, `siteName` e OpenGraph, "Moto Shop Brasil" (regras completas em `docs/decisions.md`, seção 1).
+
 Três experiências principais:
 
 1. **Marketplace / Storefront**: navegação pública, busca, categorias, produtos, Minha Moto, carrinho, checkout, pedidos, favoritos, avaliações e perguntas sobre produtos.

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 
-import { BRAND_DESCRIPTION, BRAND_SLOGAN } from "@/config/brand";
+import { BRAND_DESCRIPTION, BRAND_HOME_TITLE } from "@/config/brand";
 import { MarketingHome } from "@/modules/marketing/components/marketing-home";
 import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/motorcycles";
 import { listMarketingCategories } from "@/modules/marketing/queries/marketing-categories";
@@ -11,9 +11,9 @@ import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-m
 import { listFeaturedProducts } from "@/modules/marketing/queries/featured-products";
 import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
 
-// Home: a aba mostra apenas o slogan (sem o sufixo "| O Moto Shop" do template).
+// Home: "Moto Shop Brasil - <slogan>" sem o sufixo do template.
 export const metadata: Metadata = {
-  title: { absolute: BRAND_SLOGAN },
+  title: { absolute: BRAND_HOME_TITLE },
   description: BRAND_DESCRIPTION,
   alternates: { canonical: "/" },
 };

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InlineNotice } from "@/components/ui/inline-notice";
+import { BRAND_SITE_NAME } from "@/config/brand";
 import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
@@ -55,6 +56,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     alternates: { canonical: `/products/${product.slug}` },
     openGraph: {
       type: "website",
+      siteName: BRAND_SITE_NAME,
       title: product.name,
       description: product.description.slice(0, 160),
       url: `/products/${product.slug}`,
