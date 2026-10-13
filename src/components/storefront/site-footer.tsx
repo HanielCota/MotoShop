@@ -48,10 +48,11 @@ export function SiteFooter() {
             <div key={column.title} className="flex flex-col">
               <p className="text-moto-brand mb-1 text-xs font-bold tracking-[0.12em] uppercase">{column.title}</p>
               {column.links.map((link) => (
+                // 44px touch target on phones; about 30% tighter from the tablet up, where a mouse is used.
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="inline-flex min-h-11 items-center text-sm text-white/70 transition-colors hover:text-white"
+                  className="inline-flex min-h-11 items-center text-sm text-white/70 transition-colors hover:text-white sm:min-h-[31px]"
                 >
                   {link.label}
                 </Link>
