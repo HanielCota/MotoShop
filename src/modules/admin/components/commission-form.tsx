@@ -24,7 +24,7 @@ export function CommissionForm({ defaultCommissionBps }: { defaultCommissionBps:
           name="commissionPercent"
           inputMode="decimal"
           autoComplete="off"
-          defaultValue={defaultCommissionBps === null ? "" : formatPriceInputFromCents(defaultCommissionBps)}
+          defaultValue={state.values?.commissionPercent ?? formatOptionalCommission(defaultCommissionBps)}
           placeholder="Ex.: 12,00"
           className="h-9"
         />
@@ -35,4 +35,9 @@ export function CommissionForm({ defaultCommissionBps }: { defaultCommissionBps:
       <FormMessage error={state.error ?? null} success={state.success ?? null} />
     </form>
   );
+}
+
+function formatOptionalCommission(commissionBps: number | null) {
+  if (commissionBps === null) return "";
+  return formatPriceInputFromCents(commissionBps);
 }

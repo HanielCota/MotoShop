@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/lib/database";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { logActionFailure } from "@/shared/errors/action-error";
+import { readSubmittedValues } from "@/shared/forms/submitted-values";
 
 import { parseCommissionPercent } from "../schemas/seller-commission";
 
@@ -15,7 +16,7 @@ const commissionSchema = z.object({
   defaultCommissionBps: z.number().int().min(0).max(10_000),
 });
 
-export type CommissionActionState = { error?: string; success?: string };
+export type CommissionActionState = { error?: string; success?: string; values?: { commissionPercent: string } };
 
 export async function updateMarketplaceCommissionAction(
   _previousState: CommissionActionState,
@@ -25,7 +26,8 @@ export async function updateMarketplaceCommissionAction(
   const parsed = commissionSchema.safeParse({
     defaultCommissionBps: parseCommissionPercent(formData.get("commissionPercent")),
   });
-  if (!parsed.success) return { error: "Informe uma comissão entre 0% e 100%." };
+  const values = readSubmittedValues(formData, ["commissionPercent"] as const);
+  if (!parsed.success) return { error: "Informe uma comissão entre 0% e 100%.", values };
 
   try {
     await db.$transaction(
@@ -55,6 +57,6 @@ export async function updateMarketplaceCommissionAction(
     return { success: "Comissão padrão atualizada." };
   } catch (error) {
     logActionFailure("updateMarketplaceCommissionAction", error);
-    return { error: "Não foi possível atualizar a comissão padrão." };
+    return { error: "Não foi possível atualizar a comissão padrão.", values };
   }
 }

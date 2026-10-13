@@ -11,7 +11,7 @@ import { updateShippingOrigin } from "../application/update-shipping-origin";
 import { sellerOnboardingSchema } from "../schemas/seller-onboarding";
 import { shippingOriginSchema } from "../schemas/shipping-origin";
 import { splitStoreSlugIssue } from "../schemas/store-slug";
-import { readSubmittedValues } from "../schemas/submitted-values";
+import { readSubmittedValues } from "@/shared/forms/submitted-values";
 
 const onboardingFields = ["storeName", "storeSlug", "originPostalCode", "type"] as const;
 

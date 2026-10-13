@@ -60,6 +60,13 @@ describe("marketplace default commission", () => {
     expect(mocks.revalidate).toHaveBeenCalledWith("/admin", "layout");
   });
 
+  it("returns the typed percentage so the form keeps it after a refusal", async () => {
+    expect(await updateMarketplaceCommissionAction({}, form("150"))).toEqual({
+      error: "Informe uma comissão entre 0% e 100%.",
+      values: { commissionPercent: "150" },
+    });
+  });
+
   it("stores the percentage typed by the admin as basis points", async () => {
     expect((await updateMarketplaceCommissionAction({}, form("12,50"))).success).toBeTruthy();
     expect(mocks.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: { defaultCommissionBps: 1250 } }));
