@@ -38,7 +38,7 @@ export const equipmentCategoryLabels: Record<string, string> = {
 
 export const essentials: { title: string; description: string; href: Route; icon: LucideIcon }[] = [
   {
-    title: "Óleos e lubrificantes",
+    title: "Óleos e Lubrificantes",
     description: "Manutenção para cada intervalo",
     icon: Disc3,
     href: "/products?q=%C3%B3leo",
@@ -55,7 +55,7 @@ export const essentials: { title: string; description: string; href: Route; icon
     icon: ShieldCheck,
     href: "/categoria/parts-brakes" as Route,
   },
-  { title: "Pneus e câmaras", description: "Aderência para pista e trilha", icon: Bike, href: "/products?q=pneu" },
+  { title: "Pneus e Câmaras", description: "Aderência para pista e trilha", icon: Bike, href: "/products?q=pneu" },
 ];
 
 type HeroAssurance = { text: string; icon: LucideIcon };

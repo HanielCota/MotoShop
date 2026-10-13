@@ -352,20 +352,14 @@ test("store registration → approval → product → publication → catalog �
     await page.screenshot({ path: testInfo.outputPath("catalog.png"), fullPage: true, caret: "initial" });
     await page.goto(`/loja/${slug}`);
     await expect(page.getByRole("link", { name: productName, exact: true })).toBeVisible();
-    // No mobile os filtros da vitrine ficam recolhidos no painel compartilhado do catálogo.
-    const openStoreFilters = async () => {
-      // The panel keeps its open state across the soft navigation of "Aplicar filtros": open it only when closed.
-      const toggle = page.getByRole("button", { name: /Filtrar produtos/ });
-      if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) === "false") await toggle.click();
-    };
-    await openStoreFilters();
-    await page.getByRole("searchbox", { name: "Buscar nesta loja" }).fill("sem-correspondencia-e2e");
-    await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
+    // The store search bar sits above the products, outside the collapsible filter panel.
+    const storeSearch = page.getByRole("searchbox", { name: "Buscar nesta loja" });
+    await storeSearch.fill("sem-correspondencia-e2e");
+    await storeSearch.press("Enter");
     await expect(page.getByRole("status")).toContainText("Nenhum produto corresponde");
-    await openStoreFilters();
-    await expect(page.getByRole("searchbox", { name: "Buscar nesta loja" })).toHaveValue("sem-correspondencia-e2e");
-    await page.getByRole("searchbox", { name: "Buscar nesta loja" }).fill("");
-    await page.getByRole("button", { name: "Aplicar filtros", exact: true }).click();
+    await expect(storeSearch).toHaveValue("sem-correspondencia-e2e");
+    await storeSearch.fill("");
+    await storeSearch.press("Enter");
     await expect(page.getByRole("link", { name: productName, exact: true })).toBeVisible();
     await noHorizontalOverflow(page);
     await page.goto(`/products/${slug}`);
