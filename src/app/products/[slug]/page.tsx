@@ -29,6 +29,9 @@ import { ProductFitmentBanner, type FitmentStatus } from "@/modules/products/com
 import { ProductDetailSkeleton } from "@/modules/products/components/detail/product-detail-skeleton";
 import { ProductGallery } from "@/modules/products/components/detail/product-gallery";
 import { isNewProduct } from "@/modules/products/domain/product-novelty";
+import { ProductPageCoupons } from "@/modules/coupons/components/product-page-coupons";
+import { toProductPageCouponView } from "@/modules/coupons/domain/product-page-coupon-view";
+import { listProductPageCoupons } from "@/modules/coupons/queries/product-page-coupons";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 import {
   getProductOfferSummary,
@@ -99,9 +102,12 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
   ]);
   if (!product) notFound();
 
-  const [isFavorite, primaryMotorcycle] = session
-    ? await Promise.all([isProductFavorited(session.user.id, product.id), getPrimarySavedMotorcycle(session.user.id)])
-    : [false, null];
+  const [coupons, [isFavorite, primaryMotorcycle]] = await Promise.all([
+    listProductPageCoupons(product.id),
+    session
+      ? Promise.all([isProductFavorited(session.user.id, product.id), getPrimarySavedMotorcycle(session.user.id)])
+      : Promise.resolve([false, null] as const),
+  ]);
 
   const productPath = `/products/${product.slug}`;
   // Moto escolhida na página (?moto=, apenas ids da base ativa) tem prioridade sobre a principal salva.
@@ -223,6 +229,7 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
               fitment={<ProductFitmentBanner status={fitmentStatus} />}
             />
           </div>
+          <ProductPageCoupons coupons={coupons.map(toProductPageCouponView)} />
           {product.isDemo ? (
             <InlineNotice tone="warning" className="mt-5">
               Produto de apresentação. Imagens, valores e estoque são ilustrativos; a compra está desativada.
