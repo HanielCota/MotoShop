@@ -39,7 +39,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           Limit suppression to this element; child components retain hydration checks. */}
       <body
         suppressHydrationWarning
-        className="bg-background text-foreground selection:bg-primary selection:text-primary-foreground min-h-screen antialiased"
+        className="bg-background text-foreground selection:bg-primary selection:text-primary-foreground flex min-h-screen flex-col antialiased"
       >
         <a
           href="#conteudo"
@@ -48,7 +48,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           Pular para o conteúdo
         </a>
         <StorefrontNavigation />
-        <div id="conteudo" tabIndex={-1} className="outline-none">
+        {/* Grows on short pages so the footer stays at the bottom of the screen. */}
+        <div id="conteudo" tabIndex={-1} className="flex-1 outline-none">
           {children}
         </div>
         <StorefrontOnly>
