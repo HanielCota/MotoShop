@@ -1,6 +1,6 @@
 import { createLoader, parseAsInteger, parseAsString, parseAsStringLiteral } from "nuqs/server";
 
-export const productSortValues = ["relevance", "newest", "price_asc", "price_desc"] as const;
+export const productSortValues = ["relevance", "newest", "recent_offers", "price_asc", "price_desc"] as const;
 export type ProductSort = (typeof productSortValues)[number];
 export const productAvailabilityValues = ["ALL", "IN_STOCK", "OUT_OF_STOCK"] as const;
 export const productPromotionValues = ["ALL", "ON_SALE"] as const;

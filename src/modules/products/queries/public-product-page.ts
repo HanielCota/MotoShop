@@ -19,6 +19,18 @@ export type PublicProductFilter = {
   promotion?: "ALL" | "ON_SALE";
 };
 
+/**
+ * "recent_offers": products with an active promotion first, newest offer first. An offer without a
+ * start date counts from the variant's last update, when the promotional price was set.
+ */
+const orderBySort: Record<ProductSort, Prisma.Sql> = {
+  relevance: Prisma.sql`score DESC`,
+  newest: Prisma.sql`"createdAt" DESC`,
+  recent_offers: Prisma.sql`"onSale" DESC, "offerStartedAt" DESC NULLS LAST`,
+  price_asc: Prisma.sql`price ASC`,
+  price_desc: Prisma.sql`price DESC`,
+};
+
 function nonNegativeSafeInteger(value: number | null | undefined) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
@@ -41,10 +53,12 @@ export async function findPublicProductPage(input: PublicProductFilter, now: Dat
     SELECT v."productId", v.sku,
       CASE WHEN v."promotionalPriceInCents" IS NOT NULL AND (v."promotionStartsAt" IS NULL OR v."promotionStartsAt" <= ${now}) AND (v."promotionEndsAt" IS NULL OR v."promotionEndsAt" >= ${now}) THEN v."promotionalPriceInCents" ELSE v."priceInCents" END AS price,
       (v."promotionalPriceInCents" IS NOT NULL AND (v."promotionStartsAt" IS NULL OR v."promotionStartsAt" <= ${now}) AND (v."promotionEndsAt" IS NULL OR v."promotionEndsAt" >= ${now})) AS sale,
-      COALESCE(i."availableQuantity", 0) > 0 AS available
+      COALESCE(i."availableQuantity", 0) > 0 AS available,
+      v."promotionStartsAt", v."updatedAt" AS "variantUpdatedAt"
     FROM product_variants v LEFT JOIN inventories i ON i."variantId" = v.id WHERE v.active = true
   ), matches AS (
-    SELECT p.id, p."createdAt", MIN(o.price) AS price,
+    SELECT p.id, p."createdAt", MIN(o.price) AS price, bool_or(o.sale) AS "onSale",
+      MAX(CASE WHEN o.sale THEN COALESCE(o."promotionStartsAt", o."variantUpdatedAt") END) AS "offerStartedAt",
       (CASE WHEN ${query} = '' THEN 0 WHEN lower(trim(p.name)) = ${query} THEN 100 WHEN starts_with(lower(trim(p.name)), ${query}) THEN 50 WHEN strpos(lower(trim(p.name)), ${query}) > 0 THEN 20 ELSE 0 END
       + CASE WHEN bool_or(o.available) THEN 10 ELSE 0 END
       + LEAST((SELECT count(*) FROM product_reviews r WHERE r."productId" = p.id AND r."hiddenAt" IS NULL), 5)
@@ -67,14 +81,7 @@ export async function findPublicProductPage(input: PublicProductFilter, now: Dat
   const total = Number(counts[0]?.total ?? 0);
   const pageCount = Math.max(Math.ceil(total / size), 1);
   const page = Math.min(requestedPage, pageCount);
-  const order =
-    input.sort === "price_asc"
-      ? Prisma.sql`price ASC`
-      : input.sort === "price_desc"
-        ? Prisma.sql`price DESC`
-        : input.sort === "newest"
-          ? Prisma.sql`"createdAt" DESC`
-          : Prisma.sql`score DESC`;
+  const order = orderBySort[input.sort ?? "relevance"];
   const rows = await db.$queryRaw<Array<{ id: string }>>(
     Prisma.sql`${cte} SELECT id FROM matches ORDER BY ${order}, "createdAt" DESC, id ASC LIMIT ${size} OFFSET ${(page - 1) * size}`,
   );

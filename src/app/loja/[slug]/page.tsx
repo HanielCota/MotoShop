@@ -29,6 +29,7 @@ import { listApprovedProducts } from "@/modules/products/queries/products";
 const storeSortOptions = [
   { value: "relevance", label: "Mais relevantes" },
   { value: "newest", label: "Mais recentes" },
+  { value: "recent_offers", label: "Ofertas recentes" },
   { value: "price_asc", label: "Menor preço" },
   { value: "price_desc", label: "Maior preço" },
 ] as const;
