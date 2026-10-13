@@ -16,7 +16,8 @@ export function SellerCta() {
             Cadastre sua loja e gerencie catálogo, estoque e pedidos em um único painel.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3 lg:justify-end">
+        {/* Single-column grid: both buttons take the width of the wider one. */}
+        <div className="grid w-full gap-3 sm:w-fit lg:justify-self-end">
           <Link
             className={cn(
               buttonVariants({ size: "lg" }),
