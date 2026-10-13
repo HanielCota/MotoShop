@@ -10,8 +10,17 @@ import { toActionError } from "@/shared/errors/action-error";
 import { updateShippingOrigin } from "../application/update-shipping-origin";
 import { sellerOnboardingSchema } from "../schemas/seller-onboarding";
 import { shippingOriginSchema } from "../schemas/shipping-origin";
+import { splitStoreSlugIssue } from "../schemas/store-slug";
+import { readSubmittedValues } from "../schemas/submitted-values";
 
-export type SellerActionState = { error?: string; success?: string };
+const onboardingFields = ["storeName", "storeSlug", "originPostalCode", "type"] as const;
+
+export type SellerActionState = {
+  error?: string;
+  success?: string;
+  slugError?: string;
+  values?: Record<(typeof onboardingFields)[number], string>;
+};
 
 export async function createSellerAction(
   _previousState: SellerActionState,
@@ -25,9 +34,8 @@ export async function createSellerAction(
     type: formData.get("type"),
   });
 
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Confira os dados informados." };
-  }
+  const values = readSubmittedValues(formData, onboardingFields);
+  if (!parsed.success) return { ...splitStoreSlugIssue(parsed.error, "storeSlug"), values };
 
   try {
     await db.$transaction(async (tx) => {
@@ -58,9 +66,9 @@ export async function createSellerAction(
   } catch (error) {
     const applicationError = toActionError(error, "createSellerAction");
     if (applicationError.code === "INTERNAL_ERROR") {
-      return { error: "Não foi possível criar a loja. Verifique se o identificador já está em uso." };
+      return { error: "Não foi possível criar a loja. Verifique se o identificador já está em uso.", values };
     }
-    return { error: applicationError.message };
+    return { error: applicationError.message, values };
   }
 }
 

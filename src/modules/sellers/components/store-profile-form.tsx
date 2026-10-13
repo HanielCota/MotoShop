@@ -2,6 +2,7 @@
 import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 
 import { useActionState } from "react";
@@ -25,35 +26,34 @@ const initialState: StoreProfileActionState = {};
 
 export function StoreProfileForm({ store }: StoreProfileFormProps) {
   const [state, action, pending] = useActionState(updateStoreProfileAction, initialState);
+  const values = state.values ?? storeFormValues(store);
 
   return (
-    <form action={action} className="grid gap-4">
+    <form action={action} noValidate className="grid gap-4">
       <label className="flex flex-col gap-2 text-sm font-medium">
         Nome público
-        <Input name="name" defaultValue={store.name} required maxLength={120} />
+        <Input name="name" defaultValue={values.name} required maxLength={120} />
       </label>
-      <label className="flex flex-col gap-2 text-sm font-medium">
-        Identificador da loja
-        <Input
-          name="slug"
-          defaultValue={store.slug}
-          pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-          maxLength={120}
-          required
-          aria-describedby="store-slug-help"
-        />
-        <span id="store-slug-help" className="text-muted-foreground text-xs font-normal">
-          {STORE_SLUG_EXAMPLE}
-          <br />
-          URL pública: /loja/{store.slug}. Acentos e espaços são convertidos automaticamente.
-        </span>
-      </label>
+      <FormField
+        id="store-slug"
+        label="Identificador da loja"
+        error={state.slugError}
+        hint={
+          <>
+            {STORE_SLUG_EXAMPLE}
+            <br />
+            URL pública: /loja/{store.slug}. Acentos e espaços são convertidos automaticamente.
+          </>
+        }
+      >
+        {(field) => <Input {...field} name="slug" defaultValue={values.slug} maxLength={120} autoComplete="off" />}
+      </FormField>
       <label className="flex flex-col gap-2 text-sm font-medium">
         Descrição pública
         <Textarea
           className="border-input bg-background focus:ring-ring/40 min-h-24 w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-3"
           name="description"
-          defaultValue={store.description ?? ""}
+          defaultValue={values.description}
           maxLength={500}
           placeholder="Apresente sua loja para os clientes do Moto Shop."
         />
@@ -65,7 +65,7 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
           <Input
             name="instagramUrl"
             type="url"
-            defaultValue={store.instagramUrl ?? ""}
+            defaultValue={values.instagramUrl}
             placeholder="https://instagram.com/sualoja"
           />
         </label>
@@ -74,7 +74,7 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
           <Input
             name="youtubeUrl"
             type="url"
-            defaultValue={store.youtubeUrl ?? ""}
+            defaultValue={values.youtubeUrl}
             placeholder="https://youtube.com/@sualoja"
           />
         </label>
@@ -83,7 +83,7 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
           <Input
             name="whatsappUrl"
             type="url"
-            defaultValue={store.whatsappUrl ?? ""}
+            defaultValue={values.whatsappUrl}
             placeholder="https://wa.me/5511999999999"
           />
         </label>
@@ -92,7 +92,7 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
           <Input
             name="facebookUrl"
             type="url"
-            defaultValue={store.facebookUrl ?? ""}
+            defaultValue={values.facebookUrl}
             placeholder="https://facebook.com/sualoja"
           />
         </label>
@@ -106,4 +106,16 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
       </Button>
     </form>
   );
+}
+
+function storeFormValues(store: StoreProfileFormProps["store"]) {
+  return {
+    name: store.name,
+    slug: store.slug,
+    description: store.description ?? "",
+    instagramUrl: store.instagramUrl ?? "",
+    youtubeUrl: store.youtubeUrl ?? "",
+    whatsappUrl: store.whatsappUrl ?? "",
+    facebookUrl: store.facebookUrl ?? "",
+  };
 }

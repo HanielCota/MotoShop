@@ -1,6 +1,7 @@
 "use client";
 import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 
 import { DesignSelect } from "@/components/ui/design-select";
@@ -16,24 +17,22 @@ export function SellerOnboardingForm() {
   const [state, action, pending] = useActionState(createSellerAction, initialState);
 
   return (
-    <form action={action} className="grid gap-4 sm:grid-cols-2">
+    <form action={action} noValidate className="grid gap-4 sm:grid-cols-2">
       <label className="flex flex-col gap-2 text-sm font-medium">
         Nome da loja
-        <Input name="storeName" placeholder="Racing Parts" required />
+        <Input name="storeName" placeholder="Racing Parts" defaultValue={state.values?.storeName ?? ""} required />
       </label>
-      <label className="flex flex-col gap-2 text-sm font-medium">
-        Identificador da loja
-        <Input
-          name="storeSlug"
-          placeholder="racing-parts"
-          pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-          required
-          aria-describedby="store-slug-help"
-        />
-        <span id="store-slug-help" className="text-muted-foreground text-xs font-normal">
-          {STORE_SLUG_EXAMPLE}
-        </span>
-      </label>
+      <FormField id="store-slug" label="Identificador da loja" hint={STORE_SLUG_EXAMPLE} error={state.slugError}>
+        {(field) => (
+          <Input
+            {...field}
+            name="storeSlug"
+            placeholder="racing-parts"
+            autoComplete="off"
+            defaultValue={state.values?.storeSlug ?? ""}
+          />
+        )}
+      </FormField>
       <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
         CEP de origem dos envios
         <Input
@@ -41,6 +40,7 @@ export function SellerOnboardingForm() {
           inputMode="numeric"
           pattern="\d{5}-?\d{3}"
           placeholder="01001-000"
+          defaultValue={state.values?.originPostalCode ?? ""}
           aria-describedby="origin-postal-code-help"
           required
         />
@@ -50,7 +50,7 @@ export function SellerOnboardingForm() {
       </label>
       <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
         Tipo de lojista
-        <DesignSelect aria-label="Tipo de lojista" name="type" defaultValue="COMPANY">
+        <DesignSelect aria-label="Tipo de lojista" name="type" defaultValue={state.values?.type ?? "COMPANY"}>
           <option value="COMPANY">CNPJ / empresa</option>
           <option value="INDIVIDUAL">CPF / pessoa física</option>
         </DesignSelect>
