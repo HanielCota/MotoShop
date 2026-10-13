@@ -5,6 +5,7 @@ import { PublicCatalogLanding } from "@/modules/catalog/components/public-catalo
 import { getPublicBrandBySlug } from "@/modules/catalog/queries/public-catalog";
 import { loadPublicCatalogSearchParams } from "@/modules/catalog/search-params";
 import { listApprovedProducts } from "@/modules/products/queries/products";
+import { listPublicVariantAttributeOptions } from "@/modules/products/queries/variant-attribute-options";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -29,11 +30,16 @@ export default async function BrandPage({
   const brand = await getPublicBrandBySlug(slug);
   if (!brand) notFound();
 
+  const attributes = { gender: catalogParams.gender, color: catalogParams.color, size: catalogParams.size };
+  const attributeOptions = await listPublicVariantAttributeOptions();
   const result = await listApprovedProducts({
     brandId: brand.id,
     sort: catalogParams.sort,
     availability: catalogParams.availability,
     promotion: catalogParams.promotion,
+    gender: catalogParams.gender,
+    color: catalogParams.color,
+    size: catalogParams.size,
     page: catalogParams.page,
     pageSize: 12,
   });
@@ -49,6 +55,8 @@ export default async function BrandPage({
       sort={catalogParams.sort}
       availability={catalogParams.availability}
       promotion={catalogParams.promotion}
+      attributes={attributes}
+      attributeOptions={attributeOptions}
     />
   );
 }

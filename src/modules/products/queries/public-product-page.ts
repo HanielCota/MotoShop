@@ -1,6 +1,7 @@
 import "server-only";
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
+import { isVariantGender, VARIANT_ATTRIBUTE_MAX_LENGTH, type VariantGenderValue } from "../domain/variant-attributes";
 import type { ProductSort } from "../search-params";
 
 export type PublicProductFilter = {
@@ -17,6 +18,10 @@ export type PublicProductFilter = {
   minPriceInCents?: number | null;
   maxPriceInCents?: number | null;
   promotion?: "ALL" | "ON_SALE";
+  /** Variant attributes; the same active variant must match every attribute given. */
+  gender?: VariantGenderValue | null;
+  color?: string | null;
+  size?: string | null;
 };
 
 /**
@@ -30,6 +35,24 @@ const orderBySort: Record<ProductSort, Prisma.Sql> = {
   price_asc: Prisma.sql`price ASC`,
   price_desc: Prisma.sql`price DESC`,
 };
+
+function normalizeAttribute(value: string | null | undefined) {
+  const trimmed = value?.trim() ?? "";
+  return trimmed && trimmed.length <= VARIANT_ATTRIBUTE_MAX_LENGTH ? trimmed : null;
+}
+
+// Color and size compare without case, like buildVariantAttributeWhere in variant-attribute-options.ts.
+function variantAttributeCondition(input: PublicProductFilter) {
+  const gender = isVariantGender(input.gender) ? input.gender : null;
+  const color = normalizeAttribute(input.color);
+  const size = normalizeAttribute(input.size);
+  if (!gender && !color && !size) return Prisma.empty;
+
+  return Prisma.sql`AND EXISTS (SELECT 1 FROM product_variants va WHERE va."productId" = p.id AND va.active = true
+      ${gender ? Prisma.sql`AND va.gender = ${gender}::"VariantGender"` : Prisma.empty}
+      ${color ? Prisma.sql`AND lower(va.color) = lower(${color})` : Prisma.empty}
+      ${size ? Prisma.sql`AND lower(va.size) = lower(${size})` : Prisma.empty})`;
+}
 
 function nonNegativeSafeInteger(value: number | null | undefined) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
@@ -69,6 +92,7 @@ export async function findPublicProductPage(input: PublicProductFilter, now: Dat
       ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
       ${input.brandId ? Prisma.sql`AND p."brandId" = ${input.brandId}` : Prisma.empty}
       ${input.sellerId ? Prisma.sql`AND p."sellerId" = ${input.sellerId}` : Prisma.empty}
+      ${variantAttributeCondition(input)}
       ${fitments.length ? Prisma.sql`AND EXISTS (SELECT 1 FROM product_compatibilities pc WHERE pc."productId" = p.id AND pc."motorcycleFitmentId" IN (${Prisma.join(fitments)}))` : Prisma.empty}
       ${query ? Prisma.sql`AND (p.name ILIKE ${pattern} OR p.description ILIKE ${pattern} OR b.name ILIKE ${pattern} OR c.name ILIKE ${pattern} OR st.name ILIKE ${pattern} OR EXISTS (SELECT 1 FROM offers sk WHERE sk."productId" = p.id AND sk.sku ILIKE ${pattern}))` : Prisma.empty}
     GROUP BY p.id

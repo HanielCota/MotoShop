@@ -13,6 +13,11 @@ import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { CatalogFiltersPanel } from "@/modules/catalog/components/catalog-filters-panel";
 import { CatalogMotorcycleFields } from "@/modules/catalog/components/catalog-motorcycle-fields";
 import { CatalogSearchBand } from "@/modules/catalog/components/catalog-search-band";
+import {
+  VariantAttributeFilterFields,
+  variantAttributeChipLabels,
+  type VariantAttributeOptions,
+} from "@/modules/catalog/components/variant-attribute-filter-fields";
 import { CatalogSortSelect } from "@/modules/catalog/components/catalog-sort-select";
 import {
   getCategoryLabel,
@@ -25,6 +30,7 @@ import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-m
 import { PriceFilterInput } from "@/modules/products/components/price-filter-input";
 import { ProductGrid } from "@/modules/products/components/product-grid";
 import { listApprovedProducts, listProductBrands, listProductCategories } from "@/modules/products/queries/products";
+import { listPublicVariantAttributeOptions } from "@/modules/products/queries/variant-attribute-options";
 import { loadProductsSearchParams, type ProductSort } from "@/modules/products/search-params";
 import { listPublicSellerOptions } from "@/modules/sellers/queries/sellers";
 
@@ -57,6 +63,7 @@ type FilterOptions = {
   categories: Awaited<ReturnType<typeof listProductCategories>>;
   brands: Awaited<ReturnType<typeof listProductBrands>>;
   sellers: Awaited<ReturnType<typeof listPublicSellerOptions>>;
+  attributes?: VariantAttributeOptions;
 };
 
 function toFitmentOption(fitment: Fitment): FitmentOption {
@@ -84,11 +91,12 @@ export default async function ProductsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await loadProductsSearchParams(searchParams);
-  const [fitments, categories, brands, sellers, session] = await Promise.all([
+  const [fitments, categories, brands, sellers, attributes, session] = await Promise.all([
     listActiveMotorcycleFitments(),
     listProductCategories(),
     listProductBrands(),
     listPublicSellerOptions(),
+    listPublicVariantAttributeOptions(),
     getCurrentSession(),
   ]);
   const primaryMotorcycle = session ? await getPrimarySavedMotorcycle(session.user.id) : null;
@@ -117,6 +125,9 @@ export default async function ProductsPage({
     minPrice: normalizeCatalogPrice(params.minPrice),
     maxPrice: normalizeCatalogPrice(params.maxPrice),
     promotion: params.promotion,
+    gender: params.gender,
+    color: params.color,
+    size: params.size,
     page: params.page,
   };
   const hasInvalidPriceRange = query.minPrice !== null && query.maxPrice !== null && query.minPrice > query.maxPrice;
@@ -133,13 +144,16 @@ export default async function ProductsPage({
         minPriceInCents: query.minPrice,
         maxPriceInCents: query.maxPrice,
         promotion: query.promotion,
+        gender: query.gender,
+        color: query.color,
+        size: query.size,
         page: query.page,
       });
 
   const activeFilterCount = countActiveCatalogFilters(query);
   const chips = buildFilterChips(query, { fitments, categories, brands, sellers });
   const clearHref = clearCatalogFiltersHref(query);
-  const options = { fitments, categories, brands, sellers };
+  const options = { fitments, categories, brands, sellers, attributes };
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 sm:py-10">
@@ -360,6 +374,13 @@ function CatalogFilterForm({
           ))}
         </DesignSelect>
       </label>
+      {options.attributes ? (
+        <VariantAttributeFilterFields
+          options={options.attributes}
+          values={{ gender: query.gender, color: query.color, size: query.size }}
+          fieldClassName={fieldClassName}
+        />
+      ) : null}
       <div className="grid min-w-0 grid-cols-2 gap-3 md:grid-cols-1 lg:grid-cols-2">
         <label className={fieldClassName}>
           Preço mínimo (R$)
@@ -400,6 +421,15 @@ function CatalogFilterForm({
   );
 }
 
+function buildAttributeChips(query: CatalogQuery): { key: CatalogFilterKey; label: string }[] {
+  const labels = variantAttributeChipLabels({ gender: query.gender, color: query.color, size: query.size });
+  const keys = ["gender", "color", "size"] as const;
+  return keys.flatMap((key) => {
+    const label = labels[key];
+    return label ? [{ key, label }] : [];
+  });
+}
+
 function buildFilterChips(query: CatalogQuery, options: FilterOptions): { key: CatalogFilterKey; label: string }[] {
   const chips: { key: CatalogFilterKey; label: string }[] = [];
   if (query.q) chips.push({ key: "q", label: `Busca: “${query.q}”` });
@@ -430,5 +460,5 @@ function buildFilterChips(query: CatalogQuery, options: FilterOptions): { key: C
   if (query.availability !== "ALL")
     chips.push({ key: "availability", label: query.availability === "IN_STOCK" ? "Em estoque" : "Esgotados" });
   if (query.promotion === "ON_SALE") chips.push({ key: "promotion", label: "Em oferta" });
-  return chips;
+  return [...chips, ...buildAttributeChips(query)];
 }

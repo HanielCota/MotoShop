@@ -1,5 +1,7 @@
 import { createLoader, parseAsInteger, parseAsString, parseAsStringLiteral } from "nuqs/server";
 
+import { variantGenderValues } from "./domain/variant-attributes";
+
 export const productSortValues = ["relevance", "newest", "recent_offers", "price_asc", "price_desc"] as const;
 export type ProductSort = (typeof productSortValues)[number];
 export const productAvailabilityValues = ["ALL", "IN_STOCK", "OUT_OF_STOCK"] as const;
@@ -16,6 +18,9 @@ export const productsSearchParams = {
   minPrice: parseAsInteger,
   maxPrice: parseAsInteger,
   promotion: parseAsStringLiteral(productPromotionValues).withDefault("ALL"),
+  gender: parseAsStringLiteral(variantGenderValues),
+  color: parseAsString,
+  size: parseAsString,
   page: parseAsInteger.withDefault(1),
 };
 

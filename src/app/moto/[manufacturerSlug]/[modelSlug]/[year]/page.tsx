@@ -5,6 +5,7 @@ import { PublicCatalogLanding } from "@/modules/catalog/components/public-catalo
 import { getPublicMotorcycleByYear } from "@/modules/catalog/queries/public-catalog";
 import { loadPublicCatalogSearchParams } from "@/modules/catalog/search-params";
 import { listApprovedProducts } from "@/modules/products/queries/products";
+import { listPublicVariantAttributeOptions } from "@/modules/products/queries/variant-attribute-options";
 
 /** Only canonical four-digit years reach the database (`99999999999999999999` overflowed the INT column). */
 function parseMotorcycleYear(value: string) {
@@ -47,11 +48,16 @@ export default async function MotorcyclePage({
   if (!motorcycle || motorcycle.fitments.length === 0) notFound();
 
   const fitmentIds = motorcycle.fitments.map((fitment) => fitment.id);
+  const attributes = { gender: catalogParams.gender, color: catalogParams.color, size: catalogParams.size };
+  const attributeOptions = await listPublicVariantAttributeOptions();
   const result = await listApprovedProducts({
     motorcycleFitmentIds: fitmentIds,
     sort: catalogParams.sort,
     availability: catalogParams.availability,
     promotion: catalogParams.promotion,
+    gender: catalogParams.gender,
+    color: catalogParams.color,
+    size: catalogParams.size,
     page: catalogParams.page,
     pageSize: 12,
   });
@@ -70,6 +76,8 @@ export default async function MotorcyclePage({
       sort={catalogParams.sort}
       availability={catalogParams.availability}
       promotion={catalogParams.promotion}
+      attributes={attributes}
+      attributeOptions={attributeOptions}
     />
   );
 }
