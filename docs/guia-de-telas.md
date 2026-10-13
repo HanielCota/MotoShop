@@ -175,7 +175,32 @@ Com `review.pendente@example.test`, a Central mostra a loja aguardando aprovaç�
 
 ---
 
-## 7. Como dar feedback
+## 7. O que mudou desde 12/10/2026
+
+Uma linha por mudança: onde ver e com qual conta. "Sem conta" significa navegar sem entrar. As contas `review.*` usam a senha da seção 2. Itens marcados com **(seed novo)** só aparecem depois que o seed de revisão atualizado for rodado. Itens marcados com **(migration)** dependem de uma migration ainda não aplicada no banco da demo.
+
+| Mudança                             | Onde ver                                                                                                                                                                 | Conta                                          |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| Títulos "Moto Shop Brasil" nas abas | Nome da aba do navegador em qualquer página; na home, "Moto Shop Brasil - O Marketplace de quem vive o OFF-ROAD!"                                                        | Sem conta                                      |
+| Selos e abas da home                | `/`: selos curtos logo abaixo da busca "Minha Moto"; a aba de busca de produto vem antes da aba de moto                                                                  | Sem conta                                      |
+| 12 produtos em destaque             | `/`: três fileiras de destaques                                                                                                                                          | Sem conta                                      |
+| Faixa de lojistas nova              | `/`, faixa laranja acima do rodapé: "Sua loja na pista certa." e "Quero vender no Moto Shop"                                                                             | Sem conta                                      |
+| Rodapé novo                         | Rodapé de qualquer página da loja: descrição, Institucional, horário de atendimento, formas de pagamento, atalhos, sem CNPJ                                              | Sem conta                                      |
+| Busca com sugestões                 | Digite "capa" na busca do topo (ou da home): aparecem até 5 produtos com foto, nome e preço                                                                              | Sem conta                                      |
+| Ordenação "Ofertas recentes"        | `/products`, `/loja/review-garagem-mx` e páginas de categoria: menu de ordenação                                                                                         | Sem conta                                      |
+| Filtros com rolagem                 | `/products` no desktop: a coluna de filtros fica fixa e rola por dentro quando é mais alta que a tela                                                                    | Sem conta                                      |
+| Selo "Novidade"                     | Cards e página de produtos aprovados há menos de 30 dias. Os produtos demo são mais antigos: aprove um produto em análise em `/admin/products` e veja o card no catálogo | `review.admin@example.test`                    |
+| Cupons na página do produto         | `/products/<produto da Garagem MX>`: bloco "Cupons desta loja" abaixo do preço, com "Copiar código" **(seed novo)**                                                      | Sem conta                                      |
+| Cupons que aparecem no produto      | `/seller/coupons`: opção de mostrar o cupom na página do produto                                                                                                         | `review.lojista@example.test`                  |
+| Login com links de ajuda            | `/login`: entre com uma senha errada; aparecem "Esqueci minha senha" e "Ainda não tenho conta? Criar conta"                                                              | Sem conta (qualquer e-mail)                    |
+| Garagem com campos separados        | `/account/motorcycles`: fabricante, modelo, versão e ano separados; moto sem peça compatível mostra o aviso                                                              | `review.cliente@example.test`                  |
+| CPF/CNPJ e telefone                 | `/account/profile`: campos opcionais; depois, o `/checkout` vem com telefone e CPF preenchidos **(migration)**                                                           | `review.cliente@example.test`                  |
+| Identificador da loja               | `/seller` com uma conta sem loja: o identificador é sugerido a partir do nome, com exemplo embaixo. Não envie o formulário                                               | Conta sem loja (ex.: `review.cliente2…`)       |
+| Comissão do Admin em %              | `/admin/commission`: comissão padrão e por loja digitadas em percentual                                                                                                  | `review.admin@example.test`                    |
+| Campanhas com adesão                | Regra de cupom do Moto Shop pago pela loja que aderir. Ainda sem tela de adesão; o seed cria uma campanha com uma loja aderente **(seed novo)**                          | `review.admin@example.test` (`/admin/coupons`) |
+| Gênero, cor e tamanho nas variações | `/seller/products/new` ou "Editar" em um rascunho: campos de gênero, cor e tamanho em cada variação                                                                      | `review.lojista@example.test`                  |
+
+## 8. Como dar feedback
 
 Para cada observação, anote:
 
