@@ -204,8 +204,6 @@ export async function renderProductImage(
   <rect width="800" height="800" fill="url(#bg)"/>
   <circle cx="640" cy="170" r="240" fill="${BRAND}" opacity="0.11"/>
   <circle cx="120" cy="720" r="180" fill="${BRAND}" opacity="0.07"/>
-  <rect x="80" y="80" rx="22" width="268" height="46" fill="${BRAND}"/>
-  <text x="214" y="111" font-family="${FONT}" font-size="22" font-weight="700" fill="#171716" text-anchor="middle" letter-spacing="2">DEMONSTRAÇÃO</text>
   <text x="80" y="318" font-family="${FONT}" font-size="80" font-weight="700" fill="${text}">${escapeXml(input.label)}</text>
   ${titleLines}
   <rect x="80" y="590" width="120" height="8" rx="4" fill="${BRAND}"/>
