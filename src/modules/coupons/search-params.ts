@@ -13,6 +13,8 @@ export const couponSearchParams = {
   couponValidity: parseAsStringLiteral(couponValidityValues).withDefault("ALL"),
   couponSort: parseAsStringLiteral(couponSortValues).withDefault("newest"),
   couponPage: parseAsInteger.withDefault(1),
+  /** Campanha cujas lojas participantes o Admin está vendo. */
+  campaignId: parseAsString,
 };
 
 export const loadCouponSearchParams = createLoader(couponSearchParams);
