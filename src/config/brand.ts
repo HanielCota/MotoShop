@@ -15,6 +15,12 @@ export const BRAND_HOME_TITLE = `${BRAND_SITE_NAME} - ${BRAND_SLOGAN}`;
 export const BRAND_DESCRIPTION =
   "O Moto Shop Brasil é uma plataforma e-commerce no formato de marketplace voltada para o setor de motopeças, acessórios e equipamentos (com destaque para o segmento off-road). A plataforma atua estritamente como uma ponte tecnológica (intermediação pura) entre os clientes finais e os lojistas/fornecedores parceiros.";
 
+/** Descrição oficial em dois parágrafos, como no rodapé aprovado pelo cliente (13/10/2026). */
+export const BRAND_ABOUT_PARAGRAPHS = [
+  "O Moto Shop Brasil é uma plataforma e-commerce no formato de marketplace voltada para o setor de motopeças, acessórios e equipamentos (com destaque para o segmento off-road).",
+  "A plataforma atua estritamente como uma ponte tecnológica entre os clientes finais e os lojistas/fornecedores parceiros.",
+] as const;
+
 /** Versão curta da descrição oficial, para blurbs e textos de apoio. */
 export const BRAND_SHORT_DESCRIPTION =
   "Marketplace de motopeças, acessórios e equipamentos, com destaque para o off-road, conectando clientes a lojistas parceiros.";

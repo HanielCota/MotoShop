@@ -13,7 +13,7 @@ Decisões pontuais tomadas ao longo do MVP, agrupadas por domínio. Complementam
   - Avaliações: cada avaliação tem nota inteira de 1 a 5; a casa decimal aparece apenas na média. Vídeo em avaliações está fora do escopo.
   - "Quantidade vendida" é exibida no produto e calculada a partir de pedidos reais confirmados (na demonstração, reflete os pedidos fictícios).
   - Estimativa de frete por localização automática e entregas por aplicativo (ex.: Uber): não serão implementadas.
-  - Rodapé definitivo (horário de atendimento, formas de pagamento, redes sociais, CNPJ e páginas legais) aguarda o conteúdo oficial do cliente.
+  - Rodapé (atualizado em 13/10/2026 pelo modelo do cliente): descrição em dois parágrafos, horário de atendimento, formas de pagamento só com o que o checkout aceita pelo Mercado Pago (Pix e cartões Visa, Mastercard, Elo, American Express, Hipercard, Diners e Cabal; sem boleto) e atalhos Comprar, Vender, Pedidos e Entrar. Institucional lista só páginas que existem (hoje "Seja um Lojista"); "Sobre", trocas, políticas e termos entram quando o cliente mandar o texto. CNPJ e ícones de redes sociais ficam fora até chegarem os dados reais.
   - Link de WhatsApp na vitrine da loja: mantido, por decisão do cliente; o lojista não pode linkar uma loja própria fora da plataforma.
   - "Minha moto" é seleção de peças compatíveis (não venda de motos): a escolha acontece na página do produto e no catálogo, sem aba própria no menu da conta.
 
