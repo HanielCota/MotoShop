@@ -7,6 +7,7 @@ Decisões pontuais tomadas ao longo do MVP, agrupadas por domínio. Complementam
 ## 1. Produto e marca
 
 - A marca pública é **O Moto Shop**. Em textos de interface, SEO, e-mails e mensagens para pessoas, usar o artigo masculino e manter as duas palavras separadas. Identificadores técnicos internos, nomes de arquivos e chaves de integração não precisam ser renomeados.
+- Títulos de aba e metadados usam **Moto Shop Brasil** (`BRAND_SITE_NAME` em `src/config/brand.ts`), por decisão do responsável (13/10/2026): páginas internas mostram `<Página> - Moto Shop Brasil`; a home mostra `Moto Shop Brasil - O Marketplace de quem vive o OFF-ROAD!`; `siteName`, `applicationName` e o OpenGraph padrão usam Moto Shop Brasil. O link de uma loja (`/loja/<slug>`) usa só o nome da loja, na aba e no OpenGraph. Nos textos do site continua "O Moto Shop".
 - Decisões do responsável sobre o feedback do cliente (08/10/2026):
   - Login social (Google, Apple, Facebook): fora do escopo por enquanto.
   - Avaliações: cada avaliação tem nota inteira de 1 a 5; a casa decimal aparece apenas na média. Vídeo em avaliações está fora do escopo.
@@ -196,7 +197,7 @@ Filtros e ordenações já existentes, todos sob a regra acima:
 
 ### Homepage
 
-- A homepage pública (`/`) é uma landing comercial server-rendered. A vitrine mock foi removida: a homepage mostra até quatro produtos aprovados, de sellers ativos/aprovados e com estoque disponível; sem elegíveis, usa estado vazio. Não apresentar preço ou disponibilidade inventados. (A regra anterior, que permitia uma vitrine de demonstração ilustrativa sem registros no catálogo e sem compra direta até o lançamento, foi substituída por esta.)
+- A homepage pública (`/`) é uma landing comercial server-rendered. A vitrine mock foi removida: a homepage mostra até doze produtos aprovados, de sellers ativos/aprovados e com estoque disponível; sem elegíveis, usa estado vazio. Não apresentar preço ou disponibilidade inventados. (A regra anterior, que permitia uma vitrine de demonstração ilustrativa sem registros no catálogo e sem compra direta até o lançamento, foi substituída por esta.)
 
 ### SEO
 
