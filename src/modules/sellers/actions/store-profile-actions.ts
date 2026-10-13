@@ -10,7 +10,7 @@ import { toActionError } from "@/shared/errors/action-error";
 import { updateStoreProfile } from "../application/update-store-profile";
 import { storeProfileSchema } from "../schemas/store-profile";
 import { splitStoreSlugIssue } from "../schemas/store-slug";
-import { readSubmittedValues } from "../schemas/submitted-values";
+import { readSubmittedValues } from "@/shared/forms/submitted-values";
 
 const profileFields = [
   "name",
