@@ -19,6 +19,7 @@ vi.mock("@/modules/auth/application/authorization", () => ({
   requireSellerAccess: vi.fn(async () => ({
     seller: { id: "seller-a" },
     session: { user: { id: "owner-a" } },
+    membership: { role: "OWNER" },
   })),
 }));
 
@@ -164,5 +165,64 @@ describe("seller member id validation", () => {
     await removeSellerMemberAction("../member");
 
     expect(mocks.memberFind).not.toHaveBeenCalled();
+  });
+});
+
+describe("seller admin management is reserved to the owner (L-17)", () => {
+  const adminContext = {
+    seller: { id: "seller-a" },
+    session: { user: { id: "admin-a" } },
+    membership: { role: "ADMIN" },
+  };
+
+  it("does not let an admin add another admin", async () => {
+    vi.mocked(requireSellerAccess).mockResolvedValueOnce(adminContext as never);
+    const form = new FormData();
+    form.set("email", "member@example.test");
+    form.set("role", "ADMIN");
+
+    const result = await addSellerMemberAction({}, form);
+
+    expect(result.error).toBe("Só o responsável pela loja pode adicionar administradores.");
+    expect(mocks.transaction).not.toHaveBeenCalled();
+  });
+
+  it("does not let an admin demote or remove another admin", async () => {
+    vi.mocked(requireSellerAccess)
+      .mockResolvedValueOnce(adminContext as never)
+      .mockResolvedValueOnce(adminContext as never);
+    mocks.memberFind.mockResolvedValue({ id: "cmemberlinka0000000000001", userId: "member-a", role: "ADMIN" });
+    const form = new FormData();
+    form.set("role", "CATALOG");
+
+    await updateSellerMemberRoleAction("cmemberlinka0000000000001", form);
+    await removeSellerMemberAction("cmemberlinka0000000000001");
+
+    expect(mocks.memberUpdate).not.toHaveBeenCalled();
+    expect(mocks.memberDelete).not.toHaveBeenCalled();
+    expect(mocks.auditCreate).not.toHaveBeenCalled();
+  });
+
+  it("does not let an admin promote an operational member to admin", async () => {
+    vi.mocked(requireSellerAccess).mockResolvedValueOnce(adminContext as never);
+    const form = new FormData();
+    form.set("role", "ADMIN");
+
+    await updateSellerMemberRoleAction("cmemberlinka0000000000001", form);
+
+    expect(mocks.memberUpdate).not.toHaveBeenCalled();
+  });
+
+  it("still lets an admin manage operational roles", async () => {
+    vi.mocked(requireSellerAccess).mockResolvedValueOnce(adminContext as never);
+    const form = new FormData();
+    form.set("role", "ORDERS");
+
+    await updateSellerMemberRoleAction("cmemberlinka0000000000001", form);
+
+    expect(mocks.memberUpdate).toHaveBeenCalledWith({
+      where: { id: "cmemberlinka0000000000001", sellerId: "seller-a", role: "CATALOG" },
+      data: { role: "ORDERS" },
+    });
   });
 });
