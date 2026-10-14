@@ -10,9 +10,19 @@ describe("product price input", () => {
     expect(formatPriceInputFromCents(149990)).toBe("1499,90");
   });
 
+  it("accepts the Brazilian thousands separator (BUG-018)", () => {
+    expect(parsePriceInputToCents("1.234,56")).toBe(123456);
+    expect(parsePriceInputToCents("1.234.567,8")).toBe(123456780);
+    expect(parsePriceInputToCents("1.499")).toBe(149900);
+    expect(parsePriceInputToCents(" 2.000,00 ")).toBe(200000);
+  });
+
   it("rejects ambiguous and malformed prices", () => {
-    expect(Number.isNaN(parsePriceInputToCents("1.499,90"))).toBe(true);
     expect(Number.isNaN(parsePriceInputToCents("12,345"))).toBe(true);
+    expect(Number.isNaN(parsePriceInputToCents("1,234.56"))).toBe(true);
+    expect(Number.isNaN(parsePriceInputToCents("1.23.456"))).toBe(true);
+    expect(Number.isNaN(parsePriceInputToCents("12.3456"))).toBe(true);
     expect(Number.isNaN(parsePriceInputToCents("-1"))).toBe(true);
+    expect(Number.isNaN(parsePriceInputToCents(""))).toBe(true);
   });
 });

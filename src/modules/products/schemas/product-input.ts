@@ -53,7 +53,7 @@ export const productInputSchema = z.object({
           title: z.string().trim().min(1, "Informe a variação.").max(100),
           sku: z.string().trim().min(1, "Informe o SKU.").max(80),
           priceInCents: z
-            .number({ error: "Informe o preço em reais, sem separador de milhar." })
+            .number({ error: "Informe o preço em reais, ex.: 1.234,56." })
             .int()
             .max(2_147_483_647)
             .positive("O preço deve ser maior que zero."),
