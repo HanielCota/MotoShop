@@ -11,44 +11,7 @@ import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 import { createCoupon, type CouponOwner } from "../application/create-coupon";
 import { setCouponParticipation } from "../application/set-coupon-participation";
-import { readCouponFormInput } from "../domain/coupon-form-input";
-
-// Coupon amounts and limits are persisted as PostgreSQL int4.
-const MAX_INT32 = 2_147_483_647;
-const usageLimit = z.coerce
-  .number({ error: "Informe o limite de uso como um número inteiro." })
-  .int("Informe o limite de uso como um número inteiro.")
-  .positive("O limite de uso precisa ser maior que zero.")
-  .max(MAX_INT32, "O limite de uso informado é maior que o permitido.");
-
-const couponSchema = z.object({
-  code: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .regex(/^[A-Z0-9_-]{3,40}$/, "Use de 3 a 40 caracteres: letras, números, _ ou -."),
-  discountType: z.enum(["PERCENTAGE", "FIXED_AMOUNT"], { error: "Escolha o tipo de desconto." }),
-  percentageBps: z
-    .number({ error: "Informe o percentual com até duas casas, ex.: 10 ou 10,5." })
-    .int()
-    .min(1, "O percentual precisa ser maior que zero.")
-    .max(10_000, "O percentual não pode passar de 100%.")
-    .optional(),
-  fixedAmountInCents: z
-    .number({ error: "Informe o valor em reais, ex.: 25,90." })
-    .int()
-    .positive("O desconto precisa ser maior que zero.")
-    .max(MAX_INT32, "O desconto informado é maior que o permitido.")
-    .optional(),
-  minimumPurchaseInCents: z
-    .number({ error: "Informe a compra mínima em reais, ex.: 150,00." })
-    .int()
-    .min(0)
-    .max(MAX_INT32, "A compra mínima informada é maior que a permitida."),
-  globalUsageLimit: usageLimit.optional(),
-  perCustomerUsageLimit: usageLimit.optional(),
-  showOnProductPage: z.boolean().default(false),
-});
+import { parseCouponForm } from "../schemas/coupon-input";
 
 export type CouponActionState = { error?: string; success?: string };
 
@@ -211,30 +174,16 @@ export async function setSellerCouponProductPageAction(couponId: string, show: b
   revalidatePath("/products", "layout");
 }
 
-/** O tipo escolhido define qual valor de desconto é obrigatório. */
-function readDiscountAmount(
-  data: z.infer<typeof couponSchema>,
-): { percentageBps: number } | { fixedAmountInCents: number } | { error: string } {
-  if (data.discountType === "PERCENTAGE") {
-    if (data.percentageBps === undefined) return { error: "Informe o percentual de desconto." };
-    return { percentageBps: data.percentageBps };
-  }
-
-  if (data.fixedAmountInCents === undefined) return { error: "Informe o valor do desconto em reais." };
-  return { fixedAmountInCents: data.fixedAmountInCents };
-}
-
 async function createCouponForOwner(formData: FormData, owner: CouponOwner): Promise<CouponActionState> {
-  const parsed = couponSchema.safeParse(readCouponFormInput(formData));
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os dados do cupom." };
-  const discountAmount = readDiscountAmount(parsed.data);
-  if ("error" in discountAmount) return { error: discountAmount.error };
+  const parsed = parseCouponForm(formData);
+  if (!parsed.ok) return { error: parsed.error };
+  const { data, discountAmount } = parsed;
 
   try {
-    await createCoupon(owner, parsed.data, discountAmount);
+    await createCoupon(owner, data, discountAmount);
 
     revalidatePath(owner.ownerType === "MARKETPLACE" ? "/admin" : "/seller", "layout");
-    return { success: `Cupom ${parsed.data.code} criado.` };
+    return { success: `Cupom ${data.code} criado.` };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       // Mensagem neutra (L-10): não confirma se o código pertence a outra loja ou ao Moto Shop.

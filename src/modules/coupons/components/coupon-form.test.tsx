@@ -55,3 +55,13 @@ it("sends a seller-funded campaign by default from the Admin form, and no kind f
   render(<CouponForm ownerType="SELLER" />);
   expect(screen.queryByLabelText("Tipo de cupom")).not.toBeInTheDocument();
 });
+
+it("shows the coupon rule in the browser and does not call the server for an invalid code (BUG-011)", async () => {
+  render(<CouponForm ownerType="SELLER" />);
+  fireEvent.change(screen.getByLabelText(/Código do cupom/), { target: { value: "AB" } });
+  fireEvent.change(screen.getByLabelText(/Desconto \(%\)/), { target: { value: "10" } });
+  fireEvent.click(screen.getByRole("button", { name: "Criar cupom" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Use de 3 a 40 caracteres");
+  expect(mocks.create).not.toHaveBeenCalled();
+});
