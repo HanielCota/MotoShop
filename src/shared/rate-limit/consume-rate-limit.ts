@@ -1,6 +1,8 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
+
+import { env } from "@/config/env";
 
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
@@ -8,8 +10,13 @@ import { ApplicationError } from "@/shared/errors/application-error";
 
 type CounterResult = { count: number; resetAt: Date };
 
+// L-15: keys may contain an e-mail. A plain SHA-256 can be reversed with a dictionary by anyone
+// who reads the table, so keys are HMACed with a key derived from the server secret (a separate
+// derivation, so the auth secret itself is never used directly here).
+const rateLimitKeySecret = createHmac("sha256", env.BETTER_AUTH_SECRET).update("motoshop:rate-limit-keys:v1").digest();
+
 function hashRateLimitKey(key: string): string {
-  return createHash("sha256").update(key).digest("hex");
+  return createHmac("sha256", rateLimitKeySecret).update(key).digest("hex");
 }
 
 // A single PostgreSQL upsert is used instead of a read-then-write so concurrent
