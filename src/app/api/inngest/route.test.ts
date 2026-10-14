@@ -15,6 +15,9 @@ vi.mock("@/modules/payments/workflows/mercado-pago-webhook-workflow", () => ({ r
 vi.mock("@/modules/notifications/workflows/order-payment-notification-workflow", () => ({
   sendOrderPaymentNotification: {},
 }));
+vi.mock("@/modules/notifications/workflows/guest-order-confirmation-workflow", () => ({
+  sendGuestOrderConfirmation: {},
+}));
 vi.mock("@/modules/notifications/workflows/seller-order-fulfillment-notification-workflow", () => ({
   sendSellerOrderFulfillmentNotification: {},
 }));

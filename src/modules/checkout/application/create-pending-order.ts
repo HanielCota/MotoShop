@@ -13,6 +13,9 @@ import { multiplyMoneyInCents, sumMoneyInCents } from "@/modules/orders/domain/m
 import { preparedPaymentRequestMetadata } from "@/modules/payments/domain/payment-request-state";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 import { buildVariantAttributesSnapshot, type VariantGenderValue } from "@/modules/products/domain/variant-attributes";
+import { guestOrderConfirmationEventKey } from "@/modules/notifications/domain/guest-order-confirmation";
+import { recordOutboxEvent } from "@/modules/outbox/application/record-outbox-event";
+import { guestOrderCreatedEventName } from "@/modules/outbox/domain/outbox-events";
 import { ApplicationError } from "@/shared/errors/application-error";
 
 import { applyOrderItemDiscounts } from "../domain/order-item-discounts";
@@ -94,6 +97,16 @@ export async function reserveCartAndCreateOrder(input: ReserveCartInput): Promis
     if (input.coupon) {
       await assertCouponStillAvailableLocked(tx, input.coupon, data.customerEmail, session?.user.id, input.now);
       await redeemCoupon(tx, { coupon: input.coupon, orderId: order.id, data, session, totals });
+    }
+    if (input.guestAccessToken) {
+      // Guests get the order link by e-mail (AGENTS.md §12); sent later by a workflow, never blocking checkout.
+      await recordOutboxEvent(tx, {
+        eventKey: guestOrderConfirmationEventKey(order.id),
+        eventName: guestOrderCreatedEventName,
+        aggregateType: "Order",
+        aggregateId: order.id,
+        payload: { orderId: order.id, orderNumber: input.orderNumber },
+      });
     }
     const transaction = payment.transactions[0];
     if (!transaction)
