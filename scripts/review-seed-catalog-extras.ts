@@ -90,7 +90,7 @@ async function ensureCoupon(db: PrismaClient, data: Prisma.CouponUncheckedCreate
 }
 
 /**
- * Two seller coupons shown on the product page and one campaign joined by Garagem MX.
+ * Two seller coupons shown on the product page and one campaign: Garagem MX joined, Box 77 left.
  * Existing rows are left as they are, so changes made on screen during the review survive.
  */
 export async function ensureReviewCouponsAndCampaign(
@@ -108,13 +108,37 @@ export async function ensureReviewCouponsAndCampaign(
   }
   track("Coupon (product page + campaign)", created, coupons.length);
 
-  const participation = await db.couponSellerParticipation.findUnique({
-    where: { couponId_sellerId: { couponId: campaignId, sellerId: sellers.garagem } },
+  const participations = campaignParticipations(sellers, now);
+  let joined = 0;
+  for (const participation of participations) if (await ensureParticipation(db, campaignId, participation)) joined += 1;
+  track("CouponSellerParticipation", joined, participations.length);
+}
+
+type ParticipationSeed = { sellerId: string; joinedAt: Date; leftAt: Date | null };
+
+/**
+ * Garagem MX is in the campaign; Box 77 joined and left it, so the Admin shows "Saiu em …"
+ * and Box 77's Central do Lojista offers "Entrar na campanha".
+ */
+function campaignParticipations(sellers: ReviewSellers, now: Date): ParticipationSeed[] {
+  return [
+    { sellerId: sellers.garagem, joinedAt: now, leftAt: null },
+    {
+      sellerId: sellers.box77,
+      joinedAt: new Date(now.getTime() - 10 * DAY),
+      leftAt: new Date(now.getTime() - 2 * DAY),
+    },
+  ];
+}
+
+/** Creates the participation only when missing; an existing one (changed on screen) is kept. */
+async function ensureParticipation(db: PrismaClient, couponId: string, seed: ParticipationSeed): Promise<boolean> {
+  const existing = await db.couponSellerParticipation.findUnique({
+    where: { couponId_sellerId: { couponId, sellerId: seed.sellerId } },
     select: { id: true },
   });
-  if (!participation)
-    await db.couponSellerParticipation.create({
-      data: { couponId: campaignId, sellerId: sellers.garagem, joinedAt: now },
-    });
-  track("CouponSellerParticipation", participation ? 0 : 1, 1);
+  if (existing) return false;
+
+  await db.couponSellerParticipation.create({ data: { couponId, ...seed } });
+  return true;
 }
