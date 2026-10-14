@@ -7,6 +7,9 @@ vi.mock("@/modules/cart/infrastructure/cart-access", () => ({ hashGuestToken: (t
 
 import { resolveCustomerOrderIdentity } from "./resolve-customer-order-access";
 
+const recentOrder = { id: "order-1", createdAt: new Date("2026-10-01T00:00:00.000Z"), sellerOrders: [] };
+const now = new Date("2026-10-14T00:00:00.000Z");
+
 beforeEach(() => {
   vi.resetAllMocks();
 });
@@ -18,9 +21,9 @@ describe("resolveCustomerOrderIdentity", () => {
   });
 
   it("prefers the secure link token for a logged-in user opening a guest order", async () => {
-    mocks.findFirst.mockResolvedValueOnce({ id: "order-1" });
+    mocks.findFirst.mockResolvedValueOnce(recentOrder);
     await expect(
-      resolveCustomerOrderIdentity({ orderNumber: "MS-1", accessToken: "token", userId: "user-1" }),
+      resolveCustomerOrderIdentity({ orderNumber: "MS-1", accessToken: "token", userId: "user-1", now }),
     ).resolves.toEqual({ guestAccessTokenHash: "hash:token" });
     expect(mocks.findFirst).toHaveBeenCalledTimes(1);
     expect(mocks.findFirst).toHaveBeenCalledWith(
@@ -29,13 +32,35 @@ describe("resolveCustomerOrderIdentity", () => {
   });
 
   it("falls back to the session user when the token does not match (claimed order)", async () => {
-    mocks.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: "order-1" });
+    mocks.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce(recentOrder);
     await expect(
       resolveCustomerOrderIdentity({ orderNumber: "MS-1", accessToken: "old", userId: "user-1" }),
     ).resolves.toEqual({ userId: "user-1" });
     expect(mocks.findFirst).toHaveBeenLastCalledWith(
       expect.objectContaining({ where: { orderNumber: "MS-1", userId: "user-1" } }),
     );
+  });
+
+  it("refuses an expired guest link but still lets the signed-in owner in", async () => {
+    const oldOrder = { id: "order-1", createdAt: new Date("2026-01-01T00:00:00.000Z"), sellerOrders: [] };
+    mocks.findFirst.mockResolvedValueOnce(oldOrder);
+    await expect(resolveCustomerOrderIdentity({ orderNumber: "MS-1", accessToken: "token", now })).resolves.toBeNull();
+
+    mocks.findFirst.mockResolvedValueOnce(oldOrder).mockResolvedValueOnce(oldOrder);
+    await expect(
+      resolveCustomerOrderIdentity({ orderNumber: "MS-1", accessToken: "token", userId: "user-1", now }),
+    ).resolves.toEqual({ userId: "user-1" });
+  });
+
+  it("keeps a guest link open for 90 days after a late delivery", async () => {
+    mocks.findFirst.mockResolvedValueOnce({
+      id: "order-1",
+      createdAt: new Date("2026-03-01T00:00:00.000Z"),
+      sellerOrders: [{ shipment: { deliveredAt: new Date("2026-08-30T00:00:00.000Z") } }],
+    });
+    await expect(resolveCustomerOrderIdentity({ orderNumber: "MS-1", accessToken: "token", now })).resolves.toEqual({
+      guestAccessTokenHash: "hash:token",
+    });
   });
 
   it("denies access when no credential owns the order", async () => {

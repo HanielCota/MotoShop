@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { getCurrentSession } from "@/modules/auth/application/authorization";
-import { hashGuestToken } from "@/modules/cart/infrastructure/cart-access";
+import { resolveCustomerOrderIdentity } from "@/modules/orders/application/resolve-customer-order-access";
 import { getCustomerOrder } from "@/modules/returns/queries/customer-orders";
 import { ApplicationError } from "@/shared/errors/application-error";
 import { toActionError } from "@/shared/errors/action-error";
@@ -31,11 +31,12 @@ export async function refreshPendingPaymentAction(
 
   try {
     const session = await getCurrentSession();
-    const identity = parsed.data.accessToken
-      ? { guestAccessTokenHash: hashGuestToken(parsed.data.accessToken) }
-      : session
-        ? { userId: session.user.id }
-        : null;
+    // Same rule as the order page: a valid, unexpired guest link first, then the signed-in owner.
+    const identity = await resolveCustomerOrderIdentity({
+      orderNumber: parsed.data.orderNumber,
+      accessToken: parsed.data.accessToken,
+      userId: session?.user.id,
+    });
     if (!identity) {
       throw new ApplicationError({ code: "UNAUTHORIZED", message: "Acesse o pedido pelo link seguro do checkout." });
     }
