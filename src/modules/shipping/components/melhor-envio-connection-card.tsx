@@ -34,7 +34,7 @@ export function MelhorEnvioConnectionCard({
             <div>
               <CardTitle>Melhor Envio</CardTitle>
               <CardDescription className="mt-1">
-                Conecte a conta da sua loja para consultar opções de frete.
+                Conecte a conta da sua loja para calcular fretes e gerar etiquetas.
               </CardDescription>
             </div>
           </div>
@@ -53,7 +53,8 @@ export function MelhorEnvioConnectionCard({
           </p>
         ) : null}
         <p className="text-muted-foreground text-sm leading-6">
-          A autorização inicial libera somente consulta de frete. Nenhuma etiqueta será comprada por esta conexão.
+          A conexão permite calcular fretes, comprar e gerar etiquetas com o saldo da sua conta do Melhor Envio e
+          acompanhar as entregas. Uma etiqueta só é comprada quando alguém da loja confirma o envio de um pedido.
         </p>
         {configured ? (
           <Link

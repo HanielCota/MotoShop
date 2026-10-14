@@ -120,7 +120,7 @@ describe("Melhor Envio OAuth callback", () => {
     const response = await GET(createRequest(`?code=one-time-code&state=${stateValue}`, stateValue));
 
     expect(redirectedTo(response).searchParams.get("shipping")).toBe("connected");
-    expect(mocks.exchange).toHaveBeenCalledWith("one-time-code");
+    expect(mocks.exchange).toHaveBeenCalledWith("one-time-code", "seller-1");
     expect(mocks.persist).toHaveBeenCalledWith("seller-1", expect.anything());
     expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
     expect(mocks.exchange.mock.invocationCallOrder[0]).toBeLessThan(defined(mocks.persist.mock.invocationCallOrder[0]));
