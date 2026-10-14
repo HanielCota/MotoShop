@@ -60,10 +60,7 @@ export function useCheckoutSubmit({
             onFailure(result.error);
             return;
           }
-          if (result.orderNumber) {
-            const query = result.guestAccessToken ? `?accessToken=${encodeURIComponent(result.guestAccessToken)}` : "";
-            router.push(`/orders/${encodeURIComponent(result.orderNumber)}${query}` as Route);
-          }
+          if (result.orderNumber) router.push(`/orders/${encodeURIComponent(result.orderNumber)}` as Route);
         } catch (error) {
           onFailure(error instanceof Error && error.message ? error.message : unknownFailureMessage);
         } finally {

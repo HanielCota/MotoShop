@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import type { Route } from "next";
+import { notFound, redirect } from "next/navigation";
 
 import { PageHeader, SectionHeader } from "@/components/ui/page-header";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { CustomerAccountNavigation } from "@/modules/customers/components/customer-account-navigation";
 import { resolveCustomerOrderIdentity } from "@/modules/orders/application/resolve-customer-order-access";
+import { guestOrderPath, readGuestOrderCookie } from "@/modules/orders/infrastructure/guest-order-cookie";
 import { ClaimGuestOrderForm } from "@/modules/orders/components/claim-guest-order-form";
 import { OrderSummary } from "@/modules/orders/components/order-detail/order-summary";
 import { PaymentSection } from "@/modules/orders/components/order-detail/payment-section";
@@ -27,7 +29,12 @@ export default async function CustomerOrderPage({
   searchParams: Promise<RawSearchParams>;
 }) {
   const [{ orderNumber }, rawSearchParams] = await Promise.all([params, searchParams]);
-  const { accessToken } = parseSearchParams(orderSearchParams, rawSearchParams);
+  const { accessToken: linkToken } = parseSearchParams(orderSearchParams, rawSearchParams);
+  // Older links carry the token in the URL: swap it for the order cookie and drop it from the address.
+  if (linkToken) {
+    redirect(`${guestOrderPath(orderNumber)}/access?token=${encodeURIComponent(linkToken)}` as Route);
+  }
+  const accessToken = await readGuestOrderCookie();
   const session = await getCurrentSession();
   // Mesma regra das actions de pós-venda: token do link seguro primeiro, depois a sessão.
   const identity = await resolveCustomerOrderIdentity({ orderNumber, accessToken, userId: session?.user.id });

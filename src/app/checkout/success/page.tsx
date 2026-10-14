@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -14,6 +14,12 @@ const checkoutSuccessSearchParams = {
   orderNumber: optionalTextSearchParam(64),
   accessToken: optionalTextSearchParam(200),
 };
+
+/** Older success links may still carry the guest token: send it through the cookie swap, never to the page URL. */
+function orderHref(orderNumber: string, accessToken: string | undefined): Route {
+  const orderPath = `/orders/${encodeURIComponent(orderNumber)}`;
+  return (accessToken ? `${orderPath}/access?token=${encodeURIComponent(accessToken)}` : orderPath) as Route;
+}
 
 export default async function CheckoutSuccessPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
   const params = parseSearchParams(checkoutSuccessSearchParams, await searchParams);
@@ -38,10 +44,7 @@ export default async function CheckoutSuccessPage({ searchParams }: { searchPara
             </p>
           ) : null}
           {orderNumber ? (
-            <Link
-              className={buttonVariants({ variant: "outline" })}
-              href={`/orders/${encodeURIComponent(orderNumber)}${params.accessToken ? `?accessToken=${encodeURIComponent(params.accessToken)}` : ""}`}
-            >
+            <Link className={buttonVariants({ variant: "outline" })} href={orderHref(orderNumber, params.accessToken)}>
               Ver pagamento e acompanhar pedido
             </Link>
           ) : null}
