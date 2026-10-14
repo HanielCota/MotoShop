@@ -73,6 +73,24 @@ it("saves CPF/CNPJ and phone as digits for the signed-in user only", async () =>
   expect(mocks.revalidatePath).toHaveBeenCalledWith("/checkout");
 });
 
+it.each([
+  [
+    { taxId: null, phone: "11987654321" },
+    { taxId: null, phone: "11987654321" },
+  ],
+  [
+    { taxId: "52998224725", phone: null },
+    { taxId: "52998224725", phone: null },
+  ],
+  [
+    { taxId: null, phone: null },
+    { taxId: null, phone: null },
+  ],
+])("saves what the profile form sends after its own validation (%j)", async (input, saved) => {
+  expect(await updateCustomerContactAction(input)).toEqual({ success: "Dados atualizados." });
+  expect(mocks.updateContact).toHaveBeenCalledWith("buyer", saved);
+});
+
 it("clears both optional fields when they are left empty", async () => {
   await updateCustomerContactAction({ taxId: " ", phone: "" });
   expect(mocks.updateContact).toHaveBeenCalledWith("buyer", { taxId: null, phone: null });
