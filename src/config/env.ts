@@ -2,6 +2,8 @@ import "server-only";
 
 import { z } from "zod";
 
+import { productionAuthUrlProblem } from "./production-auth-url";
+
 const emptyStringToUndefined = (value: unknown) => (value === "" ? undefined : value);
 const optionalString = z.preprocess(emptyStringToUndefined, z.string().min(1).optional());
 const optionalUrl = z.preprocess(emptyStringToUndefined, z.url().optional());
@@ -61,6 +63,13 @@ const serverEnvSchema = z
     EMAIL_FROM: optionalString,
   })
   .superRefine((value, context) => {
+    // Raw value: the schema default (localhost) must not hide a missing URL in production (L-16).
+    const authUrlProblem = productionAuthUrlProblem(
+      emptyStringToUndefined(process.env.BETTER_AUTH_URL) as string | undefined,
+      process.env.VERCEL_ENV,
+    );
+    if (authUrlProblem) context.addIssue({ code: "custom", message: authUrlProblem, path: ["BETTER_AUTH_URL"] });
+
     if (value.AUTH_REQUIRE_EMAIL_VERIFICATION && (!value.RESEND_API_KEY || !value.EMAIL_FROM)) {
       context.addIssue({
         code: "custom",
