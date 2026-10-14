@@ -10,7 +10,10 @@ import { db } from "@/lib/database";
 import { sendAuthEmail, sendExistingAccountEmail } from "@/modules/auth/application/send-auth-email";
 import { logger } from "@/lib/logger";
 import { parseAuthUserName } from "@/modules/auth/domain/auth-user-name";
-import { enforceSignInAccountRateLimit } from "@/modules/auth/infrastructure/sign-in-account-rate-limit";
+import {
+  assertSignInAccountNotLocked,
+  recordSignInAccountOutcome,
+} from "@/modules/auth/infrastructure/sign-in-account-rate-limit";
 import { consumeRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 export const authEmailConfigured = Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
@@ -79,8 +82,11 @@ export const auth = betterAuth({
     },
   },
   hooks: {
-    // Per-account limit on top of the per-IP rule above (see sign-in-account-rate-limit.ts).
-    before: createAuthMiddleware(async (context) => enforceSignInAccountRateLimit(context.path, context.body)),
+    // Per-account limit on top of the per-IP rule above: only failures count (see sign-in-account-rate-limit.ts).
+    before: createAuthMiddleware(async (context) => assertSignInAccountNotLocked(context.path, context.body)),
+    after: createAuthMiddleware(async (context) =>
+      recordSignInAccountOutcome(context.path, context.body, context.context.returned),
+    ),
   },
   databaseHooks: {
     user: {

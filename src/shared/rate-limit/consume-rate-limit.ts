@@ -8,10 +8,14 @@ import { ApplicationError } from "@/shared/errors/application-error";
 
 type CounterResult = { count: number; resetAt: Date };
 
+function hashRateLimitKey(key: string): string {
+  return createHash("sha256").update(key).digest("hex");
+}
+
 // A single PostgreSQL upsert is used instead of a read-then-write so concurrent
 // requests cannot all pass the same limit. Keys are hashed before persistence.
 export async function consumeRateLimit(input: { key: string; windowSeconds: number; max: number }) {
-  const key = createHash("sha256").update(input.key).digest("hex");
+  const key = hashRateLimitKey(input.key);
   const window = Math.max(1, Math.min(Math.ceil(input.windowSeconds), 3600));
   const max = Math.max(1, Math.min(Math.ceil(input.max), 10000));
   const rows = await db.$queryRaw<CounterResult[]>(Prisma.sql`
@@ -28,6 +32,26 @@ export async function consumeRateLimit(input: { key: string; windowSeconds: numb
     allowed: result.count <= max,
     retryAfter: result.count <= max ? null : Math.max(1, Math.ceil((result.resetAt.getTime() - Date.now()) / 1000)),
   };
+}
+
+/** Reads a counter without consuming it: `blocked` once `max` hits happened inside the current window. */
+export async function peekRateLimit(input: { key: string; max: number }) {
+  const rows = await db.$queryRaw<CounterResult[]>(Prisma.sql`
+    SELECT count, "resetAt" FROM rate_limit_counters
+    WHERE key = ${hashRateLimitKey(input.key)} AND "resetAt" > now()
+  `);
+  const counter = rows[0];
+  if (!counter || counter.count < input.max) return { blocked: false, retryAfter: null };
+
+  return {
+    blocked: true,
+    retryAfter: Math.max(1, Math.ceil((counter.resetAt.getTime() - Date.now()) / 1000)),
+  };
+}
+
+/** Forgets a counter, e.g. after a successful sign-in. */
+export async function clearRateLimit(key: string): Promise<void> {
+  await db.$executeRaw(Prisma.sql`DELETE FROM rate_limit_counters WHERE key = ${hashRateLimitKey(key)}`);
 }
 
 export async function assertRateLimit(input: { key: string; windowSeconds: number; max: number }) {
