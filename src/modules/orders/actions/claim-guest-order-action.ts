@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { claimGuestOrder } from "@/modules/orders/application/claim-guest-order";
+import { resolveCustomerOrderIdentity } from "@/modules/orders/application/resolve-customer-order-access";
 import { clearGuestOrderCookie, readGuestOrderCookie } from "@/modules/orders/infrastructure/guest-order-cookie";
 import { toActionError } from "@/shared/errors/action-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
@@ -31,8 +32,15 @@ export async function claimGuestOrderAction(
 
   try {
     await assertRateLimit({ key: `claim-order:${session.user.id}`, windowSeconds: 60, max: 5 });
+    // The cookie may hold the checkout token or the e-mail link token: both resolve to the order's guest hash.
+    const identity = await resolveCustomerOrderIdentity({
+      orderNumber: parsed.data.orderNumber,
+      accessToken: parsed.data.accessToken,
+    });
+    if (!identity || !("guestAccessTokenHash" in identity)) return { error: "O link do pedido é inválido." };
     await claimGuestOrder({
-      ...parsed.data,
+      orderNumber: parsed.data.orderNumber,
+      guestAccessTokenHash: identity.guestAccessTokenHash,
       userId: session.user.id,
       userEmail: session.user.email,
       userEmailVerified: session.user.emailVerified === true,

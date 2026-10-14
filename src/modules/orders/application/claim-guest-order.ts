@@ -1,15 +1,15 @@
 import "server-only";
 
 import { db } from "@/lib/database";
-import { hashGuestToken } from "@/modules/cart/infrastructure/cart-access";
 import { ApplicationError } from "@/shared/errors/application-error";
 
 import { isGuestOrderAccessExpired } from "../domain/guest-order-access";
-import { guestOrderAccessSelect, toGuestOrderAccessDates } from "./resolve-customer-order-access";
+import { guestOrderAccessSelect, toGuestOrderAccessDates } from "./guest-order-access-dates";
 
 export async function claimGuestOrder(input: {
   orderNumber: string;
-  accessToken: string;
+  /** Guest identity already resolved from the checkout or e-mail link token (resolveCustomerOrderIdentity). */
+  guestAccessTokenHash: string;
   userId: string;
   userEmail: string;
   userEmailVerified: boolean;
@@ -23,7 +23,7 @@ export async function claimGuestOrder(input: {
     });
   }
 
-  const tokenHash = hashGuestToken(input.accessToken);
+  const tokenHash = input.guestAccessTokenHash;
   const order = await db.order.findFirst({
     where: { orderNumber: input.orderNumber, guestAccessTokenHash: tokenHash, userId: null },
     select: { id: true, customerEmail: true, ...guestOrderAccessSelect },

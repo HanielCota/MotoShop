@@ -1,12 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ session: vi.fn(), claim: vi.fn(), readCookie: vi.fn(), clearCookie: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  session: vi.fn(),
+  claim: vi.fn(),
+  readCookie: vi.fn(),
+  clearCookie: vi.fn(),
+  resolve: vi.fn(),
+}));
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("@/modules/auth/application/authorization", () => ({ getCurrentSession: mocks.session }));
 vi.mock("@/modules/orders/application/claim-guest-order", () => ({ claimGuestOrder: mocks.claim }));
+vi.mock("@/modules/orders/application/resolve-customer-order-access", () => ({
+  resolveCustomerOrderIdentity: mocks.resolve,
+}));
 vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
 vi.mock("@/modules/orders/infrastructure/guest-order-cookie", () => ({
   readGuestOrderCookie: mocks.readCookie,
@@ -30,15 +39,17 @@ describe("claimGuestOrderAction", () => {
     vi.clearAllMocks();
     mocks.session.mockResolvedValue(session);
     mocks.claim.mockResolvedValue({ orderNumber: "MS-1" });
+    mocks.resolve.mockResolvedValue({ guestAccessTokenHash: "guest-hash" });
   });
 
-  it("claims with the token from the order cookie and clears the cookie afterwards", async () => {
+  it("claims with the guest identity behind the order cookie and clears the cookie afterwards", async () => {
     mocks.readCookie.mockResolvedValue(token);
 
     expect(await claimGuestOrderAction({}, form())).toEqual({ success: true });
+    expect(mocks.resolve).toHaveBeenCalledWith({ orderNumber: "MS-1", accessToken: token });
     expect(mocks.claim).toHaveBeenCalledWith({
       orderNumber: "MS-1",
-      accessToken: token,
+      guestAccessTokenHash: "guest-hash",
       userId: "user-1",
       userEmail: "buyer@example.test",
       userEmailVerified: true,
@@ -48,6 +59,14 @@ describe("claimGuestOrderAction", () => {
 
   it("refuses without the order cookie, even if the form carries a token", async () => {
     mocks.readCookie.mockResolvedValue(undefined);
+
+    expect(await claimGuestOrderAction({}, form())).toEqual({ error: "O link do pedido é inválido." });
+    expect(mocks.claim).not.toHaveBeenCalled();
+  });
+
+  it("refuses a cookie token that no longer opens the order (expired or revoked)", async () => {
+    mocks.readCookie.mockResolvedValue(token);
+    mocks.resolve.mockResolvedValue(null);
 
     expect(await claimGuestOrderAction({}, form())).toEqual({ error: "O link do pedido é inválido." });
     expect(mocks.claim).not.toHaveBeenCalled();

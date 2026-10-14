@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ findFirst: vi.fn(), updateMany: vi.fn(), auditCreate: vi.fn() }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/modules/cart/infrastructure/cart-access", () => ({ hashGuestToken: (token: string) => `hash:${token}` }));
 vi.mock("@/lib/database", () => {
   const tx = { order: { updateMany: mocks.updateMany }, auditLog: { create: mocks.auditCreate } };
   return {
@@ -17,7 +16,7 @@ import { claimGuestOrder } from "./claim-guest-order";
 
 const input = {
   orderNumber: "MS-100",
-  accessToken: "secure-guest-token",
+  guestAccessTokenHash: "hash:secure-guest-token",
   userId: "user-a",
   userEmail: "buyer@example.test",
   userEmailVerified: true,
