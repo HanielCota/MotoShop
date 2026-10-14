@@ -86,7 +86,7 @@ export function DesignSelect({
         </Select.Icon>
       </Select.Trigger>
       <Select.Portal>
-        <Select.Positioner className="z-50 outline-none" sideOffset={4}>
+        <Select.Positioner className="z-50 outline-none" sideOffset={4} alignItemWithTrigger={false}>
           <Select.Popup
             className={cn(
               "border-border bg-popover text-popover-foreground max-w-[min(90vw,40rem)] min-w-[var(--anchor-width)] overflow-hidden rounded-md border shadow-lg outline-none",
