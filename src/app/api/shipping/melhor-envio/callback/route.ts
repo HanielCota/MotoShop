@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const tokenData = await exchangeMelhorEnvioAuthorizationCode(code);
+    const tokenData = await exchangeMelhorEnvioAuthorizationCode(code, state.sellerId);
     await persistMelhorEnvioConnection(state.sellerId, tokenData);
     callbackUrl.searchParams.set("shipping", "connected");
   } catch (error) {
