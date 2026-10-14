@@ -56,7 +56,7 @@ Decisões pontuais tomadas ao longo do MVP, agrupadas por domínio. Complementam
 
 ### Reembolsos
 
-- Reembolso cujo valor confirmado pelo provider difere do solicitado permanece `PENDING` para revisão financeira.
+- Reembolso cujo valor confirmado pelo provider difere do solicitado, ou cuja resposta não traz o valor, permanece `PENDING` para revisão financeira (L-08).
 - Reembolsos de cancelamento/devolução usam uma chave de idempotência por tentativa (`<base>` e depois `<base>:retry-<n>`, no máximo 5). Nova tentativa só é criada quando todas as anteriores estão `FAILED`; `PENDING`/`SUCCEEDED` são sempre reaproveitadas. Se o pagamento já foi integralmente reembolsado no provider, a solicitação é encerrada com auditoria `upstreamRefund`.
 
 ---

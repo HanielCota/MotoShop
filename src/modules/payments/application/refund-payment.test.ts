@@ -31,7 +31,11 @@ beforeEach(() => {
   mocks.payment.findFirst.mockResolvedValue(payment);
   mocks.payment.findUnique.mockResolvedValue(payment);
   mocks.transaction.create.mockResolvedValue({ id: "refund-tx" });
-  mocks.refund.mockResolvedValue({ externalId: "mp-refund", status: "APPROVED", providerMetadata: {} });
+  mocks.refund.mockResolvedValue({
+    externalId: "mp-refund",
+    status: "APPROVED",
+    providerMetadata: { amount: input.amountInCents / 100 },
+  });
 });
 
 describe("refund reservation and idempotency", () => {
@@ -86,6 +90,15 @@ describe("refund reservation and idempotency", () => {
     await expect(refundPayment(input)).rejects.toThrow("difere do solicitado");
     expect(mocks.transaction.update).not.toHaveBeenCalled();
   });
+  it("keeps the refund pending when the provider does not report the refunded amount (L-08)", async () => {
+    mocks.refund.mockResolvedValue({ externalId: "mp-refund", status: "APPROVED", providerMetadata: {} });
+
+    await expect(refundPayment(input)).rejects.toThrow("não informou o valor reembolsado");
+    expect(mocks.transaction.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: "SUCCEEDED" }) }),
+    );
+  });
+
   it("calculates full refund status from settled transactions", async () => {
     const prior = { type: "REFUND", status: "SUCCEEDED", amountInCents: 500 };
     mocks.payment.findUnique.mockResolvedValue({ ...payment, transactions: [prior] });
