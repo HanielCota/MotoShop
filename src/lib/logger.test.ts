@@ -4,12 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/config/env", () => ({ env: { NODE_ENV: "test" } }));
 
-import { loggerRedaction } from "./logger";
+import { loggerRedaction, loggerSerializers } from "./logger";
 
 function logOnce(payload: Record<string, unknown>): Record<string, unknown> {
   const lines: string[] = [];
   const destination = { write: (line: string) => lines.push(line) };
-  pino({ redact: loggerRedaction }, destination).info(payload);
+  pino({ redact: loggerRedaction, serializers: loggerSerializers }, destination).info(payload);
 
   const [line] = lines;
   if (!line) throw new Error("Expected one log line");
@@ -39,6 +39,24 @@ describe("loggerRedaction", () => {
       taxId: "[REDACTED]",
       input: { customerTaxId: "[REDACTED]", customerPhone: "[REDACTED]" },
     });
+  });
+
+  it("censors secrets two levels deep, including cookies, API keys and OAuth secrets (L-14)", () => {
+    const entry = logOnce({
+      response: { headers: { "set-cookie": "session=1", cookie: "a=b" } },
+      provider: { auth: { clientSecret: "cs", apiKey: "ak", access_token: "at" } },
+      secret: "root-secret",
+    });
+
+    const serialized = JSON.stringify(entry);
+    for (const value of ["session=1", "a=b", "cs", "ak", "at", "root-secret"])
+      expect(serialized).not.toContain(`"${value}"`);
+  });
+
+  it("serializes errors logged under error instead of printing {} (L-14)", () => {
+    const entry = logOnce({ event: "x.failed", error: new Error("database timeout") });
+
+    expect(entry.error).toMatchObject({ type: "Error", message: "database timeout" });
   });
 
   it("keeps censoring secrets", () => {

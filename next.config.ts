@@ -8,6 +8,8 @@ const imageKitPublicUrl = process.env.IMAGEKIT_URL_ENDPOINT ? new URL(process.en
 const nextConfig: NextConfig = {
   ...(process.env.NEXT_TEST_DIST_DIR ? { distDir: process.env.NEXT_TEST_DIST_DIR } : {}),
   typedRoutes: true,
+  // No "X-Powered-By: Next.js": it only helps fingerprinting (L-22).
+  poweredByHeader: false,
   async headers() {
     return [
       { source: "/:path*", headers: buildSecurityHeaders({ development: process.env.NODE_ENV !== "production" }) },
