@@ -2,7 +2,9 @@ import { afterEach, expect, it, vi } from "vitest";
 import { createHmac } from "node:crypto";
 
 const sendEmail = vi.hoisted(() => vi.fn());
+const logInfo = vi.hoisted(() => vi.fn());
 vi.mock("server-only", () => ({}));
+vi.mock("@/lib/logger", () => ({ logger: { info: logInfo, error: vi.fn(), warn: vi.fn() } }));
 vi.mock("resend", () => ({
   Resend: class {
     emails = { send: sendEmail };
@@ -22,13 +24,14 @@ vi.mock("@/config/env", () => ({
 }));
 
 import { ImageKitStorageProvider } from "./storage/imagekit-storage-provider";
-import { ResendEmailProvider } from "./email/resend-email-provider";
+import { ResendEmailProvider, SKIPPED_RESERVED_DOMAIN_ID } from "./email/resend-email-provider";
 import { MelhorEnvioProvider } from "./shipping/melhor-envio-provider";
 import { MercadoPagoProvider } from "./payment/mercado-pago-provider";
 
 afterEach(() => {
   vi.unstubAllGlobals();
   sendEmail.mockReset();
+  logInfo.mockReset();
 });
 it.each([
   ["refunded", "refunded", "REFUNDED"],
@@ -172,7 +175,7 @@ it("deletes only an ImageKit asset with the exact storage path", async () => {
 it("sends a transactional email through the configured provider", async () => {
   sendEmail.mockResolvedValue({ data: { id: "email-test-id" }, error: null });
   const result = await new ResendEmailProvider().send({
-    to: "buyer@example.test",
+    to: "buyer@cliente-moto.com.br",
     subject: "Pedido de teste",
     react: "Conteúdo de teste",
     idempotencyKey: "notification-test",
@@ -181,11 +184,35 @@ it("sends a transactional email through the configured provider", async () => {
   expect(sendEmail).toHaveBeenCalledWith(
     expect.objectContaining({
       from: "O Moto Shop <teste@example.com>",
-      to: "buyer@example.test",
+      to: ["buyer@cliente-moto.com.br"],
       subject: "Pedido de teste",
     }),
     { idempotencyKey: "notification-test" },
   );
+});
+
+it.each(["qa-123@example.test", "review.cliente@example.test", "someone@example.com", "a@x.invalid"])(
+  "never sends to the reserved test address %s",
+  async (to) => {
+    const result = await new ResendEmailProvider().send({ to, subject: "Confirme seu e-mail", react: "Conteúdo" });
+
+    expect(result).toEqual({ id: SKIPPED_RESERVED_DOMAIN_ID });
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(logInfo).toHaveBeenCalledWith({ event: "email.reserved_domain_skipped", skipped: 1, remaining: 0 });
+    expect(JSON.stringify(logInfo.mock.calls)).not.toContain(to);
+  },
+);
+
+it("drops reserved addresses and still delivers to the real ones", async () => {
+  sendEmail.mockResolvedValue({ data: { id: "email-mixed" }, error: null });
+
+  await new ResendEmailProvider().send({
+    to: ["buyer@cliente-moto.com.br", "qa-9@example.test"],
+    subject: "Pedido de teste",
+    react: "Conteúdo",
+  });
+
+  expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: ["buyer@cliente-moto.com.br"] }), undefined);
 });
 
 it("maps a Melhor Envio sandbox quote into cents without exposing provider details to checkout", async () => {

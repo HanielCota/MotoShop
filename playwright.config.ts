@@ -56,6 +56,7 @@ export default defineConfig({
             MELHOR_ENVIO_CLIENT_SECRET: "",
             MELHOR_ENVIO_REDIRECT_URI: "",
             MELHOR_ENVIO_TOKEN_ENCRYPTION_KEY: "",
+            // Never send real e-mail from E2E; the provider also skips reserved test domains.
             RESEND_API_KEY: "",
             EMAIL_FROM: "",
           },
