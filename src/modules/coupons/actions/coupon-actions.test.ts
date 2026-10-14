@@ -29,6 +29,8 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+const rateLimit = vi.hoisted(() => ({ assertRateLimit: vi.fn() }));
+vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: rateLimit.assertRateLimit }));
 vi.mock("@/lib/database", () => ({ db: { $transaction: mocks.transaction } }));
 vi.mock("../application/set-coupon-participation", () => ({ setCouponParticipation: mocks.setParticipation }));
 vi.mock("@/modules/auth/application/authorization", () => ({
@@ -321,6 +323,42 @@ describe("coupon product page opt-in", () => {
 
     await expect(setSellerCouponProductPageAction(couponId, true)).rejects.toThrow("FORBIDDEN");
 
+    expect(mocks.transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("coupon code oracle (L-10)", () => {
+  function codeForm(code: string) {
+    const form = new FormData();
+    form.set("code", code);
+    form.set("discountType", "PERCENTAGE");
+    form.set("discountPercent", "10");
+    return form;
+  }
+
+  it("answers a taken code with a neutral message that does not reveal its owner", async () => {
+    const { Prisma } = await import("@/generated/prisma/client");
+    mocks.couponCreate.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("duplicate", { code: "P2002", clientVersion: "test" }),
+    );
+
+    const result = await createSellerCouponAction({}, codeForm("BLACKFRIDAY"));
+
+    expect(result.error).toBe("Este código não está disponível. Escolha outro.");
+  });
+
+  it("limits coupon creation per store before touching the database", async () => {
+    const { ApplicationError } = await import("@/shared/errors/application-error");
+    rateLimit.assertRateLimit.mockRejectedValueOnce(
+      new ApplicationError({ code: "CONFLICT", statusCode: 429, message: "Muitas tentativas em pouco tempo." }),
+    );
+
+    const result = await createSellerCouponAction({}, codeForm("TESTE10"));
+
+    expect(result.error).toBe("Muitas tentativas em pouco tempo.");
+    expect(rateLimit.assertRateLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ key: "seller-coupon-create:seller-a" }),
+    );
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
 });

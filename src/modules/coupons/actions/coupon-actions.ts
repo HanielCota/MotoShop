@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/lib/database";
 import { requireAdminAccess, requireSellerAccess } from "@/modules/auth/application/authorization";
 import { toActionError } from "@/shared/errors/action-error";
+import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 import { createCoupon, type CouponOwner } from "../application/create-coupon";
 import { setCouponParticipation } from "../application/set-coupon-participation";
@@ -51,6 +52,10 @@ const couponSchema = z.object({
 
 export type CouponActionState = { error?: string; success?: string };
 
+const COUPON_CODE_UNAVAILABLE_MESSAGE = "Este código não está disponível. Escolha outro.";
+// Limita tentativas de criar cupom por loja para que o código único não sirva de oráculo (L-10).
+const SELLER_COUPON_CREATION_LIMIT = { windowSeconds: 60 * 60, max: 20 };
+
 // "Campanha com adesão" (paid by each seller that joins) is the default; "Cupom Moto Shop" is paid by the marketplace.
 const marketplaceCouponKindSchema = z
   .enum(["SELLER_FUNDED_CAMPAIGN", "MARKETPLACE"], { error: "Escolha quem paga o desconto do cupom." })
@@ -76,6 +81,11 @@ export async function createSellerCouponAction(
   formData: FormData,
 ): Promise<CouponActionState> {
   const context = await requireSellerAccess("COUPON_MANAGE");
+  try {
+    await assertRateLimit({ key: `seller-coupon-create:${context.seller.id}`, ...SELLER_COUPON_CREATION_LIMIT });
+  } catch (error) {
+    return { error: toActionError(error, "createSellerCouponAction").message };
+  }
   return createCouponForOwner(formData, {
     ownerType: "SELLER",
     fundedBy: "SELLER",
@@ -227,7 +237,8 @@ async function createCouponForOwner(formData: FormData, owner: CouponOwner): Pro
     return { success: `Cupom ${parsed.data.code} criado.` };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return { error: "Já existe um cupom com este código." };
+      // Mensagem neutra (L-10): não confirma se o código pertence a outra loja ou ao Moto Shop.
+      return { error: COUPON_CODE_UNAVAILABLE_MESSAGE };
     }
     return { error: toActionError(error, "createCouponForOwner").message };
   }
