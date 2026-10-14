@@ -14,6 +14,7 @@ import {
   assertSignInAccountNotLocked,
   recordSignInAccountOutcome,
 } from "@/modules/auth/infrastructure/sign-in-account-rate-limit";
+import { withoutSessionToken } from "@/modules/auth/infrastructure/session-response";
 import { consumeRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 export const authEmailConfigured = Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
@@ -84,9 +85,11 @@ export const auth = betterAuth({
   hooks: {
     // Per-account limit on top of the per-IP rule above: only failures count (see sign-in-account-rate-limit.ts).
     before: createAuthMiddleware(async (context) => assertSignInAccountNotLocked(context.path, context.body)),
-    after: createAuthMiddleware(async (context) =>
-      recordSignInAccountOutcome(context.path, context.body, context.context.returned),
-    ),
+    after: createAuthMiddleware(async (context) => {
+      await recordSignInAccountOutcome(context.path, context.body, context.context.returned);
+      // A replaced value becomes the response; undefined keeps the original one.
+      return withoutSessionToken(context.path, context.context.returned);
+    }),
   },
   databaseHooks: {
     user: {
