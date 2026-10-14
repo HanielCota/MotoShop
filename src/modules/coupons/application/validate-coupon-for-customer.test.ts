@@ -28,21 +28,53 @@ beforeEach(() => {
   mocks.findUnique.mockResolvedValue(coupon);
 });
 
-it("matches previous redemptions case-insensitively on the normalized e-mail", () => {
-  expect(couponCustomerUsageWhere("coupon-1", "  Buyer@Example.TEST ", "user-1")).toEqual({
+it("matches the canonical e-mail, the legacy e-mail, the user and the order CPF (M-07)", () => {
+  expect(
+    couponCustomerUsageWhere("coupon-1", {
+      email: "  Bu.yer+promo@GMAIL.com ",
+      userId: "user-1",
+      taxId: "52998224725",
+    }),
+  ).toEqual({
     couponId: "coupon-1",
-    OR: [{ customerEmailSnapshot: { equals: "buyer@example.test", mode: "insensitive" } }, { userId: "user-1" }],
+    OR: [
+      { customerEmailKey: "buyer@gmail.com" },
+      { customerEmailSnapshot: { equals: "bu.yer+promo@gmail.com", mode: "insensitive" } },
+      { userId: "user-1" },
+      { order: { customerTaxId: "52998224725" } },
+    ],
   });
 });
 
 it("blocks a second use by the same customer typed with different casing", async () => {
   mocks.count.mockResolvedValue(1);
-  await expect(findActiveCoupon("PROMO", "BUYER@example.test", undefined, now)).rejects.toThrow("limite");
+  await expect(findActiveCoupon("PROMO", { email: "BUYER@example.test" }, now)).rejects.toThrow("limite");
   expect(mocks.count).toHaveBeenCalledWith({
     where: {
       couponId: "coupon-1",
-      OR: [{ customerEmailSnapshot: { equals: "buyer@example.test", mode: "insensitive" } }],
+      OR: [
+        { customerEmailKey: "buyer@example.test" },
+        { customerEmailSnapshot: { equals: "buyer@example.test", mode: "insensitive" } },
+      ],
     },
+  });
+});
+
+it.each([
+  ["a +tag", { email: "buyer+2@example.test" }, { customerEmailKey: "buyer@example.test" }],
+  ["Gmail dots", { email: "b.u.y.e.r@gmail.com" }, { customerEmailKey: "buyer@gmail.com" }],
+  [
+    "the same CPF with another e-mail",
+    { email: "other@example.test", taxId: "52998224725" },
+    { order: { customerTaxId: "52998224725" } },
+  ],
+])("looks up %s as the same customer (M-07)", async (_case, customer, expectedMatch) => {
+  mocks.count.mockResolvedValue(0);
+
+  await findActiveCoupon("PROMO", customer, now);
+
+  expect(mocks.count).toHaveBeenCalledWith({
+    where: expect.objectContaining({ couponId: "coupon-1", OR: expect.arrayContaining([expectedMatch]) }),
   });
 });
 
