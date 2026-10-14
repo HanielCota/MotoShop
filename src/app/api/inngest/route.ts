@@ -9,6 +9,7 @@ import { reconcileMercadoPagoWebhook } from "@/modules/payments/workflows/mercad
 import { sendOrderPaymentNotification } from "@/modules/notifications/workflows/order-payment-notification-workflow";
 import { sendSellerOrderFulfillmentNotification } from "@/modules/notifications/workflows/seller-order-fulfillment-notification-workflow";
 import { dispatchPendingOutboxEventsWorkflow } from "@/modules/outbox/workflows/dispatch-outbox-workflow";
+import { purgeExpiredRateLimitsWorkflow } from "@/shared/rate-limit/purge-rate-limits-workflow";
 
 const handlers = serve({
   client: inngest,
@@ -19,6 +20,7 @@ const handlers = serve({
     dispatchPendingOutboxEventsWorkflow,
     schedulePaymentRecovery,
     recoverPendingPayment,
+    purgeExpiredRateLimitsWorkflow,
   ],
 });
 
