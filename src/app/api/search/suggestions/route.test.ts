@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ list: vi.fn(), logError: vi.fn() }));
+const mocks = vi.hoisted(() => ({ list: vi.fn(), logError: vi.fn(), consume: vi.fn() }));
 
 vi.mock("@/lib/logger", () => ({ logger: { error: mocks.logError } }));
+vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ consumeRateLimit: mocks.consume }));
 vi.mock("@/modules/products/queries/search-suggestions", () => ({ listSearchSuggestions: mocks.list }));
 
 import { NextRequest } from "next/server";
@@ -26,6 +27,28 @@ describe("GET /api/search/suggestions", () => {
   beforeEach(() => {
     mocks.list.mockReset();
     mocks.logError.mockReset();
+    mocks.consume.mockReset();
+    mocks.consume.mockResolvedValue({ allowed: true, retryAfter: null });
+  });
+
+  it("limits suggestions per client IP before running the search (L-03)", async () => {
+    mocks.consume.mockResolvedValue({ allowed: false, retryAfter: 42 });
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/search/suggestions?q=capa", {
+        headers: { "x-vercel-forwarded-for": "203.0.113.7" },
+      }),
+    );
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("42");
+    expect(await response.json()).toEqual({ suggestions: [] });
+    expect(mocks.consume).toHaveBeenCalledWith({
+      key: "search-suggestions:ip:203.0.113.7",
+      windowSeconds: 60,
+      max: 60,
+    });
+    expect(mocks.list).not.toHaveBeenCalled();
   });
 
   it("returns the suggestions found for a trimmed query", async () => {
