@@ -23,6 +23,6 @@ it("does not claim an order was created based only on a query parameter", async 
   expect(screen.getByText("MS-202609-ABC12345")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Ver pagamento e acompanhar pedido" })).toHaveAttribute(
     "href",
-    "/orders/MS-202609-ABC12345?accessToken=guest-token",
+    "/orders/MS-202609-ABC12345/access?token=guest-token",
   );
 });

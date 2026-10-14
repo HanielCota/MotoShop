@@ -9,7 +9,7 @@ import { claimGuestOrderAction, type ClaimGuestOrderState } from "@/modules/orde
 
 const initialState: ClaimGuestOrderState = {};
 
-export function ClaimGuestOrderForm({ orderNumber, accessToken }: { orderNumber: string; accessToken: string }) {
+export function ClaimGuestOrderForm({ orderNumber }: { orderNumber: string }) {
   const router = useRouter();
   const [state, action, pending] = useActionState(claimGuestOrderAction, initialState);
 
@@ -23,7 +23,6 @@ export function ClaimGuestOrderForm({ orderNumber, accessToken }: { orderNumber:
       className="border-info/30 bg-info-surface flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"
     >
       <input type="hidden" name="orderNumber" value={orderNumber} />
-      <input type="hidden" name="accessToken" value={accessToken} />
       <div className="min-w-0 flex-1 space-y-1">
         <p className="text-foreground font-medium">Salve este pedido na sua conta</p>
         <p className="text-muted-foreground text-sm">

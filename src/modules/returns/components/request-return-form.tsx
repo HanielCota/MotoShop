@@ -15,19 +15,12 @@ type RequestReturnFormProps = {
   orderItemId: string;
   maxQuantity: number;
   idempotencyKey: string;
-  accessToken?: string;
 };
 
 const initialState: ReturnActionState = {};
 const inputClassName = "h-9";
 
-export function RequestReturnForm({
-  orderNumber,
-  orderItemId,
-  maxQuantity,
-  idempotencyKey,
-  accessToken,
-}: RequestReturnFormProps) {
+export function RequestReturnForm({ orderNumber, orderItemId, maxQuantity, idempotencyKey }: RequestReturnFormProps) {
   const [state, action, pending] = useActionState(async (previousState: ReturnActionState, formData: FormData) => {
     void previousState;
     const input = {
@@ -37,7 +30,6 @@ export function RequestReturnForm({
       reason: String(formData.get("reason") ?? ""),
       customerMessage: String(formData.get("customerMessage") ?? "").trim(),
       idempotencyKey,
-      ...(accessToken ? { accessToken } : {}),
     };
     return requestReturnAction(input);
   }, initialState);

@@ -16,15 +16,7 @@ const reasons = [
   ["OTHER", "Outro motivo"],
 ] as const;
 
-export function RequestDisputeForm({
-  orderNumber,
-  sellerOrderId,
-  accessToken,
-}: {
-  orderNumber: string;
-  sellerOrderId: string;
-  accessToken?: string;
-}) {
+export function RequestDisputeForm({ orderNumber, sellerOrderId }: { orderNumber: string; sellerOrderId: string }) {
   const [reason, setReason] = useState<(typeof reasons)[number][0]>(reasons[0][0]);
   const [description, setDescription] = useState("");
   const [feedback, setFeedback] = useState<DisputeActionState>({});
@@ -39,7 +31,6 @@ export function RequestDisputeForm({
         reason,
         description,
         idempotencyKey: crypto.randomUUID(),
-        ...(accessToken ? { accessToken } : {}),
       });
       setFeedback(result);
       if (result.success) setDescription("");
