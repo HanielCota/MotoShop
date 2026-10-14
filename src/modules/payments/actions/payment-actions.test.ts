@@ -69,6 +69,7 @@ it("uses the authenticated user scope for payments awaiting capture", async () =
   expect(recoverPayment).toHaveBeenCalledWith("local");
 });
 it("rate limits manual refreshes per order number before querying the gateway", async () => {
+  vi.mocked(getCustomerOrder).mockResolvedValue({ payments: [{ id: "local", status: "PENDING" }] } as never);
   vi.mocked(assertRateLimit).mockRejectedValue(
     new ApplicationError({ code: "CONFLICT", statusCode: 429, message: "Muitas tentativas em pouco tempo." }),
   );
@@ -76,7 +77,17 @@ it("rate limits manual refreshes per order number before querying the gateway", 
     error: "Muitas tentativas em pouco tempo.",
   });
   expect(assertRateLimit).toHaveBeenCalledWith({ key: "payment-refresh:MS-123", windowSeconds: 60, max: 3 });
-  expect(getCustomerOrder).not.toHaveBeenCalled();
+  expect(recoverPayment).not.toHaveBeenCalled();
+});
+
+it("does not spend the order's refresh quota when the caller cannot see the order (L-02)", async () => {
+  // Like the real resolver, any non-empty token becomes a candidate identity; only the order
+  // lookup proves access.
+  vi.mocked(resolveCustomerOrderIdentity).mockResolvedValue({ guestAccessTokenHash: "forged-hash" });
+  vi.mocked(getCustomerOrder).mockResolvedValue(null);
+
+  expect(await refreshPendingPaymentAction({}, form("forged-token"))).toHaveProperty("error");
+  expect(assertRateLimit).not.toHaveBeenCalled();
   expect(recoverPayment).not.toHaveBeenCalled();
 });
 it("tells the customer when a never-sent charge was released", async () => {

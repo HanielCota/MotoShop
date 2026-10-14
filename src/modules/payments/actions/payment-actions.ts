@@ -40,15 +40,17 @@ export async function refreshPendingPaymentAction(
       throw new ApplicationError({ code: "UNAUTHORIZED", message: "Acesse o pedido pelo link seguro do checkout." });
     }
 
-    // Each refresh may query the gateway: cap it per order (shared by every viewer of the order).
+    const order = await getCustomerOrder(parsed.data.orderNumber, identity);
+    const payment = order?.payments[0];
+    if (!payment) throw new ApplicationError({ code: "NOT_FOUND", message: "Pagamento não encontrado." });
+
+    // Each refresh may query the gateway: cap it per order, but only after the order was found for
+    // this identity, so an anonymous caller cannot burn the owner's quota (L-02).
     await assertRateLimit({
       key: `payment-refresh:${parsed.data.orderNumber.toUpperCase()}`,
       windowSeconds: 60,
       max: 3,
     });
-    const order = await getCustomerOrder(parsed.data.orderNumber, identity);
-    const payment = order?.payments[0];
-    if (!payment) throw new ApplicationError({ code: "NOT_FOUND", message: "Pagamento não encontrado." });
     if (!["PENDING", "PROCESSING", "AUTHORIZED"].includes(payment.status)) {
       return { success: `O pagamento já está ${payment.status.toLowerCase()}.` };
     }
