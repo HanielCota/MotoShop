@@ -8,6 +8,7 @@ import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { env } from "@/config/env";
 import { db } from "@/lib/database";
 import { sendAuthEmail, sendExistingAccountEmail } from "@/modules/auth/application/send-auth-email";
+import { secureAdminAccountAfterVerification } from "@/modules/auth/application/secure-admin-account";
 import { logger } from "@/lib/logger";
 import { parseAuthUserName } from "@/modules/auth/domain/auth-user-name";
 import {
@@ -66,6 +67,9 @@ export const auth = betterAuth({
             url: string;
             token: string;
           }) => sendAuthEmail({ kind: "verify", to: user.email, url, token }),
+          // A verified admin e-mail must set its password through reset (L-19).
+          afterEmailVerification: async (user: { id: string; email: string }) =>
+            secureAdminAccountAfterVerification(user),
         },
       }
     : {}),
