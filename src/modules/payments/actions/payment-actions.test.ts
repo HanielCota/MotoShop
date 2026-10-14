@@ -6,6 +6,7 @@ vi.mock("@/modules/auth/application/authorization", () => ({ getCurrentSession: 
 vi.mock("@/modules/orders/application/resolve-customer-order-access", () => ({
   resolveCustomerOrderIdentity: vi.fn(),
 }));
+vi.mock("@/modules/orders/infrastructure/guest-order-cookie", () => ({ readGuestOrderCookie: vi.fn() }));
 vi.mock("@/modules/returns/queries/customer-orders", () => ({ getCustomerOrder: vi.fn() }));
 vi.mock("../application/recover-payment", () => ({ recoverPayment: vi.fn() }));
 vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
@@ -14,13 +15,15 @@ import { ApplicationError } from "@/shared/errors/application-error";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getCustomerOrder } from "@/modules/returns/queries/customer-orders";
 import { resolveCustomerOrderIdentity } from "@/modules/orders/application/resolve-customer-order-access";
+import { readGuestOrderCookie } from "@/modules/orders/infrastructure/guest-order-cookie";
 import { recoverPayment } from "../application/recover-payment";
 import { refreshPendingPaymentAction } from "./payment-actions";
 
+/** The guest token now arrives in the order cookie, not in the form. */
 function form(token?: string) {
+  vi.mocked(readGuestOrderCookie).mockResolvedValue(token);
   const data = new FormData();
   data.set("orderNumber", "MS-123");
-  if (token) data.set("accessToken", token);
   return data;
 }
 beforeEach(() => {

@@ -7,13 +7,12 @@ import { refreshPendingPaymentAction, type PaymentActionState } from "../actions
 
 const initialState: PaymentActionState = {};
 
-export function PaymentRefreshForm({ orderNumber, accessToken }: { orderNumber: string; accessToken?: string }) {
+export function PaymentRefreshForm({ orderNumber }: { orderNumber: string }) {
   const [state, formAction, pending] = useActionState(refreshPendingPaymentAction, initialState);
 
   return (
     <form action={formAction} className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
       <input type="hidden" name="orderNumber" value={orderNumber} />
-      {accessToken ? <input type="hidden" name="accessToken" value={accessToken} /> : null}
       <Button variant="outline" type="submit" disabled={pending}>
         {pending ? "Consultando..." : "Atualizar status"}
       </Button>

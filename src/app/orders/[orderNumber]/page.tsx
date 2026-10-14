@@ -44,7 +44,6 @@ export default async function CustomerOrderPage({
   if (!order) notFound();
 
   const isOwner = Boolean(session && order.userId === session.user.id);
-  const tokenProps = accessToken ? { accessToken } : {};
   const canClaim =
     session && accessToken && !order.userId && session.user.email.toLowerCase() === order.customerEmail.toLowerCase();
 
@@ -60,9 +59,7 @@ export default async function CustomerOrderPage({
             {...(session ? { back: { href: "/orders", label: "Meus pedidos" } } : {})}
           />
 
-          {canClaim && accessToken ? (
-            <ClaimGuestOrderForm orderNumber={order.orderNumber} accessToken={accessToken} />
-          ) : null}
+          {canClaim ? <ClaimGuestOrderForm orderNumber={order.orderNumber} /> : null}
 
           <OrderSummary order={order} />
 
@@ -78,12 +75,11 @@ export default async function CustomerOrderPage({
                 sellerOrder={sellerOrder}
                 canReview={isOwner}
                 sellerAlreadyReviewed={order.sellerReviews.some((review) => review.sellerId === sellerOrder.sellerId)}
-                {...tokenProps}
               />
             ))}
           </section>
 
-          <PaymentSection orderNumber={order.orderNumber} payments={order.payments} {...tokenProps} />
+          <PaymentSection orderNumber={order.orderNumber} payments={order.payments} />
         </div>
       </div>
     </main>

@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { resolveCustomerOrderIdentity } from "@/modules/orders/application/resolve-customer-order-access";
+import { readGuestOrderCookie } from "@/modules/orders/infrastructure/guest-order-cookie";
 import { toActionError } from "@/shared/errors/action-error";
 
 import { requestReturn, type ReturnRequestResult } from "../application/request-return";
@@ -16,7 +17,6 @@ const requestReturnSchema = z.object({
   reason: z.enum(["DAMAGED", "WRONG_ITEM", "NOT_AS_DESCRIBED", "REGRET", "OTHER"]),
   customerMessage: z.string().trim().max(1000).optional(),
   idempotencyKey: z.uuid(),
-  accessToken: z.string().trim().min(1).optional(),
 });
 
 export type ReturnActionState = {
@@ -31,10 +31,12 @@ export async function requestReturnAction(input: unknown): Promise<ReturnActionS
 
   try {
     const session = await getCurrentSession();
-    if (!session && !parsed.data.accessToken) return { error: "Acesse o pedido pelo link seguro do checkout." };
+    // The guest token comes from the order's HttpOnly cookie, never from the form.
+    const accessToken = await readGuestOrderCookie();
+    if (!session && !accessToken) return { error: "Acesse o pedido pelo link seguro do checkout." };
     const identity = await resolveCustomerOrderIdentity({
       orderNumber: parsed.data.orderNumber,
-      accessToken: parsed.data.accessToken,
+      accessToken,
       userId: session?.user.id,
     });
     if (!identity) return { error: "Pedido não encontrado." };

@@ -33,6 +33,11 @@ export async function setGuestOrderCookie(orderNumber: string, token: string) {
   cookieStore.set(GUEST_ORDER_COOKIE, token, guestOrderCookieOptions(orderNumber));
 }
 
+export async function clearGuestOrderCookie(orderNumber: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(GUEST_ORDER_COOKIE, "", { ...guestOrderCookieOptions(orderNumber), maxAge: 0 });
+}
+
 /** Only the cookie of the order whose page is being requested reaches the server. */
 export async function readGuestOrderCookie(): Promise<string | undefined> {
   const cookieStore = await cookies();

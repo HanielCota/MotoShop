@@ -23,7 +23,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { orderNumber } = await params;
   const response = NextResponse.redirect(new URL(guestOrderPath(orderNumber), getApplicationBaseUrl()), 303);
   response.headers.set("Cache-Control", "no-store");
-  response.headers.set("Referrer-Policy", "no-referrer");
 
   const parsed = accessInputSchema.safeParse({ orderNumber, token: request.nextUrl.searchParams.get("token") ?? "" });
   if (!parsed.success) return response;
