@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getCartIdentity } from "@/modules/cart/infrastructure/cart-access";
@@ -8,8 +9,10 @@ import { setGuestOrderCookie } from "@/modules/orders/infrastructure/guest-order
 import { ApplicationError } from "@/shared/errors/application-error";
 import { toActionError } from "@/shared/errors/action-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
+import { getClientIp } from "@/shared/request/client-ip";
 
 import { executeCheckout, type CheckoutResult } from "../application/checkout-service";
+import { assertPendingOrderCap } from "../application/pending-order-cap";
 import { checkoutSchema } from "../schemas/checkout";
 
 /**
@@ -56,6 +59,10 @@ export async function createCheckoutAction(
       windowSeconds: 60,
       max: 10,
     });
+    // A new cookie gives a new quota above, so the client IP and the CPF are limited too (M-06).
+    await assertRateLimit({ key: `checkout:ip:${getClientIp(await headers())}`, windowSeconds: 60, max: 10 });
+    await assertRateLimit({ key: `checkout:tax-id:${parsed.data.customerTaxId}`, windowSeconds: 600, max: 5 });
+    await assertPendingOrderCap(parsed.data.customerTaxId);
     const session = await getCurrentSession();
     const result: CheckoutResult = await executeCheckout({ data: parsed.data, identity, session });
     revalidatePath("/cart");

@@ -1,6 +1,8 @@
 import { beforeEach, expect, it, vi } from "vitest";
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("server-only", () => ({}));
+vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-vercel-forwarded-for": "203.0.113.7" }) }));
+vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
 const mocks = vi.hoisted(() => {
   const tx = {
     $queryRaw: vi.fn(),
@@ -97,3 +99,11 @@ function defined<T>(value: T | null | undefined): T {
   if (value === null || value === undefined) throw new Error("Expected value to be defined");
   return value;
 }
+
+it("limits adding to the cart per client IP, since each cookie-less call opens a new cart (M-06)", async () => {
+  const { assertRateLimit } = await import("@/shared/rate-limit/consume-rate-limit");
+
+  await addToCartAction("cm123456789012345678901234", 1);
+
+  expect(assertRateLimit).toHaveBeenCalledWith({ key: "cart-add:ip:203.0.113.7", windowSeconds: 60, max: 60 });
+});
