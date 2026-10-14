@@ -10,6 +10,7 @@ export type RequestRefundInput = {
   orderId: string;
   amountInCents: number;
   reason: string;
+  sellerOrderId: string;
 };
 
 export type RequestRefundOutcome =
@@ -45,6 +46,7 @@ export async function refundPostSaleRequest(input: RequestRefundInput): Promise<
     amountInCents: input.amountInCents,
     idempotencyKey: plan.idempotencyKey,
     reason: input.reason,
+    sellerOrderId: input.sellerOrderId,
   });
   return {
     kind: "REFUNDED",

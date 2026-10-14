@@ -145,6 +145,7 @@ async function refundCancellation(request: CancellationForReview): Promise<Reque
     orderId: request.orderId,
     amountInCents: request.amountInCents,
     reason: `Cancelamento do seller order ${request.sellerOrderId}`,
+    sellerOrderId: request.sellerOrderId,
   });
 }
 

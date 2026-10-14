@@ -9,7 +9,13 @@ vi.mock("@/lib/database", () => ({
 
 import { refundAuditMetadata, refundPostSaleRequest } from "./refund-request";
 
-const input = { baseKey: "cancellation-refund:req", orderId: "order-1", amountInCents: 500, reason: "Cancelamento" };
+const input = {
+  baseKey: "cancellation-refund:req",
+  orderId: "order-1",
+  amountInCents: 500,
+  reason: "Cancelamento",
+  sellerOrderId: "seller-order-1",
+};
 
 beforeEach(() => {
   vi.resetAllMocks();
@@ -31,6 +37,7 @@ describe("refundPostSaleRequest", () => {
       amountInCents: 500,
       idempotencyKey: "cancellation-refund:req",
       reason: "Cancelamento",
+      sellerOrderId: "seller-order-1",
     });
   });
 

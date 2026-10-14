@@ -46,6 +46,7 @@ export async function refundReturnRequest(input: RefundReturnInput): Promise<Ref
           orderId: request.orderId,
           amountInCents: request.amountInCents,
           reason: `Reembolso da devolução ${request.id}`,
+          sellerOrderId: request.sellerOrderId,
         })
       : null;
 
