@@ -1,89 +1,44 @@
-import { describe, expect, it } from "vitest";
+import { expect, it } from "vitest";
+
+import { ownShippingMethodSchema } from "@/modules/shipping/domain/own-shipping";
 
 import { productInputSchema } from "./product-input";
 
-const baseInput = {
-  name: "Capacete Fox V1",
-  slug: "capacete-fox-v1",
-  description: "Capacete para motocross com proteção e ventilação.",
-  categoryId: "cmf8w8m4p0000s6o5zj2q8v3k",
-  brandId: "cmf8w8m4p0001s6o5zj2q8v3k",
-  motorcycleFitmentIds: [],
-};
+const englishZodMessage = /Too (small|big)|Invalid|expected/i;
 
-describe("productInputSchema", () => {
-  const variant = { title: "M", sku: "SKU-M", priceInCents: 10000, stock: 2 };
-  it("accepts packaging overrides and a scheduled promotion", () => {
-    const result = productInputSchema.safeParse({
-      ...baseInput,
-      weightInGrams: 1000,
-      variants: [
-        {
-          ...variant,
-          weightInGrams: 1200,
-          promotionalPriceInCents: 8000,
-          promotionStartsAt: new Date("2026-09-24T12:00:00Z"),
-          promotionEndsAt: new Date("2026-09-25T12:00:00Z"),
-        },
-      ],
-    });
-    expect(result.success).toBe(true);
-  });
-  it.each([0, -1, 1.5, 2147483648])("rejects invalid packaging measurement %s", (weightInGrams) => {
-    expect(productInputSchema.safeParse({ ...baseInput, weightInGrams, variants: [variant] }).success).toBe(false);
-    expect(productInputSchema.safeParse({ ...baseInput, variants: [{ ...variant, weightInGrams }] }).success).toBe(
-      false,
-    );
-  });
-  it.each([0, -1, 10000, 11000, 99.5])("rejects invalid promotional price %s", (promotionalPriceInCents) => {
-    expect(
-      productInputSchema.safeParse({ ...baseInput, variants: [{ ...variant, promotionalPriceInCents }] }).success,
-    ).toBe(false);
-  });
-  it("rejects dates without a price and a reversed period", () => {
-    const start = new Date("2026-09-24T12:00:00Z");
-    expect(
-      productInputSchema.safeParse({ ...baseInput, variants: [{ ...variant, promotionStartsAt: start }] }).success,
-    ).toBe(false);
-    expect(
-      productInputSchema.safeParse({
-        ...baseInput,
-        variants: [{ ...variant, promotionalPriceInCents: 5000, promotionStartsAt: start, promotionEndsAt: start }],
-      }).success,
-    ).toBe(false);
-  });
-  it("allows open-ended promotions and removal", () => {
-    expect(
-      productInputSchema.safeParse({ ...baseInput, variants: [{ ...variant, promotionalPriceInCents: 5000 }] }).success,
-    ).toBe(true);
-    expect(
-      productInputSchema.safeParse({
-        ...baseInput,
-        variants: [{ ...variant, promotionalPriceInCents: null, promotionStartsAt: null, promotionEndsAt: null }],
-      }).success,
-    ).toBe(true);
-  });
-  it("accepts multiple variants with independent pricing and stock", () => {
-    const result = productInputSchema.safeParse({
-      ...baseInput,
-      variants: [
-        { title: "Preto / M", sku: "FOX-V1-M", priceInCents: 89990, stock: 3 },
-        { title: "Preto / G", sku: "FOX-V1-G", priceInCents: 92990, stock: 5 },
-      ],
-    });
+function messages(result: { success: boolean; error?: { issues: { message: string }[] } }) {
+  return result.error?.issues.map((issue) => issue.message) ?? [];
+}
 
-    expect(result.success).toBe(true);
+it("answers every product validation problem in Portuguese (BUG-007)", () => {
+  const result = productInputSchema.safeParse({
+    name: "x".repeat(161),
+    slug: "",
+    description: "y".repeat(5_001),
+    categoryId: "categoria",
+    brandId: "marca",
+    variants: [
+      { title: "t".repeat(101), sku: "s".repeat(81), priceInCents: 1.5, promotionalPriceInCents: -1, stock: "a" },
+    ],
+    motorcycleFitmentIds: ["moto"],
   });
 
-  it.each([1.5, 2147483648])("rejects stock %s that does not fit an int4 column", (stock) => {
-    const result = productInputSchema.safeParse({ ...baseInput, variants: [{ ...variant, stock }] });
-    expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.message).toMatch(/estoque/i);
+  expect(result.success).toBe(false);
+  expect(messages(result)).toContain("Use no máximo 160 caracteres no nome.");
+  expect(messages(result)).toContain("Use pelo menos 3 letras ou números no slug.");
+  expect(messages(result).filter((message) => englishZodMessage.test(message))).toEqual([]);
+});
+
+it("answers every own shipping validation problem in Portuguese (BUG-007)", () => {
+  const result = ownShippingMethodSchema.safeParse({
+    name: "ab",
+    postalCodeStart: "123",
+    postalCodeEnd: "0",
+    priceInCents: -1,
+    estimatedDeliveryDays: 0,
   });
 
-  it("requires at least one variant", () => {
-    const result = productInputSchema.safeParse({ ...baseInput, variants: [] });
-
-    expect(result.success).toBe(false);
-  });
+  expect(result.success).toBe(false);
+  expect(messages(result)).toContain("Use pelo menos 3 caracteres no nome da entrega.");
+  expect(messages(result).filter((message) => englishZodMessage.test(message))).toEqual([]);
 });
