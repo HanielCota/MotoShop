@@ -24,6 +24,7 @@
  * Uso: node node_modules/tsx/dist/cli.mjs scripts/seed-review-data.ts
  */
 import { config } from "dotenv";
+import { requireScriptDatabaseUrl } from "./database-guard";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { hashPassword } from "better-auth/crypto";
 import { createHash, randomBytes } from "node:crypto";
@@ -46,8 +47,7 @@ const PUBLISH_STORES = process.env.REVIEW_PUBLISH_STORES === "true";
 
 config({ path: ".env.local", quiet: true });
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error("DATABASE_URL is required.");
+const databaseUrl = requireScriptDatabaseUrl(process.env, "db:seed:review");
 
 const db = new PrismaClient({ adapter: new PrismaNeon({ connectionString: databaseUrl }) });
 
@@ -2123,7 +2123,7 @@ async function main() {
   console.log("Senha: valor de REVIEW_ACCOUNTS_PASSWORD (.env.local).");
   if (!adminEmails.includes(users.admin.email))
     console.log(
-      `Admin: adicione ${users.admin.email} em ADMIN_EMAILS (.env.local) e reinicie o servidor para acessar /admin.`,
+      `Admin: para revisar /admin num servidor local, adicione ${users.admin.email} em ADMIN_EMAILS do .env.local e reinicie. Nunca coloque contas review.* em ADMIN_EMAILS da produção.`,
     );
   console.log(`\nAcompanhamento do pedido convidado (token renovado a cada execução):\n${guestLink}`);
   console.log(
