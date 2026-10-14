@@ -14,7 +14,9 @@ export async function createOwnShippingMethodAction(_: OwnShippingState, form: F
     ...Object.fromEntries(form),
     priceInCents: parsePriceInputToCents(form.get("price") ?? undefined),
   });
-  if (!data.success) return { error: "Confira o nome, os CEPs, o valor e o prazo de entrega." };
+  if (!data.success) {
+    return { error: data.error.issues[0]?.message ?? "Confira o nome, os CEPs, o valor e o prazo de entrega." };
+  }
   try {
     await createOwnShippingMethod(context.seller.id, context.session.user.id, data.data);
     revalidatePath("/seller/shipping");
