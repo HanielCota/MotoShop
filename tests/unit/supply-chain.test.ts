@@ -20,3 +20,15 @@ it("pins every remote CLI run by a package script to an exact version", () => {
 it("declares the minimum release age next to its exceptions", () => {
   expect(readRepositoryFile("pnpm-workspace.yaml")).toMatch(/^minimumReleaseAge: \d+$/m);
 });
+
+it("never leaves the GitHub token in the checked-out repository", () => {
+  const workflows = ["ci.yml", "e2e.yml", "codeql.yml", "pull-request.yml"].map((name) =>
+    readRepositoryFile(join(".github", "workflows", name)),
+  );
+
+  for (const workflow of workflows) {
+    const checkouts = workflow.match(/uses: actions\/checkout@.*\n\s+with:\n\s+persist-credentials: false/g) ?? [];
+    const allCheckouts = workflow.match(/uses: actions\/checkout@/g) ?? [];
+    expect(checkouts).toHaveLength(allCheckouts.length);
+  }
+});
