@@ -22,7 +22,7 @@ import { quoteProductShippingAction, quoteShippingAction } from "./shipping-acti
 beforeEach(() => {
   limits.consume.mockResolvedValue({ allowed: true, retryAfter: null });
   limits.identity.mockResolvedValue({ guestAccessTokenHash: "guest-hash" });
-  limits.headers.mockResolvedValue(new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" }));
+  limits.headers.mockResolvedValue(new Headers({ "x-vercel-forwarded-for": "203.0.113.7" }));
 });
 
 afterEach(() => vi.resetAllMocks());
@@ -35,6 +35,16 @@ it("limits product quotes per visitor and per address before calling the provide
   expect(limits.identity).toHaveBeenCalledWith(true);
   expect(limits.consume).toHaveBeenCalledWith({ key: "shipping-quote:guest:guest-hash", windowSeconds: 60, max: 20 });
   expect(limits.consume).toHaveBeenCalledWith({ key: "shipping-quote:ip:203.0.113.7", windowSeconds: 60, max: 60 });
+});
+
+it("does not trust a client-controlled x-forwarded-for for the address limit (L-05)", async () => {
+  quotes.mockResolvedValue([]);
+  limits.headers.mockResolvedValue(new Headers({ "x-forwarded-for": "198.51.100.9" }));
+
+  await quoteProductShippingAction({ variantId: "cm123456789012345678901234", postalCode: "12345678" });
+
+  expect(limits.consume).toHaveBeenCalledWith({ key: "shipping-quote:ip:unknown", windowSeconds: 60, max: 60 });
+  expect(limits.consume).not.toHaveBeenCalledWith(expect.objectContaining({ key: "shipping-quote:ip:198.51.100.9" }));
 });
 
 it("returns a friendly error and skips the quote when the visitor is rate limited", async () => {

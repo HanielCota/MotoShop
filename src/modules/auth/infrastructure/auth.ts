@@ -16,6 +16,7 @@ import {
 } from "@/modules/auth/infrastructure/sign-in-account-rate-limit";
 import { withoutSessionToken } from "@/modules/auth/infrastructure/session-response";
 import { runAuthTaskAfterResponse } from "@/modules/auth/infrastructure/background-tasks";
+import { TRUSTED_CLIENT_IP_HEADER } from "@/shared/request/client-ip";
 import { consumeRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 export const authEmailConfigured = Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
@@ -104,6 +105,8 @@ export const auth = betterAuth({
   database: prismaAdapter(db, { provider: "postgresql" }),
   advanced: {
     database: { joins: true },
+    // Rate limits use the IP set by Vercel, not the client-controlled x-forwarded-for (L-05).
+    ipAddress: { ipAddressHeaders: [TRUSTED_CLIENT_IP_HEADER] },
     // E-mails (reset, verification) go out after the response: no timing difference per account (L-01).
     backgroundTasks: { handler: runAuthTaskAfterResponse },
   },
