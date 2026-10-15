@@ -28,11 +28,17 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+type CardTitleProps = React.ComponentProps<"h2"> & {
+  /** Heading level of the card title; `h2` under the page `h1`, `h3` inside a titled section. */
+  as?: "h2" | "h3" | undefined;
+};
+
+/** Card heading with one size for every area (Admin, Central do Lojista, storefront). */
+function CardTitle({ as: Heading = "h2", className, ...props }: CardTitleProps) {
   return (
-    <div
+    <Heading
       data-slot="card-title"
-      className={cn("text-base leading-snug font-medium group-data-[size=sm]/card:text-sm", className)}
+      className={cn("text-lg leading-snug group-data-[size=sm]/card:text-base", className)}
       {...props}
     />
   );

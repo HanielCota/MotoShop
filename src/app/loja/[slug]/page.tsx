@@ -323,9 +323,7 @@ export default async function PublicStorePage({
       {store.reviewSummary.count > 0 ? (
         <Card id="avaliacoes-loja" className="scroll-mt-24">
           <CardHeader>
-            <CardTitle>
-              <h2 className="text-xl">Avaliações da loja</h2>
-            </CardTitle>
+            <CardTitle>Avaliações da loja</CardTitle>
             <CardDescription>
               Comentários de clientes que compraram no Moto Shop
               {rating ? ` · nota média ${formatRating(rating)}/5` : ""}

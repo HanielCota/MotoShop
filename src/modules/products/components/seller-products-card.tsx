@@ -87,9 +87,7 @@ export async function SellerProductsCard({
   return (
     <Card id="seller-products" className="scroll-mt-24">
       <CardHeader>
-        <CardTitle>
-          <h2 className="text-lg">Catálogo</h2>
-        </CardTitle>
+        <CardTitle>Catálogo</CardTitle>
         <CardDescription>
           {result.total} {result.total === 1 ? "produto encontrado" : "produtos encontrados"}.
         </CardDescription>

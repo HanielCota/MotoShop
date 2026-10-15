@@ -30,9 +30,7 @@ export async function SellerCampaignsCard({
   return (
     <Card id="seller-campaigns" className="scroll-mt-24">
       <CardHeader>
-        <CardTitle>
-          <h2 className="text-lg">Campanhas do Moto Shop</h2>
-        </CardTitle>
+        <CardTitle>Campanhas do Moto Shop</CardTitle>
         <CardDescription>
           Ao entrar, o desconto da campanha sai do valor da sua loja nos itens vendidos com o cupom.
         </CardDescription>

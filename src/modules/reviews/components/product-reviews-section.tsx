@@ -54,9 +54,7 @@ export function ProductReviewsSection({
   return (
     <Card id={SECTION_ID} className="scroll-mt-24">
       <CardHeader>
-        <CardTitle>
-          <h2 className="text-xl">Avaliações do produto</h2>
-        </CardTitle>
+        <CardTitle>Avaliações do produto</CardTitle>
         <CardDescription>Notas de compradores verificados do Moto Shop.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-8 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] lg:items-start">

@@ -28,9 +28,7 @@ export function SellerStoreSettingsSection({ store, canManageStore }: { store: S
       {canManageStore ? (
         <Card id="seller-profile" className="scroll-mt-24">
           <CardHeader>
-            <CardTitle>
-              <h2 className="text-lg">Perfil público da loja</h2>
-            </CardTitle>
+            <CardTitle>Perfil público da loja</CardTitle>
             <CardDescription>
               Nome, endereço público e apresentação exibidos na vitrine do Moto Shop. Dados de origem ficam em uma seção
               separada e não são publicados.
@@ -54,9 +52,7 @@ export function SellerStoreSettingsSection({ store, canManageStore }: { store: S
       {canManageStore ? (
         <Card id="seller-branding" className="scroll-mt-24">
           <CardHeader>
-            <CardTitle>
-              <h2 className="text-lg">Identidade visual</h2>
-            </CardTitle>
+            <CardTitle>Identidade visual</CardTitle>
             <CardDescription>Adicione a logo e o banner que serão exibidos na vitrine pública da loja.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -71,9 +67,7 @@ export function SellerStoreSettingsSection({ store, canManageStore }: { store: S
       ) : null}
       <Card id="seller-shipping" className="scroll-mt-24">
         <CardHeader>
-          <CardTitle>
-            <h2 className="text-lg">Dados de envio</h2>
-          </CardTitle>
+          <CardTitle>Dados de envio</CardTitle>
           <CardDescription>
             Preencha o remetente usado nas etiquetas do Melhor Envio. O endereço do cliente vem de cada pedido.
           </CardDescription>

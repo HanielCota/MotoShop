@@ -43,9 +43,7 @@ export default async function SellerShippingIntegrationsPage({
       <MelhorEnvioConnectionCard connected={connected} shippingStatus={shipping} />
       <Card>
         <CardHeader>
-          <CardTitle>
-            <h2 className="text-lg">Frete próprio</h2>
-          </CardTitle>
+          <CardTitle>Frete próprio</CardTitle>
           <CardDescription>Continue gerenciando suas opções manuais na tela de frete próprio.</CardDescription>
         </CardHeader>
         <CardContent>

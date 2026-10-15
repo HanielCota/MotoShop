@@ -53,9 +53,7 @@ export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: 
   return (
     <Card id="seller-coupons" className="scroll-mt-24">
       <CardHeader>
-        <CardTitle>
-          <h2 className="text-lg">Cupons da loja</h2>
-        </CardTitle>
+        <CardTitle>Cupons da loja</CardTitle>
         <CardDescription>
           {result.total} {result.total === 1 ? "cupom" : "cupons"} · descontos financiados pela sua loja.
         </CardDescription>

@@ -91,9 +91,7 @@ export default async function SellerOrdersPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            <h2 className="text-lg">Pedidos da loja</h2>
-          </CardTitle>
+          <CardTitle>Pedidos da loja</CardTitle>
           <CardDescription>
             {result.total} {result.total === 1 ? "pedido encontrado" : "pedidos encontrados"}.
           </CardDescription>

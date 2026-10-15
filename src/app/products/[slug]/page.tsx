@@ -260,9 +260,7 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
 
         <Card className="min-w-0 md:col-start-1 md:row-start-2">
           <CardHeader>
-            <CardTitle>
-              <h2 className="text-xl">Sobre este produto</h2>
-            </CardTitle>
+            <CardTitle>Sobre este produto</CardTitle>
             <CardDescription>Detalhes fornecidos pela loja.</CardDescription>
           </CardHeader>
           <CardContent>

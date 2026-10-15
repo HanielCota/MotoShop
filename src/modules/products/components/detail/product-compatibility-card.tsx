@@ -40,9 +40,7 @@ export function ProductCompatibilityCard({
   return (
     <Card id="compatibilidade" className="scroll-mt-24">
       <CardHeader>
-        <CardTitle>
-          <h2 className="text-xl">Peças para a sua moto</h2>
-        </CardTitle>
+        <CardTitle>Peças para a sua moto</CardTitle>
         <CardDescription>
           {selectedFitmentId
             ? "Confira abaixo se esta peça serve na moto escolhida."

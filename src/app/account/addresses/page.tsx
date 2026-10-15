@@ -59,10 +59,10 @@ export default async function CustomerAddressesPage({
               <li key={address.id} className="flex min-w-0">
                 <Card className="w-full">
                   <CardHeader>
-                    <CardTitle className="flex items-center justify-between gap-3">
-                      <h2 className="text-lg">{address.label}</h2>
+                    <div className="flex items-center justify-between gap-3">
+                      <CardTitle>{address.label}</CardTitle>
                       {address.isDefault ? <Badge variant="brand">Padrão</Badge> : null}
-                    </CardTitle>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <p className="text-sm">
