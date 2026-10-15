@@ -12,14 +12,18 @@ export function FilterForm({
   resetHref,
   children,
   label = "Filtros",
+  action,
 }: {
   resetHref: Route;
   children: ReactNode;
   label?: string;
+  /** Destino do GET; sem ele, o formulário envia para a própria página. */
+  action?: string;
 }) {
   return (
     <form
       method="get"
+      action={action}
       aria-label={label}
       className="bg-surface-sunken/60 grid min-w-0 gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end"
     >

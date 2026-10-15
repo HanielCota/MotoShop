@@ -1,8 +1,5 @@
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { FilterDateRange, FilterForm, FilterSelect, FilterText } from "@/components/ui/filter-form";
 import { Pagination } from "@/components/ui/pagination";
-import { DesignSelect } from "@/components/ui/design-select";
-import { DateFilterInput } from "@/components/ui/date-filter-input";
 import type { Metadata, Route } from "next";
 import { createSerializer } from "nuqs/server";
 import { ClipboardList } from "lucide-react";
@@ -39,6 +36,12 @@ const orderStatusOptions = getStatusOptions("sellerOrder").filter(({ value }) =>
 const shipmentStatusOptions = getStatusOptions("shipment").filter(({ value }) =>
   (shipmentStatusValues as readonly string[]).includes(value),
 );
+const orderStatusFilterOptions = [{ value: "ALL", label: "Todos" }, ...orderStatusOptions];
+const shipmentStatusFilterOptions = [{ value: "ALL", label: "Todos" }, ...shipmentStatusOptions];
+const sortOptions = [
+  { value: "newest", label: "Mais recentes" },
+  { value: "oldest", label: "Mais antigos" },
+];
 
 export default async function SellerOrdersPage({
   searchParams,
@@ -72,56 +75,22 @@ export default async function SellerOrdersPage({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <details className="mb-5 rounded-lg border p-3" open={hasFilters}>
+          <details className="mb-5" open={hasFilters}>
             <summary className="flex min-h-11 cursor-pointer list-none items-center font-semibold [&::-webkit-details-marker]:hidden">
               Filtros de pedidos
             </summary>
-            <form className="mt-4 grid gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-6" method="get" action={basePath}>
-              <label className="flex flex-col gap-2 text-sm font-medium">
-                Buscar pedido
-                <Input name="q" defaultValue={params.q ?? ""} placeholder="Número, cliente ou e-mail" />
-              </label>
-              <label className="flex flex-col gap-2 text-sm font-medium">
-                Status
-                <DesignSelect aria-label="Status" name="status" defaultValue={params.status}>
-                  <option value="ALL">Todos</option>
-                  {orderStatusOptions.map(({ value, label }) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </DesignSelect>
-              </label>
-              <label className="flex flex-col gap-2 text-sm font-medium">
-                Status do envio
-                <DesignSelect aria-label="Status do envio" name="shipmentStatus" defaultValue={params.shipmentStatus}>
-                  <option value="ALL">Todos</option>
-                  {shipmentStatusOptions.map(({ value, label }) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </DesignSelect>
-              </label>
-              <label className="flex flex-col gap-2 text-sm font-medium">
-                Ordenação
-                <DesignSelect aria-label="Ordenação" name="sort" defaultValue={params.sort}>
-                  <option value="newest">Mais recentes</option>
-                  <option value="oldest">Mais antigos</option>
-                </DesignSelect>
-              </label>
-              <label className="flex flex-col gap-2 text-sm font-medium">
-                De
-                <DateFilterInput name="from" value={params.from} />
-              </label>
-              <label className="flex flex-col gap-2 text-sm font-medium">
-                Até
-                <DateFilterInput name="to" value={params.to} />
-              </label>
-              <Button type="submit" className="rounded-md px-4">
-                Filtrar
-              </Button>
-            </form>
+            <FilterForm resetHref={basePath} action={basePath} label="Filtrar pedidos">
+              <FilterText label="Buscar pedido" name="q" value={params.q} placeholder="Número, cliente ou e-mail" />
+              <FilterSelect label="Status" name="status" value={params.status} options={orderStatusFilterOptions} />
+              <FilterSelect
+                label="Status do envio"
+                name="shipmentStatus"
+                value={params.shipmentStatus}
+                options={shipmentStatusFilterOptions}
+              />
+              <FilterSelect label="Ordenação" name="sort" value={params.sort} options={sortOptions} />
+              <FilterDateRange fromName="from" toName="to" from={params.from} to={params.to} />
+            </FilterForm>
           </details>
 
           {result.orders.length === 0 ? (

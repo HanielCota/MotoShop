@@ -5,7 +5,7 @@ import { Package } from "lucide-react";
 import { ActionForm } from "@/components/ui/action-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DesignSelect } from "@/components/ui/design-select";
+import { FilterField, FilterForm, FilterSelect, FilterText } from "@/components/ui/filter-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
@@ -27,6 +27,23 @@ import { getStatusOptions } from "@/shared/presentation/status-labels";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const basePath = "/seller/products";
+const productStatusOptions = [{ value: "ALL", label: "Todos" }, ...getStatusOptions("product")];
+const productStockOptions = [
+  { value: "ALL", label: "Todos" },
+  { value: "IN", label: "Em estoque" },
+  { value: "LOW", label: "Baixo (1–5)" },
+  { value: "OUT", label: "Esgotado" },
+];
+const productPromotionOptions = [
+  { value: "ALL", label: "Todas" },
+  { value: "ON_SALE", label: "Em promoção" },
+];
+const productSortOptions = [
+  { value: "updated_newest", label: "Atualizados recentemente" },
+  { value: "updated_oldest", label: "Atualizados há mais tempo" },
+  { value: "name_asc", label: "Nome A–Z" },
+  { value: "name_desc", label: "Nome Z–A" },
+];
 
 export async function SellerProductsCard({
   sellerId,
@@ -78,98 +95,83 @@ export async function SellerProductsCard({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <details className="mb-4 rounded-lg border p-3" open={hasFilters}>
+        <details className="mb-4" open={hasFilters}>
           <summary className="flex min-h-11 cursor-pointer list-none items-center font-semibold [&::-webkit-details-marker]:hidden">
             Filtros de produtos
           </summary>
-          <form className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" method="get" action={basePath}>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Buscar produto
-              <Input name="productQ" defaultValue={params.productQ ?? ""} placeholder="Nome, slug ou SKU" />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Categoria
-              <DesignSelect aria-label="Categoria" name="productCategory" defaultValue={params.productCategory ?? ""}>
-                <option value="">Todas</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.parent ? `${getCategoryLabel(category.parent)} / ` : ""}
-                    {getCategoryLabel(category)}
-                  </option>
-                ))}
-              </DesignSelect>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Marca
-              <DesignSelect aria-label="Marca" name="productBrand" defaultValue={params.productBrand ?? ""}>
-                <option value="">Todas</option>
-                {brands.map((brand) => (
-                  <option key={brand.id} value={brand.id}>
-                    {brand.name}
-                  </option>
-                ))}
-              </DesignSelect>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Preço mín. (R$)
+          <FilterForm resetHref={basePath} action={basePath} label="Filtrar produtos">
+            <FilterText
+              label="Buscar produto"
+              name="productQ"
+              value={params.productQ}
+              placeholder="Nome, slug ou SKU"
+            />
+            <FilterSelect
+              label="Categoria"
+              name="productCategory"
+              value={params.productCategory ?? ""}
+              options={[
+                { value: "", label: "Todas" },
+                ...categories.map((category) => ({
+                  value: category.id,
+                  label: `${category.parent ? `${getCategoryLabel(category.parent)} / ` : ""}${getCategoryLabel(category)}`,
+                })),
+              ]}
+            />
+            <FilterSelect
+              label="Marca"
+              name="productBrand"
+              value={params.productBrand ?? ""}
+              options={[
+                { value: "", label: "Todas" },
+                ...brands.map((brand) => ({ value: brand.id, label: brand.name })),
+              ]}
+            />
+            <FilterField label="Preço mín. (R$)">
               <Input
+                size="sm"
                 name="productMinPrice"
                 inputMode="decimal"
                 autoComplete="off"
                 defaultValue={formatOptionalPrice(params.productMinPrice)}
                 placeholder="Ex.: 50,00"
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Preço máx. (R$)
+            </FilterField>
+            <FilterField label="Preço máx. (R$)">
               <Input
+                size="sm"
                 name="productMaxPrice"
                 inputMode="decimal"
                 autoComplete="off"
                 defaultValue={formatOptionalPrice(params.productMaxPrice)}
                 placeholder="Ex.: 1000,00"
               />
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Status
-              <DesignSelect aria-label="Status" name="productStatus" defaultValue={params.productStatus}>
-                <option value="ALL">Todos</option>
-                {getStatusOptions("product").map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </DesignSelect>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Estoque
-              <DesignSelect aria-label="Estoque" name="productStock" defaultValue={params.productStock}>
-                <option value="ALL">Todos</option>
-                <option value="IN">Em estoque</option>
-                <option value="LOW">Baixo (1–5)</option>
-                <option value="OUT">Esgotado</option>
-              </DesignSelect>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Promoção
-              <DesignSelect aria-label="Promoção" name="productPromotion" defaultValue={params.productPromotion}>
-                <option value="ALL">Todas</option>
-                <option value="ON_SALE">Em promoção</option>
-              </DesignSelect>
-            </label>
-            <label className="flex flex-col gap-1 text-sm font-medium">
-              Ordenação
-              <DesignSelect aria-label="Ordenação" name="productSort" defaultValue={params.productSort}>
-                <option value="updated_newest">Atualizados recentemente</option>
-                <option value="updated_oldest">Atualizados há mais tempo</option>
-                <option value="name_asc">Nome A–Z</option>
-                <option value="name_desc">Nome Z–A</option>
-              </DesignSelect>
-            </label>
-            <Button type="submit" className="self-end">
-              Filtrar
-            </Button>
-          </form>
+            </FilterField>
+            <FilterSelect
+              label="Status"
+              name="productStatus"
+              value={params.productStatus}
+              options={productStatusOptions}
+            />
+            <FilterSelect
+              label="Estoque"
+              name="productStock"
+              value={params.productStock}
+              options={productStockOptions}
+            />
+            <FilterSelect
+              label="Promoção"
+              name="productPromotion"
+              value={params.productPromotion}
+              options={productPromotionOptions}
+            />
+            <FilterSelect
+              label="Ordenação"
+              name="productSort"
+              value={params.productSort}
+              options={productSortOptions}
+            />
+          </FilterForm>
         </details>
         {result.products.length === 0 ? (
           <EmptyState

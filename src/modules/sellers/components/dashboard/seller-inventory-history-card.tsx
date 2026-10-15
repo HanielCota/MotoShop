@@ -1,12 +1,9 @@
 import Link from "next/link";
 import { History } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DateFilterInput } from "@/components/ui/date-filter-input";
-import { DesignSelect } from "@/components/ui/design-select";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
+import { FilterDateRange, FilterForm, FilterSelect, FilterText } from "@/components/ui/filter-form";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { listSellerInventoryMovements } from "@/modules/sellers/queries/inventory-movements";
@@ -16,6 +13,15 @@ import { inventoryMovementLabels } from "@/shared/presentation/status-labels";
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 /** Histórico auditável de estoque; lê seus próprios filtros (`q`, `movementType`, `from`, `to`, `sort`). */
+const movementTypeOptions = [
+  { value: "ALL", label: "Todos" },
+  ...Object.entries(inventoryMovementLabels).map(([value, label]) => ({ value, label })),
+];
+const sortOptions = [
+  { value: "newest", label: "Mais recentes" },
+  { value: "oldest", label: "Mais antigos" },
+];
+
 export async function SellerInventoryHistoryCard({
   sellerId,
   searchParams,
@@ -42,43 +48,19 @@ export async function SellerInventoryHistoryCard({
         <CardDescription>Últimas movimentações auditáveis das variações da loja.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form
-          className="mb-4 grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto_auto_auto_auto] lg:items-end"
-          method="get"
-          action="/seller#seller-history"
-        >
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Buscar produto ou SKU
-            <Input name="q" defaultValue={params.q ?? ""} placeholder="Nome, variação ou SKU" />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Tipo de movimentação
-            <DesignSelect aria-label="Tipo de movimentação" name="movementType" defaultValue={params.movementType}>
-              <option value="ALL">Todos</option>
-              {Object.entries(inventoryMovementLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </DesignSelect>
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            De
-            <DateFilterInput name="from" value={params.from} />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Até
-            <DateFilterInput name="to" value={params.to} />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Ordenação
-            <DesignSelect aria-label="Ordenação" name="sort" defaultValue={params.sort}>
-              <option value="newest">Mais recentes</option>
-              <option value="oldest">Mais antigos</option>
-            </DesignSelect>
-          </label>
-          <Button type="submit">Filtrar</Button>
-        </form>
+        <div className="mb-4">
+          <FilterForm resetHref="/seller#seller-history" action="/seller#seller-history" label="Filtrar movimentações">
+            <FilterText label="Buscar produto ou SKU" name="q" value={params.q} placeholder="Nome, variação ou SKU" />
+            <FilterSelect
+              label="Tipo de movimentação"
+              name="movementType"
+              value={params.movementType}
+              options={movementTypeOptions}
+            />
+            <FilterDateRange fromName="from" toName="to" from={params.from} to={params.to} />
+            <FilterSelect label="Ordenação" name="sort" value={params.sort} options={sortOptions} />
+          </FilterForm>
+        </div>
         {movements.length === 0 ? (
           <EmptyState
             variant="inline"
