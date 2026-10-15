@@ -8,14 +8,17 @@ export function DataTable({
   columns,
   children,
   minWidth = "min-w-[720px]",
+  className,
 }: {
   caption: string;
   columns: readonly string[];
   children: ReactNode;
   minWidth?: string;
+  /** Classes do contêiner, por exemplo `hidden md:block` quando o celular usa cartões. */
+  className?: string;
 }) {
   return (
-    <div className="-mx-4 overflow-x-auto px-4">
+    <div className={cn("-mx-4 overflow-x-auto px-4", className)}>
       <table className={cn("w-full border-collapse text-left text-sm", minWidth)}>
         <caption className="sr-only">{caption}</caption>
         <thead>
