@@ -89,7 +89,7 @@ export function SiteFooter() {
             <dl className="space-y-1.5 text-sm leading-6">
               {serviceHours.map((entry) => (
                 <div key={entry.days}>
-                  <dt className="text-moto-brand inline">{entry.days}</dt>
+                  <dt className="inline font-semibold text-white/90">{entry.days}</dt>
                   <dd className="inline text-white/70"> - {entry.hours}</dd>
                 </div>
               ))}
