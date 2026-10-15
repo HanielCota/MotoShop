@@ -72,7 +72,14 @@ export function SellerOrderSection({
         ) : null}
         {latestDispute ? <DisputeDetails dispute={latestDispute} /> : null}
 
-        <ShipmentTracking shipment={sellerOrder.shipment} />
+        {/* Before payment no delivery step has started; a checked "Aguardando envio" would mislead. */}
+        {sellerOrder.status === "PENDING_PAYMENT" ? (
+          <p className="bg-surface-sunken text-muted-foreground rounded-lg p-3 text-sm">
+            O envio começa depois que o pagamento for confirmado.
+          </p>
+        ) : (
+          <ShipmentTracking shipment={sellerOrder.shipment} />
+        )}
 
         <div>
           <h4 className="text-foreground mb-2 text-sm font-semibold">Itens</h4>

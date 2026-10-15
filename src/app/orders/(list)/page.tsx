@@ -1,19 +1,15 @@
 import { Input } from "@/components/ui/input";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { DesignSelect } from "@/components/ui/design-select";
 import { DateFilterInput } from "@/components/ui/date-filter-input";
-import Link from "next/link";
 import type { Metadata, Route } from "next";
 
 import { PackageSearch, ShoppingBag } from "lucide-react";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { isInvertedDateRange } from "@/lib/date-filter";
-import { formatDate, formatMoneyInCents } from "@/lib/format";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
 import { listCustomerOrders } from "@/modules/orders/queries/customer-orders";
 import {
@@ -25,6 +21,7 @@ import {
 import { getStatusLabel, type StatusDomain } from "@/shared/presentation/status-labels";
 import { parseMoneyFilterToCents } from "@/modules/orders/domain/money-filter";
 import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
+import { CustomerOrderCard } from "@/modules/orders/components/customer-order-card";
 
 export const metadata: Metadata = {
   title: "Meus pedidos",
@@ -215,66 +212,7 @@ export default async function CustomerOrdersPage({
       ) : (
         <div className="space-y-4">
           {result.orders.map((order) => (
-            <Card key={order.orderNumber}>
-              <CardHeader>
-                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                  <div>
-                    <CardTitle>
-                      <Link className="hover:underline" href={`/orders/${order.orderNumber}` as Route}>
-                        {order.orderNumber}
-                      </Link>
-                    </CardTitle>
-                    <CardDescription>
-                      {formatDate(order.createdAt)} · {order.sellerOrders.length}{" "}
-                      {order.sellerOrders.length === 1 ? "loja" : "lojas"}
-                    </CardDescription>
-                  </div>
-                  <StatusBadge domain="order" status={order.status} />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="text-foreground font-semibold">{formatMoneyInCents(order.totalAmountInCents)}</span>
-                  {order.payments[0] ? (
-                    <StatusBadge
-                      domain="payment"
-                      status={order.payments[0].status}
-                      label={`Pagamento: ${getStatusLabel("payment", order.payments[0].status)}`}
-                    />
-                  ) : null}
-                  <Link
-                    className={buttonVariants({ variant: "link", size: "link" })}
-                    href={`/orders/${order.orderNumber}` as Route}
-                  >
-                    Ver detalhes
-                  </Link>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {order.sellerOrders.map((sellerOrder) => (
-                    <div key={sellerOrder.id} className="bg-surface-sunken rounded-md p-3 text-sm">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-foreground font-medium">{sellerOrder.storeNameSnapshot}</span>
-                        <StatusBadge domain="sellerOrder" status={sellerOrder.status} />
-                      </div>
-                      <p className="text-muted-foreground mt-1">
-                        {sellerOrder.items.length} {sellerOrder.items.length === 1 ? "item" : "itens"}
-                        {sellerOrder.shipment ? ` · ${getStatusLabel("shipment", sellerOrder.shipment.status)}` : ""}
-                      </p>
-                      {sellerOrder.shipment?.trackingUrl ? (
-                        <a
-                          className="text-brand-strong mt-2 inline-block text-xs underline"
-                          href={sellerOrder.shipment.trackingUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Acompanhar entrega
-                        </a>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <CustomerOrderCard key={order.orderNumber} order={order} />
           ))}
         </div>
       )}

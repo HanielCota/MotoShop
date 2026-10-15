@@ -46,6 +46,7 @@ export default async function CustomerOrderPage({
   const order = await getCustomerOrder(orderNumber, identity);
   if (!order) notFound();
 
+  const pendingPayment = order.status === "PENDING_PAYMENT";
   const isOwner = Boolean(session && order.userId === session.user.id);
   const canClaim =
     session && accessToken && !order.userId && session.user.email.toLowerCase() === order.customerEmail.toLowerCase();
@@ -66,6 +67,9 @@ export default async function CustomerOrderPage({
 
           <OrderSummary order={order} />
 
+          {/* Paying is the next step of a pending order, so it comes before the deliveries. */}
+          {pendingPayment ? <PaymentSection orderNumber={order.orderNumber} payments={order.payments} /> : null}
+
           <section className="space-y-4">
             <SectionHeader
               title="Entregas por loja"
@@ -82,7 +86,7 @@ export default async function CustomerOrderPage({
             ))}
           </section>
 
-          <PaymentSection orderNumber={order.orderNumber} payments={order.payments} />
+          {pendingPayment ? null : <PaymentSection orderNumber={order.orderNumber} payments={order.payments} />}
         </div>
       </div>
     </main>

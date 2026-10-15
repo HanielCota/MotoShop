@@ -44,7 +44,15 @@ const customerOrderSelect = {
       id: true,
       status: true,
       storeNameSnapshot: true,
-      items: { select: { id: true } },
+      // Name and first photo let the customer recognize the purchase without the order number.
+      items: {
+        select: {
+          id: true,
+          productNameSnapshot: true,
+          product: { select: { images: { select: { storageKey: true }, orderBy: { sortOrder: "asc" }, take: 1 } } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
       shipment: { select: { status: true, trackingCode: true, trackingUrl: true } },
     },
     orderBy: { createdAt: "asc" },
