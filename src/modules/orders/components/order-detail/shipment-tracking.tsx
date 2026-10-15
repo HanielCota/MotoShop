@@ -71,7 +71,7 @@ export function ShipmentTracking({ shipment }: { shipment: CustomerShipment | nu
         })}
       </ol>
       {hasProblem ? (
-        <p className="text-destructive text-xs" role="status">
+        <p className="text-destructive text-xs">
           Status atual: {getStatusLabel("shipment", shipment.status)}. Se precisar, abra uma disputa abaixo.
         </p>
       ) : null}

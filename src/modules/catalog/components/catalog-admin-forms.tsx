@@ -1,4 +1,5 @@
 "use client";
+import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type ClientFormValidator, useClientValidation } from "@/shared/forms/client-validation";
@@ -42,16 +43,7 @@ function Feedback({ state, clientError }: { state: CatalogActionState; clientErr
   const error = clientError ?? state.error;
   return (
     <>
-      {error ? (
-        <p role="alert" className="text-destructive text-sm">
-          {error}
-        </p>
-      ) : null}
-      {!clientError && state.success ? (
-        <p role="status" className="text-success-foreground text-sm">
-          {state.success}
-        </p>
-      ) : null}
+      <FormMessage variant="inline" error={error ?? null} success={clientError ? null : (state.success ?? null)} />
     </>
   );
 }

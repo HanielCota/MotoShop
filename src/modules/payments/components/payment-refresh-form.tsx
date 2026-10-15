@@ -1,4 +1,5 @@
 "use client";
+import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 
 import { refreshPendingPaymentAction, type PaymentActionState } from "../actions/payment-actions";
@@ -15,16 +16,7 @@ export function PaymentRefreshForm({ orderNumber }: { orderNumber: string }) {
       <Button pending={pending} pendingLabel="Consultando…" variant="outline" type="submit">
         Atualizar status
       </Button>
-      {state.error ? (
-        <p role="alert" className="text-destructive text-xs">
-          {state.error}
-        </p>
-      ) : null}
-      {state.success ? (
-        <p role="status" className="text-success-foreground text-xs">
-          {state.success}
-        </p>
-      ) : null}
+      <FormMessage variant="inline" error={state.error ?? null} success={state.success ?? null} className="text-xs" />
     </form>
   );
 }

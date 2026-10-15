@@ -1,4 +1,5 @@
 "use client";
+import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 
 import { DesignCheckbox } from "@/components/ui/design-checkbox";
@@ -40,16 +41,7 @@ export function NotificationPreferencesForm({ emailOrderUpdatesEnabled }: { emai
           </span>
         </span>
       </label>
-      {state.error ? (
-        <p className="text-destructive text-sm" role="alert">
-          {state.error}
-        </p>
-      ) : null}
-      {state.success ? (
-        <p className="text-success-foreground text-sm" role="status">
-          {state.success}
-        </p>
-      ) : null}
+      <FormMessage variant="inline" error={state.error ?? null} success={state.success ?? null} />
       <Button pending={pending} pendingLabel="Salvando…" type="submit" className="rounded-md px-4">
         Salvar preferências
       </Button>

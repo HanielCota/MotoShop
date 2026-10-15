@@ -3,6 +3,7 @@
 import { HeartIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 
+import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 
 import { toggleFavoriteAction } from "../actions/favorite-actions";
@@ -41,11 +42,7 @@ export function FavoriteButton({ productId, initialIsFavorite }: { productId: st
         />
         {isPending ? "Salvando…" : isFavorite ? "Favoritado" : "Favoritar"}
       </Button>
-      {error ? (
-        <p role="alert" className="text-destructive text-xs">
-          {error}
-        </p>
-      ) : null}
+      <FormMessage variant="inline" error={error ?? null} className="text-xs" />
     </div>
   );
 }
