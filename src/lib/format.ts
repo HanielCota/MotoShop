@@ -37,6 +37,13 @@ export function formatMoneyInCents(amountInCents: number): string {
   return moneyFormatter.format(amountInCents / 100);
 }
 
+const percentFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
+
+/** Percentage stored in basis points: 1250 → "12,5%". */
+export function formatPercentFromBps(bps: number): string {
+  return `${percentFormatter.format(bps / 100)}%`;
+}
+
 const countFormatter = new Intl.NumberFormat("pt-BR");
 
 /** "1 pedido", "2 pedidos", "1.250 pedidos": quantidade com a palavra já no singular ou no plural. */

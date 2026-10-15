@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
-import { formatDate, formatMoneyInCents } from "@/lib/format";
+import { formatDate, formatMoneyInCents, formatPercentFromBps } from "@/lib/format";
 
 import { listMarketplaceCouponsForSeller } from "../queries/coupon-participation";
 import { loadCouponSearchParams, serializeCouponSearchParams } from "../search-params";
@@ -84,6 +84,6 @@ function campaignDiscountLabel(campaign: {
   fixedAmountInCents: number | null;
 }) {
   return campaign.discountType === "PERCENTAGE"
-    ? `${((campaign.percentageBps ?? 0) / 100).toLocaleString("pt-BR")}% de desconto`
+    ? `${formatPercentFromBps(campaign.percentageBps ?? 0)} de desconto`
     : `${formatMoneyInCents(campaign.fixedAmountInCents ?? 0)} de desconto`;
 }
