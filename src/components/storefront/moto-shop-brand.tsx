@@ -39,7 +39,9 @@ const logoAssets = {
  */
 export function MotoShopBrand({ variant = "header" }: MotoShopBrandProps) {
   const asset = variant === "header" ? logoAssets.horizontal : logoAssets.stacked;
-  const priority = variant !== "footer";
+  // The primary mark is often the LCP (header, auth, and the footer on short account pages), so it
+  // loads eagerly; the orange alternate only shows on hover and stays lazy.
+  const fetchPriority = variant === "footer" ? "auto" : "high";
 
   return (
     <Link href="/" className={`${styles.brand} ${styles[variant]}`} aria-label={`${BRAND_NAME}, página inicial`}>
@@ -57,7 +59,8 @@ export function MotoShopBrand({ variant = "header" }: MotoShopBrandProps) {
             aria-hidden="true"
             width={asset.width}
             height={asset.height}
-            priority={priority}
+            loading="eager"
+            fetchPriority={fetchPriority}
           />
           <Image
             className={`${styles.logo} ${styles.alternate}`}
@@ -66,7 +69,6 @@ export function MotoShopBrand({ variant = "header" }: MotoShopBrandProps) {
             aria-hidden="true"
             width={asset.width}
             height={asset.height}
-            priority={priority}
           />
         </span>
         <span className={styles.speedLines} aria-hidden="true">

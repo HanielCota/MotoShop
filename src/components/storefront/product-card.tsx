@@ -52,6 +52,9 @@ export type ProductCardData = {
 /** Width requested from ImageKit for card images: about 2x the widest card (~300 CSS px). */
 export const PRODUCT_CARD_IMAGE_WIDTH = 640;
 
+/** Cards in the first screen (2 rows on phones, the first row on desktop) load eagerly: one of them is the LCP. */
+export const EAGER_PRODUCT_CARDS = 4;
+
 /** 2 columns on phones, 3 on tablets and up to 4 on desktop grids. */
 const PRODUCT_CARD_IMAGE_SIZES = "(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 25vw";
 
@@ -66,7 +69,7 @@ export function ProductCard({
   action,
 }: {
   product: ProductCardData;
-  /** Apenas a primeira imagem visível deve ser carregada imediatamente. */
+  /** Só as imagens da primeira tela devem carregar imediatamente (ver EAGER_PRODUCT_CARDS). */
   eager?: boolean;
   headingLevel?: "h2" | "h3";
   /** Ação secundária opcional (ex.: botão de favorito). */

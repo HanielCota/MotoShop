@@ -7,7 +7,7 @@ import type { Metadata, Route } from "next";
 
 import { Heart, SearchX } from "lucide-react";
 
-import { ProductCard } from "@/components/storefront/product-card";
+import { EAGER_PRODUCT_CARDS, ProductCard } from "@/components/storefront/product-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
@@ -126,7 +126,7 @@ export default async function FavoritesPage({
             <li key={product.id} className="flex min-w-0">
               <ProductCard
                 product={toProductCardData(product)}
-                eager={index === 0}
+                eager={index < EAGER_PRODUCT_CARDS}
                 headingLevel="h2"
                 action={<FavoriteButton productId={product.id} initialIsFavorite />}
               />

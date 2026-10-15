@@ -2,7 +2,12 @@ import type { Route } from "next";
 import { PackageSearch } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { PRODUCT_CARD_IMAGE_WIDTH, ProductCard, type ProductCardData } from "@/components/storefront/product-card";
+import {
+  EAGER_PRODUCT_CARDS,
+  PRODUCT_CARD_IMAGE_WIDTH,
+  ProductCard,
+  type ProductCardData,
+} from "@/components/storefront/product-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { getProductOffer } from "@/modules/products/domain/product-offer";
@@ -87,7 +92,7 @@ export function ProductGrid({
     <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
       {products.map((product, index) => (
         <li key={product.id} className="flex min-w-0">
-          <ProductCard product={toProductCardData(product, now)} eager={index === 0} />
+          <ProductCard product={toProductCardData(product, now)} eager={index < EAGER_PRODUCT_CARDS} />
         </li>
       ))}
     </ul>

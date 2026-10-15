@@ -196,13 +196,16 @@ describe("marketing homepage", () => {
     expect(screen.getByText("R$ 999,90")).toHaveClass("line-through");
   });
 
-  it("prioritizes only the first featured product image", () => {
+  it("loads eagerly only the featured images of the first screen", () => {
     renderHome("", {
-      featuredProducts: [makeProduct("capacete-a", "Primeiro capacete"), makeProduct("capacete-b", "Segundo capacete")],
+      featuredProducts: ["a", "b", "c", "d", "e"].map((suffix) =>
+        makeProduct(`capacete-${suffix}`, `Capacete ${suffix}`),
+      ),
     });
 
-    expect(screen.getByRole("img", { name: "Primeiro capacete" })).toHaveAttribute("data-loading", "eager");
-    expect(screen.getByRole("img", { name: "Segundo capacete" })).toHaveAttribute("data-loading", "lazy");
+    expect(screen.getByRole("img", { name: "Capacete a" })).toHaveAttribute("data-loading", "eager");
+    expect(screen.getByRole("img", { name: "Capacete d" })).toHaveAttribute("data-loading", "eager");
+    expect(screen.getByRole("img", { name: "Capacete e" })).toHaveAttribute("data-loading", "lazy");
   });
 
   it("promises purchase and checkout only while payment is available", () => {
