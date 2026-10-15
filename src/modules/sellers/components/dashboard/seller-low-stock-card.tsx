@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { PackageCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listSellerLowStockVariants } from "@/modules/sellers/queries/seller-dashboard";
 import { countSellerStockAlerts } from "@/modules/sellers/queries/seller-overview-metrics";
+import { domainIcons } from "@/shared/presentation/domain-icons";
 
 export async function SellerLowStockCard({ sellerId }: { sellerId: string }) {
   const [variants, alerts] = await Promise.all([
@@ -25,7 +25,7 @@ export async function SellerLowStockCard({ sellerId }: { sellerId: string }) {
         {variants.length === 0 ? (
           <EmptyState
             variant="inline"
-            icon={PackageCheck}
+            icon={domainIcons.stock}
             title="Estoque em dia"
             description="Nenhuma variação precisa de reposição agora."
           />

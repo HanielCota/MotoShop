@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { ShoppingBag } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
@@ -23,6 +22,7 @@ import {
   sellerFilterOptions,
 } from "../admin-ui";
 import type { AdminSectionProps } from "./types";
+import { domainIcons } from "@/shared/presentation/domain-icons";
 
 const orderStatusOptions = [
   { value: "ALL", label: "Todos" },
@@ -97,7 +97,7 @@ export async function AdminOrdersSection({ searchParams }: AdminSectionProps) {
       </AdminFilterForm>
       {result.orders.length === 0 ? (
         <EmptyState
-          icon={ShoppingBag}
+          icon={domainIcons.notFound}
           title="Nenhum pedido encontrado"
           description="Ajuste os filtros para ver outros pedidos."
         />
