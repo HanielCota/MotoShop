@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { InlineNotice } from "@/components/ui/inline-notice";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { cn } from "@/lib/utils";
 import { formatDate, formatMoneyInCents, formatCount } from "@/lib/format";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { getAdminCatalogData } from "@/modules/catalog/queries/admin-catalog";
@@ -214,7 +215,13 @@ function ProductReviewGallery({ product, imageCount }: { product: ReviewQueuePro
 
   const hiddenCount = imageCount - Math.min(product.images.length, GALLERY_SIZE);
   return (
-    <ul aria-label={`Fotos de ${product.name}`} className="grid w-full shrink-0 grid-cols-4 gap-1 sm:w-56">
+    <ul
+      aria-label={`Fotos de ${product.name}`}
+      className={cn(
+        "grid w-full shrink-0 gap-1",
+        imageCount === 1 ? "grid-cols-1 sm:w-28" : "grid-cols-4 sm:w-40 sm:grid-cols-2",
+      )}
+    >
       {product.images.slice(0, GALLERY_SIZE).map((image, index) => {
         const imageUrl = getPublicStorageUrl(image.storageKey);
         const isLast = index === GALLERY_SIZE - 1 && hiddenCount > 0;
