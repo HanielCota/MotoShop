@@ -41,7 +41,6 @@ export function DisputeStatusActions({ disputeId, status }: { disputeId: string;
             rows={3}
             placeholder="Resolução ou motivo da decisão"
             aria-label="Resolução ou motivo da decisão"
-            className="text-xs"
           />
           <div className="flex flex-wrap gap-2">
             <Button type="button" size="sm" onClick={() => review("RESOLVE")} disabled={pending}>

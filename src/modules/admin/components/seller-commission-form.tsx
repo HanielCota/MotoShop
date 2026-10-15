@@ -46,7 +46,6 @@ export function SellerCommissionForm({
           inputMode="decimal"
           placeholder="Usar comissão padrão"
           defaultValue={commissionBpsOverride == null ? "" : formatPriceInputFromCents(commissionBpsOverride)}
-          className="border-input bg-background h-10 min-w-0 rounded-md border px-3 text-sm"
         />
       </label>
       <p className="text-muted-foreground text-xs">

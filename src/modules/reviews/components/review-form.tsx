@@ -140,13 +140,7 @@ export function ReviewForm({
         {!sellerAlreadyReviewed ? (
           <label className="text-foreground text-sm font-medium">
             Nota do lojista
-            <DesignSelect
-              aria-label="Nota do lojista"
-              name="sellerRating"
-              required
-              defaultValue="5"
-              className="border-input bg-background mt-2 min-h-10 w-full rounded-lg border px-3 py-2"
-            >
+            <DesignSelect aria-label="Nota do lojista" name="sellerRating" required defaultValue="5" className="mt-2">
               {[5, 4, 3, 2, 1].map((rating) => (
                 <option key={rating} value={rating}>
                   {rating} estrela{rating === 1 ? "" : "s"}

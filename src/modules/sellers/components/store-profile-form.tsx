@@ -55,7 +55,7 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
       <label className="flex flex-col gap-2 text-sm font-medium">
         Descrição pública
         <Textarea
-          className="border-input bg-background focus:ring-ring/40 min-h-24 w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-3"
+          className="min-h-24"
           name="description"
           defaultValue={values.description}
           maxLength={500}
