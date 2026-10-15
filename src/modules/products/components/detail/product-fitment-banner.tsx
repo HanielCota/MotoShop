@@ -1,4 +1,4 @@
-import { Bike, CircleCheck, TriangleAlert } from "lucide-react";
+import { Bike, CircleCheck, Info, TriangleAlert } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -23,6 +23,13 @@ const linkClassName =
  * seção de compatibilidade da própria página (#compatibilidade), sem sair do produto.
  * Ausência de compatibilidade cadastrada significa "não confirmada", nunca incompatível.
  */
+// "unknown" is neutral: gear such as helmets fits any bike, so a missing list is not a warning.
+const fitmentTones = {
+  fits: { box: "border-success/30 bg-success-surface text-success-foreground", Icon: CircleCheck },
+  "does-not-fit": { box: "border-warning/40 bg-warning-surface text-warning-foreground", Icon: TriangleAlert },
+  unknown: { box: "border-border bg-muted/50 text-foreground", Icon: Info },
+};
+
 export function ProductFitmentBanner({ status }: { status: FitmentStatus }) {
   if (status.kind === "no-motorcycle") {
     return (
@@ -39,10 +46,7 @@ export function ProductFitmentBanner({ status }: { status: FitmentStatus }) {
     );
   }
 
-  const tone =
-    status.kind === "fits"
-      ? { box: "border-success/30 bg-success-surface text-success-foreground", Icon: CircleCheck }
-      : { box: "border-warning/40 bg-warning-surface text-warning-foreground", Icon: TriangleAlert };
+  const tone = fitmentTones[status.kind];
   const message =
     status.kind === "fits"
       ? "Serve na sua moto"
