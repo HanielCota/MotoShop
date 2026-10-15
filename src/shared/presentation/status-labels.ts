@@ -154,6 +154,13 @@ export const returnReasonLabels: Record<string, string> = {
   OTHER: "Outro motivo",
 };
 
+export const disputeReasonLabels: Record<string, string> = {
+  ITEM_PROBLEM: "Problema com o item",
+  DELIVERY_PROBLEM: "Problema na entrega",
+  SELLER_SUPPORT: "Preciso de ajuda do lojista",
+  OTHER: "Outro motivo",
+};
+
 export const inventoryMovementLabels: Record<string, string> = {
   SALE: "Venda",
   RESERVATION: "Reserva",
