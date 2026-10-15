@@ -9,15 +9,20 @@ import {
   advanceOwnShipmentAction,
   type OwnShippingState,
 } from "../actions/own-shipping-actions";
+import { validateOwnShippingMethodForm } from "../domain/own-shipping";
+import { useClientValidation } from "@/shared/forms/client-validation";
 
 const initial: OwnShippingState = {};
-function Feedback({ state }: { state: OwnShippingState }) {
-  return <FormMessage error={state.error ?? null} success={state.success ?? null} />;
+function Feedback({ state, clientError = null }: { state: OwnShippingState; clientError?: string | null }) {
+  return (
+    <FormMessage error={clientError ?? state.error ?? null} success={clientError ? null : (state.success ?? null)} />
+  );
 }
 export function OwnShippingMethodForm() {
   const [state, action, pending] = useActionState(createOwnShippingMethodAction, initial);
+  const { clientError, onSubmit } = useClientValidation(validateOwnShippingMethodForm);
   return (
-    <form action={action} noValidate className="grid gap-4 sm:grid-cols-2">
+    <form action={action} onSubmit={onSubmit} noValidate className="grid gap-4 sm:grid-cols-2">
       <label className="grid gap-2 sm:col-span-2">
         Nome da entrega
         <Input name="name" required minLength={3} maxLength={80} placeholder="Entrega local" />
@@ -45,7 +50,7 @@ export function OwnShippingMethodForm() {
         <Input name="estimatedDeliveryDays" type="number" min={1} max={365} required />
       </label>
       <div className="sm:col-span-2">
-        <Feedback state={state} />
+        <Feedback state={state} clientError={clientError} />
       </div>
       <Button type="submit" size="lg" className="px-4" disabled={pending}>
         {pending ? "Salvando…" : "Criar modalidade"}

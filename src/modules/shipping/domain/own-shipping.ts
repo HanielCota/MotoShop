@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+import { parsePriceInputToCents } from "@/modules/products/domain/price-input";
+import { firstIssueMessage } from "@/shared/forms/first-issue-message";
+
 const postalCode = z
   .string()
   .transform((value) => value.replace(/\D/g, ""))
@@ -31,6 +34,18 @@ export const ownShippingMethodSchema = z
   });
 
 export type OwnShippingMethodInput = z.infer<typeof ownShippingMethodSchema>;
+
+export const OWN_SHIPPING_FORM_ERROR = "Confira o nome, os CEPs, o valor e o prazo de entrega.";
+
+/** Lê o formulário de modalidade como a action recebe (valor em reais vira centavos). */
+export function readOwnShippingMethodForm(form: FormData) {
+  return { ...Object.fromEntries(form), priceInCents: parsePriceInputToCents(form.get("price") ?? undefined) };
+}
+
+/** Mesma regra no servidor e no navegador (BUG-011). */
+export function validateOwnShippingMethodForm(form: FormData): string | null {
+  return firstIssueMessage(ownShippingMethodSchema, readOwnShippingMethodForm(form), OWN_SHIPPING_FORM_ERROR);
+}
 export function quoteOwnShipping(
   methods: Array<OwnShippingMethodInput & { id: string; active: boolean }>,
   destination: string,
