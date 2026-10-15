@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 const smallSize =
   "h-9 gap-1 px-3 text-sm has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&_svg:not([class*='size-'])]:size-3.5";
 
-const buttonVariants = cva(
+const buttonVariantClasses = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-md border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
@@ -62,8 +62,19 @@ const buttonVariants = cva(
   },
 );
 
+type ButtonVariantProps = VariantProps<typeof buttonVariantClasses>;
+
+/**
+ * Class string of a button, merged with tailwind-merge: the base `border-transparent` gives way to a
+ * variant border (e.g. `outline`) and a caller `className` overrides the size, even on a bare
+ * `<Link className={buttonVariants(...)}>` without `cn()`.
+ */
+function buttonVariants(props?: ButtonVariantProps & { className?: string | undefined }): string {
+  return cn(buttonVariantClasses(props));
+}
+
 type ButtonProps = ButtonPrimitive.Props &
-  VariantProps<typeof buttonVariants> & {
+  ButtonVariantProps & {
     /** Action in progress: disables the button, sets `aria-busy` and shows `pendingLabel` (ex.: "Salvando…"). */
     pending?: boolean | undefined;
     pendingLabel?: string | undefined;
@@ -82,7 +93,7 @@ function Button({
   return (
     <ButtonPrimitive
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariantClasses({ variant, size, className }))}
       disabled={pending || disabled}
       aria-busy={pending || undefined}
       {...props}
