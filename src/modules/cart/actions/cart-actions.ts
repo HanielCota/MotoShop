@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { z } from "zod";
 
 import { db } from "@/lib/database";
@@ -8,6 +9,8 @@ import { ApplicationError } from "@/shared/errors/application-error";
 import { logActionFailure, toActionError } from "@/shared/errors/action-error";
 import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
+import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
+import { getClientIp } from "@/shared/request/client-ip";
 
 import {
   addCartItem,
@@ -29,6 +32,8 @@ export async function addToCartAction(variantId: string, quantity: number): Prom
   if (!parsed.success) return { error: "Escolha uma quantidade válida." };
 
   try {
+    // Without a cookie every call opens a new cart, so the limit follows the client IP (M-06).
+    await assertRateLimit({ key: `cart-add:ip:${getClientIp(await headers())}`, windowSeconds: 60, max: 60 });
     const identity = await getCartIdentity(true);
     if (!identity) throw new ApplicationError({ code: "UNAUTHORIZED", message: "Não foi possível abrir o carrinho." });
     await addCartItem({ identity, variantId: parsed.data.variantId, quantity: parsed.data.quantity });

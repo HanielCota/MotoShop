@@ -30,6 +30,7 @@ import type { PaymentProvider } from "@/shared/payment/payment-provider";
 import { PaymentProviderError } from "@/shared/payment/payment-provider-error";
 
 import { createOrderNumber } from "../domain/order-number";
+import { couponCustomerOf } from "../domain/coupon-customer";
 import { calculateSellerCharges } from "../domain/seller-charges";
 import { shippingSelectionsSchema, type CheckoutInput } from "../schemas/checkout";
 import {
@@ -132,7 +133,11 @@ async function calculateCheckoutCharges(input: CheckoutRequest, now: Date) {
 
 /** The active coupon, plus the sellers joined to it when it is a seller-funded campaign. */
 async function loadCheckoutCoupon(input: CheckoutRequest, now: Date) {
-  const coupon = await findActiveCoupon(input.data.couponCode, input.data.customerEmail, input.session?.user.id, now);
+  const coupon = await findActiveCoupon(
+    input.data.couponCode,
+    couponCustomerOf(input.data, input.session?.user.id),
+    now,
+  );
   if (!coupon || !isSellerFundedCampaign(coupon)) return coupon;
 
   return { ...coupon, participatingSellerIds: await listActiveCouponParticipantSellerIds(coupon.id) };

@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { env } from "@/config/env";
 import { ingestMercadoPagoWebhook } from "@/modules/payments/application/ingest-webhook";
+import { signedNotificationId } from "@/modules/payments/domain/webhook-notification-id";
 
 /** Signed notifications older (or further in the future) than this are treated as replays. */
 const SIGNATURE_TOLERANCE_MS = 5 * 60 * 1000;
@@ -31,7 +32,11 @@ export async function POST(request: Request) {
   if (signatureError) return signatureError;
   if (type !== "payment") return NextResponse.json({ received: true, ignored: true }, { status: 202 });
 
-  const result = await ingestMercadoPagoWebhook({ notificationId: String(payload.id), type, payload });
+  const result = await ingestMercadoPagoWebhook({
+    notificationId: signedNotificationId(paymentId, request.headers.get("x-request-id") ?? ""),
+    type,
+    payload,
+  });
   switch (result.outcome) {
     case "ALREADY_PROCESSED":
       return NextResponse.json({ received: true, duplicate: true }, { status: 202 });

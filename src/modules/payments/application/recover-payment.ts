@@ -1,12 +1,14 @@
 import "server-only";
 
 import { db } from "@/lib/database";
+import { logger } from "@/lib/logger";
 import { mercadoPagoProvider } from "@/lib/payment/mercado-pago-provider";
 import { ApplicationError } from "@/shared/errors/application-error";
 import type { PaymentRecoveryProvider } from "@/shared/payment/payment-provider";
 import { reconcileMercadoPagoPayment } from "./reconcile-payment";
 import { releaseUnsentPayment } from "./release-unsent-payment";
 import { assertPaymentMatches } from "../domain/payment-match";
+import { isLongUnresolvedPayment } from "../domain/unresolved-payment";
 
 // Internal use case: callers must authorize the order or run in a trusted workflow.
 // Never creates a charge, including when search is empty or the gateway times out.
@@ -27,7 +29,10 @@ export async function recoverPayment(paymentId: string, provider: PaymentRecover
     ? await provider.getPayment(payment.externalId)
     : await provider.findPaymentByOrderNumber(payment.order.orderNumber);
   // An empty search is not proof of a failed charge (eventual consistency).
-  if (!result) return { outcome: "UNRESOLVED" as const };
+  if (!result) {
+    warnWhenLongUnresolved(payment);
+    return { outcome: "UNRESOLVED" as const };
+  }
   assertPaymentMatches(payment, result);
   const reconciled = await reconcileMercadoPagoPayment({
     externalId: result.externalId,
@@ -35,4 +40,16 @@ export async function recoverPayment(paymentId: string, provider: PaymentRecover
     expectedPaymentId: payment.id,
   });
   return { outcome: "RECONCILED" as const, ...reconciled };
+}
+
+/**
+ * L-09: a charge marked SENT that the provider never shows stays pending (and holds stock)
+ * forever, because only a provider answer may release it. Past the threshold this logs a
+ * warning so the case reaches monitoring; the Admin can list them with
+ * `listLongUnresolvedPayments`.
+ */
+function warnWhenLongUnresolved(payment: { id: string; externalId: string | null; createdAt: Date }): void {
+  if (!isLongUnresolvedPayment(payment, new Date())) return;
+
+  logger.warn({ event: "payment.unresolved_at_provider", paymentId: payment.id, createdAt: payment.createdAt });
 }

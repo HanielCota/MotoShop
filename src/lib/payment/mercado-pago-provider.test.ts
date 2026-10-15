@@ -53,6 +53,27 @@ it("sends only the card token, issuer and one installment with a scoped webhook 
   });
   expect(body).not.toHaveProperty("card_number");
   expect(body).not.toHaveProperty("security_code");
+  expect(body).not.toHaveProperty("date_of_expiration");
+});
+
+it("gives a Pix charge a 30-minute expiration so an unpaid one stops holding stock (M-06)", async () => {
+  vi.useFakeTimers({ now: new Date("2026-10-14T15:00:00.000Z"), toFake: ["Date"] });
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 456, status: "pending" }) });
+  vi.stubGlobal("fetch", fetchMock);
+
+  await new ConnectedSellerTestProvider().createPayment({
+    orderNumber: "MS-PIX",
+    amountInCents: 12345,
+    payerEmail: "buyer@example.test",
+    payerTaxId: "19119119100",
+    paymentMethodId: "pix",
+    idempotencyKey: "pix-attempt",
+    sellerCount: 1,
+  });
+
+  const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string);
+  expect(body.date_of_expiration).toBe("2026-10-14T12:30:00.000-03:00");
+  vi.useRealTimers();
 });
 
 it("keeps only payment-matching fields and Pix instructions from provider responses", async () => {

@@ -45,6 +45,7 @@ Decisões pontuais tomadas ao longo do MVP, agrupadas por domínio. Complementam
 
 ### Pagamento (Mercado Pago)
 
+- Proteção do checkout contra abuso (M-06, antes de habilitar o checkout real): além do limite por carrinho, o checkout limita por IP confiável (10/min) e por CPF (5 a cada 10 min), e recusa um CPF com 3 pedidos aguardando pagamento nas últimas 24 h; o "adicionar ao carrinho" limita por IP (60/min). Pix nasce com validade de 30 minutos (`date_of_expiration`), e o cancelamento pelo provider libera estoque e cupom pelo fluxo de recuperação. Ainda em aberto, para decisão do responsável: se o resgate de um pedido pendente deve contar no limite global do cupom.
 - Confirmação de venda exige pagamento `APPROVED`; `AUTHORIZED` ainda aguarda captura. Timeout incerto preserva pedido/reserva pendente para reconciliação, sem liberar estoque ou emitir outra cobrança automaticamente.
 - O adapter atual do Mercado Pago não implementa repasse 1:N. A flag de ambiente não habilita essa capacidade; checkout real multi-seller permanece bloqueado até integração homologada. Simulação de pagamentos ocorre exclusivamente por injeção de provider em testes, sem rota pública ou modo fake em produção.
 - Cartão de crédito usa Secure Fields do MercadoPago.js (iframes) e token descartável; PAN, validade e CVV nunca passam pelo servidor do Moto Shop. A primeira versão aceita crédito em uma parcela, definida no servidor. A Public Key pertence à mesma aplicação/ambiente do Access Token; somente a Public Key chega ao navegador. A URL opcional `MERCADO_PAGO_NOTIFICATION_URL` é enviada por cobrança e exige assinatura secreta configurada, sem sobrescrever configurações globais de outras integrações. Cartões e webhook real permanecem sujeitos à homologação.
@@ -56,7 +57,7 @@ Decisões pontuais tomadas ao longo do MVP, agrupadas por domínio. Complementam
 
 ### Reembolsos
 
-- Reembolso cujo valor confirmado pelo provider difere do solicitado permanece `PENDING` para revisão financeira.
+- Reembolso cujo valor confirmado pelo provider difere do solicitado, ou cuja resposta não traz o valor, permanece `PENDING` para revisão financeira (L-08).
 - Reembolsos de cancelamento/devolução usam uma chave de idempotência por tentativa (`<base>` e depois `<base>:retry-<n>`, no máximo 5). Nova tentativa só é criada quando todas as anteriores estão `FAILED`; `PENDING`/`SUCCEEDED` são sempre reaproveitadas. Se o pagamento já foi integralmente reembolsado no provider, a solicitação é encerrada com auditoria `upstreamRefund`.
 
 ---

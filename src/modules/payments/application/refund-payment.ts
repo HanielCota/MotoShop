@@ -150,13 +150,17 @@ async function assertProviderApprovedRefund(
 
 function assertRefundedAmountMatches(providerResult: ProviderRefundResult, requestedAmountInCents: number): void {
   // The provider reports the refunded value in reais. A mismatch means money moved differently from what was
-  // requested: keep the transaction PENDING (never mark it SUCCEEDED or FAILED) so a human reviews it.
+  // requested, and a missing value means it cannot be confirmed (L-08): keep the transaction PENDING (never
+  // SUCCEEDED or FAILED) so a human reviews it.
   const refundedAmount = providerResult.providerMetadata?.amount;
-  if (typeof refundedAmount !== "number" || Math.round(refundedAmount * 100) === requestedAmountInCents) return;
+  if (typeof refundedAmount === "number" && Math.round(refundedAmount * 100) === requestedAmountInCents) return;
 
   throw new ApplicationError({
     code: "CONFLICT",
-    message: "O valor reembolsado pelo provedor difere do solicitado. O reembolso precisa de revisão financeira.",
+    message:
+      typeof refundedAmount === "number"
+        ? "O valor reembolsado pelo provedor difere do solicitado. O reembolso precisa de revisão financeira."
+        : "O provedor não informou o valor reembolsado. O reembolso precisa de revisão financeira.",
     statusCode: 409,
   });
 }

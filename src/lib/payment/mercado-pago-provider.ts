@@ -13,6 +13,7 @@ import type {
 
 import { mercadoPagoRequest } from "./mercado-pago/http";
 import { mapPaymentResponse, mapRefundResponse } from "./mercado-pago/mappers";
+import { pixExpirationDate } from "./mercado-pago/pix-expiration";
 
 /**
  * Mercado Pago adapter: input validation and endpoint orchestration only.
@@ -71,6 +72,8 @@ export class MercadoPagoProvider implements PaymentProvider {
         },
         ...(input.paymentToken ? { token: input.paymentToken } : {}),
         ...(input.issuerId ? { issuer_id: input.issuerId } : {}),
+        // An unpaid Pix must not hold stock and coupons forever (M-06).
+        ...(input.paymentMethodId === "pix" ? { date_of_expiration: pixExpirationDate(new Date()) } : {}),
         ...(env.MERCADO_PAGO_NOTIFICATION_URL ? { notification_url: env.MERCADO_PAGO_NOTIFICATION_URL } : {}),
         ...(input.applicationFeeInCents !== undefined ? { application_fee: input.applicationFeeInCents / 100 } : {}),
       },

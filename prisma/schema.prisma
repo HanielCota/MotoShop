@@ -1168,6 +1168,8 @@ model CouponSellerParticipation {
 model CouponRedemption {
   id                    String   @id @default(cuid())
   customerEmailSnapshot String
+  /// Canonical e-mail for per-customer coupon limits (lowercase, no +tag, Gmail without dots). M-07.
+  customerEmailKey      String?
   discountAmountInCents Int
   couponId              String
   orderId               String
@@ -1180,6 +1182,7 @@ model CouponRedemption {
   @@unique([couponId, orderId])
   @@index([couponId, userId])
   @@index([couponId, customerEmailSnapshot])
+  @@index([couponId, customerEmailKey])
   @@index([orderId])
   @@map("coupon_redemptions")
 }

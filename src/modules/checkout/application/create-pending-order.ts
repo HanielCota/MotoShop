@@ -16,8 +16,10 @@ import { buildVariantAttributesSnapshot, type VariantGenderValue } from "@/modul
 import { guestOrderConfirmationEventKey } from "@/modules/notifications/domain/guest-order-confirmation";
 import { recordOutboxEvent } from "@/modules/outbox/application/record-outbox-event";
 import { guestOrderCreatedEventName } from "@/modules/outbox/domain/outbox-events";
+import { canonicalCouponCustomerEmail } from "@/modules/coupons/domain/coupon-customer-key";
 import { ApplicationError } from "@/shared/errors/application-error";
 
+import { couponCustomerOf } from "../domain/coupon-customer";
 import { applyOrderItemDiscounts } from "../domain/order-item-discounts";
 import type { SellerCharge } from "../domain/seller-charges";
 import type { CheckoutInput } from "../schemas/checkout";
@@ -95,7 +97,7 @@ export async function reserveCartAndCreateOrder(input: ReserveCartInput): Promis
       totalAmountInCents: totals.totalAmountInCents,
     });
     if (input.coupon) {
-      await assertCouponStillAvailableLocked(tx, input.coupon, data.customerEmail, session?.user.id, input.now);
+      await assertCouponStillAvailableLocked(tx, input.coupon, couponCustomerOf(data, session?.user.id), input.now);
       await redeemCoupon(tx, { coupon: input.coupon, orderId: order.id, data, session, totals });
     }
     if (input.guestAccessToken) {
@@ -318,6 +320,7 @@ async function redeemCoupon(
   await tx.couponRedemption.create({
     data: {
       customerEmailSnapshot: input.data.customerEmail,
+      customerEmailKey: canonicalCouponCustomerEmail(input.data.customerEmail),
       discountAmountInCents: input.totals.totalDiscountInCents,
       couponId: input.coupon.id,
       orderId: input.orderId,
