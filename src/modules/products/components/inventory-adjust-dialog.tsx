@@ -120,7 +120,7 @@ export function InventoryAdjustDialog({
                 >
                   {variants.map((item) => (
                     <option key={item.id} value={item.id}>
-                      {`${item.title} · ${item.sku} (${formatUnits(item.availableQuantity)})`}
+                      {`${item.title} (${formatUnits(item.availableQuantity)}) · ${item.sku}`}
                     </option>
                   ))}
                 </DesignSelect>
