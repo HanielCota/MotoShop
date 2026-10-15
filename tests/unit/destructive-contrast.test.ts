@@ -51,7 +51,8 @@ function over(foreground: Rgb, background: Rgb, alpha: number): Rgb {
 }
 
 function contrast(first: Rgb, second: Rgb): number {
-  const [lighter, darker] = [luminance(first), luminance(second)].sort((x, y) => y - x);
+  const lighter = Math.max(luminance(first), luminance(second));
+  const darker = Math.min(luminance(first), luminance(second));
   return (lighter + 0.05) / (darker + 0.05);
 }
 
