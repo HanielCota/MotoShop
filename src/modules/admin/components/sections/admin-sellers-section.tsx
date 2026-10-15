@@ -86,7 +86,7 @@ export async function AdminSellersSection({ searchParams }: AdminSectionProps) {
                   </ActionForm>
                   <ActionForm action={rejectSellerAction.bind(null, seller.id)}>
                     <Button type="submit" variant="outline" size="sm" className="rounded-md">
-                      Rejeitar
+                      Recusar
                     </Button>
                   </ActionForm>
                 </div>

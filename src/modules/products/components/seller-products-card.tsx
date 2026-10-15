@@ -226,7 +226,7 @@ export async function SellerProductsCard({
                       <p className="text-muted-foreground mt-2 text-xs">Sem variações cadastradas.</p>
                     )}
                     {product.rejectionReason ? (
-                      <p className="text-destructive mt-1 text-xs">Motivo da rejeição: {product.rejectionReason}</p>
+                      <p className="text-destructive mt-1 text-xs">Motivo da recusa: {product.rejectionReason}</p>
                     ) : null}
                   </div>
                   <div className="flex flex-wrap gap-2">

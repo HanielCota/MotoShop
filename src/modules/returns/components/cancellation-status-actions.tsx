@@ -36,7 +36,7 @@ export function CancellationStatusActions({
           {pending ? "Processando..." : status === "APPROVED" ? "Continuar processamento" : "Aprovar e reembolsar"}
         </Button>
         <Button variant="outline" size="sm" type="button" onClick={() => review("REJECT")} disabled={pending}>
-          Rejeitar
+          Recusar
         </Button>
       </div>
       <FormMessage error={feedback.error ?? null} success={feedback.success ?? null} className="text-xs" />

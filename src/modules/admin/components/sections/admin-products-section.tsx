@@ -2,6 +2,7 @@ import Image from "next/image";
 import { PackageSearch } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
+import { InlineNotice } from "@/components/ui/inline-notice";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, formatMoneyInCents, formatCount } from "@/lib/format";
@@ -27,10 +28,11 @@ import {
 import type { AdminSectionProps } from "./types";
 
 const reviewStatusOptions = [
-  { value: "ALL", label: "Em análise e recusados" },
   { value: "SUBMITTED", label: "Aguardando aprovação" },
   { value: "REJECTED", label: "Recusados" },
+  { value: "ALL", label: "Todos" },
 ];
+const GALLERY_SIZE = 4;
 
 export async function AdminProductsSection({ searchParams }: AdminSectionProps) {
   const params = await loadAdminProductReviewSearchParams(searchParams);
@@ -50,7 +52,11 @@ export async function AdminProductsSection({ searchParams }: AdminSectionProps) 
     listSellerOptionsForAdmin(),
   ]);
   const pageHref = (page: number) =>
-    adminHref("products", { ...params, productReviewPage: page }, { productReviewSort: "oldest" });
+    adminHref(
+      "products",
+      { ...params, productReviewPage: page },
+      { productReviewSort: "oldest", productReviewStatus: "SUBMITTED" },
+    );
 
   const categoryOptions = [
     { value: "", label: "Todas" },
@@ -125,25 +131,11 @@ export async function AdminProductsSection({ searchParams }: AdminSectionProps) 
       ) : (
         <AdminList label="Produtos em revisão">
           {result.products.map((product) => {
-            const image = product.images[0];
-            const imageUrl = image ? getPublicStorageUrl(image.storageKey) : null;
+            const imageCount = product._count.images;
             return (
               <li key={product.id} data-testid={`product-review-${product.id}`} className="flex flex-col gap-4 py-4">
                 <div className="flex flex-col gap-4 sm:flex-row">
-                  <div className="bg-muted flex aspect-square w-full shrink-0 items-center justify-center overflow-hidden rounded-md border sm:w-28">
-                    {image && imageUrl ? (
-                      <Image
-                        src={imageUrl}
-                        alt={image.altText ?? product.name}
-                        width={112}
-                        height={112}
-                        unoptimized
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-muted-foreground px-2 text-center text-xs">Sem foto pública</span>
-                    )}
-                  </div>
+                  <ProductReviewGallery product={product} imageCount={imageCount} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-semibold break-words">{product.name}</h3>
@@ -177,8 +169,13 @@ export async function AdminProductsSection({ searchParams }: AdminSectionProps) 
                     ) : null}
                   </div>
                 </div>
+                {product.status === "SUBMITTED" && imageCount === 0 ? (
+                  <InlineNotice tone="warning">
+                    Este produto não tem fotos. Ele aparecerá sem imagem na loja.
+                  </InlineNotice>
+                ) : null}
                 {product.status === "SUBMITTED" ? (
-                  <ProductStatusActions productId={product.id} />
+                  <ProductStatusActions productId={product.id} hasImages={imageCount > 0} />
                 ) : (
                   <p className="text-muted-foreground text-xs">
                     Motivo da recusa: {product.rejectionReason ?? "Não informado"}
@@ -200,5 +197,47 @@ export async function AdminProductsSection({ searchParams }: AdminSectionProps) 
         />
       ) : null}
     </AdminCard>
+  );
+}
+
+type ReviewQueueProduct = Awaited<ReturnType<typeof listProductReviewQueue>>["products"][number];
+
+/** Até quatro fotos na ordem da galeria; a primeira é a capa pública. */
+function ProductReviewGallery({ product, imageCount }: { product: ReviewQueueProduct; imageCount: number }) {
+  if (imageCount === 0) {
+    return (
+      <div className="bg-muted flex aspect-square w-full shrink-0 items-center justify-center rounded-md border sm:w-28">
+        <span className="text-muted-foreground px-2 text-center text-xs">Sem fotos</span>
+      </div>
+    );
+  }
+
+  const hiddenCount = imageCount - Math.min(product.images.length, GALLERY_SIZE);
+  return (
+    <ul aria-label={`Fotos de ${product.name}`} className="grid w-full shrink-0 grid-cols-4 gap-1 sm:w-56">
+      {product.images.slice(0, GALLERY_SIZE).map((image, index) => {
+        const imageUrl = getPublicStorageUrl(image.storageKey);
+        const isLast = index === GALLERY_SIZE - 1 && hiddenCount > 0;
+        return (
+          <li key={image.id} className="bg-muted relative aspect-square overflow-hidden rounded-md border">
+            {imageUrl ? (
+              <Image
+                src={imageUrl}
+                alt={image.altText ?? product.name}
+                width={112}
+                height={112}
+                unoptimized
+                className="h-full w-full object-cover"
+              />
+            ) : null}
+            {isLast ? (
+              <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-sm font-semibold text-white">
+                +{hiddenCount}
+              </span>
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
