@@ -135,7 +135,10 @@ export async function archiveProductAction(productId: string): Promise<void> {
     { sellerId: context.seller.id, userId: context.session.user.id },
     parsedId.data,
   );
-  if (archived) revalidateSellerCatalog();
+  if (!archived) return;
+  revalidateSellerCatalog();
+  // Um produto aprovado sai da vitrine na hora.
+  revalidatePath("/products", "layout");
 }
 
 export async function restoreProductAction(productId: string): Promise<void> {

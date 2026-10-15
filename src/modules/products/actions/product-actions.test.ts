@@ -162,6 +162,23 @@ describe("product review workflow", () => {
     );
   });
 
+  it("archives a published product and refreshes the storefront (BUG-006)", async () => {
+    mocks.productFindFirst.mockResolvedValue({ id: PRODUCT_ID, status: "APPROVED" });
+
+    await archiveProductAction(PRODUCT_ID);
+
+    expect(mocks.productFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: PRODUCT_ID, sellerId: "seller-a", status: { in: ["DRAFT", "REJECTED", "APPROVED"] } },
+      }),
+    );
+    expect(mocks.productUpdateMany).toHaveBeenCalledWith({
+      where: { id: PRODUCT_ID, sellerId: "seller-a", status: "APPROVED" },
+      data: { status: "ARCHIVED" },
+    });
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/products", "layout");
+  });
+
   it("does not audit or revalidate when another request already archived the product", async () => {
     mocks.productFindFirst.mockResolvedValue({ id: PRODUCT_ID, status: "DRAFT" });
     mocks.productUpdateMany.mockResolvedValue({ count: 0 });
