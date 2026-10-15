@@ -121,7 +121,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
                                 className="object-cover"
                               />
                             ) : (
-                              <ImageOff className="text-muted-foreground size-6" />
+                              <ImageOff aria-hidden="true" className="text-muted-foreground size-6" />
                             )}
                           </Link>
                           <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:justify-between">
