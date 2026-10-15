@@ -137,7 +137,6 @@ export async function AdminOrdersSection({ searchParams }: AdminSectionProps) {
             minWidth="min-w-[820px]"
             className="hidden md:block"
           >
-            {" "}
             {result.orders.map((order) => (
               <tr key={order.id}>
                 <td className={`${cellClassName} font-medium whitespace-nowrap`}>
