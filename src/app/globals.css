@@ -255,6 +255,22 @@
   }
 }
 
+/* DN-06: keep the autofill disguise (inset shadow) together with the DS ring. Unlayered on purpose:
+   the ring utilities also use box-shadow and would otherwise replace the disguise. */
+input:-webkit-autofill:focus-visible,
+textarea:-webkit-autofill:focus-visible {
+  box-shadow:
+    0 0 0 1000px var(--background) inset,
+    0 0 0 3px color-mix(in oklch, var(--ring) 40%, transparent);
+}
+
+input:-webkit-autofill[aria-invalid="true"],
+textarea:-webkit-autofill[aria-invalid="true"] {
+  box-shadow:
+    0 0 0 1000px var(--background) inset,
+    0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
