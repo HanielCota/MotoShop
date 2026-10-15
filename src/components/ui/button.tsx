@@ -8,8 +8,6 @@ import { cn } from "@/lib/utils";
  * - `default`/`icon`: 44px, alvo de toque mínimo recomendado.
  * - `sm`/`icon-sm`: 36px, apenas para tabelas e barras densas no desktop.
  * - `lg`/`icon-lg`: 48px, CTAs principais, sempre em `font-semibold` (peso único de CTA).
- * `xs`, `compact` e `icon-xs` são aliases legados de `sm`/`icon-sm` mantidos para
- * não quebrar chamadas existentes; não use em código novo.
  * Um único raio (`rounded-md`) para todos os controles — evite sobrescrever.
  */
 const smallSize =
@@ -43,12 +41,6 @@ const buttonVariantClasses = cva(
         icon: "size-11",
         "icon-sm": "size-9",
         "icon-lg": "size-12",
-        /** @deprecated alias legado de `sm`. */
-        xs: smallSize,
-        /** @deprecated alias legado de `sm`. */
-        compact: smallSize,
-        /** @deprecated alias legado de `icon-sm`. */
-        "icon-xs": "size-9",
         /** Text links: no padding, 44px touch target on phones and 36px from `sm` up. */
         link: "h-auto min-h-11 w-fit px-0 sm:min-h-9",
         /** Small text links in dense tables (Admin). */
