@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed } from "next/font/google";
 import { Geist } from "next/font/google";
 import type { ReactNode } from "react";
@@ -15,6 +15,14 @@ import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const display = Barlow_Condensed({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-display" });
+
+// "cover" lets the fixed bottom bars use env(safe-area-inset-bottom) on iPhones; the browser bar matches the header.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#171716",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(getApplicationBaseUrl()),
@@ -40,7 +48,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           Limit suppression to this element; child components retain hydration checks. */}
       <body
         suppressHydrationWarning
-        className="bg-background text-foreground selection:bg-primary selection:text-primary-foreground flex min-h-screen flex-col antialiased"
+        className="bg-background text-foreground selection:bg-primary selection:text-primary-foreground flex min-h-screen flex-col pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] antialiased"
       >
         <a
           href="#conteudo"
