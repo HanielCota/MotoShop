@@ -12,7 +12,14 @@ import { returnReasonLabels, type StatusDomain } from "@/shared/presentation/sta
 import type { AdminOrderSellerOrder } from "../../queries/order-detail";
 
 /** Parte do pedido de uma loja, com as solicitações de pós-venda e as mesmas ações das filas. */
-export function AdminSellerOrderCard({ sellerOrder }: { sellerOrder: AdminOrderSellerOrder }) {
+export function AdminSellerOrderCard({
+  orderNumber,
+  sellerOrder,
+}: {
+  orderNumber: string;
+  sellerOrder: AdminOrderSellerOrder;
+}) {
+  const summary = { orderNumber, storeName: sellerOrder.storeNameSnapshot };
   const hasAfterSales =
     sellerOrder.cancellationRequests.length + sellerOrder.returnRequests.length + sellerOrder.disputes.length > 0;
 
@@ -62,7 +69,11 @@ export function AdminSellerOrderCard({ sellerOrder }: { sellerOrder: AdminOrderS
                 ]}
                 actions={
                   request.status === "REQUESTED" || request.status === "APPROVED" ? (
-                    <CancellationStatusActions cancellationRequestId={request.id} status={request.status} />
+                    <CancellationStatusActions
+                      cancellationRequestId={request.id}
+                      status={request.status}
+                      summary={{ ...summary, amountInCents: request.amountInCents }}
+                    />
                   ) : null
                 }
               />
@@ -85,7 +96,13 @@ export function AdminSellerOrderCard({ sellerOrder }: { sellerOrder: AdminOrderS
                   `Motivo: ${returnReasonLabels[request.reason] ?? request.reason}${request.customerMessage ? ` · ${request.customerMessage}` : ""}`,
                   request.adminNote ? `Nota: ${request.adminNote}` : null,
                 ]}
-                actions={<ReturnStatusActions returnRequestId={request.id} status={request.status} />}
+                actions={
+                  <ReturnStatusActions
+                    returnRequestId={request.id}
+                    status={request.status}
+                    summary={{ ...summary, amountInCents: request.amountInCents }}
+                  />
+                }
               />
             ))}
             {sellerOrder.disputes.map((dispute) => (
@@ -100,7 +117,7 @@ export function AdminSellerOrderCard({ sellerOrder }: { sellerOrder: AdminOrderS
                   dispute.description,
                   dispute.resolutionNote ? `Resolução: ${dispute.resolutionNote}` : null,
                 ]}
-                actions={<DisputeStatusActions disputeId={dispute.id} status={dispute.status} />}
+                actions={<DisputeStatusActions disputeId={dispute.id} status={dispute.status} summary={summary} />}
               />
             ))}
           </section>

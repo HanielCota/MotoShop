@@ -116,7 +116,15 @@ export async function AdminReturnsSection({ searchParams }: AdminSectionProps) {
                     Solicitada em {formatDateTime(request.createdAt)}
                   </p>
                 </div>
-                <ReturnStatusActions returnRequestId={request.id} status={request.status} />
+                <ReturnStatusActions
+                  returnRequestId={request.id}
+                  status={request.status}
+                  summary={{
+                    orderNumber: request.order.orderNumber,
+                    storeName: request.seller.store?.name ?? "Lojista",
+                    amountInCents: request.amountInCents,
+                  }}
+                />
               </li>
             );
           })}
