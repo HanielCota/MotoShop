@@ -56,12 +56,13 @@ export function useCepAutofill<T extends Record<CepAutofillField, string>>(
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
       setStatus("loading");
 
-      fetch(`https://viacep.com.br/ws/${cep}/json/`, {
-        signal: controller.signal,
-        headers: { Accept: "application/json" },
-      })
-        .then((response) => (response.ok ? response.json() : null))
-        .then((payload: unknown) => {
+      async function fetchAddress() {
+        try {
+          const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, {
+            signal: controller.signal,
+            headers: { Accept: "application/json" },
+          });
+          const payload: unknown = response.ok ? await response.json() : null;
           if (controllerRef.current !== controller) return;
           const address = parseViaCepResponse(payload);
           if (!address) {
@@ -74,15 +75,16 @@ export function useCepAutofill<T extends Record<CepAutofillField, string>>(
             return result.values;
           });
           setStatus("found");
-        })
-        .catch(() => {
+        } catch {
           if (controllerRef.current !== controller) return;
           setStatus("error");
-        })
-        .finally(() => {
+        } finally {
           clearTimeout(timeout);
           if (controllerRef.current === controller) controllerRef.current = null;
-        });
+        }
+      }
+
+      void fetchAddress();
     },
     [cancel, setValues, timeoutMs],
   );

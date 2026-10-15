@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { must } from "../support/must";
 import { demoAccounts, demoStorageState } from "./demo-accounts";
 
 /**
@@ -67,7 +68,7 @@ test.describe("Loja pública (visitante)", () => {
     await page.goto("/products/review-capacete-apex-pro");
     const categoryHref = await page.locator('a[href^="/categoria/"]').first().getAttribute("href");
     expect(categoryHref).toBeTruthy();
-    await visit(page, categoryHref!);
+    await visit(page, must(categoryHref, "category link"));
   });
 
   test("prévias de carrinho e checkout, login e página inexistente", async ({ page }) => {

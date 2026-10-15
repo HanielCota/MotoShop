@@ -50,16 +50,16 @@ export const productInputSchema = z.object({
             .nonnegative("O estoque não pode ser negativo.")
             .max(MAX_INT32, "O estoque informado é maior que o permitido."),
         })
-        .superRefine((variant, ctx) => {
+        .superRefine((variant, refinementContext) => {
           if (variant.promotionalPriceInCents != null && variant.promotionalPriceInCents >= variant.priceInCents) {
-            ctx.addIssue({
+            refinementContext.addIssue({
               code: "custom",
               path: ["promotionalPriceInCents"],
               message: "O preço promocional deve ser menor que o preço normal.",
             });
           }
           if (variant.promotionalPriceInCents == null && (variant.promotionStartsAt || variant.promotionEndsAt)) {
-            ctx.addIssue({
+            refinementContext.addIssue({
               code: "custom",
               path: ["promotionalPriceInCents"],
               message: "Informe o preço promocional ou remova as datas da promoção.",
@@ -70,7 +70,7 @@ export const productInputSchema = z.object({
             variant.promotionEndsAt &&
             variant.promotionEndsAt <= variant.promotionStartsAt
           ) {
-            ctx.addIssue({
+            refinementContext.addIssue({
               code: "custom",
               path: ["promotionEndsAt"],
               message: "O término da promoção deve ser posterior ao início.",

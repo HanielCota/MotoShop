@@ -23,11 +23,11 @@ beforeEach(() => vi.resetAllMocks());
 
 it("delegates the review decision to the application service", async () => {
   mocks.review.mockResolvedValue({ nextStatus: "REJECTED" });
-  expect(await reviewReturnRequestAction("return", form("REJECT", "Fora do prazo"))).toEqual({
+  expect(await reviewReturnRequestAction("creturn0001", form("REJECT", "Fora do prazo"))).toEqual({
     success: "Solicitação atualizada.",
   });
   expect(mocks.review).toHaveBeenCalledWith({
-    returnRequestId: "return",
+    returnRequestId: "creturn0001",
     decision: "REJECT",
     note: "Fora do prazo",
     actorUserId: "admin",
@@ -35,25 +35,32 @@ it("delegates the review decision to the application service", async () => {
 });
 
 it("rejects an invalid decision without calling the service", async () => {
-  expect(await reviewReturnRequestAction("return", form("MAYBE"))).toHaveProperty("error");
+  expect(await reviewReturnRequestAction("creturn0001", form("MAYBE"))).toHaveProperty("error");
   expect(mocks.review).not.toHaveBeenCalled();
 });
 
 it("revalidates the order after a refund", async () => {
   mocks.refund.mockResolvedValue({ outcome: "REFUNDED", orderNumber: "MS-1" });
-  expect(await refundReturnRequestAction("return")).toEqual({ success: "Reembolso processado." });
-  expect(mocks.refund).toHaveBeenCalledWith({ returnRequestId: "return", actorUserId: "admin" });
+  expect(await refundReturnRequestAction("creturn0001")).toEqual({ success: "Reembolso processado." });
+  expect(mocks.refund).toHaveBeenCalledWith({ returnRequestId: "creturn0001", actorUserId: "admin" });
   expect(mocks.revalidate).toHaveBeenCalledWith("/orders/MS-1");
 });
 
 it("maps application errors to a predictable action result", async () => {
   mocks.refund.mockRejectedValue(new ApplicationError({ code: "CONFLICT", message: "A devolução mudou de estado." }));
-  expect((await refundReturnRequestAction("return")).error).toContain("mudou de estado");
+  expect((await refundReturnRequestAction("creturn0001")).error).toContain("mudou de estado");
 });
 
 it("keeps an unexpected refund failure retryable instead of leaking a generic English error", async () => {
   mocks.refund.mockRejectedValue(new Error("Mercado Pago request failed with status 404"));
-  const result = await refundReturnRequestAction("return");
+  const result = await refundReturnRequestAction("creturn0001");
   expect(result.error).toContain("pode ser reprocessada");
   expect(result.error).not.toContain("unexpected");
+});
+
+it("rejects a malformed return request id before calling the service", async () => {
+  expect(await reviewReturnRequestAction("../x", form("APPROVE"))).toEqual({ error: "Devolução inválida." });
+  expect(await refundReturnRequestAction("not a cuid")).toEqual({ error: "Devolução inválida." });
+  expect(mocks.review).not.toHaveBeenCalled();
+  expect(mocks.refund).not.toHaveBeenCalled();
 });

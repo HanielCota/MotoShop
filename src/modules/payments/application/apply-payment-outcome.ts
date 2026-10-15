@@ -53,72 +53,126 @@ export async function applyPaymentOutcome(
   input: ApplyPaymentOutcomeInput,
 ): Promise<PendingOrderPaymentOutcome> {
   const now = input.now ?? new Date();
-  const { result, order } = input;
-  const outcome = classifyPaymentStatusForPendingOrder(result.status);
-  const terminal = outcome !== "PENDING_PAYMENT";
-  const metadata = result.providerMetadata as Prisma.InputJsonValue;
+  const outcome = classifyPaymentStatusForPendingOrder(input.result.status);
 
-  if (result.status === "REFUNDED") {
-    logger.warn({
-      event: "payment.refunded_before_settlement",
-      orderId: order.id,
-      ...(result.externalId ? { externalId: result.externalId } : {}),
-      statusDetail:
-        typeof result.providerMetadata.status_detail === "string" ? result.providerMetadata.status_detail : undefined,
-    });
-  }
+  if (input.result.status === "REFUNDED") logRefundBeforeSettlement(input.order.id, input.result);
+  await updatePayment(tx, input, outcome, now);
+  await updateAuthorizationTransaction(tx, input, outcome, now);
+  await settleOrderReservations(tx, input, outcome);
+  if (outcome === "PENDING_PAYMENT") return outcome;
 
+  await updateOrderStatus(tx, input.order.id, outcome);
+  await recordPaymentStatusChange(tx, input.order, input.result);
+  return outcome;
+}
+
+type PaymentOutcomeResult = ApplyPaymentOutcomeInput["result"];
+
+type TerminalPaymentOutcome = Exclude<PendingOrderPaymentOutcome, "PENDING_PAYMENT">;
+
+function logRefundBeforeSettlement(orderId: string, result: PaymentOutcomeResult): void {
+  logger.warn({
+    event: "payment.refunded_before_settlement",
+    orderId,
+    ...(result.externalId ? { externalId: result.externalId } : {}),
+    statusDetail:
+      typeof result.providerMetadata.status_detail === "string" ? result.providerMetadata.status_detail : undefined,
+  });
+}
+
+async function updatePayment(
+  tx: InventoryTransaction,
+  input: ApplyPaymentOutcomeInput,
+  outcome: PendingOrderPaymentOutcome,
+  now: Date,
+): Promise<void> {
+  const { result } = input;
   await tx.payment.update({
     where: { id: input.paymentId },
     data: {
       ...(result.externalId ? { externalId: result.externalId } : {}),
       status: result.status,
-      providerMetadata: metadata,
+      providerMetadata: result.providerMetadata as Prisma.InputJsonValue,
       authorizedAt: result.authorizedAt ?? null,
       paidAt: result.paidAt ?? null,
       failedAt: result.failedAt ?? (outcome === "CANCELLED" ? now : null),
     },
   });
+}
 
-  if (input.transactionId) {
-    await tx.paymentTransaction.update({
-      where: { id: input.transactionId },
-      data: {
-        ...(result.externalId ? { externalId: result.externalId } : {}),
-        // A refunded/charged-back payment was captured before being returned: the
-        // authorization itself succeeded; Payment.status (REFUNDED) carries the reversal.
-        status:
-          outcome === "PAID" || result.status === "REFUNDED"
-            ? "SUCCEEDED"
-            : outcome === "CANCELLED"
-              ? "FAILED"
-              : "PENDING",
-        providerMetadata: metadata,
-        processedAt: terminal ? (result.paidAt ?? result.failedAt ?? now) : null,
-      },
-    });
-  }
+async function updateAuthorizationTransaction(
+  tx: InventoryTransaction,
+  input: ApplyPaymentOutcomeInput,
+  outcome: PendingOrderPaymentOutcome,
+  now: Date,
+): Promise<void> {
+  if (!input.transactionId) return;
 
+  const { result } = input;
+  const terminal = outcome !== "PENDING_PAYMENT";
+  await tx.paymentTransaction.update({
+    where: { id: input.transactionId },
+    data: {
+      ...(result.externalId ? { externalId: result.externalId } : {}),
+      status: authorizationTransactionStatus(outcome, result.status),
+      providerMetadata: result.providerMetadata as Prisma.InputJsonValue,
+      processedAt: terminal ? (result.paidAt ?? result.failedAt ?? now) : null,
+    },
+  });
+}
+
+function authorizationTransactionStatus(
+  outcome: PendingOrderPaymentOutcome,
+  providerStatus: PaymentProviderStatus,
+): "SUCCEEDED" | "FAILED" | "PENDING" {
+  // A refunded/charged-back payment was captured before being returned: the
+  // authorization itself succeeded; Payment.status (REFUNDED) carries the reversal.
+  if (outcome === "PAID" || providerStatus === "REFUNDED") return "SUCCEEDED";
+  if (outcome === "CANCELLED") return "FAILED";
+  return "PENDING";
+}
+
+async function settleOrderReservations(
+  tx: InventoryTransaction,
+  input: ApplyPaymentOutcomeInput,
+  outcome: PendingOrderPaymentOutcome,
+): Promise<void> {
+  const { order } = input;
   if (outcome === "PAID") await commitOrderReservations(tx, order.sellerOrders, order.id);
-  if (outcome === "CANCELLED") {
-    await releaseOrderReservations(tx, order.sellerOrders, order.id, input.releaseReason);
-    await tx.couponRedemption.deleteMany({ where: { orderId: order.id } });
-  }
-  if (terminal) {
-    await tx.order.update({ where: { id: order.id }, data: { status: outcome } });
-    await tx.sellerOrder.updateMany({ where: { orderId: order.id }, data: { status: outcome } });
-  }
+  if (outcome !== "CANCELLED") return;
 
-  if (terminal && result.externalId) {
-    const eventStatus = result.status === "APPROVED" ? "APPROVED" : result.status === "FAILED" ? "FAILED" : "CANCELLED";
-    await recordOutboxEvent(tx, {
-      eventKey: `order-payment:${order.id}:${eventStatus}`,
-      eventName: paymentStatusChangedEventName,
-      aggregateType: "ORDER",
-      aggregateId: order.id,
-      payload: { orderNumber: order.orderNumber, status: eventStatus, externalId: result.externalId },
-    });
-  }
+  await releaseOrderReservations(tx, order.sellerOrders, order.id, input.releaseReason);
+  await tx.couponRedemption.deleteMany({ where: { orderId: order.id } });
+}
 
-  return outcome;
+async function updateOrderStatus(
+  tx: InventoryTransaction,
+  orderId: string,
+  outcome: TerminalPaymentOutcome,
+): Promise<void> {
+  await tx.order.update({ where: { id: orderId }, data: { status: outcome } });
+  await tx.sellerOrder.updateMany({ where: { orderId }, data: { status: outcome } });
+}
+
+async function recordPaymentStatusChange(
+  tx: InventoryTransaction,
+  order: ApplyPaymentOutcomeInput["order"],
+  result: PaymentOutcomeResult,
+): Promise<void> {
+  if (!result.externalId) return;
+
+  const eventStatus = paymentEventStatus(result.status);
+  await recordOutboxEvent(tx, {
+    eventKey: `order-payment:${order.id}:${eventStatus}`,
+    eventName: paymentStatusChangedEventName,
+    aggregateType: "ORDER",
+    aggregateId: order.id,
+    payload: { orderNumber: order.orderNumber, status: eventStatus, externalId: result.externalId },
+  });
+}
+
+function paymentEventStatus(providerStatus: PaymentProviderStatus): "APPROVED" | "FAILED" | "CANCELLED" {
+  if (providerStatus === "APPROVED") return "APPROVED";
+  if (providerStatus === "FAILED") return "FAILED";
+  return "CANCELLED";
 }

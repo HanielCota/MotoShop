@@ -21,6 +21,35 @@ type StoreBrandingImages = {
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const maxImageSizeInBytes = 5 * 1024 * 1024;
 
+type AttachedStoreBranding = Exclude<StoreBrandingResult, { error: string }>;
+
+/** Runs an upload step; on failure discards the uploaded asset and rethrows, appending any cleanup error. */
+async function runOrDiscardUpload<T>(
+  operation: () => Promise<T>,
+  discardUpload: () => Promise<{ error?: string }>,
+  fallbackMessage: string,
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (operationError) {
+    const cleanup = await discardUpload();
+    if (cleanup.error) {
+      throw new Error(`${operationError instanceof Error ? operationError.message : fallbackMessage} ${cleanup.error}`);
+    }
+    throw operationError;
+  }
+}
+
+async function attachUploadedImage(input: {
+  imageType: StoreBrandingImageType;
+  storageKey: string;
+  fileId: string;
+}): Promise<AttachedStoreBranding> {
+  const attached = await attachStoreBrandingImageAction(input);
+  if ("error" in attached) throw new Error(attached.error);
+  return attached;
+}
+
 export function StoreBrandingManager({ initialImages }: { initialImages: StoreBrandingImages }) {
   const [images, setImages] = useState(initialImages);
   const [error, setError] = useState<string>();
@@ -44,48 +73,30 @@ export function StoreBrandingManager({ initialImages }: { initialImages: StoreBr
       });
       if ("error" in upload) throw new Error(upload.error);
 
-      let fileId: string;
-      try {
-        fileId = await uploadImageToImageKit({ url: upload.url, fields: upload.fields, file });
-      } catch (uploadError) {
-        const cleanup = await discardStoreBrandingUploadAction({ imageType, storageKey: upload.key });
-        if (cleanup.error) {
-          throw new Error(
-            `${uploadError instanceof Error ? uploadError.message : "Falha ao enviar a imagem."} ${cleanup.error}`,
-          );
-        }
-        throw uploadError;
-      }
+      const discardUpload = () => discardStoreBrandingUploadAction({ imageType, storageKey: upload.key });
+      const fileId = await runOrDiscardUpload(
+        () => uploadImageToImageKit({ url: upload.url, fields: upload.fields, file }),
+        discardUpload,
+        "Falha ao enviar a imagem.",
+      );
+      const attached = await runOrDiscardUpload(
+        () => attachUploadedImage({ imageType, storageKey: upload.key, fileId }),
+        discardUpload,
+        "Falha ao associar a imagem.",
+      );
 
-      let attached: StoreBrandingResult;
-      try {
-        attached = await attachStoreBrandingImageAction({
-          imageType,
-          storageKey: upload.key,
-          fileId,
-        });
-        if ("error" in attached) throw new Error(attached.error);
-      } catch (attachError) {
-        const cleanup = await discardStoreBrandingUploadAction({ imageType, storageKey: upload.key });
-        if (cleanup.error) {
-          throw new Error(
-            `${attachError instanceof Error ? attachError.message : "Falha ao associar a imagem."} ${cleanup.error}`,
-          );
-        }
-        throw attachError;
-      }
-      if ("error" in attached) throw new Error(attached.error);
-      if (attached.image.url) {
-        setImages((current) => ({
-          ...current,
-          [imageType === "logo" ? "logoUrl" : "bannerUrl"]: attached.image.url,
-        }));
-        setSuccess(`${imageType === "logo" ? "Logo" : "Banner"} atualizado.`);
-      } else {
+      if (!attached.image.url) {
         setSuccess(
           `${imageType === "logo" ? "Logo" : "Banner"} associado. Configure IMAGEKIT_URL_ENDPOINT para exibi-lo na vitrine.`,
         );
+        return;
       }
+
+      setImages((current) => ({
+        ...current,
+        [imageType === "logo" ? "logoUrl" : "bannerUrl"]: attached.image.url,
+      }));
+      setSuccess(`${imageType === "logo" ? "Logo" : "Banner"} atualizado.`);
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Não foi possível enviar a imagem.");
     } finally {

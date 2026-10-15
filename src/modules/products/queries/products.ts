@@ -35,63 +35,52 @@ export async function listProductBrands() {
   return db.brand.findMany({ where: { active: true }, orderBy: { name: "asc" } });
 }
 
-export async function listSellerProducts(
-  sellerId: string,
-  input: {
-    query?: string | null;
-    categoryId?: string | null;
-    brandId?: string | null;
-    minPriceInCents?: number | null;
-    maxPriceInCents?: number | null;
-    status?: SellerProductStatus;
-    stock?: SellerProductStock;
-    promotion?: "ALL" | "ON_SALE";
-    sort?: SellerProductSort;
-    page?: number;
-    pageSize?: number;
-  } = {},
-) {
+type SellerProductListInput = {
+  query?: string | null;
+  categoryId?: string | null;
+  brandId?: string | null;
+  minPriceInCents?: number | null;
+  maxPriceInCents?: number | null;
+  status?: SellerProductStatus;
+  stock?: SellerProductStock;
+  promotion?: "ALL" | "ON_SALE";
+  sort?: SellerProductSort;
+  page?: number;
+  pageSize?: number;
+};
+
+export async function listSellerProducts(sellerId: string, input: SellerProductListInput = {}) {
   const pageSize = Math.min(Math.max(input.pageSize ?? 20, 1), 50);
   const requestedPage = normalizeRequestedPage(input.page);
+  const where = buildSellerProductWhere(sellerId, input);
+  const [total, products] = await Promise.all([
+    db.product.count({ where }),
+    db.product.findMany({
+      where,
+      include: {
+        category: true,
+        brand: true,
+        variants: { include: { inventory: true }, orderBy: { createdAt: "asc" } },
+      },
+      orderBy: sellerProductOrderBy(input.sort),
+      skip: (requestedPage - 1) * pageSize,
+      take: pageSize,
+    }),
+  ]);
+  const pageCount = Math.max(Math.ceil(total / pageSize), 1);
+  return { products, total, page: Math.min(requestedPage, pageCount), pageCount };
+}
+
+function parsePriceFilter(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) return undefined;
+  return Math.min(value, MAX_INT4);
+}
+
+function buildSellerProductWhere(sellerId: string, input: SellerProductListInput): Prisma.ProductWhereInput {
   const query = input.query?.trim();
   const status = input.status && input.status !== "ALL" ? (input.status as ProductStatus) : undefined;
-  const minPrice =
-    typeof input.minPriceInCents === "number" &&
-    Number.isSafeInteger(input.minPriceInCents) &&
-    input.minPriceInCents >= 0
-      ? Math.min(input.minPriceInCents, MAX_INT4)
-      : undefined;
-  const maxPrice =
-    typeof input.maxPriceInCents === "number" &&
-    Number.isSafeInteger(input.maxPriceInCents) &&
-    input.maxPriceInCents >= 0
-      ? Math.min(input.maxPriceInCents, MAX_INT4)
-      : undefined;
-  const variantFilter: Prisma.ProductVariantWhereInput = {
-    ...(minPrice !== undefined || maxPrice !== undefined ? { active: true } : {}),
-    ...(input.stock === "OUT" ? { active: true, inventory: { availableQuantity: 0 } } : {}),
-    ...(input.stock === "IN" ? { active: true, inventory: { availableQuantity: { gt: 0 } } } : {}),
-    ...(input.stock === "LOW" ? { active: true, inventory: { availableQuantity: { gt: 0, lte: 5 } } } : {}),
-    ...(input.promotion === "ON_SALE"
-      ? {
-          active: true,
-          promotionalPriceInCents: { not: null },
-          AND: [
-            { OR: [{ promotionStartsAt: null }, { promotionStartsAt: { lte: new Date() } }] },
-            { OR: [{ promotionEndsAt: null }, { promotionEndsAt: { gte: new Date() } }] },
-          ],
-        }
-      : {}),
-    ...(minPrice !== undefined || maxPrice !== undefined
-      ? {
-          priceInCents: {
-            ...(minPrice !== undefined ? { gte: minPrice } : {}),
-            ...(maxPrice !== undefined ? { lte: maxPrice } : {}),
-          },
-        }
-      : {}),
-  };
-  const where: Prisma.ProductWhereInput = {
+  const variantFilter = buildSellerVariantFilter(input);
+  return {
     sellerId,
     ...(input.categoryId ? { categoryId: input.categoryId } : {}),
     ...(input.brandId ? { brandId: input.brandId } : {}),
@@ -107,23 +96,86 @@ export async function listSellerProducts(
         }
       : {}),
   };
+}
+
+function buildSellerVariantFilter(input: SellerProductListInput): Prisma.ProductVariantWhereInput {
+  const minPrice = parsePriceFilter(input.minPriceInCents);
+  const maxPrice = parsePriceFilter(input.maxPriceInCents);
+  const hasPriceFilter = minPrice !== undefined || maxPrice !== undefined;
+  return {
+    ...(hasPriceFilter ? { active: true } : {}),
+    ...sellerStockFilter(input.stock),
+    ...(input.promotion === "ON_SALE" ? activePromotionFilter() : {}),
+    ...(hasPriceFilter
+      ? {
+          priceInCents: {
+            ...(minPrice !== undefined ? { gte: minPrice } : {}),
+            ...(maxPrice !== undefined ? { lte: maxPrice } : {}),
+          },
+        }
+      : {}),
+  };
+}
+
+function sellerStockFilter(stock: SellerProductStock | undefined): Prisma.ProductVariantWhereInput {
+  if (stock === "OUT") return { active: true, inventory: { availableQuantity: 0 } };
+  if (stock === "IN") return { active: true, inventory: { availableQuantity: { gt: 0 } } };
+  if (stock === "LOW") return { active: true, inventory: { availableQuantity: { gt: 0, lte: 5 } } };
+  return {};
+}
+
+function activePromotionFilter(): Prisma.ProductVariantWhereInput {
+  return {
+    active: true,
+    promotionalPriceInCents: { not: null },
+    AND: [
+      { OR: [{ promotionStartsAt: null }, { promotionStartsAt: { lte: new Date() } }] },
+      { OR: [{ promotionEndsAt: null }, { promotionEndsAt: { gte: new Date() } }] },
+    ],
+  };
+}
+
+function sellerProductOrderBy(sort: SellerProductSort | undefined): Prisma.ProductOrderByWithRelationInput[] {
+  if (sort === "updated_oldest") return [{ updatedAt: "asc" }, { name: "asc" }];
+  if (sort === "name_asc") return [{ name: "asc" }, { updatedAt: "desc" }];
+  if (sort === "name_desc") return [{ name: "desc" }, { updatedAt: "desc" }];
+  return [{ updatedAt: "desc" }, { name: "asc" }];
+}
+
+type ProductReviewQueueInput = {
+  status?: "ALL" | "SUBMITTED" | "REJECTED";
+  q?: string | null;
+  categoryId?: string | null;
+  brandId?: string | null;
+  sellerId?: string | null;
+  from?: string | null;
+  to?: string | null;
+  sort?: "newest" | "oldest";
+  page?: number;
+};
+
+const productReviewQueueInclude = {
+  seller: { include: { store: true } },
+  category: true,
+  brand: true,
+  variants: { include: { inventory: true } },
+  images: { orderBy: { sortOrder: "asc" }, take: 1 },
+  compatibilities: {
+    include: { motorcycleFitment: { include: { motorcycleModel: { include: { manufacturer: true } } } } },
+  },
+} satisfies Prisma.ProductInclude;
+
+export async function listProductReviewQueue(input: ProductReviewQueueInput = {}) {
+  const pageSize = 20;
+  const requestedPage = Math.max(input.page ?? 1, 1);
+  const where = buildProductReviewQueueWhere(input);
+  const sortDirection = input.sort === "newest" ? "desc" : "asc";
   const [total, products] = await Promise.all([
     db.product.count({ where }),
     db.product.findMany({
       where,
-      include: {
-        category: true,
-        brand: true,
-        variants: { include: { inventory: true }, orderBy: { createdAt: "asc" } },
-      },
-      orderBy:
-        input.sort === "updated_oldest"
-          ? [{ updatedAt: "asc" }, { name: "asc" }]
-          : input.sort === "name_asc"
-            ? [{ name: "asc" }, { updatedAt: "desc" }]
-            : input.sort === "name_desc"
-              ? [{ name: "desc" }, { updatedAt: "desc" }]
-              : [{ updatedAt: "desc" }, { name: "asc" }],
+      include: productReviewQueueInclude,
+      orderBy: [{ submittedAt: sortDirection }, { createdAt: sortDirection }],
       skip: (requestedPage - 1) * pageSize,
       take: pageSize,
     }),
@@ -132,26 +184,12 @@ export async function listSellerProducts(
   return { products, total, page: Math.min(requestedPage, pageCount), pageCount };
 }
 
-export async function listProductReviewQueue(
-  input: {
-    status?: "ALL" | "SUBMITTED" | "REJECTED";
-    q?: string | null;
-    categoryId?: string | null;
-    brandId?: string | null;
-    sellerId?: string | null;
-    from?: string | null;
-    to?: string | null;
-    sort?: "newest" | "oldest";
-    page?: number;
-  } = {},
-) {
-  const pageSize = 20;
-  const requestedPage = Math.max(input.page ?? 1, 1);
+function buildProductReviewQueueWhere(input: ProductReviewQueueInput): Prisma.ProductWhereInput {
   const status = input.status && input.status !== "ALL" ? input.status : undefined;
   const query = input.q?.trim().slice(0, 100);
   const from = parseProductReviewDate(input.from, false);
   const to = parseProductReviewDate(input.to, true);
-  const where = {
+  return {
     status: status ?? { in: [ProductStatus.SUBMITTED, ProductStatus.REJECTED] },
     ...(input.categoryId ? { categoryId: input.categoryId } : {}),
     ...(input.brandId ? { brandId: input.brandId } : {}),
@@ -168,30 +206,6 @@ export async function listProductReviewQueue(
         }
       : {}),
   };
-  const [total, products] = await Promise.all([
-    db.product.count({ where }),
-    db.product.findMany({
-      where,
-      include: {
-        seller: { include: { store: true } },
-        category: true,
-        brand: true,
-        variants: { include: { inventory: true } },
-        images: { orderBy: { sortOrder: "asc" }, take: 1 },
-        compatibilities: {
-          include: { motorcycleFitment: { include: { motorcycleModel: { include: { manufacturer: true } } } } },
-        },
-      },
-      orderBy: [
-        { submittedAt: input.sort === "newest" ? "desc" : "asc" },
-        { createdAt: input.sort === "newest" ? "desc" : "asc" },
-      ],
-      skip: (requestedPage - 1) * pageSize,
-      take: pageSize,
-    }),
-  ]);
-  const pageCount = Math.max(Math.ceil(total / pageSize), 1);
-  return { products, total, page: Math.min(requestedPage, pageCount), pageCount };
 }
 
 export async function listApprovedProducts(input: PublicProductFilter = {}) {
@@ -231,102 +245,52 @@ export async function listApprovedProducts(input: PublicProductFilter = {}) {
         reviewCount: product._count.productReviews,
         isVip: product.seller.subscriptions.length > 0,
       }))
-      .sort((a, b) => positions.get(a.id)! - positions.get(b.id)!),
+      .sort((a, b) => (positions.get(a.id) ?? 0) - (positions.get(b.id) ?? 0)),
     total: page.total,
     page: page.page,
     pageCount: page.pageCount,
   };
 }
 
-export async function getApprovedProductBySlug(
-  slug: string,
-  input: {
-    reviewRating?: number | null;
-    reviewSort?: "newest" | "oldest";
-    reviewPage?: number;
-    questionPage?: number;
-    questionSort?: "newest" | "oldest";
-  } = {},
-) {
-  const pageSize = 6;
+type ProductDetailInput = {
+  reviewRating?: number | null;
+  reviewSort?: "newest" | "oldest";
+  reviewPage?: number;
+  questionPage?: number;
+  questionSort?: "newest" | "oldest";
+};
+
+type ProductInteractionArgs = {
+  pageSize: number;
+  reviewRating: number | undefined;
+  reviewSort: ProductDetailInput["reviewSort"];
+  questionSort: ProductDetailInput["questionSort"];
+};
+
+export async function getApprovedProductBySlug(slug: string, input: ProductDetailInput = {}) {
   const requestedReviewPage = normalizeRequestedPage(input.reviewPage);
   const requestedQuestionPage = normalizeRequestedPage(input.questionPage);
-  const reviewRating =
-    typeof input.reviewRating === "number" &&
-    Number.isInteger(input.reviewRating) &&
-    input.reviewRating >= 1 &&
-    input.reviewRating <= 5
-      ? input.reviewRating
-      : undefined;
-  const now = new Date();
-  const reviewsInclude = (page: number) =>
-    ({
-      where: { hiddenAt: null, ...(reviewRating ? { ratingTenths: { gte: reviewRating * 10 } } : {}) },
-      include: { user: { select: { name: true } }, media: { orderBy: { sortOrder: "asc" } } },
-      orderBy: { createdAt: input.reviewSort === "oldest" ? "asc" : "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }) satisfies Prisma.Product$productReviewsArgs;
-  const questionsInclude = (page: number) =>
-    ({
-      where: { hiddenAt: null },
-      include: {
-        askedBy: { select: { name: true } },
-        answeredBy: { select: { name: true } },
-      },
-      orderBy: { createdAt: input.questionSort === "oldest" ? "asc" : "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }) satisfies Prisma.Product$questionsArgs;
+  const interactionArgs: ProductInteractionArgs = {
+    pageSize: 6,
+    reviewRating: parseReviewRating(input.reviewRating),
+    reviewSort: input.reviewSort,
+    questionSort: input.questionSort,
+  };
   const product = await db.product.findFirst({
-    where: {
-      slug,
-      status: ProductStatus.APPROVED,
-      category: { active: true },
-      brand: { active: true },
-      seller: { status: { in: ["APPROVED", "ACTIVE"] } },
-    },
-    include: {
-      seller: {
-        include: {
-          store: true,
-          subscriptions: {
-            where: { status: "ACTIVE", startsAt: { lte: now }, endsAt: { gte: now } },
-            select: { id: true, endsAt: true },
-          },
-          sellerReviews: {
-            where: { hiddenAt: null },
-            include: { user: { select: { name: true } } },
-            orderBy: { createdAt: "desc" },
-          },
-        },
-      },
-      category: true,
-      brand: true,
-      images: { orderBy: { sortOrder: "asc" } },
-      variants: { where: { active: true }, include: { inventory: true }, orderBy: { createdAt: "asc" } },
-      compatibilities: {
-        include: { motorcycleFitment: { include: { motorcycleModel: { include: { manufacturer: true } } } } },
-      },
-      productReviews: reviewsInclude(requestedReviewPage),
-      questions: questionsInclude(requestedQuestionPage),
-      _count: { select: { productReviews: { where: { hiddenAt: null } }, questions: { where: { hiddenAt: null } } } },
-    },
+    where: approvedProductWhere(slug),
+    include: approvedProductDetailInclude(interactionArgs, requestedReviewPage, requestedQuestionPage, new Date()),
   });
 
   if (!product) return null;
 
-  const reviewWhere: Prisma.ProductReviewWhereInput = {
-    productId: product.id,
-    hiddenAt: null,
-    ...(reviewRating ? { ratingTenths: { gte: reviewRating * 10 } } : {}),
-  };
+  const reviewWhere = productReviewWhere(product.id, interactionArgs.reviewRating);
   const [reviewSummary, reviewGroups, unitsSold] = await Promise.all([
     db.productReview.aggregate({ where: reviewWhere, _avg: { ratingTenths: true }, _count: { _all: true } }),
     db.productReview.groupBy({ by: ["ratingTenths"], where: reviewWhere, _count: { _all: true } }),
     getProductUnitsSold(product.id),
   ]);
   const reviewCount = reviewSummary._count._all;
+  const { pageSize } = interactionArgs;
   const { page: reviewPage, pageCount: reviewPageCount } = resolvePage(requestedReviewPage, reviewCount, pageSize);
   const { page: questionPage, pageCount: questionPageCount } = resolvePage(
     requestedQuestionPage,
@@ -337,11 +301,11 @@ export async function getApprovedProductBySlug(
   const [productReviews, questions] = await Promise.all([
     reviewPage === requestedReviewPage
       ? product.productReviews
-      : db.productReview.findMany({ ...reviewsInclude(reviewPage), where: reviewWhere }),
+      : db.productReview.findMany({ ...productReviewsArgs(interactionArgs, reviewPage), where: reviewWhere }),
     questionPage === requestedQuestionPage
       ? product.questions
       : db.productQuestion.findMany({
-          ...questionsInclude(questionPage),
+          ...productQuestionsArgs(interactionArgs, questionPage),
           where: { productId: product.id, hiddenAt: null },
         }),
   ]);
@@ -362,6 +326,86 @@ export async function getApprovedProductBySlug(
     questionPage,
     questionPageCount,
   };
+}
+
+function parseReviewRating(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 5) return undefined;
+  return value;
+}
+
+function approvedProductWhere(slug: string) {
+  return {
+    slug,
+    status: ProductStatus.APPROVED,
+    category: { active: true },
+    brand: { active: true },
+    seller: { status: { in: ["APPROVED", "ACTIVE"] } },
+  } satisfies Prisma.ProductWhereInput;
+}
+
+function productReviewWhere(productId: string, reviewRating: number | undefined): Prisma.ProductReviewWhereInput {
+  return {
+    productId,
+    hiddenAt: null,
+    ...(reviewRating ? { ratingTenths: { gte: reviewRating * 10 } } : {}),
+  };
+}
+
+function productReviewsArgs(args: ProductInteractionArgs, page: number) {
+  return {
+    where: { hiddenAt: null, ...(args.reviewRating ? { ratingTenths: { gte: args.reviewRating * 10 } } : {}) },
+    include: { user: { select: { name: true } }, media: { orderBy: { sortOrder: "asc" } } },
+    orderBy: { createdAt: args.reviewSort === "oldest" ? "asc" : "desc" },
+    skip: (page - 1) * args.pageSize,
+    take: args.pageSize,
+  } satisfies Prisma.Product$productReviewsArgs;
+}
+
+function productQuestionsArgs(args: ProductInteractionArgs, page: number) {
+  return {
+    where: { hiddenAt: null },
+    include: {
+      askedBy: { select: { name: true } },
+      answeredBy: { select: { name: true } },
+    },
+    orderBy: { createdAt: args.questionSort === "oldest" ? "asc" : "desc" },
+    skip: (page - 1) * args.pageSize,
+    take: args.pageSize,
+  } satisfies Prisma.Product$questionsArgs;
+}
+
+function approvedProductDetailInclude(
+  args: ProductInteractionArgs,
+  reviewPage: number,
+  questionPage: number,
+  now: Date,
+) {
+  return {
+    seller: {
+      include: {
+        store: true,
+        subscriptions: {
+          where: { status: "ACTIVE", startsAt: { lte: now }, endsAt: { gte: now } },
+          select: { id: true, endsAt: true },
+        },
+        sellerReviews: {
+          where: { hiddenAt: null },
+          include: { user: { select: { name: true } } },
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    },
+    category: true,
+    brand: true,
+    images: { orderBy: { sortOrder: "asc" } },
+    variants: { where: { active: true }, include: { inventory: true }, orderBy: { createdAt: "asc" } },
+    compatibilities: {
+      include: { motorcycleFitment: { include: { motorcycleModel: { include: { manufacturer: true } } } } },
+    },
+    productReviews: productReviewsArgs(args, reviewPage),
+    questions: productQuestionsArgs(args, questionPage),
+    _count: { select: { productReviews: { where: { hiddenAt: null } }, questions: { where: { hiddenAt: null } } } },
+  } satisfies Prisma.ProductInclude;
 }
 
 /**

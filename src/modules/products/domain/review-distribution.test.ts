@@ -37,6 +37,11 @@ describe("buildRatingDistribution", () => {
       [2, 0],
       [1, 2],
     ]);
-    expect(distribution[0]!.percentage).toBe(50);
+    expect(defined(distribution[0]).percentage).toBe(50);
   });
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

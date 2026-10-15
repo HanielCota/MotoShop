@@ -305,9 +305,9 @@ function toSafeProviderMetadata(value: unknown, keys: readonly string[]): Record
   const safe: Record<string, string | number | boolean> = {};
   for (const key of keys) {
     const candidate = record[key];
-    if (typeof candidate === "string" && candidate.length <= 100) safe[key] = candidate;
-    else if (typeof candidate === "number" && Number.isFinite(candidate)) safe[key] = candidate;
-    else if (typeof candidate === "boolean") safe[key] = candidate;
+    const isSafeString = typeof candidate === "string" && candidate.length <= 100;
+    const isSafeNumber = typeof candidate === "number" && Number.isFinite(candidate);
+    if (isSafeString || isSafeNumber || typeof candidate === "boolean") safe[key] = candidate;
   }
   return safe;
 }
@@ -326,11 +326,10 @@ function toOptionalInteger(value: unknown): number | undefined {
 }
 
 function readNestedString(value: Record<string, unknown>, path: string[]): string | undefined {
-  let current: unknown = value;
-  for (const key of path) {
-    if (typeof current !== "object" || current === null) return undefined;
-    current = (current as Record<string, unknown>)[key];
-  }
+  const current = path.reduce<unknown>(
+    (node, key) => (typeof node === "object" && node !== null ? (node as Record<string, unknown>)[key] : undefined),
+    value,
+  );
   return typeof current === "string" && current.length > 0 ? current : undefined;
 }
 

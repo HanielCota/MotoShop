@@ -93,9 +93,8 @@ it("links field errors and focuses the summary alert when validation fails", asy
   await waitFor(() => expect(alert.closest("[tabindex='-1']")).toHaveFocus());
   const cpf = screen.getByLabelText("CPF do comprador");
   expect(cpf).toHaveAttribute("aria-invalid", "true");
-  expect(document.getElementById(cpf.getAttribute("aria-describedby")!.split(" ")[0]!)).toHaveTextContent(
-    "Informe um CPF válido.",
-  );
+  const [errorId] = defined(cpf.getAttribute("aria-describedby")).split(" ");
+  expect(document.getElementById(defined(errorId))).toHaveTextContent("Informe um CPF válido.");
   expect(checkout).not.toHaveBeenCalled();
 });
 
@@ -106,3 +105,8 @@ it("does not invite the customer to pay before the seller connects a Mercado Pag
   expect(screen.queryByRole("radiogroup", { name: "Forma de pagamento" })).toBeNull();
   expect(screen.getByRole("button", { name: "Pagamento indisponível" })).toBeDisabled();
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

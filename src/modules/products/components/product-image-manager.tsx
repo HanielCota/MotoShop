@@ -25,6 +25,65 @@ type ProductImage = { id: string; storageKey: string; altText: string | null; ur
 const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const maxImageSizeInBytes = 5 * 1024 * 1024;
 
+function assertValidImageFile(file: File) {
+  if (!allowedTypes.has(file.type)) throw new Error("Use imagens JPG, PNG ou WebP.");
+  if (file.size > maxImageSizeInBytes) throw new Error("Cada imagem deve ter no máximo 5 MB.");
+}
+
+/** Removes the orphan upload, then rethrows the original error (with the cleanup error, if any). */
+async function discardUploadAndRethrow(
+  productId: string,
+  storageKey: string,
+  error: unknown,
+  fallbackMessage: string,
+): Promise<never> {
+  const cleanup = await discardProductImageUploadAction({ productId, storageKey });
+  if (!cleanup.error) throw error;
+
+  throw new Error(`${error instanceof Error ? error.message : fallbackMessage} ${cleanup.error}`);
+}
+
+async function sendFileToStorage(
+  productId: string,
+  upload: { url: string; fields: Record<string, string>; key: string },
+  file: File,
+): Promise<string> {
+  try {
+    return await uploadImageToImageKit({ url: upload.url, fields: upload.fields, file });
+  } catch (uploadError) {
+    return discardUploadAndRethrow(productId, upload.key, uploadError, "Falha ao enviar a imagem.");
+  }
+}
+
+async function uploadProductImage(productId: string, file: File): Promise<ProductImage> {
+  assertValidImageFile(file);
+
+  const upload = await createProductImageUploadUrlAction({
+    productId,
+    contentType: file.type,
+    sizeInBytes: file.size,
+  });
+  if ("error" in upload) throw new Error(upload.error);
+
+  const fileId = await sendFileToStorage(productId, upload, file);
+
+  try {
+    const attached: ProductImageResult = await attachProductImageAction({
+      productId,
+      storageKey: upload.key,
+      fileId,
+      altText: file.name.replace(/\.[^.]+$/, ""),
+    });
+    if ("error" in attached) throw new Error(attached.error);
+
+    return attached.image;
+  } catch (attachError) {
+    // The attach request may have committed even if its response was lost;
+    // the server-side cleanup keeps associated assets and removes only orphans.
+    return discardUploadAndRethrow(productId, upload.key, attachError, "Falha ao associar a imagem.");
+  }
+}
+
 export function ProductImageManager({
   productId,
   initialImages,
@@ -53,49 +112,10 @@ export function ProductImageManager({
 
     try {
       for (const file of Array.from(files)) {
-        if (!allowedTypes.has(file.type)) throw new Error("Use imagens JPG, PNG ou WebP.");
-        if (file.size > maxImageSizeInBytes) throw new Error("Cada imagem deve ter no máximo 5 MB.");
-
-        const upload = await createProductImageUploadUrlAction({
-          productId,
-          contentType: file.type,
-          sizeInBytes: file.size,
-        });
-        if ("error" in upload) throw new Error(upload.error);
-
-        let fileId: string;
-        try {
-          fileId = await uploadImageToImageKit({ url: upload.url, fields: upload.fields, file });
-        } catch (uploadError) {
-          const cleanup = await discardProductImageUploadAction({ productId, storageKey: upload.key });
-          if (cleanup.error) {
-            throw new Error(
-              `${uploadError instanceof Error ? uploadError.message : "Falha ao enviar a imagem."} ${cleanup.error}`,
-            );
-          }
-          throw uploadError;
-        }
-
-        try {
-          const attached: ProductImageResult = await attachProductImageAction({
-            productId,
-            storageKey: upload.key,
-            fileId,
-            altText: file.name.replace(/\.[^.]+$/, ""),
-          });
-          if ("error" in attached) throw new Error(attached.error);
-          setImages((current) => [...current, attached.image]);
-        } catch (attachError) {
-          // The attach request may have committed even if its response was lost;
-          // the server-side cleanup keeps associated assets and removes only orphans.
-          const cleanup = await discardProductImageUploadAction({ productId, storageKey: upload.key });
-          if (cleanup.error)
-            throw new Error(
-              `${attachError instanceof Error ? attachError.message : "Falha ao associar a imagem."} ${cleanup.error}`,
-            );
-          throw attachError;
-        }
+        const image = await uploadProductImage(productId, file);
+        setImages((current) => [...current, image]);
       }
+
       setSuccess(
         files.length === 1
           ? "Imagem adicionada. Salve o produto e envie para aprovação quando terminar."

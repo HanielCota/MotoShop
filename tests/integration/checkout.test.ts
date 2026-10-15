@@ -5,6 +5,7 @@ const integrationMocks = vi.hoisted(() => ({
   adminSession: { user: { id: "" } },
 }));
 import { testDb, cleanupFixtures } from "../support/database";
+import { must } from "../support/must";
 vi.mock("@/lib/database", async () => ({ db: (await import("../support/database")).testDb }));
 vi.mock("@/lib/inngest/client", () => ({ inngest: { send: vi.fn(async () => ({ ids: [] })) } }));
 vi.mock("@/lib/payment/mercado-pago-provider", () => ({ mercadoPagoProvider: { refund: integrationMocks.refund } }));
@@ -92,11 +93,11 @@ async function createPaidOrder() {
     where: { orderNumber: checkout.orderNumber },
     include: { payments: true },
   });
-  const payment = initialOrder.payments[0]!;
+  const payment = must(initialOrder.payments[0], "initial payment");
   await reconcileMercadoPagoPayment({
-    externalId: payment.externalId!,
+    externalId: must(payment.externalId, "payment external id"),
     result: {
-      externalId: payment.externalId!,
+      externalId: must(payment.externalId, "payment external id"),
       status: "APPROVED",
       providerMetadata: {
         external_reference: initialOrder.orderNumber,
@@ -143,7 +144,7 @@ beforeAll(async () => {
         reviewedAt: new Date(),
         reviewedByUserId: actor.id,
         sellerId: seller.id,
-        storeId: seller.store!.id,
+        storeId: must(seller.store, "seller store").id,
         categoryId: category.id,
         brandId: brand.id,
         variants: {
@@ -157,7 +158,7 @@ beforeAll(async () => {
       },
       include: { variants: true },
     });
-    variants.push(product.variants[0]!.id);
+    variants.push(must(product.variants[0], "product variant").id);
     const method = await testDb.sellerShippingMethod.create({
       data: {
         sellerId: seller.id,
@@ -193,7 +194,9 @@ afterAll(async () => {
 
 describe("checkout with real development database and simulated payments", () => {
   it("blocks demo catalog items before invoking the payment provider", async () => {
-    const variant = await testDb.productVariant.findUniqueOrThrow({ where: { id: variants[0]! } });
+    const variant = await testDb.productVariant.findUniqueOrThrow({
+      where: { id: must(variants[0], "first variant") },
+    });
     await testDb.product.update({ where: { id: variant.productId }, data: { isDemo: true } });
     try {
       const payment = provider();
@@ -207,8 +210,10 @@ describe("checkout with real development database and simulated payments", () =>
   });
 
   it("uses active promotions and packaging, preserving order snapshots after commission changes", async () => {
-    const variant = await testDb.productVariant.findUniqueOrThrow({ where: { id: variants[0]! } });
-    const sellerId = fixtures.sellerIds[0]!;
+    const variant = await testDb.productVariant.findUniqueOrThrow({
+      where: { id: must(variants[0], "first variant") },
+    });
+    const sellerId = must(fixtures.sellerIds[0], "first seller");
     try {
       await testDb.product.update({
         where: { id: variant.productId },
@@ -223,7 +228,7 @@ describe("checkout with real development database and simulated payments", () =>
           promotionEndsAt: new Date(Date.now() + 60_000),
         },
       });
-      await updateSellerCommission(fixtures.userIds[0]!, {
+      await updateSellerCommission(must(fixtures.userIds[0], "actor user"), {
         sellerId,
         previousCommissionBpsOverride: 1000,
         commissionBpsOverride: 1050,
@@ -245,7 +250,7 @@ describe("checkout with real development database and simulated payments", () =>
         widthInMillimetersSnapshot: 250,
         lengthInMillimetersSnapshot: 300,
       });
-      await updateSellerCommission(fixtures.userIds[0]!, {
+      await updateSellerCommission(must(fixtures.userIds[0], "actor user"), {
         sellerId,
         previousCommissionBpsOverride: 1050,
         commissionBpsOverride: null,
@@ -255,7 +260,7 @@ describe("checkout with real development database and simulated payments", () =>
         marketplaceCommissionInCents: 840,
       });
       await expect(
-        updateSellerCommission(fixtures.userIds[0]!, {
+        updateSellerCommission(must(fixtures.userIds[0], "actor user"), {
           sellerId,
           previousCommissionBpsOverride: 1050,
           commissionBpsOverride: 2000,
@@ -352,14 +357,20 @@ describe("checkout with real development database and simulated payments", () =>
   });
   it("hides suspended stores and rejects their cart items before payment", async () => {
     const input = await cartInput();
-    await testDb.seller.update({ where: { id: fixtures.sellerIds[0]! }, data: { status: "SUSPENDED" } });
+    await testDb.seller.update({
+      where: { id: must(fixtures.sellerIds[0], "first seller") },
+      data: { status: "SUSPENDED" },
+    });
     try {
       expect((await listApprovedProducts({ query: run })).total).toBe(1);
       const fake = provider();
       await expect(executeCheckout(input, fake)).rejects.toThrow(/disponibilidade/);
       expect(fake.createPayment).not.toHaveBeenCalled();
     } finally {
-      await testDb.seller.update({ where: { id: fixtures.sellerIds[0]! }, data: { status: "ACTIVE" } });
+      await testDb.seller.update({
+        where: { id: must(fixtures.sellerIds[0], "first seller") },
+        data: { status: "ACTIVE" },
+      });
     }
   });
   it("creates two SellerOrders, exact money, coupon allocations and auditable stock once", async () => {
@@ -389,11 +400,11 @@ describe("checkout with real development database and simulated payments", () =>
       executeCheckout({ ...input, identity: { guestAccessTokenHash: "another-visitor" } }, fake),
     ).rejects.toThrow(/sessão/);
     expect(await testDb.inventoryMovement.count({ where: { referenceId: order.id, type: "RESERVATION" } })).toBe(2);
-    const first = order.sellerOrders[0]!;
+    const first = must(order.sellerOrders[0], "first seller order");
     await expect(
       advanceOwnShipment({
         sellerId: "another-seller",
-        actorUserId: fixtures.userIds[0]!,
+        actorUserId: must(fixtures.userIds[0], "actor user"),
         sellerOrderId: first.id,
         status: "SHIPPED",
       }),
@@ -401,21 +412,21 @@ describe("checkout with real development database and simulated payments", () =>
     await expect(
       advanceOwnShipment({
         sellerId: first.sellerId,
-        actorUserId: fixtures.userIds[0]!,
+        actorUserId: must(fixtures.userIds[0], "actor user"),
         sellerOrderId: first.id,
         status: "DELIVERED",
       }),
     ).rejects.toThrow(/estado/);
     await advanceOwnShipment({
       sellerId: first.sellerId,
-      actorUserId: fixtures.userIds[0]!,
+      actorUserId: must(fixtures.userIds[0], "actor user"),
       sellerOrderId: first.id,
       status: "SHIPPED",
     });
     expect((await testDb.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe("PARTIALLY_SHIPPED");
     await advanceOwnShipment({
       sellerId: first.sellerId,
-      actorUserId: fixtures.userIds[0]!,
+      actorUserId: must(fixtures.userIds[0], "actor user"),
       sellerOrderId: first.id,
       status: "DELIVERED",
     });
@@ -439,9 +450,9 @@ describe("checkout with real development database and simulated payments", () =>
     ]);
     const payment = await testDb.payment.findFirstOrThrow({ where: { orderId: order.id } });
     await reconcileMercadoPagoPayment({
-      externalId: payment.externalId!,
+      externalId: must(payment.externalId, "payment external id"),
       result: {
-        externalId: payment.externalId!,
+        externalId: must(payment.externalId, "payment external id"),
         status: "APPROVED",
         providerMetadata: {
           external_reference: order.orderNumber,
@@ -462,9 +473,12 @@ describe("checkout with real development database and simulated payments", () =>
     expect(fake.createPayment).not.toHaveBeenCalled();
   });
   it("does not reserve the same last unit for two concurrent checkouts", async () => {
-    const scarceVariantId = variants[0]!;
+    const scarceVariantId = must(variants[0], "first variant");
     const originalInventory = await testDb.inventory.findMany({ where: { variantId: { in: variants } } });
-    const scarceInventory = originalInventory.find((inventory) => inventory.variantId === scarceVariantId)!;
+    const scarceInventory = must(
+      originalInventory.find((inventory) => inventory.variantId === scarceVariantId),
+      "scarce inventory",
+    );
     const reservationCountBefore = await testDb.inventoryMovement.count({
       where: { inventoryId: scarceInventory.id, type: "RESERVATION", quantityChange: -1 },
     });
@@ -594,7 +608,7 @@ describe("checkout with real development database and simulated payments", () =>
     expect(order.status).toBe("PENDING_PAYMENT");
 
     const approved = {
-      externalId: externalId!,
+      externalId: must(externalId, "pending Pix external id"),
       status: "APPROVED" as const,
       providerMetadata: {
         external_reference: order.orderNumber,
@@ -603,10 +617,10 @@ describe("checkout with real development database and simulated payments", () =>
         payment_method_id: "pix",
       },
     };
-    await reconcileMercadoPagoPayment({ externalId: externalId!, result: approved });
-    await reconcileMercadoPagoPayment({ externalId: externalId!, result: approved });
+    await reconcileMercadoPagoPayment({ externalId: must(externalId, "pending Pix external id"), result: approved });
+    await reconcileMercadoPagoPayment({ externalId: must(externalId, "pending Pix external id"), result: approved });
     await reconcileMercadoPagoPayment({
-      externalId: externalId!,
+      externalId: must(externalId, "pending Pix external id"),
       result: { ...approved, status: "FAILED" },
     });
 
@@ -632,7 +646,7 @@ describe("checkout with real development database and simulated payments", () =>
       where: { orderNumber: result.orderNumber },
       include: { payments: true },
     });
-    const payment = order.payments[0]!;
+    const payment = must(order.payments[0], "order payment");
     const providerMetadata = {
       external_reference: order.orderNumber,
       transaction_amount: order.totalAmountInCents / 100,
@@ -641,8 +655,8 @@ describe("checkout with real development database and simulated payments", () =>
     };
 
     await reconcileMercadoPagoPayment({
-      externalId: payment.externalId!,
-      result: { externalId: payment.externalId!, status: "FAILED", providerMetadata },
+      externalId: must(payment.externalId, "payment external id"),
+      result: { externalId: must(payment.externalId, "payment external id"), status: "FAILED", providerMetadata },
     });
     const webhookEvent = await testDb.webhookEvent.create({
       data: {
@@ -656,9 +670,9 @@ describe("checkout with real development database and simulated payments", () =>
     fixtures.webhookEventIds.push(webhookEvent.id);
 
     await reconcileMercadoPagoPayment({
-      externalId: payment.externalId!,
+      externalId: must(payment.externalId, "payment external id"),
       webhookEventId: webhookEvent.id,
-      result: { externalId: payment.externalId!, status: "APPROVED", providerMetadata },
+      result: { externalId: must(payment.externalId, "payment external id"), status: "APPROVED", providerMetadata },
     });
 
     expect((await testDb.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe("CANCELLED");
@@ -672,12 +686,16 @@ describe("checkout with real development database and simulated payments", () =>
   });
   it("cancels one seller order, refunds once and restores only that seller's inventory", async () => {
     const { order } = await createPaidOrder();
-    const target = order.sellerOrders[0]!;
-    const untouched = order.sellerOrders[1]!;
+    const target = must(order.sellerOrders[0], "first seller order");
+    const untouched = must(order.sellerOrders[1], "second seller order");
     const expectedRefundInCents =
       target.itemsSubtotalInCents - target.discountAmountInCents + target.customerShippingAmountInCents;
     const inventoryBefore = await testDb.inventory.findMany({
-      where: { variantId: { in: target.items.map((item) => item.variantId!).filter(Boolean) } },
+      where: {
+        variantId: {
+          in: target.items.map((item) => item.variantId).filter((variantId): variantId is string => Boolean(variantId)),
+        },
+      },
     });
     const cancellation = await testDb.cancellationRequest.create({
       data: {
@@ -730,14 +748,14 @@ describe("checkout with real development database and simulated payments", () =>
   });
   it("keeps Order status aligned when a cancellation is requested and rejected", async () => {
     const { checkout, order } = await createPaidOrder();
-    const target = order.sellerOrders[0]!;
-    const untouched = order.sellerOrders[1]!;
+    const target = must(order.sellerOrders[0], "first seller order");
+    const untouched = must(order.sellerOrders[1], "second seller order");
     const cancellation = await requestCancellation({
       orderNumber: order.orderNumber,
       sellerOrderId: target.id,
       reason: "Integração: validar estado agregado",
       idempotencyKey: randomUUID(),
-      identity: { guestAccessTokenHash: hashGuestToken(checkout.guestAccessToken!) },
+      identity: { guestAccessTokenHash: hashGuestToken(must(checkout.guestAccessToken, "guest access token")) },
     });
 
     const requestedOrder = await testDb.order.findUniqueOrThrow({
@@ -764,9 +782,11 @@ describe("checkout with real development database and simulated payments", () =>
   });
   it("records a received return, restores its stock and refunds with the simulated provider", async () => {
     const { checkout, order } = await createPaidOrder();
-    const sellerOrder = order.sellerOrders[0]!;
-    const item = sellerOrder.items[0]!;
-    const inventoryBefore = await testDb.inventory.findUniqueOrThrow({ where: { variantId: item.variantId! } });
+    const sellerOrder = must(order.sellerOrders[0], "first seller order");
+    const item = must(sellerOrder.items[0], "seller order item");
+    const inventoryBefore = await testDb.inventory.findUniqueOrThrow({
+      where: { variantId: must(item.variantId, "returned item variant") },
+    });
     await testDb.sellerOrder.update({ where: { id: sellerOrder.id }, data: { status: "DELIVERED" } });
     await testDb.shipment.update({ where: { sellerOrderId: sellerOrder.id }, data: { status: "DELIVERED" } });
 
@@ -776,7 +796,7 @@ describe("checkout with real development database and simulated payments", () =>
       quantity: 1,
       reason: "Integração: devolução parcial",
       idempotencyKey: `return-${run}-${randomUUID()}`,
-      identity: { guestAccessTokenHash: hashGuestToken(checkout.guestAccessToken!) },
+      identity: { guestAccessTokenHash: hashGuestToken(must(checkout.guestAccessToken, "guest access token")) },
     });
     const approve = new FormData();
     approve.set("decision", "APPROVE");
@@ -793,7 +813,11 @@ describe("checkout with real development database and simulated payments", () =>
     });
     expect((await testDb.payment.findFirstOrThrow({ where: { orderId: order.id } })).status).toBe("PARTIALLY_REFUNDED");
     expect(
-      (await testDb.inventory.findUniqueOrThrow({ where: { variantId: item.variantId! } })).availableQuantity,
+      (
+        await testDb.inventory.findUniqueOrThrow({
+          where: { variantId: must(item.variantId, "returned item variant") },
+        })
+      ).availableQuantity,
     ).toBe(inventoryBefore.availableQuantity + 1);
     expect(
       await testDb.inventoryMovement.count({
@@ -810,17 +834,27 @@ describe("checkout with real development database and simulated payments", () =>
   });
   it("rejects forged shipping and cross-tenant shipping changes", async () => {
     const input = await cartInput();
-    input.data.shippingSelections = JSON.stringify({ [fixtures.sellerIds[0]!]: `own:${methods[1]}` });
+    input.data.shippingSelections = JSON.stringify({
+      [must(fixtures.sellerIds[0], "first seller")]: `own:${methods[1]}`,
+    });
     await expect(executeCheckout(input, provider())).rejects.toThrow(/frete/);
     await expect(
-      setOwnShippingMethodActive(fixtures.sellerIds[1]!, fixtures.userIds[0]!, methods[0]!, false),
+      setOwnShippingMethodActive(
+        must(fixtures.sellerIds[1], "second seller"),
+        must(fixtures.userIds[0], "actor user"),
+        must(methods[0], "first shipping method"),
+        false,
+      ),
     ).rejects.toThrow(/não encontrada/);
     await expect(quoteShippingForCart(null, "01001000")).rejects.toThrow(/produto/);
   });
   it("does not expose or advance another seller's order in the real database", async () => {
     const { order } = await createPaidOrder();
-    const target = order.sellerOrders[0]!;
-    const otherSellerId = fixtures.sellerIds.find((id) => id !== target.sellerId)!;
+    const target = must(order.sellerOrders[0], "first seller order");
+    const otherSellerId = must(
+      fixtures.sellerIds.find((id) => id !== target.sellerId),
+      "other seller",
+    );
     const otherSellerOrders = await listSellerOrders(otherSellerId, {
       sort: "newest",
       status: "ALL",
@@ -832,7 +866,7 @@ describe("checkout with real development database and simulated payments", () =>
     await expect(
       advanceOwnShipment({
         sellerId: otherSellerId,
-        actorUserId: fixtures.userIds[0]!,
+        actorUserId: must(fixtures.userIds[0], "actor user"),
         sellerOrderId: target.id,
         status: "SHIPPED",
         trackingCode: "QA-NAO-DEVE-ATUALIZAR",
@@ -846,7 +880,7 @@ describe("checkout with real development database and simulated payments", () =>
   it("rejects expired and exhausted coupons without creating a charge", async () => {
     const fake = provider();
     const input = await cartInput(1, true);
-    const id = fixtures.couponIds[0]!;
+    const id = must(fixtures.couponIds[0], "marketplace coupon");
     try {
       await testDb.coupon.update({ where: { id }, data: { endsAt: new Date(0) } });
       await expect(executeCheckout(input, fake)).rejects.toThrow(/expirado/);
@@ -862,7 +896,7 @@ describe("checkout with real development database and simulated payments", () =>
       data: {
         code: `SELLER${run.toUpperCase()}`,
         ownerType: "SELLER",
-        sellerId: fixtures.sellerIds[0]!,
+        sellerId: must(fixtures.sellerIds[0], "first seller"),
         fundedBy: "SELLER",
         discountType: "FIXED_AMOUNT",
         fixedAmountInCents: 1000,

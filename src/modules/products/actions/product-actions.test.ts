@@ -241,6 +241,16 @@ describe("product review workflow", () => {
     expect(mocks.productFindFirst).not.toHaveBeenCalled();
     expect(mocks.productUpdateMany).not.toHaveBeenCalled();
   });
+
+  it("rejects malformed product ids before an admin review reads the catalog", async () => {
+    const reason = new FormData();
+    reason.set("reason", "Descrição insuficiente");
+
+    expect(await approveProductAction("../x")).toEqual({ error: "Produto inválido." });
+    expect(await rejectProductAction("not a cuid", reason)).toEqual({ error: "Produto inválido." });
+    expect(mocks.productFindFirst).not.toHaveBeenCalled();
+    expect(mocks.transaction).not.toHaveBeenCalled();
+  });
 });
 
 describe("product edit revision", () => {

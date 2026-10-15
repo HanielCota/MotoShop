@@ -22,7 +22,7 @@ export function withMotoParam(productHref: string, fitmentId: string | null) {
   const [path, search = ""] = productHref.split("?");
   const query = new URLSearchParams(search);
   if (fitmentId) query.set("moto", fitmentId);
-  else query.delete("moto");
+  if (!fitmentId) query.delete("moto");
   const serialized = query.toString();
   return `${path}${serialized ? `?${serialized}` : ""}`;
 }
@@ -78,7 +78,8 @@ export function ProductMotorcyclePicker({
       return;
     }
     startTransition(async () => {
-      const result = await savePrimaryMotorcycleFromProductAction(fitmentId, productHref.split("?")[0]!);
+      const [productPath = productHref] = productHref.split("?");
+      const result = await savePrimaryMotorcycleFromProductAction(fitmentId, productPath);
       setMessage(result);
       if (!result.error) {
         // A moto salva passa a ser a referência; remove a escolha temporária da URL.
@@ -110,7 +111,7 @@ export function ProductMotorcyclePicker({
             const nextModels = unique(
               fitments.filter((fitment) => fitment.manufacturer === next).map((fitment) => fitment.model),
             );
-            setModel(nextModels.length === 1 ? nextModels[0]! : "");
+            setModel(nextModels.length === 1 ? (nextModels[0] ?? "") : "");
             setFitmentId("");
           }}
         >
@@ -135,7 +136,7 @@ export function ProductMotorcyclePicker({
             const nextVariants = fitments.filter(
               (fitment) => fitment.manufacturer === manufacturer && fitment.model === next,
             );
-            setFitmentId(nextVariants.length === 1 ? nextVariants[0]!.id : "");
+            setFitmentId(nextVariants.length === 1 ? (nextVariants[0]?.id ?? "") : "");
           }}
         >
           <option value="">Selecione</option>

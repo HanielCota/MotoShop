@@ -25,10 +25,25 @@ export type ReviewCancellationResult = {
   orderNumber: string;
 };
 
+const cancellationForReviewInclude = {
+  sellerOrder: { include: { shipment: true } },
+  order: { select: { orderNumber: true } },
+} satisfies Prisma.CancellationRequestInclude;
+
+type CancellationForReview = Prisma.CancellationRequestGetPayload<{ include: typeof cancellationForReviewInclude }>;
+
+const cancellationForFinalizationInclude = {
+  sellerOrder: { include: { items: true } },
+} satisfies Prisma.CancellationRequestInclude;
+
+type CancellationForFinalization = Prisma.CancellationRequestGetPayload<{
+  include: typeof cancellationForFinalizationInclude;
+}>;
+
 export async function reviewCancellationRequest(input: ReviewCancellationInput): Promise<ReviewCancellationResult> {
   const request = await db.cancellationRequest.findUnique({
     where: { id: input.cancellationRequestId },
-    include: { sellerOrder: { include: { shipment: true } }, order: { select: { orderNumber: true } } },
+    include: cancellationForReviewInclude,
   });
   if (!request)
     throw new ApplicationError({ code: "NOT_FOUND", message: "Solicitação de cancelamento não encontrada." });
@@ -50,94 +65,144 @@ export async function reviewCancellationRequest(input: ReviewCancellationInput):
     return { outcome: "REJECTED", orderNumber };
   }
 
-  if (!["REQUESTED", "APPROVED"].includes(request.status)) {
-    throw new ApplicationError({
-      code: "CONFLICT",
-      message: "Esta solicitação já está em processamento.",
-      statusCode: 409,
-    });
-  }
+  await approveAndRefundCancellation(request, input);
+  return { outcome: "REFUNDED", orderNumber };
+}
+
+async function approveAndRefundCancellation(
+  request: CancellationForReview,
+  input: ReviewCancellationInput,
+): Promise<void> {
+  assertApprovalStillPending(request.status);
   assertCancellable(request.sellerOrder.status, request.sellerOrder.shipment?.status);
-
-  if (request.status === "REQUESTED") {
-    await db.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM "orders" WHERE id = ${request.orderId} FOR UPDATE`;
-      await tx.$queryRaw`SELECT id FROM "seller_orders" WHERE id = ${request.sellerOrderId} FOR UPDATE`;
-      // Relê com o pedido travado: o rastreio pode ter registrado a postagem desde a leitura acima.
-      const locked = await tx.sellerOrder.findUnique({
-        where: { id: request.sellerOrderId },
-        select: { status: true, shipment: { select: { status: true } } },
-      });
-      if (!locked) throw new ApplicationError({ code: "NOT_FOUND", message: "Pedido da loja não encontrado." });
-      assertCancellable(locked.status, locked.shipment?.status);
-
-      const approved = await tx.cancellationRequest.updateMany({
-        where: { id: request.id, status: "REQUESTED" },
-        data: { status: "APPROVED", ...(input.note !== undefined ? { adminNote: input.note } : {}) },
-      });
-      if (approved.count !== 1)
-        throw new ApplicationError({ code: "CONFLICT", message: "Esta solicitação já foi decidida.", statusCode: 409 });
-      await tx.auditLog.create({
-        data: {
-          action: "CANCELLATION_APPROVED",
-          entityType: "CANCELLATION_REQUEST",
-          entityId: request.id,
-          actorUserId: input.actorUserId,
-          metadata: { previousStatus: request.status } as Prisma.InputJsonValue,
-        },
-      });
-    });
-  }
+  if (request.status === "REQUESTED") await approveCancellation(request, input);
 
   // Saída administrativa: uma solicitação APPROVED cujo reembolso falhou (recusa definitiva do
   // provedor) pode ser reprocessada com nova decisão APPROVE ("Continuar processamento"). Se todas
   // as tentativas anteriores estão FAILED, uma nova chave `:retry-<n>` é derivada; uma tentativa
   // PENDING/SUCCEEDED é sempre reutilizada para reconciliar, nunca para gerar um segundo reembolso.
   // Se o pagamento já foi totalmente reembolsado no provedor, a solicitação é concluída sem nova chamada.
-  let refund: RequestRefundOutcome | null = null;
-  if (request.amountInCents > 0) {
-    refund = await refundPostSaleRequest({
-      baseKey: cancellationRefundBaseKey(request.id),
-      orderId: request.orderId,
-      amountInCents: request.amountInCents,
-      reason: `Cancelamento do seller order ${request.sellerOrderId}`,
-    });
-  }
+  const refund = await refundCancellation(request);
+  await finalizeRefundedCancellation(request, input.actorUserId, refund);
+}
 
+function assertApprovalStillPending(status: CancellationForReview["status"]): void {
+  if (["REQUESTED", "APPROVED"].includes(status)) return;
+
+  throw new ApplicationError({
+    code: "CONFLICT",
+    message: "Esta solicitação já está em processamento.",
+    statusCode: 409,
+  });
+}
+
+async function approveCancellation(request: CancellationForReview, input: ReviewCancellationInput): Promise<void> {
+  await db.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "orders" WHERE id = ${request.orderId} FOR UPDATE`;
+    await tx.$queryRaw`SELECT id FROM "seller_orders" WHERE id = ${request.sellerOrderId} FOR UPDATE`;
+    await assertLockedSellerOrderCancellable(tx, request.sellerOrderId);
+    await markCancellationApproved(tx, request.id, input.note);
+    await tx.auditLog.create({
+      data: {
+        action: "CANCELLATION_APPROVED",
+        entityType: "CANCELLATION_REQUEST",
+        entityId: request.id,
+        actorUserId: input.actorUserId,
+        metadata: { previousStatus: request.status } as Prisma.InputJsonValue,
+      },
+    });
+  });
+}
+
+async function assertLockedSellerOrderCancellable(tx: Prisma.TransactionClient, sellerOrderId: string): Promise<void> {
+  // Relê com o pedido travado: o rastreio pode ter registrado a postagem desde a leitura acima.
+  const locked = await tx.sellerOrder.findUnique({
+    where: { id: sellerOrderId },
+    select: { status: true, shipment: { select: { status: true } } },
+  });
+  if (!locked) throw new ApplicationError({ code: "NOT_FOUND", message: "Pedido da loja não encontrado." });
+  assertCancellable(locked.status, locked.shipment?.status);
+}
+
+async function markCancellationApproved(
+  tx: Prisma.TransactionClient,
+  cancellationRequestId: string,
+  note: string | undefined,
+): Promise<void> {
+  const approved = await tx.cancellationRequest.updateMany({
+    where: { id: cancellationRequestId, status: "REQUESTED" },
+    data: { status: "APPROVED", ...(note !== undefined ? { adminNote: note } : {}) },
+  });
+  if (approved.count !== 1)
+    throw new ApplicationError({ code: "CONFLICT", message: "Esta solicitação já foi decidida.", statusCode: 409 });
+}
+
+async function refundCancellation(request: CancellationForReview): Promise<RequestRefundOutcome | null> {
+  if (request.amountInCents <= 0) return null;
+
+  return refundPostSaleRequest({
+    baseKey: cancellationRefundBaseKey(request.id),
+    orderId: request.orderId,
+    amountInCents: request.amountInCents,
+    reason: `Cancelamento do seller order ${request.sellerOrderId}`,
+  });
+}
+
+async function finalizeRefundedCancellation(
+  request: CancellationForReview,
+  actorUserId: string,
+  refund: RequestRefundOutcome | null,
+): Promise<void> {
   await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "orders" WHERE id = ${request.orderId} FOR UPDATE`;
     await tx.$queryRaw`SELECT id FROM "cancellation_requests" WHERE id = ${request.id} FOR UPDATE`;
-    const current = await tx.cancellationRequest.findUnique({
-      where: { id: request.id },
-      include: { sellerOrder: { include: { items: true } } },
-    });
-    if (current?.status === "REFUNDED") return;
-    if (!current || current.status !== "APPROVED") {
-      throw new ApplicationError({ code: "CONFLICT", message: "O cancelamento já foi finalizado.", statusCode: 409 });
-    }
+    const current = await findApprovedOrRefundedCancellation(tx, request.id);
+    if (current.status === "REFUNDED") return;
 
-    await cancelCommittedInventory(tx, [{ sellerId: current.sellerId, items: current.sellerOrder.items }], {
-      referenceType: "CANCELLATION_REQUEST",
-      referenceId: current.id,
-      actorUserId: input.actorUserId,
-    });
-    await tx.sellerOrder.update({ where: { id: current.sellerOrderId }, data: { status: "CANCELLED" } });
-    // A label already bought for this seller order is now useless; flag it for cancellation at the provider.
-    await markShipmentLabelForCancellation(tx, current.sellerOrderId, input.actorUserId);
-    await tx.cancellationRequest.update({ where: { id: current.id }, data: { status: "REFUNDED" } });
-
-    await syncOrderStatusFromSellerOrders(tx, current.orderId, "CANCELLATION", input.actorUserId);
+    await cancelSellerOrderForRefund(tx, current, actorUserId);
+    await syncOrderStatusFromSellerOrders(tx, current.orderId, "CANCELLATION", actorUserId);
     await tx.auditLog.create({
       data: {
         action: "CANCELLATION_REFUNDED",
         entityType: "CANCELLATION_REQUEST",
         entityId: current.id,
-        actorUserId: input.actorUserId,
+        actorUserId,
         metadata: { amountInCents: current.amountInCents, ...refundAuditMetadata(refund) } as Prisma.InputJsonValue,
       },
     });
   });
-  return { outcome: "REFUNDED", orderNumber };
+}
+
+async function findApprovedOrRefundedCancellation(
+  tx: Prisma.TransactionClient,
+  cancellationRequestId: string,
+): Promise<CancellationForFinalization> {
+  const current = await tx.cancellationRequest.findUnique({
+    where: { id: cancellationRequestId },
+    include: cancellationForFinalizationInclude,
+  });
+  if (current?.status === "REFUNDED") return current;
+  if (!current || current.status !== "APPROVED") {
+    throw new ApplicationError({ code: "CONFLICT", message: "O cancelamento já foi finalizado.", statusCode: 409 });
+  }
+
+  return current;
+}
+
+async function cancelSellerOrderForRefund(
+  tx: Prisma.TransactionClient,
+  current: CancellationForFinalization,
+  actorUserId: string,
+): Promise<void> {
+  await cancelCommittedInventory(tx, [{ sellerId: current.sellerId, items: current.sellerOrder.items }], {
+    referenceType: "CANCELLATION_REQUEST",
+    referenceId: current.id,
+    actorUserId,
+  });
+  await tx.sellerOrder.update({ where: { id: current.sellerOrderId }, data: { status: "CANCELLED" } });
+  // A label already bought for this seller order is now useless; flag it for cancellation at the provider.
+  await markShipmentLabelForCancellation(tx, current.sellerOrderId, actorUserId);
+  await tx.cancellationRequest.update({ where: { id: current.id }, data: { status: "REFUNDED" } });
 }
 
 function assertCancellable(sellerOrderStatus: SellerOrderStatus, shipmentStatus: string | undefined) {
@@ -194,11 +259,9 @@ async function rejectCancellation(input: {
       where: { sellerOrderId: input.sellerOrderId },
       select: { status: true },
     });
-    if (shipment) {
-      await syncFulfillmentStatuses(tx, input.sellerOrderId, shipment.status, input.actorUserId);
-    } else {
-      await syncOrderStatusFromSellerOrders(tx, input.orderId, "CANCELLATION", input.actorUserId);
-    }
+    await (shipment
+      ? syncFulfillmentStatuses(tx, input.sellerOrderId, shipment.status, input.actorUserId)
+      : syncOrderStatusFromSellerOrders(tx, input.orderId, "CANCELLATION", input.actorUserId));
     await tx.auditLog.create({
       data: {
         action: "CANCELLATION_REJECTED",

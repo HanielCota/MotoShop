@@ -6,6 +6,7 @@ import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { ApplicationError } from "@/shared/errors/application-error";
+import { isRecordId } from "@/shared/validation/record-id";
 
 import { reviewCancellationRequest } from "../application/review-cancellation";
 
@@ -44,6 +45,7 @@ export async function reviewCancellationRequestAction(
   formData: FormData,
 ): Promise<CancellationAdminActionState> {
   const session = await requireAdminAccess();
+  if (!isRecordId(cancellationRequestId)) return { error: "Solicitação de cancelamento inválida." };
   const parsed = reviewSchema.safeParse({
     decision: formData.get("decision"),
     note: formData.get("note") || undefined,

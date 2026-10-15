@@ -135,12 +135,12 @@ export const productFormSchema = z
   .custom<ProductFormValues>()
   .transform(toProductInput)
   .pipe(productInputSchema)
-  .superRefine((input, ctx) => {
+  .superRefine((input, refinementContext) => {
     const seen = new Set<string>();
     input.variants.forEach((variant, index) => {
       const sku = variant.sku.toLowerCase();
       if (seen.has(sku)) {
-        ctx.addIssue({
+        refinementContext.addIssue({
           code: "custom",
           path: ["variants", index, "sku"],
           message: "Cada variação precisa ter um SKU diferente.",

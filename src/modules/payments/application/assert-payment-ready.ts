@@ -1,6 +1,7 @@
 import "server-only";
 
 import { env } from "@/config/env";
+import { logger } from "@/lib/logger";
 import { mercadoPagoProvider } from "@/lib/payment/mercado-pago-provider";
 import { ApplicationError } from "@/shared/errors/application-error";
 import type { PaymentProvider } from "@/shared/payment/payment-provider";
@@ -35,7 +36,13 @@ export function getCheckoutPaymentAvailability(
   try {
     assertPaymentConfigured(paymentProvider, "pix");
     assertPaymentCanHandleSellers(sellerCount, paymentProvider);
-  } catch {
+  } catch (error) {
+    // Missing configuration and unsupported seller counts are expected states; anything else is a bug
+    // that would otherwise look like "payment unavailable" with no trace.
+    if (!(error instanceof ApplicationError)) {
+      logger.error({ event: "checkout.payment_availability.failed", sellerCount, error });
+    }
+
     return { available: false, cardPublicKey: undefined };
   }
   // The Public Key is meant for the browser (Secure Fields); the Access Token never leaves the server.

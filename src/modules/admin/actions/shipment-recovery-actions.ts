@@ -57,7 +57,8 @@ export async function reconcileShipmentPurchaseAction(
         ...(externalShipmentId ? { externalShipmentId } : {}),
         actorUserId: session.user.id,
       });
-    } else {
+    }
+    if (operation !== "PURCHASE") {
       await reconcileShipmentGeneration({
         shipmentId: data.shipmentId,
         confirmedOrderNumber: data.confirmedOrderNumber,

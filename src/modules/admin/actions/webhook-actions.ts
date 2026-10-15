@@ -6,9 +6,11 @@ import { db } from "@/lib/database";
 import { inngest } from "@/lib/inngest/client";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { retryableWebhookEventWhere } from "@/modules/payments/domain/webhook-retry";
+import { assertRecordId } from "@/shared/validation/record-id";
 
 export async function retryWebhookEventAction(webhookEventId: string): Promise<void> {
   const session = await requireAdminAccess();
+  assertRecordId(webhookEventId, "Evento inválido.");
   // FAILED events, or PROCESSING events stuck for more than 15 minutes (worker crash
   // before the onFailure handler could run).
   const now = new Date();

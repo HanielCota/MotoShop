@@ -102,14 +102,15 @@ export class MercadoPagoProvider implements PaymentProvider {
       })
       .parse(await mercadoPagoRequest(`/v1/payments/search?${query}`, { method: "GET" }));
     if (response.paging.total === 0 && response.results.length === 0) return null;
-    if (response.paging.total !== 1 || response.results.length !== 1) {
+    const [match] = response.results;
+    if (response.paging.total !== 1 || response.results.length !== 1 || !match) {
       throw new ApplicationError({
         code: "CONFLICT",
         message: "Mais de uma cobrança encontrada. O pagamento precisa de revisão pelo Moto Shop.",
       });
     }
     // Search is discovery only; retrieve the authoritative current payment state.
-    return this.getPayment(String(response.results[0]!.id));
+    return this.getPayment(String(match.id));
   }
 
   async refund(input: RefundPaymentInput): Promise<CreatePaymentResult> {

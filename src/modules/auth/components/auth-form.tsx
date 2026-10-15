@@ -64,7 +64,7 @@ export function AuthForm({
     // A History API nativa é integrada ao roteador do Next.js e não refaz a navegação.
     const params = new URLSearchParams(window.location.search);
     if (next === "sign-up") params.set(MODE_PARAM, SIGN_UP_VALUE);
-    else params.delete(MODE_PARAM);
+    if (next !== "sign-up") params.delete(MODE_PARAM);
     const query = params.toString();
     window.history.replaceState(null, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
   }

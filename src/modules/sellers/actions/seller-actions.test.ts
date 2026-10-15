@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("server-only", () => ({}));
+
 const mocks = vi.hoisted(() => {
   const sellerCreate = vi.fn();
   const storeCreate = vi.fn();
@@ -78,8 +80,8 @@ describe("seller onboarding", () => {
     expect(result.success).toMatch(/solicitação enviada/i);
     expect(mocks.transaction).toHaveBeenCalledOnce();
     expect(mocks.lockUser).toHaveBeenCalledOnce();
-    expect(mocks.lockUser.mock.invocationCallOrder[0]!).toBeLessThan(
-      mocks.membershipFindFirst.mock.invocationCallOrder[0]!,
+    expect(defined(mocks.lockUser.mock.invocationCallOrder[0])).toBeLessThan(
+      defined(mocks.membershipFindFirst.mock.invocationCallOrder[0]),
     );
     expect(mocks.sellerCreate).toHaveBeenCalledWith({ data: { type: "COMPANY", status: "PENDING" } });
     expect(mocks.storeCreate).toHaveBeenCalledWith({
@@ -144,7 +146,7 @@ describe("shipping origin update", () => {
       where: { id: "store-a", sellerId: "seller-a" },
       data: expect.objectContaining({ originDocument: "12345678901", originState: "SP" }),
     });
-    const audit = mocks.auditCreate.mock.calls[0]![0] as { data: { action: string; metadata: unknown } };
+    const audit = defined(mocks.auditCreate.mock.calls[0])[0] as { data: { action: string; metadata: unknown } };
     expect(audit.data.action).toBe("STORE_SHIPPING_ORIGIN_UPDATED");
     expect(audit.data.metadata).toMatchObject({
       sellerId: "seller-a",
@@ -154,3 +156,8 @@ describe("shipping origin update", () => {
     expect(JSON.stringify(audit.data.metadata)).not.toContain("12345678901");
   });
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}
