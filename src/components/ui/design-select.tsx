@@ -4,6 +4,7 @@ import { Select } from "@base-ui/react/select";
 import { Check, ChevronDown } from "lucide-react";
 import { Children, isValidElement, type ReactNode } from "react";
 
+import { popoverSurfaceClassName } from "@/components/ui/popover-surface";
 import { fieldSizeClasses, type FieldSize } from "@/components/ui/field-size";
 import { cn } from "@/lib/utils";
 
@@ -91,10 +92,11 @@ export function DesignSelect({
         </Select.Icon>
       </Select.Trigger>
       <Select.Portal>
-        <Select.Positioner className="z-50 outline-none" sideOffset={4} alignItemWithTrigger={false}>
+        <Select.Positioner className="z-popover outline-none" sideOffset={4} alignItemWithTrigger={false}>
           <Select.Popup
             className={cn(
-              "border-border bg-popover text-popover-foreground max-w-[min(90vw,40rem)] min-w-[var(--anchor-width)] overflow-hidden rounded-md border shadow-lg outline-none",
+              popoverSurfaceClassName,
+              "max-w-[min(90vw,40rem)] min-w-[var(--anchor-width)] overflow-hidden outline-none",
               "origin-[var(--transform-origin)] transition-[opacity,transform] duration-100 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
             )}
           >

@@ -7,6 +7,8 @@ import { Menu as BaseMenu } from "@base-ui/react/menu";
 import { useRef, useState } from "react";
 
 import { pageContainerClassName } from "@/components/ui/page-container";
+import { popoverSurfaceClassName } from "@/components/ui/popover-surface";
+import { cn } from "@/lib/utils";
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
 import { SignOutButton } from "@/modules/auth/components/sign-out-button";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
@@ -32,7 +34,7 @@ export function StorefrontNavigation() {
 
   return (
     <header
-      className="bg-moto-brand-foreground sticky top-0 z-50 border-b border-white/10 text-white shadow-sm"
+      className="bg-moto-brand-foreground z-header sticky top-0 border-b border-white/10 text-white shadow-sm"
       onKeyDown={(event) => {
         if (event.key !== "Escape" || !menuOpen) return;
         setMenuOpen(false);
@@ -166,8 +168,8 @@ function AccountMenu() {
         <ChevronDown aria-hidden="true" className="size-3.5" />
       </BaseMenu.Trigger>
       <BaseMenu.Portal>
-        <BaseMenu.Positioner side="bottom" align="end" sideOffset={8} className="z-[60]">
-          <BaseMenu.Popup className="bg-popover text-popover-foreground border-border w-56 rounded-xl border p-1.5 shadow-lg outline-none">
+        <BaseMenu.Positioner side="bottom" align="end" sideOffset={8} className="z-popover">
+          <BaseMenu.Popup className={cn(popoverSurfaceClassName, "w-56 p-1.5 outline-none")}>
             <p className="text-muted-foreground truncate px-3 pt-1.5 pb-2 text-xs">
               {session.user.name ? `Olá, ${session.user.name}` : "Minha conta"}
             </p>

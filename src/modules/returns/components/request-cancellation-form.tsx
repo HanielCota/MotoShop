@@ -51,8 +51,8 @@ export function RequestCancellationForm({
           Solicitar cancelamento
         </Dialog.Trigger>
         <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/55" />
-          <Dialog.Popup className="bg-background text-foreground fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[min(92vw,30rem)] -translate-x-1/2 -translate-y-1/2 space-y-4 overflow-y-auto rounded-xl border p-5 shadow-xl">
+          <Dialog.Backdrop className="z-dialog fixed inset-0 bg-black/55" />
+          <Dialog.Popup className="bg-background text-foreground z-dialog fixed top-1/2 left-1/2 max-h-[calc(100dvh-2rem)] w-[min(92vw,30rem)] -translate-x-1/2 -translate-y-1/2 space-y-4 overflow-y-auto rounded-xl border p-5 shadow-xl">
             <Dialog.Title className="text-lg font-semibold">Solicitar cancelamento</Dialog.Title>
             <Dialog.Description className="text-muted-foreground text-sm">
               Nossa equipe analisará o pedido antes de confirmar o cancelamento.

@@ -49,6 +49,24 @@
 /* Tema único (claro): `dark:` não é usado; o variant fica preso a uma classe nunca aplicada. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Stacking scale (DS-22): use these instead of z-40/z-50/z-[60]. Popovers sit above the sticky header;
+   dialogs above popovers; the skip link above everything when focused. */
+@utility z-sticky-bar {
+  z-index: 30;
+}
+@utility z-header {
+  z-index: 40;
+}
+@utility z-popover {
+  z-index: 50;
+}
+@utility z-dialog {
+  z-index: 60;
+}
+@utility z-skip-link {
+  z-index: 70;
+}
+
 @theme inline {
   --font-heading: var(--font-display);
   --font-sans: var(--font-sans);

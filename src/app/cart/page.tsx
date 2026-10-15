@@ -204,7 +204,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
           {/* Mobile/tablet: CTA sempre ao alcance do polegar; o resumo completo segue acima. */}
           <div
             data-slot="cart-sticky-checkout"
-            className="bg-background/95 fixed inset-x-0 bottom-0 z-40 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgb(0_0_0/0.08)] backdrop-blur lg:hidden"
+            className="bg-background/95 z-sticky-bar fixed inset-x-0 bottom-0 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgb(0_0_0/0.08)] backdrop-blur lg:hidden"
           >
             <div className="mx-auto flex max-w-6xl items-center gap-3">
               <div className="min-w-0 flex-1">

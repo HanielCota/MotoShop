@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { QuantityStepper } from "@/components/ui/quantity-stepper";
+import { popoverSurfaceClassName } from "@/components/ui/popover-surface";
 import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -113,8 +114,8 @@ export function CartPreview() {
         ) : null}
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Positioner side="bottom" align="end" sideOffset={8} className="z-50">
-          <Popover.Popup className="border-border bg-background text-foreground w-[min(92vw,24rem)] rounded-xl border p-4 shadow-xl outline-none">
+        <Popover.Positioner side="bottom" align="end" sideOffset={8} className="z-popover">
+          <Popover.Popup className={cn(popoverSurfaceClassName, "w-[min(92vw,24rem)] p-4 outline-none")}>
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <Popover.Title className="font-semibold">Seu carrinho</Popover.Title>

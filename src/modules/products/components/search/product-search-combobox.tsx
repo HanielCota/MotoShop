@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useId, useState, type KeyboardEvent } from "react";
 
 import type { FieldSize } from "@/components/ui/field-size";
+import { popoverSurfaceClassName } from "@/components/ui/popover-surface";
 import { Input } from "@/components/ui/input";
 import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -170,7 +171,8 @@ function SuggestionList({
       hidden={hidden}
       onMouseDown={(event) => event.preventDefault()}
       className={cn(
-        "bg-card text-foreground border-border absolute top-full right-0 z-50 mt-2 w-full min-w-full overflow-hidden rounded-xl border shadow-2xl",
+        popoverSurfaceClassName,
+        "z-popover absolute top-full right-0 mt-2 w-full min-w-full overflow-hidden",
         className,
       )}
     >

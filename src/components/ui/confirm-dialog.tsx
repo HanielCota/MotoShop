@@ -106,11 +106,11 @@ export function ConfirmDialog({
     <AlertDialog.Root open={open} onOpenChange={changeOpen}>
       <AlertDialog.Trigger render={trigger} disabled={disabled} />
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-black/55" />
+        <AlertDialog.Backdrop className="z-dialog fixed inset-0 bg-black/55" />
         <AlertDialog.Popup
           initialFocus={reason ? reasonRef : cancelRef}
           aria-busy={pending}
-          className="bg-background text-foreground fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[min(92vw,30rem)] -translate-x-1/2 -translate-y-1/2 space-y-4 overflow-y-auto rounded-xl border p-5 shadow-xl"
+          className="bg-background text-foreground z-dialog fixed top-1/2 left-1/2 max-h-[calc(100dvh-2rem)] w-[min(92vw,30rem)] -translate-x-1/2 -translate-y-1/2 space-y-4 overflow-y-auto rounded-xl border p-5 shadow-xl"
         >
           <AlertDialog.Title className="text-lg font-semibold">{title}</AlertDialog.Title>
           <AlertDialog.Description className="text-muted-foreground text-sm">{description}</AlertDialog.Description>
