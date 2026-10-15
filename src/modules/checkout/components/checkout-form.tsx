@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { flushSync } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
@@ -65,7 +66,6 @@ export function CheckoutForm({
   );
   const [fieldErrors, setFieldErrors] = useState<CheckoutFieldErrors>({});
   const [formError, setFormError] = useState<string>();
-  const [failureCount, setFailureCount] = useState(0);
   const [paymentType, setPaymentType] = useState<CheckoutPaymentType>("pix");
   const errorRef = useRef<HTMLDivElement>(null);
   const card = useRef<SecureCardHandle>(null);
@@ -74,18 +74,16 @@ export function CheckoutForm({
   const shipping = useCheckoutShippingQuotes();
   const cep = useCepAutofill(setForm);
 
+  // Renders the alert right away, then moves focus to it for screen readers and keyboard users.
   const handleFailure = useCallback((message: string) => {
     const field = fieldForServerMessage(message);
-    if (field) setFieldErrors((current) => ({ ...current, [field]: message }));
-    setFormError(message);
-    setFailureCount((count) => count + 1);
+    flushSync(() => {
+      if (field) setFieldErrors((current) => ({ ...current, [field]: message }));
+      setFormError(message);
+    });
+    errorRef.current?.focus();
   }, []);
   const { submit, isSubmitting } = useCheckoutSubmit({ cardRef: card, onFailure: handleFailure });
-
-  // Move o foco para o alerta sempre que um envio falha, para leitores de tela e teclado.
-  useEffect(() => {
-    if (failureCount > 0) errorRef.current?.focus();
-  }, [failureCount]);
 
   // Endereço padrão já preenchido: calcula o frete sem exigir clique.
   const { requestQuote } = shipping;
@@ -123,12 +121,15 @@ export function CheckoutForm({
     if (isSubmitting) return;
     const errors = validateCheckoutForm(form);
     const firstInvalid = checkoutFieldOrder.find((field) => errors[field]);
-    setFieldErrors(errors);
     if (firstInvalid) {
-      setFormError("Revise os campos destacados para continuar.");
-      setFailureCount((count) => count + 1);
+      flushSync(() => {
+        setFieldErrors(errors);
+        setFormError("Revise os campos destacados para continuar.");
+      });
+      errorRef.current?.focus();
       return;
     }
+    setFieldErrors(errors);
     if (!shipping.hasQuotes) {
       handleFailure("Calcule o frete e escolha uma opção de entrega.");
       return;

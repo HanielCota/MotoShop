@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { getCurrentSession } from "@/modules/auth/application/authorization";
@@ -15,7 +16,7 @@ const schema = z.object({
   accessToken: z.string().trim().min(20).max(200),
 });
 
-export type ClaimGuestOrderState = { error?: string; success?: boolean };
+export type ClaimGuestOrderState = { error?: string };
 
 export async function claimGuestOrderAction(
   _previousState: ClaimGuestOrderState,
@@ -49,8 +50,10 @@ export async function claimGuestOrderAction(
     await clearGuestOrderCookie(parsed.data.orderNumber);
     revalidatePath("/orders");
     revalidatePath(`/orders/${parsed.data.orderNumber}`);
-    return { success: true };
   } catch (error) {
     return { error: toActionError(error, "claimGuestOrderAction").message };
   }
+
+  // Outside the try: redirect() works by throwing, and the order page now opens through the account.
+  redirect(`/orders/${encodeURIComponent(parsed.data.orderNumber)}`);
 }
