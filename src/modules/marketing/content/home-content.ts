@@ -1,5 +1,5 @@
 import type { Route } from "next";
-import { BadgeCheck, Clock, MapPin, Shield, UserRoundCheck, Wrench, type LucideIcon } from "lucide-react";
+import { BadgeCheck, Clock, Shield, Truck, UserRoundCheck, Wrench, type LucideIcon } from "lucide-react";
 
 export const categoryCards: { title: string; description: string; eyebrow: string; href: Route; icon: LucideIcon }[] = [
   {
@@ -57,14 +57,14 @@ export function getHeroAssurances(paymentAvailable: boolean): HeroAssurance[] {
     return [
       approvedStoresAssurance,
       { icon: Clock, text: "Compras em breve" },
-      { icon: MapPin, text: "Frete e prazo definidos por cada loja" },
+      { icon: Truck, text: "Frete e prazo definidos por cada loja" },
     ];
   }
 
   return [
     approvedStoresAssurance,
     { icon: UserRoundCheck, text: "Compre sem criar conta" },
-    { icon: MapPin, text: "Frete e prazo de cada loja no checkout" },
+    { icon: Truck, text: "Frete e prazo de cada loja no checkout" },
   ];
 }
 
