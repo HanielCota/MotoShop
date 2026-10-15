@@ -289,7 +289,7 @@ function PrimaryMotorcycleBanner({
         }
         className={cn(buttonVariants({ variant: "link", size: "link" }), "w-fit gap-2")}
       >
-        <Motorbike aria-hidden="true" className="size-4" />
+        <Motorbike aria-hidden="true" className="size-4 shrink-0" />
         Salvar minha moto para encontrar peças compatíveis
       </Link>
     );
