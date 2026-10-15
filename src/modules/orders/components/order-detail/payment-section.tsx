@@ -32,15 +32,7 @@ const paymentMethodLabels: Record<string, string> = {
   hipercard: "Cartão Hipercard",
 };
 
-export function PaymentSection({
-  orderNumber,
-  payments,
-  accessToken,
-}: {
-  orderNumber: string;
-  payments: CustomerOrderPayment[];
-  accessToken?: string;
-}) {
+export function PaymentSection({ orderNumber, payments }: { orderNumber: string; payments: CustomerOrderPayment[] }) {
   return (
     <section className="space-y-4">
       <SectionHeader title="Pagamento" description="Status e histórico de transações do pedido." />
@@ -85,7 +77,7 @@ export function PaymentSection({
                   ) : null}
                   {["PENDING", "PROCESSING", "AUTHORIZED"].includes(payment.status) ? (
                     <div className="mt-3">
-                      <PaymentRefreshForm orderNumber={orderNumber} {...(accessToken ? { accessToken } : {})} />
+                      <PaymentRefreshForm orderNumber={orderNumber} />
                     </div>
                   ) : null}
                 </div>

@@ -6,6 +6,8 @@ allowBuilds:
   protobufjs: true
   sharp: true
   unrs-resolver: false
+# Minutes a release must age before pnpm installs it (pnpm default, declared so it cannot drift).
+minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - deepmerge-ts@8.0.0
   - mysql2@3.22.0 || 3.23.1

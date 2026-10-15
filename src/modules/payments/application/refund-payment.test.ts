@@ -3,8 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => {
   const transaction = { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() };
   const payment = { findFirst: vi.fn(), findUnique: vi.fn(), update: vi.fn() };
-  const tx = { $queryRaw: vi.fn(), paymentTransaction: transaction, payment };
-  return { tx, transaction, payment, refund: vi.fn(), db: { ...tx, $transaction: vi.fn() } };
+  const sellerOrder = { findFirst: vi.fn() };
+  const tx = { $queryRaw: vi.fn(), paymentTransaction: transaction, payment, sellerOrder };
+  return { tx, transaction, payment, sellerOrder, refund: vi.fn(), db: { ...tx, $transaction: vi.fn() } };
 });
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/database", () => ({ db: mocks.db }));
@@ -165,5 +166,59 @@ describe("resuming a refund whose provider outcome was unknown", () => {
     mocks.transaction.findUnique.mockResolvedValue({ ...pending, amountInCents: 600 });
     await expect(refundPayment(input)).rejects.toThrow("outra operação");
     expect(mocks.refund).not.toHaveBeenCalled();
+  });
+});
+
+describe("refund ceiling per seller order (L-07)", () => {
+  const sellerInput = { ...input, sellerOrderId: "seller-order-a" };
+
+  beforeEach(() => {
+    // Seller A charged R$ 6,00 (500 + 100 of shipping) inside a payment of R$ 10,00.
+    mocks.sellerOrder.findFirst.mockResolvedValue({
+      itemsSubtotalInCents: 600,
+      discountAmountInCents: 100,
+      customerShippingAmountInCents: 100,
+    });
+  });
+
+  it("refuses a refund above what was charged from that store even if the payment still has balance", async () => {
+    mocks.transaction.findMany.mockResolvedValue([{ amountInCents: 200 }]);
+
+    await expect(refundPayment(sellerInput)).rejects.toThrow("excede o total cobrado desta loja");
+
+    expect(mocks.sellerOrder.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: "seller-order-a", orderId: "order-1" } }),
+    );
+    expect(mocks.transaction.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ providerMetadata: { path: ["sellerOrderId"], equals: "seller-order-a" } }),
+      }),
+    );
+    expect(mocks.transaction.create).not.toHaveBeenCalled();
+    expect(mocks.refund).not.toHaveBeenCalled();
+  });
+
+  it("refuses a seller order from another order", async () => {
+    mocks.sellerOrder.findFirst.mockResolvedValue(null);
+
+    await expect(refundPayment(sellerInput)).rejects.toThrow("não pertence a este pedido");
+    expect(mocks.refund).not.toHaveBeenCalled();
+  });
+
+  it("refunds within the store total and keeps the seller order on the transaction", async () => {
+    mocks.transaction.findMany.mockResolvedValue([]);
+
+    await refundPayment(sellerInput);
+
+    expect(mocks.transaction.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ providerMetadata: { sellerOrderId: "seller-order-a" } }),
+    });
+    expect(mocks.transaction.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          providerMetadata: expect.objectContaining({ sellerOrderId: "seller-order-a" }),
+        }),
+      }),
+    );
   });
 });

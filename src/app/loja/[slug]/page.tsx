@@ -11,6 +11,7 @@ import { Store } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { BRAND_SITE_NAME } from "@/config/brand";
+import { isAllowedSocialHost, socialNetworkHosts } from "@/modules/sellers/schemas/store-profile";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionHeader } from "@/components/ui/page-header";
@@ -93,12 +94,13 @@ export default async function PublicStorePage({
     .map((word) => word.charAt(0))
     .join("")
     .toUpperCase();
+  // Links saved before the host rules (M-09) are not shown unless they point to the network itself.
   const socialLinks = [
-    { label: "Instagram", href: store.instagramUrl },
-    { label: "YouTube", href: store.youtubeUrl },
-    { label: "WhatsApp", href: store.whatsappUrl },
-    { label: "Facebook", href: store.facebookUrl },
-  ].filter((social) => social.href);
+    { label: "Instagram", href: store.instagramUrl, hosts: socialNetworkHosts.instagram },
+    { label: "YouTube", href: store.youtubeUrl, hosts: socialNetworkHosts.youtube },
+    { label: "WhatsApp", href: store.whatsappUrl, hosts: socialNetworkHosts.whatsapp },
+    { label: "Facebook", href: store.facebookUrl, hosts: socialNetworkHosts.facebook },
+  ].filter((social) => social.href && isAllowedSocialHost(social.href, social.hosts));
 
   function storeHref(
     overrides: {

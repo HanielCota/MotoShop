@@ -71,7 +71,7 @@ function tryDecodeBase64Url(value: string): Buffer | null {
 export function verifyMelhorEnvioState(value: string): OAuthState | null {
   const [encoded, signature, extra] = value.split(".");
   if (!encoded || !signature || extra) return null;
-  const expected = createHmac("sha256", env.BETTER_AUTH_SECRET).update(encoded).digest();
+  const expected = createHmac("sha256", stateSigningKey()).update(encoded).digest();
   const received = tryDecodeBase64Url(signature);
   if (!received) return null;
   if (received.length !== expected.length || !timingSafeEqual(received, expected)) return null;
@@ -92,7 +92,7 @@ export function verifyMelhorEnvioState(value: string): OAuthState | null {
   }
 }
 
-export async function exchangeMelhorEnvioAuthorizationCode(code: string) {
+export async function exchangeMelhorEnvioAuthorizationCode(code: string, sellerId: string) {
   const oauth = requireOAuthConfig();
   const response = await fetch(`${env.MELHOR_ENVIO_API_URL ?? DEFAULT_API_URL}/oauth/token`, {
     method: "POST",
@@ -121,7 +121,7 @@ export async function exchangeMelhorEnvioAuthorizationCode(code: string) {
     });
   }
 
-  return toStoredTokenData(parsed.data);
+  return toStoredTokenData(parsed.data, sellerId);
 }
 
 export async function getSellerMelhorEnvioAccessToken(
@@ -135,7 +135,7 @@ export async function getSellerMelhorEnvioAccessToken(
 
   const refreshBefore = Date.now() + 2 * 60_000;
   if (integration.accessTokenExpiresAt.getTime() > refreshBefore) {
-    return decryptToken(integration.accessTokenEncrypted);
+    return decryptToken(integration.accessTokenEncrypted, sellerId);
   }
   assertRefreshTokenNotExpired(integration.refreshTokenExpiresAt);
 
@@ -174,7 +174,8 @@ async function waitForConcurrentRefresh(sellerId: string, refreshBefore: number)
     await new Promise((resolve) => setTimeout(resolve, 250));
     const updated = await db.sellerShippingIntegration.findUnique({ where: { sellerId } });
     if (!updated) return null;
-    if (updated.accessTokenExpiresAt.getTime() > refreshBefore) return decryptToken(updated.accessTokenEncrypted);
+    if (updated.accessTokenExpiresAt.getTime() > refreshBefore)
+      return decryptToken(updated.accessTokenEncrypted, sellerId);
     if (!updated.refreshLeaseUntil || updated.refreshLeaseUntil.getTime() <= Date.now()) break;
   }
   throw new ApplicationError({
@@ -200,12 +201,12 @@ async function refreshAccessTokenWithLease(input: {
     }
     if (current.accessTokenExpiresAt.getTime() > input.refreshBefore) {
       await releaseRefreshLease(input.integrationId, input.sellerId);
-      return decryptToken(current.accessTokenEncrypted);
+      return decryptToken(current.accessTokenEncrypted, input.sellerId);
     }
-    const token = await requestRefreshedToken(input.oauth, decryptToken(current.refreshTokenEncrypted));
+    const token = await requestRefreshedToken(input.oauth, decryptToken(current.refreshTokenEncrypted, input.sellerId));
     await db.sellerShippingIntegration.update({
       where: { id: input.integrationId },
-      data: { ...toStoredTokenData(token), refreshLeaseUntil: null },
+      data: { ...toStoredTokenData(token, input.sellerId), refreshLeaseUntil: null },
     });
     return token.access_token;
   } catch (error) {
@@ -278,20 +279,37 @@ function assertRequiredScopes(scopes: string, requiredScopes: readonly string[])
   }
 }
 
-export function encryptToken(token: string): string {
-  const key = getEncryptionKey();
+const TOKEN_FORMAT_VERSION = "v2";
+const AUTH_TAG_BYTES = 16;
+
+/**
+ * L-13: tokens are encrypted with AES-256-GCM bound to the seller (sellerId as additional
+ * authenticated data), so a ciphertext copied to another seller's row does not decrypt, and the
+ * 16-byte tag length is enforced. Values written before (three parts, no AAD) still decrypt and
+ * are re-encrypted at the next token refresh.
+ */
+export function encryptToken(token: string, sellerId: string): string {
   const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const cipher = createCipheriv("aes-256-gcm", getEncryptionKey(), iv, { authTagLength: AUTH_TAG_BYTES });
+  cipher.setAAD(Buffer.from(sellerId, "utf8"));
   const ciphertext = Buffer.concat([cipher.update(token, "utf8"), cipher.final()]);
-  return [iv, cipher.getAuthTag(), ciphertext].map((part) => part.toString("base64url")).join(".");
+  const parts = [iv, cipher.getAuthTag(), ciphertext].map((part) => part.toString("base64url"));
+  return [TOKEN_FORMAT_VERSION, ...parts].join(".");
 }
 
-export function decryptToken(value: string): string {
-  const [ivValue, authTagValue, ciphertextValue, extra] = value.split(".");
+export function decryptToken(value: string, sellerId: string): string {
+  const parts = value.split(".");
+  const versioned = parts[0] === TOKEN_FORMAT_VERSION;
+  const [ivValue, authTagValue, ciphertextValue, extra] = versioned ? parts.slice(1) : parts;
   if (!ivValue || !authTagValue || !ciphertextValue || extra) throw invalidStoredToken();
+  const authTag = Buffer.from(authTagValue, "base64url");
+  if (authTag.length !== AUTH_TAG_BYTES) throw invalidStoredToken();
   try {
-    const decipher = createDecipheriv("aes-256-gcm", getEncryptionKey(), Buffer.from(ivValue, "base64url"));
-    decipher.setAuthTag(Buffer.from(authTagValue, "base64url"));
+    const decipher = createDecipheriv("aes-256-gcm", getEncryptionKey(), Buffer.from(ivValue, "base64url"), {
+      authTagLength: AUTH_TAG_BYTES,
+    });
+    if (versioned) decipher.setAAD(Buffer.from(sellerId, "utf8"));
+    decipher.setAuthTag(authTag);
     return Buffer.concat([decipher.update(Buffer.from(ciphertextValue, "base64url")), decipher.final()]).toString(
       "utf8",
     );
@@ -311,18 +329,26 @@ export async function persistMelhorEnvioConnection(
   });
 }
 
+/**
+ * L-13: the state is signed with a key derived from the server secret for this purpose only, so
+ * the Better Auth secret is never used directly as an HMAC key here.
+ */
+function stateSigningKey(): Buffer {
+  return createHmac("sha256", env.BETTER_AUTH_SECRET).update("motoshop:melhor-envio-oauth-state:v1").digest();
+}
+
 function signState(state: OAuthState): string {
   const encoded = Buffer.from(JSON.stringify(state)).toString("base64url");
-  const signature = createHmac("sha256", env.BETTER_AUTH_SECRET).update(encoded).digest("base64url");
+  const signature = createHmac("sha256", stateSigningKey()).update(encoded).digest("base64url");
   return `${encoded}.${signature}`;
 }
 
-function toStoredTokenData(token: z.infer<typeof tokenResponseSchema>) {
+function toStoredTokenData(token: z.infer<typeof tokenResponseSchema>, sellerId: string) {
   const now = Date.now();
   return {
     accountId: token.user_id === undefined ? null : String(token.user_id),
-    accessTokenEncrypted: encryptToken(token.access_token),
-    refreshTokenEncrypted: encryptToken(token.refresh_token),
+    accessTokenEncrypted: encryptToken(token.access_token, sellerId),
+    refreshTokenEncrypted: encryptToken(token.refresh_token, sellerId),
     scopes: token.scope ?? REQUESTED_SCOPES.join(" "),
     accessTokenExpiresAt: new Date(now + token.expires_in * 1000),
     refreshTokenExpiresAt: new Date(now + (token.refresh_token_expires_in ?? 45 * 24 * 60 * 60) * 1000),

@@ -15,6 +15,7 @@
  *   --dry-run  apenas conta o que seria removido (nenhuma escrita no banco nem nos arquivos).
  */
 import { config } from "dotenv";
+import { requireScriptDatabaseUrl } from "./database-guard";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { existsSync, readdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
@@ -31,8 +32,7 @@ import {
 
 config({ path: ".env.local", quiet: true });
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error("DATABASE_URL is required.");
+const databaseUrl = requireScriptDatabaseUrl(process.env, "db:remove:review");
 
 const dryRun = process.argv.includes("--dry-run");
 const db = new PrismaClient({ adapter: new PrismaNeon({ connectionString: databaseUrl }) });

@@ -12,7 +12,7 @@ Roteiro para revisar todas as telas com dados de demonstração. Tudo o que apar
 
 0. **Banco isolado para a revisão (recomendado).** No console da Neon, crie um branch a partir do principal (por exemplo, `review`) e copie a connection string dele. Use essa URL em `DATABASE_URL` e `DIRECT_URL` só enquanto durar a revisão: nada do que acontecer ali afeta o site. Apague o branch ao final.
 
-1. No `.env.local`, deixe `BETTER_AUTH_URL="http://localhost:3001"` e inclua `review.admin@example.test` em `ADMIN_EMAILS` (separado por vírgula). Sem isso, o login falha na porta 3001 e o Admin fica bloqueado. Defina também `REVIEW_ACCOUNTS_PASSWORD` com a senha das contas de demonstração (veja a seção 2).
+1. No `.env.local`, deixe `BETTER_AUTH_URL="http://localhost:3001"` e inclua `review.admin@example.test` em `ADMIN_EMAILS` (separado por vírgula). Sem isso, o login falha na porta 3001 e o Admin fica bloqueado. Defina também `REVIEW_ACCOUNTS_PASSWORD` com a senha das contas de demonstração (veja a seção 2) e, se o banco não for local, ponha o host dele em `SCRIPT_DATABASE_HOSTS`: sem isso, o seed e a remoção recusam rodar (proteção contra rodar no banco errado). Só o host vai nessa variável, nunca a URL com senha.
 
 2. Na pasta do projeto, crie os dados de demonstração (pode rodar quantas vezes quiser; não duplica nada). Publique as lojas de demonstração com a variável `REVIEW_PUBLISH_STORES`:
 

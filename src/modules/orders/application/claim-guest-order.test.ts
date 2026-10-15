@@ -25,7 +25,12 @@ const input = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.findFirst.mockResolvedValue({ id: "order-a", customerEmail: "Buyer@Example.Test" });
+  mocks.findFirst.mockResolvedValue({
+    id: "order-a",
+    customerEmail: "Buyer@Example.Test",
+    createdAt: new Date(),
+    sellerOrders: [],
+  });
   mocks.updateMany.mockResolvedValue({ count: 1 });
 });
 
@@ -34,7 +39,7 @@ describe("claim guest order", () => {
     await expect(claimGuestOrder(input)).resolves.toEqual({ orderNumber: "MS-100" });
     expect(mocks.findFirst).toHaveBeenCalledWith({
       where: { orderNumber: "MS-100", guestAccessTokenHash: "hash:secure-guest-token", userId: null },
-      select: { id: true, customerEmail: true },
+      select: expect.objectContaining({ id: true, customerEmail: true, createdAt: true }),
     });
     expect(mocks.updateMany).toHaveBeenCalledWith({
       where: { id: "order-a", userId: null, guestAccessTokenHash: "hash:secure-guest-token" },
@@ -53,6 +58,17 @@ describe("claim guest order", () => {
 
   it("rejects a different account email without mutating the order", async () => {
     await expect(claimGuestOrder({ ...input, userEmail: "other@example.test" })).rejects.toThrow(/mesmo e-mail/);
+    expect(mocks.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("refuses an expired guest link", async () => {
+    mocks.findFirst.mockResolvedValue({
+      id: "order-a",
+      customerEmail: "buyer@example.test",
+      createdAt: new Date("2025-01-01T00:00:00.000Z"),
+      sellerOrders: [],
+    });
+    await expect(claimGuestOrder(input)).rejects.toThrow(/não encontrado/);
     expect(mocks.updateMany).not.toHaveBeenCalled();
   });
 

@@ -7,6 +7,7 @@ import { getCartIdentity } from "@/modules/cart/infrastructure/cart-access";
 import { ApplicationError } from "@/shared/errors/application-error";
 import { toActionError } from "@/shared/errors/action-error";
 import { consumeRateLimit } from "@/shared/rate-limit/consume-rate-limit";
+import { getClientIp } from "@/shared/request/client-ip";
 
 import {
   quoteShippingForActiveCart,
@@ -28,9 +29,7 @@ async function assertShippingQuoteRateLimit(createGuest: boolean) {
       ? `user:${identity.userId}`
       : `guest:${identity.guestAccessTokenHash}`
     : null;
-  const headerStore = await headers();
-  const clientAddress =
-    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || headerStore.get("x-real-ip")?.trim() || "unknown";
+  const clientAddress = getClientIp(await headers());
 
   const checks = [
     ...(requesterKey ? [{ key: `shipping-quote:${requesterKey}`, windowSeconds: 60, max: 20 }] : []),

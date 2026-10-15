@@ -1,4 +1,5 @@
 import { config } from "dotenv";
+import { requireScriptDatabaseUrl } from "../scripts/database-guard";
 
 import { PrismaNeon } from "@prisma/adapter-neon";
 
@@ -6,11 +7,7 @@ import { PrismaClient } from "../src/generated/prisma/client";
 
 config({ path: ".env.local", quiet: true });
 
-const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is required to seed the database.");
-}
+const databaseUrl = requireScriptDatabaseUrl(process.env, "db:seed");
 
 const database = new PrismaClient({
   adapter: new PrismaNeon({ connectionString: databaseUrl }),

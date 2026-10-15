@@ -8,13 +8,25 @@ import { ProductStatus } from "@/generated/prisma/enums";
 // (and would make `next build` require a database).
 export const dynamic = "force-dynamic";
 
+// A sitemap file holds at most 50,000 URLs; the newest products come first.
+const MAX_SITEMAP_PRODUCTS = 45_000;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = getApplicationBaseUrl();
   const [products, categories, brands, stores, fitments] = await Promise.all([
+    // Same visibility as the product page (L-04): no products of suspended sellers or of
+    // inactive categories and brands, which would only answer 404.
     db.product.findMany({
-      where: { status: ProductStatus.APPROVED, isDemo: false },
+      where: {
+        status: ProductStatus.APPROVED,
+        isDemo: false,
+        category: { active: true },
+        brand: { active: true },
+        seller: { status: { in: ["APPROVED", "ACTIVE"] } },
+      },
       select: { slug: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
+      take: MAX_SITEMAP_PRODUCTS,
     }),
     db.category.findMany({ where: { active: true }, select: { slug: true, updatedAt: true } }),
     db.brand.findMany({ where: { active: true }, select: { slug: true, updatedAt: true } }),

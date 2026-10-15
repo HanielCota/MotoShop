@@ -91,3 +91,33 @@ describe("storeProfileSchema", () => {
     for (const input of rejected) expect(storeProfileSchema.safeParse(input).success).toBe(false);
   });
 });
+
+describe("WhatsApp link (M-09)", () => {
+  const base = {
+    name: "MX Parts",
+    slug: "mx-parts",
+    description: "",
+    instagramUrl: "",
+    youtubeUrl: "",
+    facebookUrl: "",
+  };
+
+  it.each([
+    "https://wa.me/5511999999999",
+    "https://api.whatsapp.com/send?phone=5511999999999",
+    "https://chat.whatsapp.com/abc",
+  ])("accepts WhatsApp's own link %s", (whatsappUrl) => {
+    expect(storeProfileSchema.safeParse({ ...base, whatsappUrl }).success).toBe(true);
+  });
+
+  it.each([
+    "https://loja-externa.example/checkout",
+    "https://wa.me.evil.example/5511",
+    "https://whatsapp.com.phishing.example/",
+    "https://user:pass@wa.me/5511",
+  ])("refuses %s, which is not WhatsApp", (whatsappUrl) => {
+    const result = storeProfileSchema.safeParse({ ...base, whatsappUrl });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe("Informe um link de o WhatsApp.");
+  });
+});
