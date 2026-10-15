@@ -6,6 +6,7 @@ import { getInngestServeBlockReason } from "@/lib/inngest/production-guard";
 import { logger } from "@/lib/logger";
 import { schedulePaymentRecovery, recoverPendingPayment } from "@/modules/payments/workflows/payment-recovery-workflow";
 import { reconcileMercadoPagoWebhook } from "@/modules/payments/workflows/mercado-pago-webhook-workflow";
+import { sendGuestOrderConfirmation } from "@/modules/notifications/workflows/guest-order-confirmation-workflow";
 import { sendOrderPaymentNotification } from "@/modules/notifications/workflows/order-payment-notification-workflow";
 import { sendSellerOrderFulfillmentNotification } from "@/modules/notifications/workflows/seller-order-fulfillment-notification-workflow";
 import { dispatchPendingOutboxEventsWorkflow } from "@/modules/outbox/workflows/dispatch-outbox-workflow";
@@ -16,6 +17,7 @@ const handlers = serve({
   functions: [
     reconcileMercadoPagoWebhook,
     sendOrderPaymentNotification,
+    sendGuestOrderConfirmation,
     sendSellerOrderFulfillmentNotification,
     dispatchPendingOutboxEventsWorkflow,
     schedulePaymentRecovery,
