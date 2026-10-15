@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/nextjs";
 import { useEffect, useState } from "react";
 
 import {
+  SEARCH_SUGGESTION_MAX_LENGTH,
   SEARCH_SUGGESTION_MIN_LENGTH,
   searchSuggestionsResponseSchema,
   type SearchSuggestion,
@@ -9,12 +10,13 @@ import {
 
 const DEBOUNCE_MS = 250;
 
-/** Debounced suggestions for the typed text; empty below the minimum length. */
+/** Debounced suggestions for the typed text; none outside the length the endpoint accepts. */
 export function useSearchSuggestions(query: string, sellerId?: string): SearchSuggestion[] {
   // Keeps the last results while a new request is pending, so the list does not flicker while typing.
   const [loaded, setLoaded] = useState<SearchSuggestion[]>([]);
   const trimmed = query.trim();
-  const searchable = trimmed.length >= SEARCH_SUGGESTION_MIN_LENGTH;
+  // A long query (e.g. a pasted or prefilled ?q=) would only get a 400 from the endpoint.
+  const searchable = trimmed.length >= SEARCH_SUGGESTION_MIN_LENGTH && trimmed.length <= SEARCH_SUGGESTION_MAX_LENGTH;
 
   useEffect(() => {
     if (!searchable) return;

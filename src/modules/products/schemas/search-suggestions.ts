@@ -2,10 +2,11 @@ import { z } from "zod";
 
 export const SEARCH_SUGGESTION_LIMIT = 5;
 export const SEARCH_SUGGESTION_MIN_LENGTH = 2;
+export const SEARCH_SUGGESTION_MAX_LENGTH = 80;
 
 /** Query string accepted by GET /api/search/suggestions. */
 export const searchSuggestionsQuerySchema = z.object({
-  q: z.string().trim().min(SEARCH_SUGGESTION_MIN_LENGTH).max(80),
+  q: z.string().trim().min(SEARCH_SUGGESTION_MIN_LENGTH).max(SEARCH_SUGGESTION_MAX_LENGTH),
   sellerId: z.cuid().optional(),
 });
 
