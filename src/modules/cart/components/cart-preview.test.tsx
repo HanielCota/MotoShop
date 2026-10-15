@@ -153,3 +153,22 @@ it("updates quantity from the preview and prevents exceeding available stock", a
   fireEvent.click(screen.getByRole("button", { name: "Diminuir quantidade de Capacete off-road" }));
   await waitFor(() => expect(actions.update).toHaveBeenCalledWith("item-1", 1));
 });
+
+it("shows a retry instead of an endless loading message when the cart cannot be read", async () => {
+  actions.preview.mockRejectedValueOnce(new Error("offline")).mockResolvedValue({
+    items: [],
+    itemCount: 0,
+    subtotalInCents: 0,
+    paymentAvailable: false,
+  });
+  render(<CartPreview />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Visualizar carrinho" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar o carrinho.");
+  expect(screen.queryByText("Carregando carrinho…")).not.toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Ir para o carrinho" })).toHaveAttribute("href", "/cart");
+
+  fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
+  expect(await screen.findByText("Seu carrinho está vazio")).toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});

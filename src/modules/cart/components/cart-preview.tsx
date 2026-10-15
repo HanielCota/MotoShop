@@ -24,18 +24,20 @@ export function CartPreview() {
   const [message, setMessage] = useState<string>();
   const [pending, setPending] = useState(false);
   const [isError, setIsError] = useState(false);
+  // Reading the cart failed: there is nothing to show, so the popover offers a retry instead of "Carregando".
+  const [loadFailed, setLoadFailed] = useState(false);
 
   async function refresh() {
     setPending(true);
     try {
       const result = await getCartPreviewAction();
       setData(result);
+      setLoadFailed(false);
       setMessage(result.error);
       setIsError(Boolean(result.error));
     } catch (error) {
       Sentry.captureException(error);
-      setMessage("Não foi possível carregar o carrinho.");
-      setIsError(true);
+      setLoadFailed(true);
     } finally {
       setPending(false);
     }
@@ -140,7 +142,8 @@ export function CartPreview() {
               ) : null}
             </div>
 
-            {!data || pending ? (
+            {loadFailed && !pending ? <CartLoadError onRetry={() => void refresh()} /> : null}
+            {(!data && !loadFailed) || pending ? (
               <p className="text-muted-foreground py-6 text-center text-sm">Carregando carrinho…</p>
             ) : null}
             {data && !pending && data.items.length === 0 ? (
@@ -222,5 +225,22 @@ export function CartPreview() {
         </Popover.Positioner>
       </Popover.Portal>
     </Popover.Root>
+  );
+}
+
+function CartLoadError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div role="alert" className="py-5 text-center">
+      <p className="text-sm font-medium">Não foi possível carregar o carrinho.</p>
+      <p className="text-muted-foreground mt-1 text-xs">Confira a conexão e tente de novo.</p>
+      <div className="mt-3 flex flex-wrap justify-center gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+          Tentar de novo
+        </Button>
+        <Link href="/cart" className={cn(buttonVariants({ variant: "link", size: "sm" }))}>
+          Ir para o carrinho
+        </Link>
+      </div>
+    </div>
   );
 }
