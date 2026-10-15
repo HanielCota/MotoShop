@@ -1,4 +1,5 @@
 import { InlineNotice } from "@/components/ui/inline-notice";
+import { formatDate } from "@/lib/format";
 import { formatCep } from "@/modules/customers/domain/brazilian-address";
 import { formatPhone } from "@/modules/customers/domain/tax-id";
 
@@ -13,6 +14,18 @@ export function SellerOrderDelivery({ order }: { order: SellerOrderListItem }) {
     return (
       <InlineNotice tone="warning">
         Aguardando pagamento: não prepare ainda. Endereço e telefone aparecem quando o pagamento for confirmado.
+      </InlineNotice>
+    );
+  }
+
+  const cancellation = order.cancellationRequests[0];
+  if (order.status === "CANCELLATION_REQUESTED" && cancellation) {
+    // Só o motivo, sem ações: a decisão do cancelamento é do Moto Shop (UX-13).
+    return (
+      <InlineNotice tone="warning">
+        <strong>Cancelamento pedido pelo cliente</strong> em {formatDate(cancellation.createdAt)} · Motivo:{" "}
+        {cancellation.customerMessage ? `"${cancellation.customerMessage}"` : "não informado"}. O Moto Shop está
+        analisando; não despache este pedido.
       </InlineNotice>
     );
   }
