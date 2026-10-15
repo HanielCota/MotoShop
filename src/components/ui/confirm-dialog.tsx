@@ -145,7 +145,7 @@ export function ConfirmDialog({
             </AlertDialog.Close>
             <Button
               type="button"
-              variant={tone === "destructive" ? "destructive" : "default"}
+              variant={tone === "destructive" ? "destructive-solid" : "default"}
               onClick={() => void confirm()}
               disabled={pending}
             >

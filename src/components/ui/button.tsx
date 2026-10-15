@@ -28,6 +28,9 @@ const buttonVariants = cva(
         ghost: "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20",
+        /** Final confirmation of an irreversible action (e.g. inside ConfirmDialog); white on red keeps 7:1. */
+        "destructive-solid":
+          "bg-destructive text-white hover:bg-destructive/90 focus-visible:border-destructive/40 focus-visible:ring-destructive/30",
         link: "text-brand-text underline-offset-4 hover:underline",
       },
       size: {

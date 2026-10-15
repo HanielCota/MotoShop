@@ -74,4 +74,12 @@ describe("--destructive token", () => {
     expect(contrast(text, over(text, base, 0.1))).toBeGreaterThanOrEqual(4.5);
     expect(contrast(text, over(text, base, 0.2))).toBeGreaterThanOrEqual(4.5);
   });
+
+  it.each(["background", "card"])("keeps 4.5:1 for white text on the solid button over --%s", (surface) => {
+    const white: Rgb = [1, 1, 1];
+    const fill = srgb(destructive);
+
+    expect(contrast(white, fill)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(white, over(fill, srgb(token(surface)), 0.9))).toBeGreaterThanOrEqual(4.5);
+  });
 });

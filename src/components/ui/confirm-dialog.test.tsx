@@ -41,6 +41,14 @@ describe("ConfirmDialog", () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
+  it("paints the destructive confirmation as a solid red button", async () => {
+    renderDialog();
+
+    await openDialog();
+
+    expect(screen.getByRole("button", { name: "Remover" })).toHaveClass("bg-destructive", "text-white");
+  });
+
   it("closes on Cancelar and on ESC without running the action", async () => {
     const { onConfirm } = renderDialog();
 
