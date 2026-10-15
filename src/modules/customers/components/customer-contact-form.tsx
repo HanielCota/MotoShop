@@ -91,13 +91,7 @@ export function CustomerContactForm({ taxId, phone }: { taxId: string | null; ph
         )}
       </FormField>
       <FormMessage error={state.error ?? null} success={state.success ?? null} />
-      <Button
-        pending={pending}
-        pendingLabel="Salvando…"
-        type="submit"
-        size="lg"
-        className="h-12 self-start px-5 text-base"
-      >
+      <Button pending={pending} pendingLabel="Salvando…" type="submit" size="lg" className="self-start">
         Salvar dados
       </Button>
     </form>

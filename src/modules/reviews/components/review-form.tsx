@@ -212,12 +212,7 @@ export function ReviewForm({
         <FormMessage error={uploadError ?? null} />
       </section>
       <FormMessage error={state.error ?? null} success={state.success ?? null} />
-      <Button
-        type="submit"
-        size="lg"
-        disabled={pending || uploading || Boolean(state.success)}
-        className="px-4 font-semibold"
-      >
+      <Button type="submit" size="lg" disabled={pending || uploading || Boolean(state.success)} className="px-4">
         {pending ? "Publicando..." : uploading ? "Enviando arquivos..." : "Publicar avaliação"}
       </Button>
     </form>

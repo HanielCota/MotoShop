@@ -80,25 +80,25 @@ export async function AdminSellersSection({ searchParams }: AdminSectionProps) {
               {seller.status === "PENDING" ? (
                 <div className="flex shrink-0 gap-2">
                   <ActionForm action={approveSellerAction.bind(null, seller.id)}>
-                    <Button type="submit" size="sm" className="rounded-md">
+                    <Button type="submit" size="sm">
                       Aprovar
                     </Button>
                   </ActionForm>
                   <ActionForm action={rejectSellerAction.bind(null, seller.id)}>
-                    <Button type="submit" variant="outline" size="sm" className="rounded-md">
+                    <Button type="submit" variant="outline" size="sm">
                       Recusar
                     </Button>
                   </ActionForm>
                 </div>
               ) : seller.status === "SUSPENDED" ? (
                 <ActionForm action={reactivateSellerAction.bind(null, seller.id)} className="shrink-0">
-                  <Button type="submit" size="sm" className="rounded-md">
+                  <Button type="submit" size="sm">
                     Reativar
                   </Button>
                 </ActionForm>
               ) : seller.status === "APPROVED" || seller.status === "ACTIVE" ? (
                 <ActionForm action={suspendSellerAction.bind(null, seller.id)} className="shrink-0">
-                  <Button type="submit" variant="outline" size="sm" className="rounded-md">
+                  <Button type="submit" variant="outline" size="sm">
                     Suspender
                   </Button>
                 </ActionForm>

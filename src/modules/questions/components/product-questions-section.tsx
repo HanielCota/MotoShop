@@ -78,7 +78,7 @@ export function ProductQuestionsSection({
                 <option value="oldest">Mais antigas</option>
               </DesignSelect>
             </label>
-            <Button type="submit" variant="outline" className="h-10 px-4">
+            <Button type="submit" variant="outline">
               Aplicar
             </Button>
           </form>

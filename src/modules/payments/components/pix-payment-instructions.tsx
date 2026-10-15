@@ -51,7 +51,7 @@ export function PixPaymentInstructions({ copyAndPasteCode, qrImageDataUrl }: Pix
             onFocus={(event) => event.currentTarget.select()}
             className="border-input bg-background h-24 w-full resize-none rounded-md border p-3 text-xs break-all"
           />
-          <Button type="button" onClick={copyCode} className="px-4">
+          <Button type="button" onClick={copyCode}>
             Copiar código Pix
           </Button>
           {copyMessage ? (

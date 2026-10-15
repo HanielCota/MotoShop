@@ -74,7 +74,7 @@ function FormShell({
   return (
     <form action={action} onSubmit={onSubmit} noValidate className="space-y-3 rounded-lg border p-4">
       {children}
-      <Button pending={pending} pendingLabel="Salvando…" type="submit" className="rounded-md font-semibold">
+      <Button pending={pending} pendingLabel="Salvando…" type="submit" className="font-semibold">
         Adicionar
       </Button>
       <Feedback state={state} clientError={clientError} />

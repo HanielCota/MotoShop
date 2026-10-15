@@ -67,7 +67,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
             )}
           </FormField>
           <FormMessage error={error ?? null} />
-          <Button pending={isSubmitting} pendingLabel="Aguarde…" type="submit" size="lg" className="font-semibold">
+          <Button pending={isSubmitting} pendingLabel="Aguarde…" type="submit" size="lg">
             Salvar nova senha
           </Button>
         </>

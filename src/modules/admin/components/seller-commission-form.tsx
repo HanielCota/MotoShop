@@ -51,7 +51,7 @@ export function SellerCommissionForm({
       <p className="text-muted-foreground text-xs">
         Em branco usa a comissão padrão. Zero define 0%. Aplica-se somente a novos pedidos.
       </p>
-      <Button pending={pending} pendingLabel="Salvando…" type="submit" className="rounded-md">
+      <Button pending={pending} pendingLabel="Salvando…" type="submit">
         Salvar comissão da loja
       </Button>
       <FormMessage error={state.error ?? null} success={state.success ?? null} />

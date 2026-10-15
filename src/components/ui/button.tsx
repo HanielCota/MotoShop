@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
  * Escala de botões (mobile first):
  * - `default`/`icon`: 44px, alvo de toque mínimo recomendado.
  * - `sm`/`icon-sm`: 36px, apenas para tabelas e barras densas no desktop.
- * - `lg`/`icon-lg`: 48px, CTAs principais.
+ * - `lg`/`icon-lg`: 48px, CTAs principais, sempre em `font-semibold` (peso único de CTA).
  * `xs`, `compact` e `icon-xs` são aliases legados de `sm`/`icon-sm` mantidos para
  * não quebrar chamadas existentes; não use em código novo.
  * Um único raio (`rounded-md`) para todos os controles — evite sobrescrever.
@@ -39,7 +39,7 @@ const buttonVariants = cva(
       size: {
         default: "h-11 gap-1.5 px-4 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
         sm: smallSize,
-        lg: "h-12 gap-2 px-5 text-base has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
+        lg: "h-12 gap-2 px-5 text-base font-semibold has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
         icon: "size-11",
         "icon-sm": "size-9",
         "icon-lg": "size-12",

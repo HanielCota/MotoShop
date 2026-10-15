@@ -181,9 +181,7 @@ export default async function CustomerOrdersPage({
               <option value="total_low">Menor valor</option>
             </DesignSelect>
           </label>
-          <Button type="submit" className="rounded-md px-4">
-            Filtrar
-          </Button>
+          <Button type="submit">Filtrar</Button>
         </form>
       </details>
       {result.orders.length === 0 ? (

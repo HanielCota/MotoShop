@@ -57,7 +57,7 @@ export function ShippingOriginForm({ store }: ShippingOriginFormProps) {
         aplicável.
       </p>
       <FormMessage error={state.error ?? null} success={state.success ?? null} className="sm:col-span-2" />
-      <Button pending={pending} pendingLabel="Salvando…" type="submit" className="rounded-md px-4 sm:col-span-2">
+      <Button pending={pending} pendingLabel="Salvando…" type="submit" className="sm:col-span-2">
         Salvar dados de envio
       </Button>
     </form>

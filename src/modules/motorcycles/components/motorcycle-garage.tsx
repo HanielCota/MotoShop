@@ -94,13 +94,7 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
         ) : null}
         {!saved.isPrimary && saved.available ? (
           <form action={primaryAction}>
-            <Button
-              pending={primaryPending}
-              pendingLabel="Atualizando…"
-              type="submit"
-              variant="outline"
-              className="px-4"
-            >
+            <Button pending={primaryPending} pendingLabel="Atualizando…" type="submit" variant="outline">
               Definir como principal
             </Button>
           </form>
@@ -110,7 +104,6 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
           variant="outline"
           onClick={() => setEditing((current) => !current)}
           aria-expanded={editing}
-          className="px-4"
         >
           {editing ? "Cancelar edição" : "Editar"}
         </Button>
@@ -120,7 +113,7 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
               type="button"
               variant="outline"
               aria-label={`Remover ${saved.label}`}
-              className="text-destructive hover:bg-destructive/10 px-4"
+              className="text-destructive hover:bg-destructive/10"
             >
               Remover
             </Button>
@@ -154,13 +147,7 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
               ))}
             </DesignSelect>
           </label>
-          <Button
-            pending={editPending}
-            pendingLabel="Salvando…"
-            size="lg"
-            type="submit"
-            className="min-h-11 rounded-md px-5 font-semibold"
-          >
+          <Button pending={editPending} pendingLabel="Salvando…" size="lg" type="submit" className="min-h-11">
             Salvar alteração
           </Button>
           <ActionMessage state={editState} />
@@ -267,7 +254,7 @@ export function MotorcycleGarage({
             size="lg"
             type="submit"
             disabled={pending || fitments.length === 0}
-            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-4 font-semibold"
+            className="flex min-h-11 w-full items-center justify-center gap-2 px-4"
           >
             <CheckCircle2 aria-hidden="true" className="size-4" />
             {pending ? "Salvando..." : "Salvar moto"}

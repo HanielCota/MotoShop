@@ -120,7 +120,7 @@ export function ChangePasswordForm() {
       </FormField>
       <FormMessage error={message.error ?? null} success={message.success ?? null} />
       <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-        <Button pending={isSubmitting} pendingLabel="Salvando…" type="submit" size="lg" className="h-12 px-5 text-base">
+        <Button pending={isSubmitting} pendingLabel="Salvando…" type="submit" size="lg">
           Salvar nova senha
         </Button>
         <Link href="/forgot-password" className={buttonVariants({ variant: "link", size: "link" })}>

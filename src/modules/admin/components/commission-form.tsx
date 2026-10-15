@@ -32,7 +32,7 @@ export function CommissionForm({ defaultCommissionBps }: { defaultCommissionBps:
           className="h-9"
         />
       </label>
-      <Button pending={pending} pendingLabel="Salvando…" type="submit" size="sm" className="rounded-md px-4">
+      <Button pending={pending} pendingLabel="Salvando…" type="submit" size="sm" className="px-4">
         Salvar comissão
       </Button>
       <FormMessage error={clientError ?? state.error ?? null} success={clientError ? null : (state.success ?? null)} />

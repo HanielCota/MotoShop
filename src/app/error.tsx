@@ -16,7 +16,7 @@ export default function PageError({ error, retry }: { error: Error & { digest?: 
         Tente novamente em instantes. Se você estava finalizando uma compra, confira seus pedidos antes de repetir o
         pagamento.
       </p>
-      <Button type="button" className="rounded-md px-4 py-3" onClick={retry}>
+      <Button type="button" className="py-3" onClick={retry}>
         Tentar novamente
       </Button>
       <Link href="/orders" className="underline">

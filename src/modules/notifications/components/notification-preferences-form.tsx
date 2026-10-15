@@ -42,7 +42,7 @@ export function NotificationPreferencesForm({ emailOrderUpdatesEnabled }: { emai
         </span>
       </label>
       <FormMessage variant="inline" error={state.error ?? null} success={state.success ?? null} />
-      <Button pending={pending} pendingLabel="Salvando…" type="submit" className="rounded-md px-4">
+      <Button pending={pending} pendingLabel="Salvando…" type="submit">
         Salvar preferências
       </Button>
     </form>

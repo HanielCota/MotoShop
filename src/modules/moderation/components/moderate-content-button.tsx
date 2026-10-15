@@ -15,7 +15,7 @@ export function ModerateContentButton({ kind, id, hidden }: { kind: ModerationKi
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="hide" value={String(!hidden)} />
-      <Button type="submit" variant="outline" disabled={pending} className="rounded-md">
+      <Button type="submit" variant="outline" disabled={pending}>
         {pending ? "Aguarde..." : hidden ? "Restaurar" : "Ocultar"}
       </Button>
       <FormMessage variant="inline" error={state.error ?? null} success={state.success ?? null} />

@@ -166,7 +166,7 @@ export function ProductMotorcyclePicker({
         </DesignSelect>
       </label>
       <div className="flex flex-col gap-2 sm:col-span-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <Button type="submit" size="lg" disabled={pending || !fitmentId || alreadySaved} className="px-5">
+        <Button type="submit" size="lg" disabled={pending || !fitmentId || alreadySaved}>
           <Bike aria-hidden="true" />
           {pending
             ? "Salvando..."

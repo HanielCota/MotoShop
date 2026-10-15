@@ -121,7 +121,7 @@ export function ProductReviewsSection({
               ) : null}
               {params.questionPage > 1 ? <input type="hidden" name="questionPage" value={params.questionPage} /> : null}
               {params.moto ? <input type="hidden" name="moto" value={params.moto} /> : null}
-              <Button type="submit" variant="outline" className="h-10 px-4">
+              <Button type="submit" variant="outline">
                 Aplicar
               </Button>
             </form>

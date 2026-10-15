@@ -105,7 +105,7 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
         </p>
       </fieldset>
       <FormMessage error={formError} success={clientError ? null : (state.success ?? null)} />
-      <Button pending={pending} pendingLabel="Salvando…" type="submit" className="rounded-md px-4">
+      <Button pending={pending} pendingLabel="Salvando…" type="submit">
         Salvar perfil público
       </Button>
     </form>
