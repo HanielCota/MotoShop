@@ -118,6 +118,17 @@ it("prefills the phone and CPF saved in the customer profile", () => {
   expect(screen.getByLabelText(/CPF/)).toHaveValue("529.982.247-25");
 });
 
+it("prefills the signed-in account e-mail", () => {
+  render(
+    <CheckoutForm
+      cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }}
+      customerDefaults={{ email: "cliente@exemplo.com.br", taxId: null, phone: null }}
+    />,
+  );
+
+  expect(screen.getByLabelText(/E-mail/)).toHaveValue("cliente@exemplo.com.br");
+});
+
 it("does not put a saved CNPJ in the CPF field", () => {
   render(
     <CheckoutForm
