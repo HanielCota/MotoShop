@@ -7,6 +7,10 @@ import { FormEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { adjustInventoryAction, type ProductActionState } from "@/modules/products/actions/product-actions";
+import {
+  parseInventoryAdjustmentInput,
+  validateInventoryAdjustment,
+} from "@/modules/products/domain/inventory-adjustment-input";
 
 export function InventoryAdjustForm({ variantId }: { variantId: string }) {
   const router = useRouter();
@@ -16,8 +20,14 @@ export function InventoryAdjustForm({ variantId }: { variantId: string }) {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const adjustment = parseInventoryAdjustmentInput(quantityChange);
+    const clientError = validateInventoryAdjustment(adjustment);
+    if (clientError) {
+      setResult({ error: clientError });
+      return;
+    }
     startTransition(async () => {
-      const result = await adjustInventoryAction(variantId, Number(quantityChange));
+      const result = await adjustInventoryAction(variantId, adjustment);
       setResult(result);
       if (result.success) {
         setQuantityChange("");

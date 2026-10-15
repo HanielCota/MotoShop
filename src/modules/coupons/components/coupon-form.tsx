@@ -8,6 +8,7 @@ import { DesignSelect } from "@/components/ui/design-select";
 import { FormField } from "@/components/ui/form-field";
 import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
+import { useClientValidation } from "@/shared/forms/client-validation";
 
 import {
   createMarketplaceCouponAction,
@@ -15,6 +16,7 @@ import {
   type CouponActionState,
 } from "../actions/coupon-actions";
 import { couponKindLabels } from "../domain/coupon-kind";
+import { validateCouponForm } from "../schemas/coupon-input";
 
 type MarketplaceCouponKind = "SELLER_FUNDED_CAMPAIGN" | "MARKETPLACE";
 const couponKindHints: Record<MarketplaceCouponKind, string> = {
@@ -37,6 +39,7 @@ const emptyValues = {
 export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" }) {
   const action = ownerType === "MARKETPLACE" ? createMarketplaceCouponAction : createSellerCouponAction;
   const [state, formAction, pending] = useActionState(action, initialState);
+  const { clientError, onSubmit } = useClientValidation(validateCouponForm);
   const [values, setValues] = useState(emptyValues);
   const [showOnProductPage, setShowOnProductPage] = useState(false);
   const [couponKind, setCouponKind] = useState<MarketplaceCouponKind>("SELLER_FUNDED_CAMPAIGN");
@@ -47,7 +50,12 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
   }
 
   return (
-    <form action={formAction} noValidate className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2">
+    <form
+      action={formAction}
+      onSubmit={onSubmit}
+      noValidate
+      className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2"
+    >
       {ownerType === "MARKETPLACE" ? (
         <FormField
           id="marketplace-coupon-kind"
@@ -186,7 +194,10 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
         <Button type="submit" disabled={pending} className="font-semibold">
           {pending ? "Criando..." : "Criar cupom"}
         </Button>
-        <FormMessage error={state.error ?? null} success={state.success ?? null} />
+        <FormMessage
+          error={clientError ?? state.error ?? null}
+          success={clientError ? null : (state.success ?? null)}
+        />
       </div>
     </form>
   );

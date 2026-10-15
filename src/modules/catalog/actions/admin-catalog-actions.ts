@@ -2,7 +2,6 @@
 
 import { Prisma } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 
 import { db } from "@/lib/database";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
@@ -11,44 +10,18 @@ import { ApplicationError } from "@/shared/errors/application-error";
 import { toActionError } from "@/shared/errors/action-error";
 import { assertRecordId } from "@/shared/validation/record-id";
 
-// O slug público deriva do nome: um nome só com símbolos ("!!!") geraria slug vazio.
-const nameSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, "Informe um nome com pelo menos 2 caracteres.")
-    .max(120, "Use no máximo 120 caracteres.")
-    .refine((name) => slugify(name).length > 0, "O nome precisa conter letras ou números."),
-});
-const sortOrderMessage = "Informe a ordem de exibição como número inteiro, de 0 a 100000.";
-const displacementMessage = "Informe a cilindrada em cc, de 1 a 10000.";
-const yearMessage = "Informe o ano entre 1900 e 2200.";
-
-const categorySchema = nameSchema.extend({
-  parentId: z.string().cuid("Escolha uma categoria pai válida.").optional(),
-  sortOrder: z.coerce
-    .number({ error: sortOrderMessage })
-    .int(sortOrderMessage)
-    .min(0, sortOrderMessage)
-    .max(100_000, sortOrderMessage),
-});
-const modelSchema = nameSchema.extend({ manufacturerId: z.string().cuid("Escolha o fabricante.") });
-const fitmentSchema = z.object({
-  motorcycleModelId: z.string().cuid("Escolha o modelo da moto."),
-  version: z.string().trim().max(80, "Use no máximo 80 caracteres na versão."),
-  displacementCc: z.coerce
-    .number({ error: displacementMessage })
-    .int(displacementMessage)
-    .positive(displacementMessage)
-    .max(10_000, displacementMessage),
-  year: z.coerce.number({ error: yearMessage }).int(yearMessage).min(1900, yearMessage).max(2_200, yearMessage),
-});
+import {
+  categorySchema,
+  fitmentSchema,
+  modelSchema,
+  nameSchema,
+  readCategoryInput,
+  readFitmentInput,
+  readModelInput,
+  readNameInput,
+} from "../schemas/catalog-input";
 
 export type CatalogActionState = { error?: string; success?: string };
-
-function value(formData: FormData, key: string) {
-  return String(formData.get(key) ?? "").trim();
-}
 
 function duplicateMessage(error: unknown, fallback: string, action: string) {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return fallback;
@@ -60,11 +33,7 @@ export async function createCategoryAction(
   formData: FormData,
 ): Promise<CatalogActionState> {
   const session = await requireAdminAccess();
-  const parsed = categorySchema.safeParse({
-    name: value(formData, "name"),
-    parentId: value(formData, "parentId") || undefined,
-    sortOrder: value(formData, "sortOrder") || "0",
-  });
+  const parsed = categorySchema.safeParse(readCategoryInput(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Categoria inválida." };
 
   try {
@@ -104,7 +73,7 @@ export async function createBrandAction(
   formData: FormData,
 ): Promise<CatalogActionState> {
   const session = await requireAdminAccess();
-  const parsed = nameSchema.safeParse({ name: value(formData, "name") });
+  const parsed = nameSchema.safeParse(readNameInput(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Marca inválida." };
 
   try {
@@ -133,7 +102,7 @@ export async function createMotorcycleManufacturerAction(
   formData: FormData,
 ): Promise<CatalogActionState> {
   const session = await requireAdminAccess();
-  const parsed = nameSchema.safeParse({ name: value(formData, "name") });
+  const parsed = nameSchema.safeParse(readNameInput(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Fabricante inválido." };
 
   try {
@@ -169,10 +138,7 @@ export async function createMotorcycleModelAction(
   formData: FormData,
 ): Promise<CatalogActionState> {
   const session = await requireAdminAccess();
-  const parsed = modelSchema.safeParse({
-    name: value(formData, "name"),
-    manufacturerId: value(formData, "manufacturerId"),
-  });
+  const parsed = modelSchema.safeParse(readModelInput(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Modelo inválido." };
 
   try {
@@ -216,12 +182,7 @@ export async function createMotorcycleFitmentAction(
   formData: FormData,
 ): Promise<CatalogActionState> {
   const session = await requireAdminAccess();
-  const parsed = fitmentSchema.safeParse({
-    motorcycleModelId: value(formData, "motorcycleModelId"),
-    version: value(formData, "version"),
-    displacementCc: value(formData, "displacementCc"),
-    year: value(formData, "year"),
-  });
+  const parsed = fitmentSchema.safeParse(readFitmentInput(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Fitment inválido." };
 
   try {

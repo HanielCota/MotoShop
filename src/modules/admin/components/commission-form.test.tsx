@@ -21,3 +21,13 @@ it("keeps the typed percentage when the server refuses it", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("Informe uma comissão");
   expect(screen.getByLabelText("Comissão padrão (%)")).toHaveValue("150");
 });
+
+it("refuses an invalid percentage in the browser without calling the server (BUG-011)", async () => {
+  render(<CommissionForm defaultCommissionBps={1200} />);
+
+  fireEvent.change(screen.getByLabelText("Comissão padrão (%)"), { target: { value: "-1" } });
+  fireEvent.click(screen.getByRole("button", { name: "Salvar comissão" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Informe uma comissão entre 0% e 100%.");
+  expect(mocks.update).not.toHaveBeenCalled();
+});

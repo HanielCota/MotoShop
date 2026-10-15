@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+import { slugify } from "@/lib/utils";
+
+import { splitStoreSlugIssue, type StoreSlugFormProblem } from "./store-slug";
+
 /** True when the URL host is one of `hosts` or a subdomain of it (www., m.). */
 export function isAllowedSocialHost(value: string, hosts: readonly string[]): boolean {
   try {
@@ -45,3 +49,26 @@ export const storeProfileSchema = z.object({
 });
 
 export type StoreProfileInput = z.infer<typeof storeProfileSchema>;
+
+/** Lê o formulário do perfil como a action recebe (o identificador é convertido como no servidor). */
+export function readStoreProfileFormInput(formData: FormData) {
+  return {
+    name: formData.get("name"),
+    slug: slugify(String(formData.get("slug") ?? "")),
+    description: readTrimmedField(formData, "description"),
+    instagramUrl: readTrimmedField(formData, "instagramUrl"),
+    youtubeUrl: readTrimmedField(formData, "youtubeUrl"),
+    whatsappUrl: readTrimmedField(formData, "whatsappUrl"),
+    facebookUrl: readTrimmedField(formData, "facebookUrl"),
+  };
+}
+
+function readTrimmedField(formData: FormData, name: string): string {
+  return String(formData.get(name) ?? "").trim();
+}
+
+/** Mesma regra no servidor e no navegador (BUG-011); o erro do identificador vai para o campo. */
+export function validateStoreProfileForm(formData: FormData): StoreSlugFormProblem | null {
+  const parsed = storeProfileSchema.safeParse(readStoreProfileFormInput(formData));
+  return parsed.success ? null : splitStoreSlugIssue(parsed.error, "slug");
+}
