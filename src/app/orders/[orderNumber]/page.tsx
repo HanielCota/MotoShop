@@ -38,6 +38,8 @@ export default async function CustomerOrderPage({
   const session = await getCurrentSession();
   // Mesma regra das actions de pós-venda: token do link seguro primeiro, depois a sessão.
   const identity = await resolveCustomerOrderIdentity({ orderNumber, accessToken, userId: session?.user.id });
+  // Signed out (e.g. after leaving in another tab): ask to sign in instead of saying the order does not exist.
+  if (!identity && !session) redirect(`/login?next=${encodeURIComponent(guestOrderPath(orderNumber))}` as Route);
   if (!identity) notFound();
 
   const order = await getCustomerOrder(orderNumber, identity);
