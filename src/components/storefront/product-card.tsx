@@ -190,8 +190,8 @@ export function ProductCard({
                   : "text-foreground font-medium",
             )}
           >
+            {/* The "Demonstração" badge and the name already identify demo products; no third mention here. */}
             {publicStockStatusLabel[stockStatus]}
-            {product.isDemo ? " · demonstração" : ""}
           </p>
         </div>
         {action ? <div className="pt-2 [&_button]:w-full">{action}</div> : null}
