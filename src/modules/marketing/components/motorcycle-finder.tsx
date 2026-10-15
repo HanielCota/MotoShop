@@ -158,7 +158,7 @@ export function MotorcycleFinder({
                 value={searchQuery}
                 onValueChange={setSearchQuery}
                 placeholder="Ex.: filtro de ar"
-                inputClassName="h-14 rounded-md pr-12 text-base sm:text-base [&::-webkit-search-cancel-button]:hidden"
+                inputClassName="h-14 rounded-md pr-12 text-base sm:text-base"
               />
               {searchQuery ? (
                 <Button
