@@ -8,6 +8,7 @@ import { db } from "@/lib/database";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { slugify } from "@/lib/utils";
 import { ApplicationError, asApplicationError } from "@/shared/errors/application-error";
+import { assertRecordId } from "@/shared/validation/record-id";
 
 // O slug público deriva do nome: um nome só com símbolos ("!!!") geraria slug vazio.
 const nameSchema = z.object({
@@ -230,6 +231,7 @@ export async function createMotorcycleFitmentAction(
  */
 export async function toggleCategoryAction(categoryId: string, nextActive: boolean): Promise<void> {
   const session = await requireAdminAccess();
+  assertToggleInput(categoryId, nextActive);
   await db.$transaction(async (tx) => {
     const category = await tx.category.findUnique({ where: { id: categoryId } });
     if (!category) throw missingCatalogEntry();
@@ -259,6 +261,7 @@ export async function toggleCategoryAction(categoryId: string, nextActive: boole
  */
 export async function toggleBrandAction(brandId: string, nextActive: boolean): Promise<void> {
   const session = await requireAdminAccess();
+  assertToggleInput(brandId, nextActive);
   await db.$transaction(async (tx) => {
     const brand = await tx.brand.findUnique({ where: { id: brandId } });
     if (!brand) throw missingCatalogEntry();
@@ -288,6 +291,7 @@ export async function toggleBrandAction(brandId: string, nextActive: boolean): P
  */
 export async function toggleMotorcycleManufacturerAction(manufacturerId: string, nextActive: boolean): Promise<void> {
   const session = await requireAdminAccess();
+  assertToggleInput(manufacturerId, nextActive);
   await db.$transaction(async (tx) => {
     const manufacturer = await tx.motorcycleManufacturer.findUnique({ where: { id: manufacturerId } });
     if (!manufacturer) throw missingCatalogEntry();
@@ -317,6 +321,7 @@ export async function toggleMotorcycleManufacturerAction(manufacturerId: string,
  */
 export async function toggleMotorcycleModelAction(modelId: string, nextActive: boolean): Promise<void> {
   const session = await requireAdminAccess();
+  assertToggleInput(modelId, nextActive);
   await db.$transaction(async (tx) => {
     const model = await tx.motorcycleModel.findUnique({ where: { id: modelId } });
     if (!model) throw missingCatalogEntry();
@@ -354,4 +359,11 @@ function missingCatalogEntry() {
     message: "Este cadastro não foi encontrado. Atualize a página e tente novamente.",
     statusCode: 404,
   });
+}
+
+function assertToggleInput(entryId: unknown, nextActive: unknown): asserts entryId is string {
+  assertRecordId(entryId, "Item do catálogo inválido.");
+  if (typeof nextActive === "boolean") return;
+
+  throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Status inválido.", statusCode: 400 });
 }

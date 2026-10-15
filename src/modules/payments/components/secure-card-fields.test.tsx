@@ -27,7 +27,7 @@ function setup() {
         mount: vi.fn(),
         unmount: fieldUnmount,
         update: vi.fn(),
-        on: (event: string, fn: (event: { bin?: string }) => void) => listeners.set(`${type}:${event}`, fn),
+        on: (event: string, listener: (event: { bin?: string }) => void) => listeners.set(`${type}:${event}`, listener),
       }),
       createCardToken: token,
     },
@@ -41,6 +41,10 @@ function setup() {
   const view = render(<SecureCardFields publicKey="TEST-public-key" ref={ref} />);
   return { ...view, ref, listeners, token, fieldUnmount, getPaymentMethods };
 }
+function handle(ref: { current: SecureCardHandle | null }) {
+  if (!ref.current) throw new Error("SecureCardFields handle was not attached");
+  return ref.current;
+}
 it("tokenizes with hosted fields and sends only non-PCI holder data to the SDK", async () => {
   const test = setup();
   await waitFor(() => expect(test.listeners.has("cardNumber:binChange")).toBe(true));
@@ -50,7 +54,7 @@ it("tokenizes with hosted fields and sends only non-PCI holder data to the SDK",
   });
   fireEvent.change(screen.getByLabelText("Nome no cartão"), { target: { value: "Titular Teste" } });
   fireEvent.change(screen.getByLabelText("CPF do titular"), { target: { value: "19119119100" } });
-  expect(await test.ref.current!.tokenize()).toEqual({
+  expect(await handle(test.ref).tokenize()).toEqual({
     paymentMethodId: "visa",
     paymentToken: "a".repeat(32),
     issuerId: "25",
@@ -65,7 +69,7 @@ it("tokenizes with hosted fields and sends only non-PCI holder data to the SDK",
 });
 it("blocks submission while secure fields are not ready", async () => {
   const test = setup();
-  await expect(test.ref.current!.tokenize()).rejects.toThrow("Aguarde");
+  await expect(handle(test.ref).tokenize()).rejects.toThrow("Aguarde");
   expect(test.token).not.toHaveBeenCalled();
 });
 it("disposes hosted fields when switching back to Pix", async () => {

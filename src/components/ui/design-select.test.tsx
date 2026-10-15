@@ -29,13 +29,13 @@ describe("DesignSelect", () => {
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
     expect(screen.getByRole("combobox", { name: "Marca" })).toHaveTextContent("Selecione");
-    expect(form!.checkValidity()).toBe(false);
+    expect(defined(form).checkValidity()).toBe(false);
     selectOption("Marca", "Fox");
-    expect(new FormData(form!).get("brandId")).toBe("fox");
-    expect(form!.checkValidity()).toBe(true);
+    expect(new FormData(defined(form)).get("brandId")).toBe("fox");
+    expect(defined(form).checkValidity()).toBe(true);
     selectOption("Marca", "Selecione");
-    expect(new FormData(form!).get("brandId")).toBe("");
-    expect(form!.checkValidity()).toBe(false);
+    expect(new FormData(defined(form)).get("brandId")).toBe("");
+    expect(defined(form).checkValidity()).toBe(false);
   });
 
   it("submits every selected motorcycle as a separate value", () => {
@@ -52,7 +52,10 @@ describe("DesignSelect", () => {
     );
     selectOption("Motos compatíveis", "Honda CRF");
     selectOption("Motos compatíveis", "Yamaha YZ");
-    expect(new FormData(container.querySelector("form")!).getAll("motorcycleFitmentIds")).toEqual(["honda", "yamaha"]);
+    expect(new FormData(defined(container.querySelector("form"))).getAll("motorcycleFitmentIds")).toEqual([
+      "honda",
+      "yamaha",
+    ]);
   });
 
   it("does not open when disabled", () => {
@@ -65,3 +68,8 @@ describe("DesignSelect", () => {
     expect(screen.queryByRole("option", { name: "YZ" })).not.toBeInTheDocument();
   });
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

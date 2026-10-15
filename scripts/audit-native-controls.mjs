@@ -59,24 +59,35 @@ function walk(directory) {
   }
 }
 walk("src");
-const mode = process.argv[2] ?? "summary";
-if (mode === "json") console.log(JSON.stringify(rows));
-else if (mode === "summary") {
-  const counts = {};
-  for (const row of rows) {
-    const key = row.tag === "input" ? `input:${row.attributes.type ?? '"text"'}` : row.tag;
-    counts[key] = (counts[key] ?? 0) + 1;
+function report(mode) {
+  if (mode === "json") {
+    console.log(JSON.stringify(rows));
+    return;
   }
-  console.log(JSON.stringify(counts, null, 2));
-} else if (mode === "select-without-value") {
-  for (const row of rows.filter(
-    (row) => row.tag === "DesignSelect" && !row.attributes.value && !row.attributes.defaultValue,
-  ))
-    console.log(`${row.file}:${row.line} | ${row.attributes.name ?? row.attributes["aria-label"] ?? "—"}`);
-} else {
+
+  if (mode === "summary") {
+    const counts = {};
+    for (const row of rows) {
+      const key = row.tag === "input" ? `input:${row.attributes.type ?? '"text"'}` : row.tag;
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    console.log(JSON.stringify(counts, null, 2));
+    return;
+  }
+
+  if (mode === "select-without-value") {
+    for (const row of rows.filter(
+      (row) => row.tag === "DesignSelect" && !row.attributes.value && !row.attributes.defaultValue,
+    ))
+      console.log(`${row.file}:${row.line} | ${row.attributes.name ?? row.attributes["aria-label"] ?? "—"}`);
+    return;
+  }
+
   for (const row of rows.filter((row) => row.tag === mode)) {
     console.log(
       `${row.file}:${row.line} | ${row.attributes.name ?? row.attributes.id ?? "—"} | ${row.attributes.type ?? ""} | ${row.attributes.multiple ? "multiple" : ""}`,
     );
   }
 }
+
+report(process.argv[2] ?? "summary");

@@ -61,3 +61,6 @@ next-env.d.ts
 # Read-only demo walkthrough (pnpm test:demo)
 /playwright-report-demo/
 /test-results-demo/
+
+# Local git worktrees
+.claude/worktrees/

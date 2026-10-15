@@ -93,7 +93,7 @@ export function validateCheckoutForm(form: CheckoutFormState): CheckoutFieldErro
   if (form.customerPhone.replace(/\D/g, "").length < 10) errors.customerPhone = "Informe um telefone válido.";
   const cpf = normalizeCpf(form.customerTaxId);
   if (!cpf) errors.customerTaxId = "Informe seu CPF para o pagamento.";
-  else if (!isValidCpf(cpf)) errors.customerTaxId = "Informe um CPF válido.";
+  if (cpf && !isValidCpf(cpf)) errors.customerTaxId = "Informe um CPF válido.";
   if (normalizeCep(form.postalCode).length !== 8) errors.postalCode = "Informe um CEP com 8 números.";
   if (form.street.trim().length < 2) errors.street = "Informe a rua.";
   if (!form.number.trim()) errors.number = "Informe o número.";

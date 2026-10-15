@@ -117,19 +117,19 @@ export function volumesFromQuotedPackages(packages: readonly ShippingVolume[]): 
 }
 
 export function buildOriginAddress(store: ShipmentOriginStore, sellerType: "INDIVIDUAL" | "COMPANY"): ShippingAddress {
-  const required = [
-    store.originName,
-    store.originEmail,
-    store.originPhone,
-    store.originDocument,
-    store.originPostalCode,
-    store.originStreet,
-    store.originNumber,
-    store.originNeighborhood,
-    store.originCity,
-    store.originState,
-  ];
-  if (required.some((value) => !value)) {
+  const {
+    originName: name,
+    originEmail: email,
+    originPhone: phone,
+    originDocument: document,
+    originPostalCode: postalCode,
+    originStreet: street,
+    originNumber: number,
+    originNeighborhood: district,
+    originCity: city,
+    originState: state,
+  } = store;
+  if (!name || !email || !phone || !document || !postalCode || !street || !number || !district || !city || !state) {
     throw new ApplicationError({
       code: "CONFIGURATION_ERROR",
       message: "Complete os dados de envio da loja antes de comprar a etiqueta.",
@@ -138,17 +138,17 @@ export function buildOriginAddress(store: ShipmentOriginStore, sellerType: "INDI
   }
 
   return {
-    name: store.originName!,
-    email: store.originEmail!,
-    phone: store.originPhone!,
-    ...(sellerType === "COMPANY" ? { company_document: store.originDocument! } : { document: store.originDocument! }),
-    address: store.originStreet!,
-    number: store.originNumber!,
+    name,
+    email,
+    phone,
+    ...(sellerType === "COMPANY" ? { company_document: document } : { document }),
+    address: street,
+    number,
     ...(store.originComplement ? { complement: store.originComplement } : {}),
-    district: store.originNeighborhood!,
-    city: store.originCity!,
-    postal_code: store.originPostalCode!,
-    state_abbr: store.originState!,
+    district,
+    city,
+    postal_code: postalCode,
+    state_abbr: state,
     state_register: store.originStateRegister || "ISENTO",
     country_id: "BR",
   };

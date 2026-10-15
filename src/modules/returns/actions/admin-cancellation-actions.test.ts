@@ -24,11 +24,11 @@ beforeEach(() => {
 
 it("delegates the decision to the application service and revalidates the order", async () => {
   mocks.review.mockResolvedValue({ outcome: "REJECTED", orderNumber: "MS-1" });
-  expect(await reviewCancellationRequestAction("request", form("REJECT", "Já postado"))).toEqual({
+  expect(await reviewCancellationRequestAction("crequest0001", form("REJECT", "Já postado"))).toEqual({
     success: "Solicitação de cancelamento rejeitada.",
   });
   expect(mocks.review).toHaveBeenCalledWith({
-    cancellationRequestId: "request",
+    cancellationRequestId: "crequest0001",
     decision: "REJECT",
     note: "Já postado",
     actorUserId: "admin",
@@ -40,17 +40,24 @@ it("maps application errors to a predictable action result", async () => {
   mocks.review.mockRejectedValue(
     new ApplicationError({ code: "CONFLICT", message: "Esta solicitação já foi decidida." }),
   );
-  expect((await reviewCancellationRequestAction("request", form("APPROVE"))).error).toContain("já foi decidida");
+  expect((await reviewCancellationRequestAction("crequest0001", form("APPROVE"))).error).toContain("já foi decidida");
 });
 
 it("rejects an invalid decision without calling the service", async () => {
-  expect(await reviewCancellationRequestAction("request", form("MAYBE"))).toHaveProperty("error");
+  expect(await reviewCancellationRequestAction("crequest0001", form("MAYBE"))).toHaveProperty("error");
   expect(mocks.review).not.toHaveBeenCalled();
 });
 
 it("keeps an unexpected refund failure retryable instead of leaking a generic English error", async () => {
   mocks.review.mockRejectedValue(new Error("Mercado Pago request failed with status 404"));
-  const result = await reviewCancellationRequestAction("request", form("APPROVE"));
+  const result = await reviewCancellationRequestAction("crequest0001", form("APPROVE"));
   expect(result.error).toContain("pode ser reprocessada");
   expect(result.error).not.toContain("unexpected");
+});
+
+it("rejects a malformed cancellation request id before calling the service", async () => {
+  expect(await reviewCancellationRequestAction("../x", form("APPROVE"))).toEqual({
+    error: "Solicitação de cancelamento inválida.",
+  });
+  expect(mocks.review).not.toHaveBeenCalled();
 });

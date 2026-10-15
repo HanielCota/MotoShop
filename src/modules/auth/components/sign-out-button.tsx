@@ -1,5 +1,6 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -30,7 +31,8 @@ export function SignOutButton({ className, onSignedOut }: SignOutButtonProps) {
       onSignedOut?.();
       router.push("/");
       router.refresh();
-    } catch {
+    } catch (error) {
+      Sentry.captureException(error);
       setFailed(true);
     } finally {
       setPending(false);

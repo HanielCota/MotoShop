@@ -28,7 +28,8 @@ export const schedulePaymentRecovery = inngest.createFunction(
           select: { id: true },
         }),
       );
-      if (!payments.length) break;
+      const lastPayment = payments.at(-1);
+      if (!lastPayment) break;
       await step.sendEvent(
         `dispatch-${page}`,
         payments.map(({ id }) => ({
@@ -37,7 +38,7 @@ export const schedulePaymentRecovery = inngest.createFunction(
         })),
       );
       count += payments.length;
-      cursor = payments[payments.length - 1]!.id;
+      cursor = lastPayment.id;
     }
     return { dispatched: count };
   },

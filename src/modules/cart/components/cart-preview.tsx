@@ -1,5 +1,6 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { Popover } from "@base-ui/react/popover";
 import { ShoppingBag } from "lucide-react";
 import Link from "next/link";
@@ -27,7 +28,8 @@ export function CartPreview() {
       setData(result);
       setMessage(result.error);
       setIsError(Boolean(result.error));
-    } catch {
+    } catch (error) {
+      Sentry.captureException(error);
       setMessage("Não foi possível carregar o carrinho.");
       setIsError(true);
     } finally {
@@ -61,7 +63,8 @@ export function CartPreview() {
       }
       const updated = await getCartPreviewAction();
       setData(updated);
-    } catch {
+    } catch (error) {
+      Sentry.captureException(error);
       setMessage("Não foi possível atualizar o carrinho. Tente novamente.");
       setIsError(true);
     } finally {
@@ -84,7 +87,8 @@ export function CartPreview() {
       setConfirmingClear(false);
       setMessage(result.success);
       setIsError(false);
-    } catch {
+    } catch (error) {
+      Sentry.captureException(error);
       setMessage("Não foi possível limpar o carrinho. Tente novamente.");
       setIsError(true);
     } finally {

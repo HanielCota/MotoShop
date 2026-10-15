@@ -35,7 +35,7 @@ export function buildCatalogHref(query: CatalogQuery, overrides: Partial<Catalog
   const params = new URLSearchParams();
   if (next.q) params.set("q", next.q);
   if (next.moto) params.set("moto", next.moto);
-  else if (next.motoCleared) params.set("moto", "all");
+  if (!next.moto && next.motoCleared) params.set("moto", "all");
   if (next.category) params.set("category", next.category);
   if (next.brand) params.set("brand", next.brand);
   if (next.seller) params.set("seller", next.seller);

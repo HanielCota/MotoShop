@@ -39,15 +39,15 @@ export async function refundReturnRequest(input: RefundReturnInput): Promise<Ref
     });
   }
 
-  let refund: RequestRefundOutcome | null = null;
-  if (request.amountInCents > 0) {
-    refund = await refundPostSaleRequest({
-      baseKey: returnRefundBaseKey(request.id),
-      orderId: request.orderId,
-      amountInCents: request.amountInCents,
-      reason: `Reembolso da devolução ${request.id}`,
-    });
-  }
+  const refund: RequestRefundOutcome | null =
+    request.amountInCents > 0
+      ? await refundPostSaleRequest({
+          baseKey: returnRefundBaseKey(request.id),
+          orderId: request.orderId,
+          amountInCents: request.amountInCents,
+          reason: `Reembolso da devolução ${request.id}`,
+        })
+      : null;
 
   await db.$transaction(async (tx) => {
     const updated = await tx.returnRequest.updateMany({

@@ -139,10 +139,10 @@ export function ProductCard({
           {product.hasPriceRange && !product.isDemo ? (
             <span className="text-muted-foreground block text-xs">A partir de</span>
           ) : null}
-          {onSale ? (
+          {onSale && product.compareAtPriceInCents != null ? (
             <span className="text-muted-foreground block text-xs line-through">
               <span className="sr-only">Preço normal: </span>
-              {formatMoneyInCents(product.compareAtPriceInCents!)}
+              {formatMoneyInCents(product.compareAtPriceInCents)}
             </span>
           ) : null}
           <p className="text-foreground text-base font-semibold sm:text-lg">

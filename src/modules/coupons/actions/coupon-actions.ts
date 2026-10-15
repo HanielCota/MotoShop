@@ -8,6 +8,7 @@ import { db } from "@/lib/database";
 import { requireAdminAccess, requireSellerAccess } from "@/modules/auth/application/authorization";
 import { asApplicationError } from "@/shared/errors/application-error";
 
+import { createCoupon, type CouponOwner } from "../application/create-coupon";
 import { readCouponFormInput } from "../domain/coupon-form-input";
 
 // Coupon amounts and limits are persisted as PostgreSQL int4.
@@ -53,7 +54,11 @@ export async function createMarketplaceCouponAction(
   formData: FormData,
 ): Promise<CouponActionState> {
   const session = await requireAdminAccess();
-  return createCoupon(formData, { ownerType: "MARKETPLACE", fundedBy: "MARKETPLACE", actorUserId: session.user.id });
+  return createCouponForOwner(formData, {
+    ownerType: "MARKETPLACE",
+    fundedBy: "MARKETPLACE",
+    actorUserId: session.user.id,
+  });
 }
 
 export async function createSellerCouponAction(
@@ -61,7 +66,7 @@ export async function createSellerCouponAction(
   formData: FormData,
 ): Promise<CouponActionState> {
   const context = await requireSellerAccess("COUPON_MANAGE");
-  return createCoupon(formData, {
+  return createCouponForOwner(formData, {
     ownerType: "SELLER",
     fundedBy: "SELLER",
     sellerId: context.seller.id,
@@ -123,65 +128,29 @@ export async function setSellerCouponActiveAction(couponId: string, active: bool
   revalidatePath("/seller", "layout");
 }
 
-async function createCoupon(
-  formData: FormData,
-  owner: {
-    ownerType: "MARKETPLACE" | "SELLER";
-    fundedBy: "MARKETPLACE" | "SELLER";
-    sellerId?: string;
-    actorUserId: string;
-  },
-): Promise<CouponActionState> {
+/** O tipo escolhido define qual valor de desconto é obrigatório. */
+function readDiscountAmount(
+  data: z.infer<typeof couponSchema>,
+): { percentageBps: number } | { fixedAmountInCents: number } | { error: string } {
+  if (data.discountType === "PERCENTAGE") {
+    if (data.percentageBps === undefined) return { error: "Informe o percentual de desconto." };
+    return { percentageBps: data.percentageBps };
+  }
+
+  if (data.fixedAmountInCents === undefined) return { error: "Informe o valor do desconto em reais." };
+  return { fixedAmountInCents: data.fixedAmountInCents };
+}
+
+async function createCouponForOwner(formData: FormData, owner: CouponOwner): Promise<CouponActionState> {
   const parsed = couponSchema.safeParse(readCouponFormInput(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os dados do cupom." };
-  if (parsed.data.discountType === "PERCENTAGE" && parsed.data.percentageBps === undefined)
-    return { error: "Informe o percentual de desconto." };
-  if (parsed.data.discountType === "FIXED_AMOUNT" && parsed.data.fixedAmountInCents === undefined)
-    return { error: "Informe o valor do desconto em reais." };
+  const discountAmount = readDiscountAmount(parsed.data);
+  if ("error" in discountAmount) return { error: discountAmount.error };
 
   try {
-    const data = {
-      code: parsed.data.code,
-      ownerType: owner.ownerType,
-      discountType: parsed.data.discountType,
-      ...(parsed.data.discountType === "PERCENTAGE"
-        ? { percentageBps: parsed.data.percentageBps! }
-        : { fixedAmountInCents: parsed.data.fixedAmountInCents! }),
-      minimumPurchaseInCents: parsed.data.minimumPurchaseInCents,
-      ...(parsed.data.globalUsageLimit !== undefined ? { globalUsageLimit: parsed.data.globalUsageLimit } : {}),
-      ...(parsed.data.perCustomerUsageLimit !== undefined
-        ? { perCustomerUsageLimit: parsed.data.perCustomerUsageLimit }
-        : {}),
-      fundedBy: owner.fundedBy,
-    };
-    await db.$transaction(async (tx) => {
-      const coupon = owner.sellerId
-        ? await tx.coupon.create({ data: { ...data, sellerId: owner.sellerId } })
-        : await tx.coupon.create({ data });
-      await tx.auditLog.create({
-        data: {
-          action: "COUPON_CREATED",
-          entityType: "Coupon",
-          entityId: coupon.id,
-          actorUserId: owner.actorUserId,
-          metadata: {
-            code: data.code,
-            ownerType: owner.ownerType,
-            fundedBy: owner.fundedBy,
-            sellerId: owner.sellerId ?? null,
-            discountType: data.discountType,
-            percentageBps: parsed.data.discountType === "PERCENTAGE" ? (parsed.data.percentageBps ?? null) : null,
-            fixedAmountInCents:
-              parsed.data.discountType === "FIXED_AMOUNT" ? (parsed.data.fixedAmountInCents ?? null) : null,
-            minimumPurchaseInCents: data.minimumPurchaseInCents,
-            globalUsageLimit: parsed.data.globalUsageLimit ?? null,
-            perCustomerUsageLimit: parsed.data.perCustomerUsageLimit ?? null,
-          },
-        },
-      });
-    });
-    if (owner.ownerType === "MARKETPLACE") revalidatePath("/admin", "layout");
-    else revalidatePath("/seller", "layout");
+    await createCoupon(owner, parsed.data, discountAmount);
+
+    revalidatePath(owner.ownerType === "MARKETPLACE" ? "/admin" : "/seller", "layout");
     return { success: `Cupom ${parsed.data.code} criado.` };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
