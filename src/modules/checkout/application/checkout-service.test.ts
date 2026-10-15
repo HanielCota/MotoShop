@@ -161,6 +161,18 @@ it("reports a previously declined attempt again on an idempotent replay", async 
   });
 });
 
+it("replays an existing pending order without reserving again or checking the creation cap", async () => {
+  mocks.db.paymentTransaction.findUnique.mockResolvedValue({
+    payment: { status: "PENDING", order: { orderNumber: "MS-3", userId: "user-1", status: "PENDING_PAYMENT" } },
+  });
+  const payment = provider(vi.fn());
+
+  await expect(executeCheckout(input, payment)).resolves.toEqual({ orderNumber: "MS-3" });
+  expect(mocks.reserve).not.toHaveBeenCalled();
+  expect(mocks.loadCart).not.toHaveBeenCalled();
+  expect(payment.createPayment).not.toHaveBeenCalled();
+});
+
 it("marks the request as SENT under the order lock before calling the provider", async () => {
   const createPayment = vi.fn(async () => {
     expect(mocks.tx.paymentTransaction.updateMany).toHaveBeenCalledWith({

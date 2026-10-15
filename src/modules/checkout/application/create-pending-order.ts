@@ -24,6 +24,7 @@ import { applyOrderItemDiscounts } from "../domain/order-item-discounts";
 import type { SellerCharge } from "../domain/seller-charges";
 import type { CheckoutInput } from "../schemas/checkout";
 import type { CheckoutShippingQuote } from "./shipping-quotes";
+import { assertPendingOrderCap } from "./pending-order-cap";
 
 export type CheckoutSession = Awaited<ReturnType<typeof getCurrentSession>>;
 
@@ -83,6 +84,8 @@ export async function reserveCartAndCreateOrder(input: ReserveCartInput): Promis
   if (totals.totalAmountInCents <= 0)
     throw new ApplicationError({ code: "CONFLICT", message: "O total da compra deve ser maior que zero." });
   return db.$transaction(async (tx) => {
+    // Existing idempotency keys return from executeCheckout before reaching this creation path.
+    await assertPendingOrderCap(tx, data.customerTaxId, input.now);
     await convertCart(tx, input.cart.id);
     await assertCartItemsUnchanged(tx, input.cart);
     await lockAndRecheckChargedPrices(tx, input.sellerCharges, input.now);

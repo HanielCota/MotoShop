@@ -6,6 +6,7 @@ const integrationMocks = vi.hoisted(() => ({
 }));
 import { testDb, cleanupFixtures } from "../support/database";
 import { must } from "../support/must";
+import { createTestCustomerTaxId } from "../support/customer-tax-id";
 vi.mock("@/lib/database", async () => ({ db: (await import("../support/database")).testDb }));
 vi.mock("@/lib/inngest/client", () => ({ inngest: { send: vi.fn(async () => ({ ids: [] })) } }));
 vi.mock("@/lib/payment/mercado-pago-provider", () => ({ mercadoPagoProvider: { refund: integrationMocks.refund } }));
@@ -71,7 +72,7 @@ async function cartInput(quantity = 1, withCoupon = false) {
     customerName: "Teste integração",
     customerEmail: email,
     customerPhone: "11999999999",
-    customerTaxId: "19119119100",
+    customerTaxId: createTestCustomerTaxId(),
     postalCode: "01001000",
     street: "Rua Teste",
     number: "1",
