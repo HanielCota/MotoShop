@@ -15,3 +15,7 @@ it("lets a caller className override the size classes", () => {
   expect(classes).toContain("h-14");
   expect(classes).not.toContain("h-12");
 });
+
+it("draws 20px icons in lg buttons (IC-14)", () => {
+  expect(buttonVariants({ size: "lg" })).toContain("[&_svg:not([class*='size-'])]:size-5");
+});
