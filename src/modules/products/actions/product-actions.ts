@@ -16,6 +16,7 @@ import {
   submitProductForReview,
 } from "../application/product-lifecycle";
 import { createSellerProduct, updateSellerProduct } from "../application/save-product";
+import { validateInventoryAdjustment } from "../domain/inventory-adjustment-input";
 import { parseProductForm } from "../schemas/parse-product-form";
 
 export type ProductActionState = { error?: string; success?: string };
@@ -147,8 +148,8 @@ export async function restoreProductAction(productId: string): Promise<void> {
 export async function adjustInventoryAction(variantId: string, quantityChange: number): Promise<ProductActionState> {
   const context = await requireSellerAccess("PRODUCT_UPDATE");
   if (!productIdSchema.safeParse(variantId).success) return { error: "Variação inválida." };
-  if (!Number.isSafeInteger(quantityChange) || quantityChange === 0)
-    return { error: "Informe um ajuste inteiro diferente de zero." };
+  const adjustmentError = validateInventoryAdjustment(quantityChange);
+  if (adjustmentError) return { error: adjustmentError };
   try {
     await adjustInventoryManually({
       sellerId: context.seller.id,
