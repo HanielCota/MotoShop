@@ -64,38 +64,8 @@ export function sellerFilterOptions(sellers: readonly { id: string; store: { nam
   ];
 }
 
-/** Tabela responsiva: rola horizontalmente no mobile sem estourar a página. */
-export function AdminTable({
-  caption,
-  columns,
-  children,
-  minWidth = "min-w-[720px]",
-}: {
-  caption: string;
-  columns: readonly string[];
-  children: ReactNode;
-  minWidth?: string;
-}) {
-  return (
-    <div className="-mx-4 overflow-x-auto px-4">
-      <table className={cn("w-full border-collapse text-left text-sm", minWidth)}>
-        <caption className="sr-only">{caption}</caption>
-        <thead>
-          <tr className="text-muted-foreground border-b text-xs uppercase">
-            {columns.map((column) => (
-              <th key={column} scope="col" className="px-2 py-2 font-semibold tracking-wide first:pl-0 last:pr-0">
-                {column}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-border divide-y">{children}</tbody>
-      </table>
-    </div>
-  );
-}
-
-export const cellClassName = "px-2 py-3 align-top first:pl-0 last:pr-0";
+// Tabela promovida para components/ui (DS-16); os nomes antigos continuam valendo no Admin.
+export { DataTable as AdminTable, tableCellClassName as cellClassName } from "@/components/ui/table";
 
 /** Lista simples de registros em cartões empilhados (quando o conteúdo não cabe numa tabela). */
 export function AdminList({ label, children }: { label: string; children: ReactNode }) {
