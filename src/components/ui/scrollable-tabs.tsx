@@ -51,9 +51,17 @@ export function ScrollableTabs({
     updateOverflow();
   }, [activeKey, updateOverflow]);
 
+  // Observa a própria faixa (DS-25): também reage quando o contêiner muda de largura sem a janela mudar.
   useEffect(() => {
-    window.addEventListener("resize", updateOverflow);
-    return () => window.removeEventListener("resize", updateOverflow);
+    const nav = navRef.current;
+    if (!nav) return;
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateOverflow);
+      return () => window.removeEventListener("resize", updateOverflow);
+    }
+    const observer = new ResizeObserver(updateOverflow);
+    observer.observe(nav);
+    return () => observer.disconnect();
   }, [updateOverflow]);
 
   return (
