@@ -7,7 +7,7 @@ import { DesignCheckbox } from "@/components/ui/design-checkbox";
 import { DesignSelect } from "@/components/ui/design-select";
 
 import Link from "next/link";
-import { Bike, CheckCircle2, Plus, Star } from "lucide-react";
+import { Motorbike, Plus, Star } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -66,7 +66,7 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
     <article className="border-border bg-card rounded-2xl border p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start gap-4">
         <div className="bg-moto-brand-surface text-brand-strong flex size-12 shrink-0 items-center justify-center rounded-xl">
-          <Bike aria-hidden="true" className="size-6" />
+          <Motorbike aria-hidden="true" className="size-6" />
         </div>
         <div className="@container min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -209,7 +209,7 @@ export function MotorcycleGarage({
           savedMotorcycles.map((saved) => <SavedMotorcycleCard key={saved.id} saved={saved} fitments={fitments} />)
         ) : (
           <EmptyState
-            icon={Bike}
+            icon={Motorbike}
             title="Sua garagem está vazia"
             description="Salve sua moto para voltar às peças com compatibilidade cadastrada sempre que quiser."
           />
@@ -257,7 +257,6 @@ export function MotorcycleGarage({
             disabled={pending || fitments.length === 0}
             className="flex min-h-11 w-full items-center justify-center gap-2 px-4"
           >
-            <CheckCircle2 aria-hidden="true" className="size-4" />
             {pending ? "Salvando..." : "Salvar moto"}
           </Button>
           {fitments.length === 0 ? (

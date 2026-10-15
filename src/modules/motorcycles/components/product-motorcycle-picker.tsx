@@ -1,6 +1,5 @@
 "use client";
 
-import { Bike } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
@@ -167,7 +166,6 @@ export function ProductMotorcyclePicker({
       </label>
       <div className="flex flex-col gap-2 sm:col-span-3 sm:flex-row sm:flex-wrap sm:items-center">
         <Button type="submit" size="lg" disabled={pending || !fitmentId || alreadySaved}>
-          <Bike aria-hidden="true" />
           {pending
             ? "Salvando..."
             : alreadySaved

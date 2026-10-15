@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata, Route } from "next";
-import { Bike, X } from "lucide-react";
+import { Motorbike, X } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { pageContainerClassName } from "@/components/ui/page-container";
@@ -289,7 +289,7 @@ function PrimaryMotorcycleBanner({
         }
         className={cn(buttonVariants({ variant: "link", size: "link" }), "w-fit gap-2")}
       >
-        <Bike aria-hidden="true" className="size-4" />
+        <Motorbike aria-hidden="true" className="size-4" />
         Salvar minha moto para encontrar peças compatíveis
       </Link>
     );
@@ -298,7 +298,7 @@ function PrimaryMotorcycleBanner({
   return (
     <div className="border-moto-brand/30 bg-moto-brand-surface flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4 text-sm">
       <p className="flex items-center gap-2">
-        <Bike aria-hidden="true" className="text-brand-strong size-4 shrink-0" />
+        <Motorbike aria-hidden="true" className="text-brand-strong size-4 shrink-0" />
         <span>
           <strong>Minha moto principal:</strong> {primary.label}
           {applied ? " · filtro aplicado" : ""}

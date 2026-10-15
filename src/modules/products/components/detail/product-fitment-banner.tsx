@@ -1,4 +1,4 @@
-import { Bike, CircleCheck, Info, TriangleAlert } from "lucide-react";
+import { Motorbike, CircleCheck, Info, TriangleAlert } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -34,7 +34,7 @@ export function ProductFitmentBanner({ status }: { status: FitmentStatus }) {
   if (status.kind === "no-motorcycle") {
     return (
       <div className="border-border bg-surface-sunken flex items-start gap-3 rounded-xl border p-3 text-sm">
-        <Bike aria-hidden="true" className="text-muted-foreground mt-0.5 size-5 shrink-0" />
+        <Motorbike aria-hidden="true" className="text-muted-foreground mt-0.5 size-5 shrink-0" />
         <p className="text-muted-foreground">
           <span className="text-foreground font-semibold">Sua moto: </span>
           informe sua moto para saber se esta peça serve.{" "}
