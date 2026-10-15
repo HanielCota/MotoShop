@@ -331,7 +331,7 @@ function CatalogFilterForm({
       key={JSON.stringify(query)}
       id="product-filters"
       action="/products"
-      className="grid min-w-0 content-start gap-4 [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:min-w-0 [&_input]:min-w-0"
+      className="grid min-w-0 content-start gap-4 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:min-w-0 [&_input]:min-w-0"
     >
       {query.sort !== "relevance" ? <input type="hidden" name="sort" value={query.sort} /> : null}
       {/* The search field lives in the band above the results; applying filters keeps the search. */}

@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
 import type { Metadata } from "next";
 
-import { Button, buttonVariants } from "@/components/ui/button";
-import { ProductSearchCombobox } from "@/modules/products/components/search/product-search-combobox";
+import { buttonVariants } from "@/components/ui/button";
+import { SearchForm } from "@/modules/products/components/search/search-form";
 
 export const metadata: Metadata = {
   title: "Página não encontrada",
@@ -21,21 +20,14 @@ export default function NotFound() {
         </p>
       </div>
 
-      <form action="/products" method="get" role="search" className="flex w-full flex-col gap-3 sm:flex-row">
-        <label htmlFor="not-found-search" className="sr-only">
-          Buscar produtos
-        </label>
-        <ProductSearchCombobox
-          id="not-found-search"
-          className="flex-1"
-          placeholder="Ex.: filtro de ar, pastilha de freio"
-          inputClassName="bg-card h-11"
-        />
-        <Button type="submit" size="lg" className="px-5">
-          <Search aria-hidden="true" />
-          Buscar
-        </Button>
-      </form>
+      <SearchForm
+        action="/products"
+        label="Buscar produtos"
+        inputId="not-found-search"
+        placeholder="Ex.: filtro de ar, pastilha de freio"
+        inputClassName="bg-card"
+        className="w-full flex-col gap-3 sm:flex-row"
+      />
 
       <div className="flex flex-wrap gap-3">
         <Link href="/products" className={buttonVariants({ variant: "outline", size: "lg" })}>

@@ -59,7 +59,7 @@ export default async function FavoritesPage({
       />
 
       <form
-        className="border-border bg-card grid gap-3 rounded-xl border p-4 sm:grid-cols-[1fr_180px_180px_auto] sm:items-end [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:w-full"
+        className="border-border bg-card grid gap-3 rounded-xl border p-4 sm:grid-cols-[1fr_180px_180px_auto] sm:items-end [&_[data-slot=select-trigger]]:w-full"
         method="get"
       >
         <label className="flex flex-col gap-2 text-sm font-medium">
