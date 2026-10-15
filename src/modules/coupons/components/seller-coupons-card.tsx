@@ -5,9 +5,8 @@ import { ActionForm } from "@/components/ui/action-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DesignSelect } from "@/components/ui/design-select";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
+import { FilterForm, FilterSelect, FilterText } from "@/components/ui/filter-form";
 import { Pagination } from "@/components/ui/pagination";
 import { formatDate, formatMoneyInCents } from "@/lib/format";
 import {
@@ -21,6 +20,23 @@ import { loadCouponSearchParams, serializeCouponSearchParams } from "@/modules/c
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const basePath = "/seller/coupons";
+const couponActiveOptions = [
+  { value: "ALL", label: "Todos" },
+  { value: "ACTIVE", label: "Ativos" },
+  { value: "INACTIVE", label: "Inativos" },
+];
+const couponValidityOptions = [
+  { value: "ALL", label: "Todas" },
+  { value: "CURRENT", label: "Vigentes" },
+  { value: "UPCOMING", label: "Futuros" },
+  { value: "EXPIRED", label: "Expirados" },
+];
+const couponSortOptions = [
+  { value: "newest", label: "Mais recentes" },
+  { value: "oldest", label: "Mais antigos" },
+  { value: "ends_soonest", label: "Validade mais próxima" },
+  { value: "code_asc", label: "Código A–Z" },
+];
 
 export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: string; searchParams: SearchParams }) {
   const params = await loadCouponSearchParams(searchParams);
@@ -46,43 +62,17 @@ export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: 
       </CardHeader>
       <CardContent className="space-y-4">
         <CouponForm ownerType="SELLER" />
-        <form
-          className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-[1fr_180px_180px_200px_auto] lg:items-end"
-          method="get"
-          action={basePath}
-        >
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Buscar cupom
-            <Input name="couponQ" defaultValue={params.couponQ ?? ""} placeholder="Código" />
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Status
-            <DesignSelect aria-label="Status" name="couponActive" defaultValue={params.couponActive}>
-              <option value="ALL">Todos</option>
-              <option value="ACTIVE">Ativos</option>
-              <option value="INACTIVE">Inativos</option>
-            </DesignSelect>
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Vigência
-            <DesignSelect aria-label="Vigência" name="couponValidity" defaultValue={params.couponValidity}>
-              <option value="ALL">Todas</option>
-              <option value="CURRENT">Vigentes</option>
-              <option value="UPCOMING">Futuros</option>
-              <option value="EXPIRED">Expirados</option>
-            </DesignSelect>
-          </label>
-          <label className="flex flex-col gap-1 text-sm font-medium">
-            Ordenação
-            <DesignSelect aria-label="Ordenação" name="couponSort" defaultValue={params.couponSort}>
-              <option value="newest">Mais recentes</option>
-              <option value="oldest">Mais antigos</option>
-              <option value="ends_soonest">Validade mais próxima</option>
-              <option value="code_asc">Código A–Z</option>
-            </DesignSelect>
-          </label>
-          <Button type="submit">Filtrar</Button>
-        </form>
+        <FilterForm resetHref={basePath} action={basePath} label="Filtrar cupons">
+          <FilterText label="Buscar cupom" name="couponQ" value={params.couponQ} placeholder="Código" />
+          <FilterSelect label="Status" name="couponActive" value={params.couponActive} options={couponActiveOptions} />
+          <FilterSelect
+            label="Vigência"
+            name="couponValidity"
+            value={params.couponValidity}
+            options={couponValidityOptions}
+          />
+          <FilterSelect label="Ordenação" name="couponSort" value={params.couponSort} options={couponSortOptions} />
+        </FilterForm>
         {result.coupons.length === 0 ? (
           <EmptyState
             variant="inline"
