@@ -162,6 +162,24 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
   }));
 
   // pb extra no mobile: espaço para a barra fixa de "Adicionar" (ProductBuyBox).
+  const motorcyclePicker = (
+    <ProductMotorcyclePicker
+      key={selectedFitment?.id ?? "none"}
+      fitments={fitments.map((fitment) => ({
+        id: fitment.id,
+        manufacturer: fitment.motorcycleModel.manufacturer.name,
+        model: fitment.motorcycleModel.name,
+        version: fitment.version,
+        displacementCc: fitment.displacementCc,
+        year: fitment.year,
+      }))}
+      selectedFitmentId={selectedFitment?.id ?? null}
+      savedFitmentId={primaryMotorcycle?.motorcycleFitmentId ?? null}
+      signedIn={Boolean(session)}
+      productHref={buildProductInteractionHref(product.slug, interactionParams)}
+    />
+  );
+
   return (
     <main className={pageContainerClassName("default", "flex flex-col gap-8 pt-8 pb-28 sm:pt-12 md:pb-12")}>
       {!product.isDemo ? (
@@ -223,7 +241,7 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
               isDemo={product.isDemo}
               hasPriceRange={offer.hasPriceRange}
               paymentAvailable={getCheckoutPaymentAvailability(1).available}
-              fitment={<ProductFitmentBanner status={fitmentStatus} />}
+              fitment={<ProductFitmentBanner status={fitmentStatus} picker={motorcyclePicker} />}
             />
           </div>
           <ProductPageCoupons coupons={coupons.map(toProductPageCouponView)} />
@@ -268,24 +286,6 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
       <ProductCompatibilityCard
         compatibilities={product.compatibilities}
         selectedFitmentId={selectedFitment?.id ?? null}
-        status={selectedFitment ? <ProductFitmentBanner status={fitmentStatus} /> : null}
-        picker={
-          <ProductMotorcyclePicker
-            key={selectedFitment?.id ?? "none"}
-            fitments={fitments.map((fitment) => ({
-              id: fitment.id,
-              manufacturer: fitment.motorcycleModel.manufacturer.name,
-              model: fitment.motorcycleModel.name,
-              version: fitment.version,
-              displacementCc: fitment.displacementCc,
-              year: fitment.year,
-            }))}
-            selectedFitmentId={selectedFitment?.id ?? null}
-            savedFitmentId={primaryMotorcycle?.motorcycleFitmentId ?? null}
-            signedIn={Boolean(session)}
-            productHref={buildProductInteractionHref(product.slug, interactionParams)}
-          />
-        }
       />
 
       <ProductReviewsSection
