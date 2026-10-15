@@ -90,7 +90,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
                   <div className="flex items-start gap-3">
                     <Store aria-hidden="true" className="text-brand-strong mt-1 size-5 shrink-0" />
                     <div>
-                      <h2 id={`cart-store-${sellerId}`} className="text-lg font-semibold">
+                      <h2 id={`cart-store-${sellerId}`} className="section-title">
                         {storeName}
                       </h2>
                       <p className="text-muted-foreground text-sm">
@@ -165,7 +165,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
             aria-labelledby="cart-summary-title"
             className="bg-card h-fit rounded-xl border p-4 sm:p-6 lg:sticky lg:top-24"
           >
-            <h2 id="cart-summary-title" className="text-lg font-semibold">
+            <h2 id="cart-summary-title" className="section-title">
               Resumo
             </h2>
             <dl className="mt-4 space-y-2 text-sm">

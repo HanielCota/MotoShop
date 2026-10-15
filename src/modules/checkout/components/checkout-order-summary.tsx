@@ -42,7 +42,7 @@ export function CheckoutOrderSummary({
       className="bg-card h-fit min-w-0 rounded-xl border p-4 sm:p-6 lg:sticky lg:top-24"
     >
       <div className="flex items-center justify-between gap-3">
-        <h2 id="checkout-summary-title" className="text-lg font-semibold">
+        <h2 id="checkout-summary-title" className="section-title">
           Resumo do pedido
         </h2>
         <button

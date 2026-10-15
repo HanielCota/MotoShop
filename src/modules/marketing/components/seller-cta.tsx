@@ -9,7 +9,7 @@ export function SellerCta() {
     <section className="bg-moto-brand text-moto-brand-foreground py-14 sm:py-20" aria-labelledby="home-seller-title">
       <div className={pageContainerClassName("default", "grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-center")}>
         <div>
-          <p className="text-xs font-bold tracking-[0.16em] uppercase">Para lojas especializadas</p>
+          <p className="eyebrow">Para lojas especializadas</p>
           <h2 id="home-seller-title" className="mt-2 text-4xl leading-[0.92] uppercase sm:text-5xl lg:text-6xl">
             Sua loja na pista certa.
           </h2>

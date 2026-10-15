@@ -176,7 +176,7 @@ function MotorcycleDetails({ saved }: { saved: SavedMotorcycle }) {
     <dl className="mt-3 grid grid-cols-1 gap-y-3 @[16rem]:grid-cols-2 @[16rem]:gap-x-6">
       {details.map((detail) => (
         <div key={detail.label} className="min-w-0">
-          <dt className="text-muted-foreground text-xs font-semibold tracking-[0.08em] uppercase">{detail.label}</dt>
+          <dt className="eyebrow text-muted-foreground">{detail.label}</dt>
           <dd className="text-foreground mt-0.5 text-sm font-medium break-words">{detail.value}</dd>
         </div>
       ))}
@@ -222,7 +222,7 @@ export function MotorcycleGarage({
       >
         <div className="flex items-center gap-2">
           <Plus aria-hidden="true" className="text-brand-strong size-5" />
-          <h2 id="add-motorcycle-title" className="text-foreground text-lg font-semibold">
+          <h2 id="add-motorcycle-title" className="section-title text-foreground">
             Adicionar moto
           </h2>
         </div>

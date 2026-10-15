@@ -30,7 +30,7 @@ export function CheckoutAddressFields({
 }) {
   return (
     <section aria-labelledby="checkout-address-title" className="bg-card rounded-xl border p-4 sm:p-6">
-      <h2 id="checkout-address-title" className="text-lg font-semibold">
+      <h2 id="checkout-address-title" className="section-title">
         Endereço de entrega
       </h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">

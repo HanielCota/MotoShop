@@ -161,9 +161,7 @@ export default async function PublicStorePage({
         />
         <div className="relative flex min-h-[340px] flex-col justify-between gap-10 p-6 sm:min-h-[390px] sm:p-10">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <span className="text-moto-brand text-xs font-bold tracking-[0.2em] uppercase">
-              Vitrine de loja · O Moto Shop
-            </span>
+            <span className="eyebrow text-moto-brand">Vitrine de loja · O Moto Shop</span>
             {store.seller.subscriptions.length > 0 ? (
               <Badge className="border-moto-brand/60 bg-moto-brand text-moto-brand-foreground border">Loja VIP</Badge>
             ) : null}

@@ -42,9 +42,7 @@ export function StatusPage({
         </span>
       ) : null}
       <div className="space-y-3">
-        {eyebrow ? (
-          <p className="text-brand-strong text-xs font-semibold tracking-[0.14em] uppercase">{eyebrow}</p>
-        ) : null}
+        {eyebrow ? <p className="eyebrow text-brand-strong">{eyebrow}</p> : null}
         <h1 className="text-3xl text-balance sm:text-4xl">{title}</h1>
         <div className="text-muted-foreground max-w-xl">{description}</div>
       </div>

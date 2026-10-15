@@ -20,7 +20,7 @@ export function AppAreaHeader({ area, subtitle, icon: Icon }: AppAreaHeaderProps
           <Icon className="size-4" aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <p className="text-brand-strong text-xs font-semibold tracking-[0.14em] uppercase">{area}</p>
+          <p className="eyebrow text-brand-strong">{area}</p>
           {subtitle ? <p className="truncate text-sm font-semibold">{subtitle}</p> : null}
         </div>
       </div>

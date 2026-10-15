@@ -67,7 +67,7 @@ export function CustomerAddressForm() {
 
   return (
     <form action={formAction} noValidate className="bg-card grid gap-4 rounded-xl border p-4 sm:grid-cols-2 sm:p-6">
-      <h2 className="text-lg font-semibold sm:col-span-2">Adicionar endereço</h2>
+      <h2 className="section-title sm:col-span-2">Adicionar endereço</h2>
       <Field
         label="Nome do endereço"
         name="label"

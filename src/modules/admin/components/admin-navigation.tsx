@@ -23,7 +23,7 @@ function AdminLinks() {
       </Link>
       {groups.map((group) => (
         <div key={group}>
-          <p className="text-muted-foreground px-3 text-[11px] font-bold tracking-[0.14em] uppercase">{group}</p>
+          <p className="eyebrow text-muted-foreground px-3">{group}</p>
           <div className="mt-2 grid gap-0.5 max-lg:sm:grid-cols-2">
             {adminSections
               .filter((section) => section.group === group)

@@ -52,7 +52,7 @@ export function MarketingHome({
         />
         <div className={styles.heroShade} aria-hidden="true" />
         <div className={pageContainerClassName("default", "pt-12 pb-12 sm:pt-20 sm:pb-16 lg:pt-24")}>
-          <p className="text-moto-brand-surface flex items-center gap-2.5 text-xs font-bold tracking-[0.16em] uppercase">
+          <p className="eyebrow text-moto-brand-surface flex items-center gap-2.5">
             <span className={styles.kickerRule} aria-hidden="true" />
             Motopeças · Acessórios · Equipamentos
           </p>

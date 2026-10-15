@@ -49,6 +49,20 @@
 /* Tema único (claro): `dark:` não é usado; o variant fica preso a uma classe nunca aplicada. */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Typography by role (DS-19). Color stays at the call site. */
+@utility eyebrow {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+/* Section heading (h2) inside a page; the base layer already sets the display font and weight. */
+@utility section-title {
+  font-size: var(--text-lg);
+  line-height: 1.3;
+}
+
 /* Stacking scale (DS-22): use these instead of z-40/z-50/z-[60]. Popovers sit above the sticky header;
    dialogs above popovers; the skip link above everything when focused. */
 @utility z-sticky-bar {
