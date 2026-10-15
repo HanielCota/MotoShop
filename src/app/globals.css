@@ -203,10 +203,18 @@
 
   input:not([type="hidden"]):focus-visible,
   textarea:focus-visible,
-  button:focus-visible,
-  summary:focus-visible {
+  button:focus-visible {
     outline-color: var(--ring);
     outline-offset: 2px;
+  }
+
+  /* DN-05: links, summaries and custom buttons get the DS focus ring instead of the browser outline. */
+  a:focus-visible,
+  summary:focus-visible,
+  [role="button"]:not(button):focus-visible {
+    outline: none;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
   }
 
   /* DN-02: no native clear "x" in search fields (clearing, when offered, is a DS button). */
