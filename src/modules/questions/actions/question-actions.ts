@@ -9,9 +9,9 @@ import { ApplicationError } from "@/shared/errors/application-error";
 import { toActionError } from "@/shared/errors/action-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
-const questionSchema = z.object({ question: z.string().trim().min(5, "Escreva uma pergunta maior.").max(500) });
+import { answerSchema, questionSchema } from "../schemas/question-input";
+
 const idSchema = z.string().cuid();
-const answerSchema = z.object({ answer: z.string().trim().min(2, "Escreva uma resposta.").max(1000) });
 
 export type QuestionActionState = { error?: string; success?: string };
 
