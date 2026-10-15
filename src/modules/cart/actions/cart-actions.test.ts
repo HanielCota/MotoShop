@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => {
   const tx = {
@@ -26,6 +27,10 @@ vi.mock("../infrastructure/cart-access", () => ({
   getCartIdentity: async () => ({ userId: "buyer" }),
   cartOwnerWhere: () => ({ userId: "buyer" }),
   findOrCreateActiveCart: async () => ({ id: "cart" }),
+}));
+// The real module reads payment environment variables; these tests do not exercise the cart preview.
+vi.mock("@/modules/payments/application/assert-payment-ready", () => ({
+  getCheckoutPaymentAvailability: () => ({ available: false, cardPublicKey: undefined }),
 }));
 import { addToCartAction, clearCartAction, updateCartItemAction } from "./cart-actions";
 const id = "cmf8w8m4p0000s6o5zj2q8v3k";

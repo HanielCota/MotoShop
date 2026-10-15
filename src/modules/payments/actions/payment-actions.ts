@@ -6,7 +6,8 @@ import { z } from "zod";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { hashGuestToken } from "@/modules/cart/infrastructure/cart-access";
 import { getCustomerOrder } from "@/modules/returns/queries/customer-orders";
-import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 import { recoverPayment } from "../application/recover-payment";
@@ -61,6 +62,6 @@ export async function refreshPendingPaymentAction(
     revalidatePath(`/orders/${parsed.data.orderNumber}`);
     return { success: "Status do pagamento atualizado." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "refreshPendingPaymentAction").message };
   }
 }

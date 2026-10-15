@@ -6,31 +6,44 @@ import { Bike, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DesignSelect } from "@/components/ui/design-select";
 import { InlineNotice } from "@/components/ui/inline-notice";
-import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
 import { formatMoneyInCents } from "@/lib/format";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { CatalogFiltersPanel } from "@/modules/catalog/components/catalog-filters-panel";
+import { CatalogMotorcycleFields } from "@/modules/catalog/components/catalog-motorcycle-fields";
+import { CatalogSearchBand } from "@/modules/catalog/components/catalog-search-band";
+import {
+  VariantAttributeFilterFields,
+  variantAttributeChipLabels,
+  type VariantAttributeOptions,
+} from "@/modules/catalog/components/variant-attribute-filter-fields";
 import { CatalogSortSelect } from "@/modules/catalog/components/catalog-sort-select";
-import { getCategoryLabel } from "@/modules/catalog/category-labels";
+import {
+  getCategoryLabel,
+  getCategoryOptionLabel,
+  sortCategoriesByOptionLabel,
+} from "@/modules/catalog/category-labels";
+import type { FitmentOption } from "@/modules/motorcycles/domain/fitment-options";
 import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/motorcycles";
 import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
 import { PriceFilterInput } from "@/modules/products/components/price-filter-input";
 import { ProductGrid } from "@/modules/products/components/product-grid";
 import { listApprovedProducts, listProductBrands, listProductCategories } from "@/modules/products/queries/products";
+import { listPublicVariantAttributeOptions } from "@/modules/products/queries/variant-attribute-options";
 import { loadProductsSearchParams, type ProductSort } from "@/modules/products/search-params";
 import { listPublicSellerOptions } from "@/modules/sellers/queries/sellers";
 
 import {
   buildCatalogHref,
+  catalogFormEntries,
   clearCatalogFiltersHref,
   countActiveCatalogFilters,
   normalizeCatalogPrice,
   removeCatalogFilterHref,
   type CatalogFilterKey,
   type CatalogQuery,
-} from "./catalog-query";
+} from "../catalog-query";
 
 export const metadata: Metadata = {
   title: "Catálogo",
@@ -39,6 +52,7 @@ export const metadata: Metadata = {
 const sortOptions: { value: ProductSort; label: string }[] = [
   { value: "relevance", label: "Mais relevantes" },
   { value: "newest", label: "Mais recentes" },
+  { value: "recent_offers", label: "Ofertas recentes" },
   { value: "price_asc", label: "Menor preço" },
   { value: "price_desc", label: "Maior preço" },
 ];
@@ -49,7 +63,19 @@ type FilterOptions = {
   categories: Awaited<ReturnType<typeof listProductCategories>>;
   brands: Awaited<ReturnType<typeof listProductBrands>>;
   sellers: Awaited<ReturnType<typeof listPublicSellerOptions>>;
+  attributes?: VariantAttributeOptions;
 };
+
+function toFitmentOption(fitment: Fitment): FitmentOption {
+  return {
+    id: fitment.id,
+    manufacturer: fitment.motorcycleModel.manufacturer.name,
+    model: fitment.motorcycleModel.name,
+    version: fitment.version,
+    displacementCc: fitment.displacementCc,
+    year: fitment.year,
+  };
+}
 
 function fitmentLabel(fitment: Fitment) {
   return [
@@ -65,11 +91,12 @@ export default async function ProductsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await loadProductsSearchParams(searchParams);
-  const [fitments, categories, brands, sellers, session] = await Promise.all([
+  const [fitments, categories, brands, sellers, attributes, session] = await Promise.all([
     listActiveMotorcycleFitments(),
     listProductCategories(),
     listProductBrands(),
     listPublicSellerOptions(),
+    listPublicVariantAttributeOptions(),
     getCurrentSession(),
   ]);
   const primaryMotorcycle = session ? await getPrimarySavedMotorcycle(session.user.id) : null;
@@ -98,6 +125,9 @@ export default async function ProductsPage({
     minPrice: normalizeCatalogPrice(params.minPrice),
     maxPrice: normalizeCatalogPrice(params.maxPrice),
     promotion: params.promotion,
+    gender: params.gender,
+    color: params.color,
+    size: params.size,
     page: params.page,
   };
   const hasInvalidPriceRange = query.minPrice !== null && query.maxPrice !== null && query.minPrice > query.maxPrice;
@@ -114,13 +144,16 @@ export default async function ProductsPage({
         minPriceInCents: query.minPrice,
         maxPriceInCents: query.maxPrice,
         promotion: query.promotion,
+        gender: query.gender,
+        color: query.color,
+        size: query.size,
         page: query.page,
       });
 
   const activeFilterCount = countActiveCatalogFilters(query);
   const chips = buildFilterChips(query, { fitments, categories, brands, sellers });
   const clearHref = clearCatalogFiltersHref(query);
-  const options = { fitments, categories, brands, sellers };
+  const options = { fitments, categories, brands, sellers, attributes };
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 sm:py-10">
@@ -137,6 +170,12 @@ export default async function ProductsPage({
         activeMoto={activeMoto}
         signedIn={Boolean(session)}
         query={query}
+      />
+
+      <CatalogSearchBand
+        key={query.q ?? ""}
+        defaultValue={query.q ?? ""}
+        preservedEntries={catalogFormEntries(query, { q: null })}
       />
 
       <div className="grid min-w-0 gap-6 md:grid-cols-[260px_minmax(0,1fr)] md:items-start md:gap-8">
@@ -295,36 +334,20 @@ function CatalogFilterForm({
       className="grid min-w-0 content-start gap-4 [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:min-w-0 [&_input]:min-w-0"
     >
       {query.sort !== "relevance" ? <input type="hidden" name="sort" value={query.sort} /> : null}
-      <label className={fieldClassName} htmlFor="catalog-q">
-        Buscar
-        <Input
-          id="catalog-q"
-          name="q"
-          type="search"
-          className="h-11"
-          defaultValue={query.q ?? ""}
-          placeholder="Produto, SKU, marca ou loja..."
-        />
-      </label>
-      <label className={fieldClassName}>
-        Compatibilidade com moto
-        <DesignSelect aria-label="Compatibilidade com moto" name="moto" defaultValue={query.moto || "all"}>
-          <option value="all">Todas as motos</option>
-          {options.fitments.map((fitment) => (
-            <option key={fitment.id} value={fitment.id}>
-              {fitmentLabel(fitment)}
-            </option>
-          ))}
-        </DesignSelect>
-      </label>
+      {/* The search field lives in the band above the results; applying filters keeps the search. */}
+      {query.q ? <input type="hidden" name="q" value={query.q} /> : null}
+      <CatalogMotorcycleFields
+        fitments={options.fitments.map(toFitmentOption)}
+        defaultFitmentId={query.moto}
+        fieldClassName={fieldClassName}
+      />
       <label className={fieldClassName}>
         Categoria
         <DesignSelect aria-label="Categoria" name="category" defaultValue={query.category ?? ""}>
           <option value="">Todas as categorias</option>
-          {options.categories.map((category) => (
+          {sortCategoriesByOptionLabel(options.categories).map((category) => (
             <option key={category.id} value={category.id}>
-              {category.parent ? `${getCategoryLabel(category.parent)} / ` : ""}
-              {getCategoryLabel(category)}
+              {getCategoryOptionLabel(category)}
             </option>
           ))}
         </DesignSelect>
@@ -351,6 +374,13 @@ function CatalogFilterForm({
           ))}
         </DesignSelect>
       </label>
+      {options.attributes ? (
+        <VariantAttributeFilterFields
+          options={options.attributes}
+          values={{ gender: query.gender, color: query.color, size: query.size }}
+          fieldClassName={fieldClassName}
+        />
+      ) : null}
       <div className="grid min-w-0 grid-cols-2 gap-3 md:grid-cols-1 lg:grid-cols-2">
         <label className={fieldClassName}>
           Preço mínimo (R$)
@@ -391,6 +421,15 @@ function CatalogFilterForm({
   );
 }
 
+function buildAttributeChips(query: CatalogQuery): { key: CatalogFilterKey; label: string }[] {
+  const labels = variantAttributeChipLabels({ gender: query.gender, color: query.color, size: query.size });
+  const keys = ["gender", "color", "size"] as const;
+  return keys.flatMap((key) => {
+    const label = labels[key];
+    return label ? [{ key, label }] : [];
+  });
+}
+
 function buildFilterChips(query: CatalogQuery, options: FilterOptions): { key: CatalogFilterKey; label: string }[] {
   const chips: { key: CatalogFilterKey; label: string }[] = [];
   if (query.q) chips.push({ key: "q", label: `Busca: “${query.q}”` });
@@ -421,5 +460,5 @@ function buildFilterChips(query: CatalogQuery, options: FilterOptions): { key: C
   if (query.availability !== "ALL")
     chips.push({ key: "availability", label: query.availability === "IN_STOCK" ? "Em estoque" : "Esgotados" });
   if (query.promotion === "ON_SALE") chips.push({ key: "promotion", label: "Em oferta" });
-  return chips;
+  return [...chips, ...buildAttributeChips(query)];
 }

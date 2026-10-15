@@ -3,17 +3,28 @@ import "server-only";
 import { Resend } from "resend";
 
 import { env } from "@/config/env";
+import { logger } from "@/lib/logger";
 import type { EmailProvider, SendEmailInput, SendEmailResult } from "@/shared/email/email-provider";
+import { withoutReservedRecipients } from "@/shared/email/reserved-email-domain";
 import { ApplicationError } from "@/shared/errors/application-error";
+
+/** Provider id stored when nothing was sent because every recipient was a reserved test domain. */
+export const SKIPPED_RESERVED_DOMAIN_ID = "skipped:reserved-domain";
 
 export class ResendEmailProvider implements EmailProvider {
   async send(input: SendEmailInput): Promise<SendEmailResult> {
+    // Safety net: tests and QA use @example.test accounts; delivering to them bounces and hurts the
+    // sending domain's reputation, whatever environment or API key the server runs with.
+    const { deliverable, skipped } = withoutReservedRecipients(input.to);
+    if (skipped > 0) logger.info({ event: "email.reserved_domain_skipped", skipped, remaining: deliverable.length });
+    if (deliverable.length === 0) return { id: SKIPPED_RESERVED_DOMAIN_ID };
+
     const config = this.getConfig();
     const resend = new Resend(config.apiKey);
     const { data, error } = await resend.emails.send(
       {
         from: config.from,
-        to: input.to,
+        to: deliverable,
         subject: input.subject,
         react: input.react,
         ...(input.replyTo ? { replyTo: input.replyTo } : {}),

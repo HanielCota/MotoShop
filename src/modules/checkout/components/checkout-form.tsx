@@ -12,12 +12,14 @@ import type { SecureCardHandle } from "@/modules/payments/components/secure-card
 import { CheckoutAddressFields } from "./checkout-address-fields";
 import { CheckoutCustomerFields } from "./checkout-customer-fields";
 import {
+  applyCustomerDefaults,
   applySavedAddress,
   checkoutFieldId,
   checkoutFieldOrder,
   fieldForServerMessage,
   initialCheckoutForm,
   validateCheckoutForm,
+  type CheckoutCustomerDefaults,
   type CheckoutField,
   type CheckoutFieldErrors,
   type CheckoutSummaryItem,
@@ -41,8 +43,11 @@ export function CheckoutForm({
   items,
   cardPublicKey,
   paymentAvailable = true,
+  customerDefaults,
 }: {
   savedAddresses?: CustomerAddress[] | undefined;
+  /** Phone and CPF saved in the signed-in customer's profile. */
+  customerDefaults?: CheckoutCustomerDefaults | undefined;
   cartSummary: { itemCount: number; itemsSubtotalInCents: number };
   items?: CheckoutSummaryItem[] | undefined;
   cardPublicKey?: string | undefined;
@@ -50,7 +55,10 @@ export function CheckoutForm({
 }) {
   const [form, setForm] = useState(() => {
     const defaultAddress = savedAddresses.find((address) => address.isDefault);
-    return defaultAddress ? applySavedAddress(initialCheckoutForm, defaultAddress) : initialCheckoutForm;
+    const prefilled = customerDefaults
+      ? applyCustomerDefaults(initialCheckoutForm, customerDefaults)
+      : initialCheckoutForm;
+    return defaultAddress ? applySavedAddress(prefilled, defaultAddress) : prefilled;
   });
   const [selectedAddressId, setSelectedAddressId] = useState(
     () => savedAddresses.find((address) => address.isDefault)?.id ?? "",

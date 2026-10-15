@@ -7,7 +7,7 @@ import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { reconcileShipmentPurchase } from "@/modules/shipping/application/reconcile-shipment-purchase";
 import { reconcileShipmentGeneration } from "@/modules/shipping/application/reconcile-shipment-generation";
 import { confirmShipmentLabelCancelled } from "@/modules/shipping/application/shipment-label-cancellation";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 export type ShipmentRecoveryActionState = { error?: string; success?: string };
 
@@ -71,7 +71,7 @@ export async function reconcileShipmentPurchaseAction(
     revalidatePath("/seller/orders");
     return { success: "Tentativa reconciliada e registrada no histórico administrativo." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "reconcileShipmentPurchaseAction").message };
   }
 }
 
@@ -98,6 +98,6 @@ export async function confirmShipmentLabelCancelledAction(
     revalidatePath("/admin/shipping-recovery");
     return { success: "Cancelamento da etiqueta confirmado e registrado no histórico administrativo." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "confirmShipmentLabelCancelledAction").message };
   }
 }

@@ -26,8 +26,14 @@ type SavedMotorcycle = {
   id: string;
   motorcycleFitmentId: string;
   label: string;
+  manufacturer: string;
+  model: string;
+  /** Empty when the fitment has no named version. */
+  version: string;
+  year: number;
   isPrimary: boolean;
   available: boolean;
+  compatibleProductCount: number;
 };
 
 const initialState: SavedMotorcycleActionState = {};
@@ -58,23 +64,24 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
         <div className="bg-moto-brand-surface text-brand-strong flex size-12 shrink-0 items-center justify-center rounded-xl">
           <Bike aria-hidden="true" className="size-6" />
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="@container min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-sans text-lg font-semibold tracking-normal">{saved.label}</h2>
+            <h2 className="font-sans text-lg font-semibold tracking-normal">
+              {saved.manufacturer} {saved.model}
+            </h2>
             {saved.isPrimary ? (
               <span className="bg-moto-brand-surface text-brand-strong inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold">
                 <Star aria-hidden="true" className="size-3.5" /> Principal
               </span>
             ) : null}
           </div>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {saved.available ? "Configuração cadastrada pelo Moto Shop" : "Configuração indisponível para novas buscas"}
-          </p>
+          <MotorcycleDetails saved={saved} />
+          <MotorcycleAvailability saved={saved} />
         </div>
       </div>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        {saved.available ? (
+        {saved.available && saved.compatibleProductCount > 0 ? (
           <Link
             href={`/products?moto=${encodeURIComponent(saved.motorcycleFitmentId)}`}
             className={buttonVariants({ className: "px-4 font-semibold" })}
@@ -143,6 +150,38 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
       </div>
     </article>
   );
+}
+
+function MotorcycleDetails({ saved }: { saved: SavedMotorcycle }) {
+  const details = [
+    { label: "Fabricante", value: saved.manufacturer },
+    { label: "Modelo", value: saved.model },
+    { label: "Versão", value: saved.version || "Padrão" },
+    { label: "Ano", value: String(saved.year) },
+  ];
+
+  return (
+    // Sized by the card, not the screen: beside the account menu and the "Adicionar moto" form the
+    // card can be narrow, and "FABRICANTE" would overflow into the next label. One column below
+    // 16rem, two above; never four.
+    <dl className="mt-3 grid grid-cols-1 gap-y-3 @[16rem]:grid-cols-2 @[16rem]:gap-x-6">
+      {details.map((detail) => (
+        <div key={detail.label} className="min-w-0">
+          <dt className="text-muted-foreground text-xs font-semibold tracking-[0.08em] uppercase">{detail.label}</dt>
+          <dd className="text-foreground mt-0.5 text-sm font-medium break-words">{detail.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function MotorcycleAvailability({ saved }: { saved: SavedMotorcycle }) {
+  if (!saved.available)
+    return <p className="text-muted-foreground mt-3 text-sm">Configuração indisponível para novas buscas</p>;
+  if (saved.compatibleProductCount === 0)
+    return <p className="text-muted-foreground mt-3 text-sm">Não encontramos nenhum equipamento para esta moto.</p>;
+
+  return null;
 }
 
 export function MotorcycleGarage({

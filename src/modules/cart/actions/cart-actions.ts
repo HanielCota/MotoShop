@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { db } from "@/lib/database";
-import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
+import { logActionFailure, toActionError } from "@/shared/errors/action-error";
+import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 
 import {
@@ -33,7 +35,7 @@ export async function addToCartAction(variantId: string, quantity: number): Prom
     revalidatePath("/cart");
     return { success: "Produto adicionado ao carrinho." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "addToCartAction").message };
   }
 }
 
@@ -51,7 +53,7 @@ export async function updateCartItemAction(cartItemId: string, quantity: number)
     revalidatePath("/checkout");
     return { success: "Carrinho atualizado." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "updateCartItemAction").message };
   }
 }
 
@@ -70,21 +72,27 @@ export async function getCartPreviewAction(): Promise<{
   }[];
   itemCount: number;
   subtotalInCents: number;
+  /** Same check the cart page and checkout use for this cart's stores. */
+  paymentAvailable: boolean;
   error?: string;
 }> {
   try {
     const identity = await getCartIdentity();
-    if (!identity) return { items: [], itemCount: 0, subtotalInCents: 0 };
+    if (!identity) return { items: [], itemCount: 0, subtotalInCents: 0, paymentAvailable: false };
     const cart = await db.cart.findFirst({
       where: { ...cartOwnerWhere(identity), status: "ACTIVE" },
       include: {
         items: {
           orderBy: { createdAt: "asc" },
-          include: { variant: { include: { inventory: true, product: { select: { name: true } } } } },
+          include: {
+            variant: { include: { inventory: true, product: { select: { name: true, sellerId: true } } } },
+          },
         },
       },
     });
-    const items = (cart?.items ?? []).map((item) => ({
+    const cartItems = cart?.items ?? [];
+    const sellerCount = new Set(cartItems.map((item) => item.variant.product.sellerId)).size;
+    const items = cartItems.map((item) => ({
       id: item.id,
       name: item.variant.product.name,
       variant: item.variant.title,
@@ -96,9 +104,17 @@ export async function getCartPreviewAction(): Promise<{
       items,
       itemCount: items.reduce((total, item) => total + item.quantity, 0),
       subtotalInCents: items.reduce((total, item) => total + item.unitPriceInCents * item.quantity, 0),
+      paymentAvailable: getCheckoutPaymentAvailability(sellerCount).available,
     };
-  } catch {
-    return { items: [], itemCount: 0, subtotalInCents: 0, error: "Não foi possível carregar o carrinho." };
+  } catch (error) {
+    logActionFailure("getCartPreviewAction", error);
+    return {
+      items: [],
+      itemCount: 0,
+      subtotalInCents: 0,
+      paymentAvailable: false,
+      error: "Não foi possível carregar o carrinho.",
+    };
   }
 }
 
@@ -111,6 +127,6 @@ export async function clearCartAction(): Promise<CartActionState> {
     revalidatePath("/checkout");
     return { success: "Carrinho limpo." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "clearCartAction").message };
   }
 }

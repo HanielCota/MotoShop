@@ -7,7 +7,8 @@ import { z } from "zod";
 import { db } from "@/lib/database";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { slugify } from "@/lib/utils";
-import { ApplicationError, asApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 import { assertRecordId } from "@/shared/validation/record-id";
 
 // O slug público deriva do nome: um nome só com símbolos ("!!!") geraria slug vazio.
@@ -19,16 +20,28 @@ const nameSchema = z.object({
     .max(120, "Use no máximo 120 caracteres.")
     .refine((name) => slugify(name).length > 0, "O nome precisa conter letras ou números."),
 });
+const sortOrderMessage = "Informe a ordem de exibição como número inteiro, de 0 a 100000.";
+const displacementMessage = "Informe a cilindrada em cc, de 1 a 10000.";
+const yearMessage = "Informe o ano entre 1900 e 2200.";
+
 const categorySchema = nameSchema.extend({
-  parentId: z.string().cuid().optional(),
-  sortOrder: z.coerce.number().int().min(0).max(100_000),
+  parentId: z.string().cuid("Escolha uma categoria pai válida.").optional(),
+  sortOrder: z.coerce
+    .number({ error: sortOrderMessage })
+    .int(sortOrderMessage)
+    .min(0, sortOrderMessage)
+    .max(100_000, sortOrderMessage),
 });
-const modelSchema = nameSchema.extend({ manufacturerId: z.string().cuid() });
+const modelSchema = nameSchema.extend({ manufacturerId: z.string().cuid("Escolha o fabricante.") });
 const fitmentSchema = z.object({
-  motorcycleModelId: z.string().cuid(),
-  version: z.string().trim().max(80),
-  displacementCc: z.coerce.number().int().positive().max(10_000),
-  year: z.coerce.number().int().min(1900).max(2_200),
+  motorcycleModelId: z.string().cuid("Escolha o modelo da moto."),
+  version: z.string().trim().max(80, "Use no máximo 80 caracteres na versão."),
+  displacementCc: z.coerce
+    .number({ error: displacementMessage })
+    .int(displacementMessage)
+    .positive(displacementMessage)
+    .max(10_000, displacementMessage),
+  year: z.coerce.number({ error: yearMessage }).int(yearMessage).min(1900, yearMessage).max(2_200, yearMessage),
 });
 
 export type CatalogActionState = { error?: string; success?: string };
@@ -37,9 +50,9 @@ function value(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
-function duplicateMessage(error: unknown, fallback: string) {
+function duplicateMessage(error: unknown, fallback: string, action: string) {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") return fallback;
-  return asApplicationError(error).message;
+  return toActionError(error, action).message;
 }
 
 export async function createCategoryAction(
@@ -82,7 +95,7 @@ export async function createCategoryAction(
     revalidatePath("/seller/products/new");
     return { success: "Categoria criada." };
   } catch (error) {
-    return { error: duplicateMessage(error, "Já existe uma categoria com este nome ou slug.") };
+    return { error: duplicateMessage(error, "Já existe uma categoria com este nome ou slug.", "createCategoryAction") };
   }
 }
 
@@ -111,7 +124,7 @@ export async function createBrandAction(
     revalidatePath("/seller/products/new");
     return { success: "Marca criada." };
   } catch (error) {
-    return { error: duplicateMessage(error, "Já existe uma marca com este nome ou slug.") };
+    return { error: duplicateMessage(error, "Já existe uma marca com este nome ou slug.", "createBrandAction") };
   }
 }
 
@@ -141,7 +154,13 @@ export async function createMotorcycleManufacturerAction(
     revalidatePath("/admin", "layout");
     return { success: "Fabricante criado." };
   } catch (error) {
-    return { error: duplicateMessage(error, "Já existe um fabricante com este nome ou slug.") };
+    return {
+      error: duplicateMessage(
+        error,
+        "Já existe um fabricante com este nome ou slug.",
+        "createMotorcycleManufacturerAction",
+      ),
+    };
   }
 }
 
@@ -182,7 +201,13 @@ export async function createMotorcycleModelAction(
     revalidatePath("/admin", "layout");
     return { success: "Modelo criado." };
   } catch (error) {
-    return { error: duplicateMessage(error, "Já existe este modelo para o fabricante selecionado.") };
+    return {
+      error: duplicateMessage(
+        error,
+        "Já existe este modelo para o fabricante selecionado.",
+        "createMotorcycleModelAction",
+      ),
+    };
   }
 }
 
@@ -221,7 +246,13 @@ export async function createMotorcycleFitmentAction(
     revalidatePath("/seller/products/new");
     return { success: "Fitment criado." };
   } catch (error) {
-    return { error: duplicateMessage(error, "Este fitment já existe para o modelo selecionado.") };
+    return {
+      error: duplicateMessage(
+        error,
+        "Este fitment já existe para o modelo selecionado.",
+        "createMotorcycleFitmentAction",
+      ),
+    };
   }
 }
 

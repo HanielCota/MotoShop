@@ -2,65 +2,98 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
-import { BRAND_SHORT_DESCRIPTION, BRAND_SLOGAN } from "@/config/brand";
+import { BRAND_ABOUT_PARAGRAPHS } from "@/config/brand";
 
-import { sellerLinkLabel } from "./storefront-routes";
+import { PaymentMethodIcons } from "./payment-method-icons";
 
-const footerColumns: { title: string; links: { label: string; href: Route }[] }[] = [
-  {
-    title: "Institucional",
-    links: [
-      { label: "Início", href: "/" },
-      { label: "Categorias", href: "/#categorias" },
-      { label: "Encontre peças para sua moto", href: "/#minha-moto" },
-    ],
-  },
-  {
-    title: "Compras",
-    links: [
-      { label: "Catálogo", href: "/products" },
-      { label: "Favoritos", href: "/favorites" },
-      { label: "Carrinho", href: "/cart" },
-      { label: "Meus pedidos", href: "/orders" },
-    ],
-  },
-  {
-    title: "Para lojistas",
-    links: [
-      { label: sellerLinkLabel, href: "/seller" },
-      { label: "Acessar minha conta", href: "/login" },
-    ],
-  },
+const quickLinks: { label: string; href: Route }[] = [
+  { label: "Comprar", href: "/products" },
+  { label: "Vender", href: "/seller" },
+  { label: "Pedidos", href: "/orders" },
+  { label: "Entrar", href: "/login" },
 ];
+
+// Only pages that exist; "Sobre", "Trocas e Devoluções", "Políticas" etc. join when the client sends the text.
+const institutionalLinks: { label: string; href: Route }[] = [{ label: "Seja um Lojista", href: "/seller" }];
+
+const serviceHours = [
+  { days: "Segunda a Sexta", hours: "08h30 às 18h30" },
+  { days: "Sábado", hours: "09h00 às 13h00" },
+  { days: "Domingos e Feriados", hours: "Retorna no próximo dia útil!" },
+];
+
+// 44px touch target on phones; about 30% tighter from the tablet up, where a mouse is used.
+const footerLinkClassName =
+  "inline-flex min-h-11 items-center text-sm text-white/70 transition-colors hover:text-white sm:min-h-[31px]";
+
+function FooterHeading({ id, children }: { id: string; children: string }) {
+  return (
+    <h2 id={id} className="text-moto-brand mb-3 text-2xl leading-none uppercase">
+      {children}
+    </h2>
+  );
+}
 
 /** Rodapé público compartilhado; renderizado pelo layout raiz nas rotas da loja. */
 export function SiteFooter() {
   return (
     <footer className="bg-moto-brand-foreground text-white">
-      <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 pt-10 pb-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <div className="space-y-3">
+      <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 pt-12 pb-6 sm:px-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,1fr)_auto]">
+        <div className="space-y-4">
           <MotoShopBrand variant="footer" />
-          <p className="text-moto-brand text-xs font-bold tracking-[0.12em] uppercase">{BRAND_SLOGAN}</p>
-          <p className="max-w-sm text-sm leading-6 text-white/65">{BRAND_SHORT_DESCRIPTION}</p>
+          {BRAND_ABOUT_PARAGRAPHS.map((paragraph) => (
+            <p key={paragraph} className="max-w-sm text-sm leading-6 text-white/80">
+              {paragraph}
+            </p>
+          ))}
         </div>
-        <nav aria-label="Links do rodapé" className="grid grid-cols-2 gap-6 sm:grid-cols-3">
-          {footerColumns.map((column) => (
-            <div key={column.title} className="flex flex-col">
-              <p className="text-moto-brand mb-1 text-xs font-bold tracking-[0.12em] uppercase">{column.title}</p>
-              {column.links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="inline-flex min-h-11 items-center text-sm text-white/70 transition-colors hover:text-white"
-                >
+
+        {/* Second on phones (right below the logo); last column on desktop, as in the approved layout. */}
+        <nav aria-label="Atalhos" className="lg:order-4">
+          <ul className="grid grid-cols-2 gap-x-6 sm:flex sm:flex-wrap sm:gap-x-8">
+            {quickLinks.map((link) => (
+              <li key={link.label}>
+                <Link href={link.href} className={footerLinkClassName}>
                   {link.label}
                 </Link>
-              ))}
-            </div>
-          ))}
+              </li>
+            ))}
+          </ul>
         </nav>
-        <p className="border-t border-white/15 pt-4 text-xs text-white/55 lg:col-span-2">
-          © 2026 O Moto Shop Brasil. Plataforma de intermediação entre clientes e lojistas parceiros.
+
+        <nav aria-labelledby="footer-institutional">
+          <FooterHeading id="footer-institutional">Institucional</FooterHeading>
+          <ul>
+            {institutionalLinks.map((link) => (
+              <li key={link.label}>
+                <Link href={link.href} className={footerLinkClassName}>
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div className="space-y-8">
+          <section aria-labelledby="footer-service-hours">
+            <FooterHeading id="footer-service-hours">Horário de atendimento</FooterHeading>
+            <dl className="space-y-1.5 text-sm leading-6">
+              {serviceHours.map((entry) => (
+                <div key={entry.days}>
+                  <dt className="text-moto-brand inline">{entry.days}</dt>
+                  <dd className="inline text-white/70"> - {entry.hours}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+          <section aria-labelledby="footer-payment-methods">
+            <FooterHeading id="footer-payment-methods">Formas de pagamento</FooterHeading>
+            <PaymentMethodIcons />
+          </section>
+        </div>
+
+        <p className="border-t border-white/15 pt-4 text-xs leading-5 text-white/55 lg:order-5 lg:col-span-4 lg:text-right">
+          © 2026 MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE. Todos os direitos reservados.
         </p>
       </div>
     </footer>

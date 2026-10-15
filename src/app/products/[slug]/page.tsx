@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata, Route } from "next";
 
@@ -6,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { InlineNotice } from "@/components/ui/inline-notice";
+import { BRAND_SITE_NAME } from "@/config/brand";
 import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
@@ -16,6 +18,7 @@ import { ProductMotorcyclePicker } from "@/modules/motorcycles/components/produc
 import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/motorcycles";
 import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
 import { buildProductJsonLd, serializeJsonLd } from "@/modules/products/application/build-product-json-ld";
+import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
 import { ProductBreadcrumb } from "@/modules/products/components/detail/product-breadcrumb";
 import { ProductBuyBox } from "@/modules/products/components/detail/product-buy-box";
 import {
@@ -23,7 +26,12 @@ import {
   ProductCompatibilityCard,
 } from "@/modules/products/components/detail/product-compatibility-card";
 import { ProductFitmentBanner, type FitmentStatus } from "@/modules/products/components/detail/product-fitment-banner";
+import { ProductDetailSkeleton } from "@/modules/products/components/detail/product-detail-skeleton";
 import { ProductGallery } from "@/modules/products/components/detail/product-gallery";
+import { isNewProduct } from "@/modules/products/domain/product-novelty";
+import { ProductPageCoupons } from "@/modules/coupons/components/product-page-coupons";
+import { toProductPageCouponView } from "@/modules/coupons/domain/product-page-coupon-view";
+import { listProductPageCoupons } from "@/modules/coupons/queries/product-page-coupons";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 import {
   getProductOfferSummary,
@@ -52,6 +60,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     alternates: { canonical: `/products/${product.slug}` },
     openGraph: {
       type: "website",
+      siteName: BRAND_SITE_NAME,
       title: product.name,
       description: product.description.slice(0, 160),
       url: `/products/${product.slug}`,
@@ -60,14 +69,28 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
+type ProductSearchParams = Promise<Record<string, string | string[] | undefined>>;
+
 export default async function ProductPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: ProductSearchParams;
 }) {
   const { slug } = await params;
+  // Checa a existência antes de qualquer Suspense: depois que o streaming começa, o status já saiu como 200.
+  // A consulta é a mesma (em cache) usada pelo generateMetadata.
+  if (!(await getApprovedProductSeoBySlug(slug))) notFound();
+
+  return (
+    <Suspense fallback={<ProductDetailSkeleton />}>
+      <ProductDetail slug={slug} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function ProductDetail({ slug, searchParams }: { slug: string; searchParams: ProductSearchParams }) {
   const [loadedInteractionParams, rawSearchParams] = await Promise.all([
     loadProductInteractionSearchParams(searchParams),
     searchParams,
@@ -79,9 +102,12 @@ export default async function ProductPage({
   ]);
   if (!product) notFound();
 
-  const [isFavorite, primaryMotorcycle] = session
-    ? await Promise.all([isProductFavorited(session.user.id, product.id), getPrimarySavedMotorcycle(session.user.id)])
-    : [false, null];
+  const [coupons, [isFavorite, primaryMotorcycle]] = await Promise.all([
+    listProductPageCoupons(product.id),
+    session
+      ? Promise.all([isProductFavorited(session.user.id, product.id), getPrimarySavedMotorcycle(session.user.id)])
+      : Promise.resolve([false, null] as const),
+  ]);
 
   const productPath = `/products/${product.slug}`;
   // Moto escolhida na página (?moto=, apenas ids da base ativa) tem prioridade sobre a principal salva.
@@ -162,6 +188,9 @@ export default async function ProductPage({
               <Badge className="bg-moto-brand text-moto-brand-foreground border-0">Oferta</Badge>
             ) : null}
             {product.seller.subscriptions.length > 0 ? <Badge variant="brand">Patrocinado · Loja VIP</Badge> : null}
+            {isNewProduct(product, new Date()) ? (
+              <Badge className="bg-foreground text-background">Novidade</Badge>
+            ) : null}
           </div>
           <h1 id="product-title" className="text-foreground mt-5 text-3xl leading-tight sm:text-4xl">
             {product.name}
@@ -196,9 +225,11 @@ export default async function ProductPage({
               variants={buyBoxVariants}
               isDemo={product.isDemo}
               hasPriceRange={offer.hasPriceRange}
+              paymentAvailable={getCheckoutPaymentAvailability(1).available}
               fitment={<ProductFitmentBanner status={fitmentStatus} />}
             />
           </div>
+          <ProductPageCoupons coupons={coupons.map(toProductPageCouponView)} />
           {product.isDemo ? (
             <InlineNotice tone="warning" className="mt-5">
               Produto de apresentação. Imagens, valores e estoque são ilustrativos; a compra está desativada.

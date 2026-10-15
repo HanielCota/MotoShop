@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { PageHeader } from "@/components/ui/page-header";
+import { SellerCampaignsCard } from "@/modules/coupons/components/seller-campaigns-card";
 import { SellerCouponsCard } from "@/modules/coupons/components/seller-coupons-card";
 import { requireSellerPageContext } from "@/modules/sellers/application/get-seller-dashboard-context";
 import { SellerCardSkeleton } from "@/modules/sellers/components/dashboard/seller-card-skeleton";
@@ -27,6 +28,9 @@ export default async function SellerCouponsPage({
       />
       <Suspense fallback={<SellerCardSkeleton rows={4} label="Carregando cupons" />}>
         <SellerCouponsCard sellerId={seller.id} searchParams={searchParams} />
+      </Suspense>
+      <Suspense fallback={<SellerCardSkeleton rows={3} label="Carregando campanhas" />}>
+        <SellerCampaignsCard sellerId={seller.id} searchParams={searchParams} />
       </Suspense>
     </>
   );

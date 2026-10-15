@@ -6,9 +6,10 @@ import { z } from "zod";
 
 import { db } from "@/lib/database";
 import { requireAdminAccess, requireSellerAccess } from "@/modules/auth/application/authorization";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 import { createCoupon, type CouponOwner } from "../application/create-coupon";
+import { setCouponParticipation } from "../application/set-coupon-participation";
 import { readCouponFormInput } from "../domain/coupon-form-input";
 
 // Coupon amounts and limits are persisted as PostgreSQL int4.
@@ -45,18 +46,27 @@ const couponSchema = z.object({
     .max(MAX_INT32, "A compra mínima informada é maior que a permitida."),
   globalUsageLimit: usageLimit.optional(),
   perCustomerUsageLimit: usageLimit.optional(),
+  showOnProductPage: z.boolean().default(false),
 });
 
 export type CouponActionState = { error?: string; success?: string };
+
+// "Campanha com adesão" (paid by each seller that joins) is the default; "Cupom Moto Shop" is paid by the marketplace.
+const marketplaceCouponKindSchema = z
+  .enum(["SELLER_FUNDED_CAMPAIGN", "MARKETPLACE"], { error: "Escolha quem paga o desconto do cupom." })
+  .default("SELLER_FUNDED_CAMPAIGN");
 
 export async function createMarketplaceCouponAction(
   _previousState: CouponActionState,
   formData: FormData,
 ): Promise<CouponActionState> {
   const session = await requireAdminAccess();
+  const kind = marketplaceCouponKindSchema.safeParse(formData.get("couponKind") ?? undefined);
+  if (!kind.success) return { error: kind.error.issues[0]?.message ?? "Escolha quem paga o desconto do cupom." };
+
   return createCouponForOwner(formData, {
     ownerType: "MARKETPLACE",
-    fundedBy: "MARKETPLACE",
+    fundedBy: kind.data === "MARKETPLACE" ? "MARKETPLACE" : "SELLER",
     actorUserId: session.user.id,
   });
 }
@@ -75,6 +85,40 @@ export async function createSellerCouponAction(
 }
 
 const couponStatusSchema = z.object({ couponId: z.string().cuid(), active: z.boolean() });
+const couponIdSchema = z.cuid();
+
+/** The seller joins a Moto Shop campaign: the campaign discount then comes out of its own items. */
+export async function joinMarketplaceCouponAction(couponId: string): Promise<CouponActionState> {
+  return setCampaignParticipation(couponId, true);
+}
+
+/** The seller leaves a campaign; only later checkouts stop applying it to its items. */
+export async function leaveMarketplaceCouponAction(couponId: string): Promise<CouponActionState> {
+  return setCampaignParticipation(couponId, false);
+}
+
+async function setCampaignParticipation(couponId: string, participate: boolean): Promise<CouponActionState> {
+  const context = await requireSellerAccess("COUPON_MANAGE");
+  const parsedCouponId = couponIdSchema.safeParse(couponId);
+  if (!parsedCouponId.success) return { error: "Campanha inválida." };
+
+  try {
+    await setCouponParticipation({
+      sellerId: context.seller.id,
+      userId: context.session.user.id,
+      couponId: parsedCouponId.data,
+      participate,
+    });
+    revalidatePath("/seller", "layout");
+    return { success: participate ? "Sua loja entrou na campanha." : "Sua loja saiu da campanha." };
+  } catch (error) {
+    return {
+      error: toActionError(error, participate ? "joinMarketplaceCouponAction" : "leaveMarketplaceCouponAction").message,
+    };
+  }
+}
+
+const couponProductPageSchema = z.object({ couponId: z.string().cuid(), show: z.boolean() });
 
 export async function setMarketplaceCouponActiveAction(couponId: string, active: boolean): Promise<void> {
   const session = await requireAdminAccess();
@@ -128,6 +172,35 @@ export async function setSellerCouponActiveAction(couponId: string, active: bool
   revalidatePath("/seller", "layout");
 }
 
+/** Liga ou desliga a divulgação de um cupom da própria loja na página do produto. */
+export async function setSellerCouponProductPageAction(couponId: string, show: boolean): Promise<void> {
+  const context = await requireSellerAccess("COUPON_MANAGE");
+  const input = couponProductPageSchema.safeParse({ couponId, show });
+  if (!input.success) return;
+  await db.$transaction(async (tx) => {
+    const coupon = await tx.coupon.findFirst({
+      where: { id: couponId, ownerType: "SELLER", sellerId: context.seller.id },
+    });
+    if (!coupon) return;
+    const result = await tx.coupon.updateMany({
+      where: { id: coupon.id, ownerType: "SELLER", sellerId: context.seller.id, showOnProductPage: !show },
+      data: { showOnProductPage: show },
+    });
+    if (result.count !== 1) return;
+    await tx.auditLog.create({
+      data: {
+        action: show ? "SELLER_COUPON_SHOWN_ON_PRODUCT_PAGE" : "SELLER_COUPON_HIDDEN_FROM_PRODUCT_PAGE",
+        entityType: "Coupon",
+        entityId: coupon.id,
+        metadata: { code: coupon.code, showOnProductPage: show },
+        actorUserId: context.session.user.id,
+      },
+    });
+  });
+  revalidatePath("/seller", "layout");
+  revalidatePath("/products", "layout");
+}
+
 /** O tipo escolhido define qual valor de desconto é obrigatório. */
 function readDiscountAmount(
   data: z.infer<typeof couponSchema>,
@@ -156,6 +229,6 @@ async function createCouponForOwner(formData: FormData, owner: CouponOwner): Pro
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return { error: "Já existe um cupom com este código." };
     }
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "createCouponForOwner").message };
   }
 }

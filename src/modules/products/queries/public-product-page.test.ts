@@ -21,6 +21,40 @@ describe("findPublicProductPage", () => {
     expect(statement.sql).toMatch(/o\.price <= \?::bigint/);
     expect(statement.values).toContain(99_999_999_999_999);
   });
+
+  it("orders recent offers by active promotion first, newest offer first", async () => {
+    await findPublicProductPage({ sort: "recent_offers" }, new Date());
+
+    const statement = defined(mocks.queryRaw.mock.calls[1])[0] as { sql: string };
+    expect(statement.sql).toMatch(/bool_or\(o\.sale\) AS "onSale"/);
+    expect(statement.sql).toMatch(/COALESCE\(o\."promotionStartsAt", o\."variantUpdatedAt"\)/);
+    expect(statement.sql).toMatch(/ORDER BY "onSale" DESC, "offerStartedAt" DESC NULLS LAST, "createdAt" DESC, id ASC/);
+  });
+
+  it("requires one active variant to match every chosen attribute, ignoring case for color and size", async () => {
+    await findPublicProductPage({ gender: "FEMALE", color: " Preto ", size: "m" }, new Date());
+
+    const statement = defined(mocks.queryRaw.mock.calls[0])[0] as { sql: string; values: unknown[] };
+    const offers = statement.sql.split("), matches AS (")[0];
+    expect(offers).toContain('v.gender = ?::"VariantGender"');
+    expect(offers).toContain("lower(v.color) = lower(?)");
+    expect(offers).toContain("lower(v.size) = lower(?)");
+    expect(statement.values).toEqual(expect.arrayContaining(["FEMALE", "Preto", "m"]));
+  });
+
+  it("ignores empty, unknown or oversized attributes", async () => {
+    await findPublicProductPage({ gender: "OTHER" as never, color: "  ", size: "x".repeat(51) }, new Date());
+
+    const statement = defined(mocks.queryRaw.mock.calls[0])[0] as { sql: string };
+    expect(statement.sql).not.toMatch(/v\.(gender|color|size)/);
+  });
+
+  it("keeps relevance as the default order", async () => {
+    await findPublicProductPage({}, new Date());
+
+    const statement = defined(mocks.queryRaw.mock.calls[1])[0] as { sql: string };
+    expect(statement.sql).toMatch(/ORDER BY score DESC, "createdAt" DESC, id ASC/);
+  });
 });
 
 function defined<T>(value: T | null | undefined): T {

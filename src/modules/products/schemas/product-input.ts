@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { VARIANT_ATTRIBUTE_MAX_LENGTH, variantGenderValues } from "../domain/variant-attributes";
+
 const MAX_INT32 = 2_147_483_647;
 
 const measurement = z
@@ -9,6 +11,19 @@ const measurement = z
   .max(2_147_483_647)
   .nullable()
   .optional();
+const optionalAttributeText = (label: string) =>
+  z
+    .string()
+    .trim()
+    .max(VARIANT_ATTRIBUTE_MAX_LENGTH, `Use no máximo ${VARIANT_ATTRIBUTE_MAX_LENGTH} caracteres em ${label}.`)
+    .transform((value) => value || null)
+    .nullable()
+    .optional();
+const variantAttributes = {
+  gender: z.enum(variantGenderValues, { error: "Escolha um gênero da lista." }).nullable().optional(),
+  color: optionalAttributeText("cor"),
+  size: optionalAttributeText("tamanho"),
+};
 const measurements = {
   weightInGrams: measurement,
   heightInMillimeters: measurement,
@@ -33,6 +48,7 @@ export const productInputSchema = z.object({
       z
         .object({
           ...measurements,
+          ...variantAttributes,
           id: z.string().cuid().optional(),
           title: z.string().trim().min(1, "Informe a variação.").max(100),
           sku: z.string().trim().min(1, "Informe o SKU.").max(80),

@@ -7,7 +7,8 @@ import { betterAuth } from "better-auth/minimal";
 import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { env } from "@/config/env";
 import { db } from "@/lib/database";
-import { sendAuthEmail } from "@/modules/auth/application/send-auth-email";
+import { sendAuthEmail, sendExistingAccountEmail } from "@/modules/auth/application/send-auth-email";
+import { logger } from "@/lib/logger";
 import { parseAuthUserName } from "@/modules/auth/domain/auth-user-name";
 import { enforceSignInAccountRateLimit } from "@/modules/auth/infrastructure/sign-in-account-rate-limit";
 import { consumeRateLimit } from "@/shared/rate-limit/consume-rate-limit";
@@ -33,6 +34,15 @@ export const auth = betterAuth({
       ? {
           sendResetPassword: async ({ user, url, token }: { user: { email: string }; url: string; token: string }) =>
             sendAuthEmail({ kind: "reset", to: user.email, url, token }),
+          // Only reached when the duplicate sign-up gets the generic response (verification required).
+          // A send failure must not change that response, or it would reveal that the account exists.
+          onExistingUserSignUp: async ({ user }: { user: { id: string; email: string } }) => {
+            try {
+              await sendExistingAccountEmail({ to: user.email });
+            } catch (error) {
+              logger.error({ event: "auth.existing_account_email.failed", userId: user.id, error });
+            }
+          },
         }
       : {}),
   },

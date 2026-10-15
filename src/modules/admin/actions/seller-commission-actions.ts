@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 import { updateSellerCommission } from "../application/update-seller-commission";
 import { parseCommissionPercent, sellerCommissionSchema } from "../schemas/seller-commission";
 
@@ -33,7 +33,7 @@ export async function updateSellerCommissionAction(
       savedValue: parsed.data.commissionBpsOverride,
     };
   } catch (error) {
-    const applicationError = asApplicationError(error);
+    const applicationError = toActionError(error, "updateSellerCommissionAction");
     return {
       error:
         applicationError.code === "INTERNAL_ERROR" ? "Não foi possível salvar a comissão." : applicationError.message,

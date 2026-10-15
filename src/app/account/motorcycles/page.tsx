@@ -5,7 +5,10 @@ import { PageHeader } from "@/components/ui/page-header";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
 import { MotorcycleGarage } from "@/modules/motorcycles/components/motorcycle-garage";
 import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/motorcycles";
-import { listSavedMotorcycles } from "@/modules/motorcycles/queries/saved-motorcycles";
+import {
+  countCompatibleProductsByFitment,
+  listSavedMotorcycles,
+} from "@/modules/motorcycles/queries/saved-motorcycles";
 import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
 
 export const metadata: Metadata = {
@@ -19,6 +22,9 @@ export default async function MyMotorcyclesPage() {
     listActiveMotorcycleFitments(),
     listSavedMotorcycles(session.user.id),
   ]);
+  const compatibleCounts = await countCompatibleProductsByFitment(
+    savedMotorcycles.map((saved) => saved.motorcycleFitmentId),
+  );
 
   return (
     <CustomerAccountShell pathname="/account/motorcycles" userName={session.user.name}>
@@ -43,6 +49,11 @@ export default async function MyMotorcyclesPage() {
         savedMotorcycles={savedMotorcycles.map((saved) => ({
           id: saved.id,
           motorcycleFitmentId: saved.motorcycleFitmentId,
+          manufacturer: saved.motorcycleFitment.motorcycleModel.manufacturer.name,
+          model: saved.motorcycleFitment.motorcycleModel.name,
+          version: saved.motorcycleFitment.version,
+          year: saved.motorcycleFitment.year,
+          compatibleProductCount: compatibleCounts.get(saved.motorcycleFitmentId) ?? 0,
           isPrimary: saved.isPrimary,
           available:
             saved.motorcycleFitment.motorcycleModel.active &&

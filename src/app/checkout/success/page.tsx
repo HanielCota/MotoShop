@@ -3,19 +3,21 @@ import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { optionalTextSearchParam, parseSearchParams, type RawSearchParams } from "@/shared/validation/search-params";
 
 export const metadata: Metadata = {
   title: "Pedido recebido",
   robots: { index: false, follow: false },
 };
 
-export default async function CheckoutSuccessPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ orderNumber?: string; accessToken?: string }>;
-}) {
-  const params = await searchParams;
-  const orderNumber = params.orderNumber?.trim();
+const checkoutSuccessSearchParams = {
+  orderNumber: optionalTextSearchParam(64),
+  accessToken: optionalTextSearchParam(200),
+};
+
+export default async function CheckoutSuccessPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
+  const params = parseSearchParams(checkoutSuccessSearchParams, await searchParams);
+  const { orderNumber } = params;
   return (
     <main className="mx-auto flex w-full max-w-2xl px-4 py-16 sm:px-6">
       <Card className="w-full">

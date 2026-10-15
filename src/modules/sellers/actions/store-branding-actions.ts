@@ -7,7 +7,7 @@ import { z } from "zod";
 import { db } from "@/lib/database";
 import { ImageKitStorageProvider } from "@/lib/storage/imagekit-storage-provider";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 import {
   attachVerifiedAsset,
@@ -67,7 +67,7 @@ export async function createStoreBrandingUploadUrlAction(input: unknown): Promis
       contentType: parsed.contentType,
     });
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "createStoreBrandingUploadUrlAction").message };
   }
 }
 
@@ -96,7 +96,7 @@ export async function discardStoreBrandingUploadAction(input: unknown): Promise<
     }
     return {};
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "discardStoreBrandingUploadAction").message };
   }
 }
 
@@ -154,6 +154,6 @@ export async function attachStoreBrandingImageAction(input: unknown): Promise<St
       },
     };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "attachStoreBrandingImageAction").message };
   }
 }

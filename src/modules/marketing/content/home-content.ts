@@ -3,10 +3,11 @@ import {
   BadgeCheck,
   Bike,
   CircleCheck,
+  Clock,
   Disc3,
   MapPin,
-  PackageCheck,
   Shield,
+  UserRoundCheck,
   ShieldCheck,
   Wrench,
   type LucideIcon,
@@ -37,7 +38,7 @@ export const equipmentCategoryLabels: Record<string, string> = {
 
 export const essentials: { title: string; description: string; href: Route; icon: LucideIcon }[] = [
   {
-    title: "Óleos e lubrificantes",
+    title: "Óleos e Lubrificantes",
     description: "Manutenção para cada intervalo",
     icon: Disc3,
     href: "/products?q=%C3%B3leo",
@@ -54,15 +55,32 @@ export const essentials: { title: string; description: string; href: Route; icon
     icon: ShieldCheck,
     href: "/categoria/parts-brakes" as Route,
   },
-  { title: "Pneus e câmaras", description: "Aderência para pista e trilha", icon: Bike, href: "/products?q=pneu" },
+  { title: "Pneus e Câmaras", description: "Aderência para pista e trilha", icon: Bike, href: "/products?q=pneu" },
 ];
 
-export const trustItems: { title: string; text: string; icon: LucideIcon }[] = [
-  { icon: BadgeCheck, title: "Lojistas parceiros", text: "Lojas aprovadas pelo Moto Shop" },
-  { icon: PackageCheck, title: "Peças compatíveis", text: "Confira se a peça serve na sua moto" },
-  { icon: MapPin, title: "Frete por loja", text: "Opções e prazos no checkout" },
-  { icon: ShieldCheck, title: "Pedido acompanhado", text: "Status de pagamento e entrega" },
-];
+type HeroAssurance = { text: string; icon: LucideIcon };
+
+const approvedStoresAssurance: HeroAssurance = { icon: BadgeCheck, text: "Lojas aprovadas pelo Moto Shop" };
+
+/**
+ * Garantias curtas exibidas logo abaixo da busca por moto, no hero. Enquanto o pagamento não está
+ * liberado, nenhuma delas promete compra ou checkout.
+ */
+export function getHeroAssurances(paymentAvailable: boolean): HeroAssurance[] {
+  if (!paymentAvailable) {
+    return [
+      approvedStoresAssurance,
+      { icon: Clock, text: "Compras em breve" },
+      { icon: MapPin, text: "Frete e prazo definidos por cada loja" },
+    ];
+  }
+
+  return [
+    approvedStoresAssurance,
+    { icon: UserRoundCheck, text: "Compre sem criar conta" },
+    { icon: MapPin, text: "Frete e prazo de cada loja no checkout" },
+  ];
+}
 
 /** Links de categoria só aparecem quando a categoria existe e está ativa. */
 export function isCategoryHrefActive(href: string, categories: { slug: string }[]) {

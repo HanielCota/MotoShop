@@ -27,7 +27,7 @@ export function InventoryAdjustForm({ variantId }: { variantId: string }) {
   }
 
   return (
-    <form onSubmit={submit} className="mt-2 flex flex-wrap items-center gap-2">
+    <form onSubmit={submit} noValidate className="mt-2 flex flex-wrap items-center gap-2">
       <label className="sr-only" htmlFor={`inventory-${variantId}`}>
         Ajuste de estoque
       </label>

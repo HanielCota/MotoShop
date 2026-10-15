@@ -8,15 +8,17 @@ export function SellerCta() {
     <section className="bg-moto-brand text-moto-brand-foreground py-14 sm:py-20" aria-labelledby="home-seller-title">
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[1.25fr_0.75fr] lg:items-center">
         <div>
-          <p className="text-xs font-bold tracking-[0.16em] uppercase">Para lojistas</p>
+          <p className="text-xs font-bold tracking-[0.16em] uppercase">Para lojas especializadas</p>
           <h2 id="home-seller-title" className="mt-2 text-4xl leading-[0.92] uppercase sm:text-5xl lg:text-6xl">
-            Venda no Moto Shop
+            Sua loja na pista certa.
           </h2>
           <p className="mt-4 max-w-2xl text-sm leading-6 sm:text-base">
-            Cadastre sua loja e gerencie catálogo, estoque e pedidos em um único painel.
+            Venda para um público que já procura motocross. Controle catálogo, estoque, pedidos e equipe em um único
+            painel.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3 lg:justify-end">
+        {/* Single-column grid: both buttons take the width of the wider one. */}
+        <div className="grid w-full gap-3 sm:w-fit lg:justify-self-end">
           <Link
             className={cn(
               buttonVariants({ size: "lg" }),
@@ -24,7 +26,7 @@ export function SellerCta() {
             )}
             href="/seller"
           >
-            Cadastrar minha loja
+            Quero vender no Moto Shop
           </Link>
           <Link
             className={cn(

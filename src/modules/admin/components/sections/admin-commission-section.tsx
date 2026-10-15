@@ -11,7 +11,7 @@ export async function AdminCommissionSection() {
     <AdminCard
       id="admin-commission"
       title="Comissão do marketplace"
-      description="Defina a comissão padrão em basis points (100 bps = 1%). Comissões individuais de lojistas continuam valendo."
+      description="Defina a comissão padrão em percentual, com até duas casas decimais. Comissões individuais de lojistas continuam valendo."
     >
       {!configuration ? (
         <InlineNotice tone="warning" role="status">

@@ -7,6 +7,11 @@ import type { Route } from "next";
 import { PageHeader } from "@/components/ui/page-header";
 import { CatalogFiltersPanel } from "./catalog-filters-panel";
 import { CatalogSortSelect } from "./catalog-sort-select";
+import {
+  VariantAttributeFilterFields,
+  type VariantAttributeOptions,
+  type VariantAttributeValues,
+} from "./variant-attribute-filter-fields";
 import { ProductGrid } from "@/modules/products/components/product-grid";
 import type { listApprovedProducts } from "@/modules/products/queries/products";
 import type {
@@ -23,6 +28,7 @@ type Promotion = (typeof publicCatalogPromotionValues)[number];
 const sortOptions: { value: Sort; label: string }[] = [
   { value: "relevance", label: "Mais relevantes" },
   { value: "newest", label: "Mais recentes" },
+  { value: "recent_offers", label: "Ofertas recentes" },
   { value: "price_asc", label: "Menor preço" },
   { value: "price_desc", label: "Maior preço" },
 ];
@@ -37,6 +43,8 @@ export function PublicCatalogLanding({
   sort,
   availability,
   promotion,
+  attributes,
+  attributeOptions,
 }: {
   title: string;
   description: string;
@@ -47,19 +55,40 @@ export function PublicCatalogLanding({
   sort: (typeof publicCatalogSortValues)[number];
   availability: (typeof publicCatalogAvailabilityValues)[number];
   promotion: (typeof publicCatalogPromotionValues)[number];
+  attributes: VariantAttributeValues;
+  attributeOptions: VariantAttributeOptions;
 }) {
-  function buildHref(overrides: { sort?: Sort; availability?: Availability; promotion?: Promotion; page?: number }) {
-    const next = { sort, availability, promotion, page, ...overrides };
+  function buildHref(
+    overrides: Partial<{ sort: Sort; availability: Availability; promotion: Promotion; page: number }> &
+      Partial<VariantAttributeValues>,
+  ) {
+    const next = { sort, availability, promotion, page, ...attributes, ...overrides };
     const query = new URLSearchParams();
     if (next.sort !== "relevance") query.set("sort", next.sort);
     if (next.availability !== "ALL") query.set("availability", next.availability);
     if (next.promotion !== "ALL") query.set("promotion", next.promotion);
+    if (next.gender) query.set("gender", next.gender);
+    if (next.color) query.set("color", next.color);
+    if (next.size) query.set("size", next.size);
     if (next.page > 1) query.set("page", String(next.page));
     const serialized = query.toString();
     return `${baseHref}${serialized ? `?${serialized}` : ""}` as Route;
   }
-  const activeFilterCount = (availability !== "ALL" ? 1 : 0) + (promotion !== "ALL" ? 1 : 0);
-  const clearHref = buildHref({ availability: "ALL", promotion: "ALL", page: 1 });
+  const activeFilterCount = [
+    availability !== "ALL",
+    promotion !== "ALL",
+    attributes.gender,
+    attributes.color,
+    attributes.size,
+  ].filter(Boolean).length;
+  const clearHref = buildHref({
+    availability: "ALL",
+    promotion: "ALL",
+    gender: null,
+    color: null,
+    size: null,
+    page: 1,
+  });
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6">
@@ -92,6 +121,11 @@ export function PublicCatalogLanding({
                 <option value="ON_SALE">Em oferta</option>
               </DesignSelect>
             </label>
+            <VariantAttributeFilterFields
+              options={attributeOptions}
+              values={attributes}
+              fieldClassName="flex min-w-0 flex-col gap-2 text-sm font-medium"
+            />
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <Button type="submit" size="lg" className="flex-1 px-4">
                 Aplicar filtros

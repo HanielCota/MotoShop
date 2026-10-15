@@ -1,4 +1,3 @@
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { DesignSelect } from "@/components/ui/design-select";
@@ -11,6 +10,7 @@ import Image from "next/image";
 import { Store } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { BRAND_SITE_NAME } from "@/config/brand";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionHeader } from "@/components/ui/page-header";
@@ -19,6 +19,8 @@ import { formatRating } from "@/modules/reviews/domain/rating";
 import { ReviewStars } from "@/modules/reviews/components/review-stars";
 import { CatalogFiltersPanel } from "@/modules/catalog/components/catalog-filters-panel";
 import { CatalogSortSelect } from "@/modules/catalog/components/catalog-sort-select";
+import { StoreProductSearch } from "@/modules/catalog/components/store-product-search";
+import { StoreRatingHighlight } from "@/modules/catalog/components/store-rating-highlight";
 import { getPublicStoreBySlug } from "@/modules/catalog/queries/public-catalog";
 import { loadPublicStoreSearchParams } from "@/modules/catalog/search-params";
 import { ProductGrid } from "@/modules/products/components/product-grid";
@@ -27,6 +29,7 @@ import { listApprovedProducts } from "@/modules/products/queries/products";
 const storeSortOptions = [
   { value: "relevance", label: "Mais relevantes" },
   { value: "newest", label: "Mais recentes" },
+  { value: "recent_offers", label: "Ofertas recentes" },
   { value: "price_asc", label: "Menor preço" },
   { value: "price_desc", label: "Maior preço" },
 ] as const;
@@ -35,10 +38,19 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const store = await getPublicStoreBySlug(slug);
   if (!store) return { title: "Loja não encontrada" };
+  const description = store.description ?? `Produtos da loja ${store.name} no marketplace do Moto Shop.`;
+  // Link de uma loja: a aba e o preview do link mostram só o nome da loja, sem o sufixo do site.
   return {
-    title: store.name,
-    description: store.description ?? `Produtos da loja ${store.name} no marketplace do Moto Shop.`,
+    title: { absolute: store.name },
+    description,
     alternates: { canonical: `/loja/${store.slug}` },
+    openGraph: {
+      type: "website",
+      siteName: BRAND_SITE_NAME,
+      title: store.name,
+      description,
+      url: `/loja/${store.slug}`,
+    },
   };
 }
 
@@ -196,17 +208,7 @@ export default async function PublicStorePage({
               <strong className="mr-1 text-lg text-white">{result.total}</strong> produto{result.total === 1 ? "" : "s"}{" "}
               {result.total === 1 ? "exibido" : "exibidos"}
             </span>
-            {rating ? (
-              <a href="#avaliacoes-loja" className="underline-offset-4 hover:text-white hover:underline">
-                <span aria-hidden="true" className="text-moto-brand">
-                  ★
-                </span>{" "}
-                {formatRating(rating)}/5 · {store.reviewSummary.count}{" "}
-                {store.reviewSummary.count === 1 ? "avaliação" : "avaliações"}
-              </a>
-            ) : (
-              <span>Ainda sem avaliações</span>
-            )}
+            <StoreRatingHighlight rating={rating} reviewCount={store.reviewSummary.count} />
           </div>
         </div>
       </section>
@@ -220,6 +222,11 @@ export default async function PublicStorePage({
         />
       ) : (
         <div id="produtos" className="scroll-mt-24 space-y-6">
+          <StoreProductSearch
+            key={storeParams.storeProductQ ?? ""}
+            storeParams={storeParams}
+            sellerId={store.sellerId}
+          />
           <SectionHeader title="Produtos da vitrine" description="Seleção publicada por esta loja." />
           <div className="grid min-w-0 gap-6 md:grid-cols-[240px_minmax(0,1fr)] md:items-start md:gap-8">
             <CatalogFiltersPanel activeCount={activeProductFilterCount}>
@@ -238,16 +245,10 @@ export default async function PublicStorePage({
                 {storeParams.storeProductSort !== "relevance" ? (
                   <input type="hidden" name="storeProductSort" value={storeParams.storeProductSort} />
                 ) : null}
-                <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
-                  Buscar nesta loja
-                  <Input
-                    type="search"
-                    className="h-11"
-                    name="storeProductQ"
-                    defaultValue={storeParams.storeProductQ ?? ""}
-                    placeholder="Nome, marca, categoria ou SKU"
-                  />
-                </label>
+                {/* The search field lives in the bar above; applying filters keeps the current search. */}
+                {storeParams.storeProductQ ? (
+                  <input type="hidden" name="storeProductQ" value={storeParams.storeProductQ} />
+                ) : null}
                 <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
                   Disponibilidade
                   <DesignSelect

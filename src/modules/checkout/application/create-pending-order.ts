@@ -12,6 +12,7 @@ import { reserveOrderInventory } from "@/modules/inventory/application/reserve-o
 import { multiplyMoneyInCents, sumMoneyInCents } from "@/modules/orders/domain/money";
 import { preparedPaymentRequestMetadata } from "@/modules/payments/domain/payment-request-state";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
+import { buildVariantAttributesSnapshot, type VariantGenderValue } from "@/modules/products/domain/variant-attributes";
 import { ApplicationError } from "@/shared/errors/application-error";
 
 import { applyOrderItemDiscounts } from "../domain/order-item-discounts";
@@ -335,6 +336,9 @@ export function createOrderItem(item: {
     sku: string;
     title: string;
     attributes: unknown;
+    gender: VariantGenderValue | null;
+    color: string | null;
+    size: string | null;
     weightInGrams: number | null;
     heightInMillimeters: number | null;
     widthInMillimeters: number | null;
@@ -354,7 +358,7 @@ export function createOrderItem(item: {
     productNameSnapshot: item.variant.product.name,
     variantDescriptionSnapshot: item.variant.title,
     skuSnapshot: item.variant.sku,
-    attributesSnapshot: item.variant.attributes as Prisma.InputJsonValue,
+    attributesSnapshot: buildVariantAttributesSnapshot(item.variant.attributes, item.variant) as Prisma.InputJsonValue,
     weightInGramsSnapshot: item.variant.weightInGrams ?? item.variant.product.weightInGrams,
     heightInMillimetersSnapshot: item.variant.heightInMillimeters ?? item.variant.product.heightInMillimeters,
     widthInMillimetersSnapshot: item.variant.widthInMillimeters ?? item.variant.product.widthInMillimeters,

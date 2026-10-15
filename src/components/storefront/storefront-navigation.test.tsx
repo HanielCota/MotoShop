@@ -98,3 +98,16 @@ it("closes the mobile navigation with Escape and restores trigger focus", () => 
   expect(trigger).toHaveFocus();
   expect(menu).toHaveAttribute("hidden");
 });
+
+it("hides the header search only on the catalog page, which has its own search band", () => {
+  authMocks.useSession.mockReturnValue({ data: null });
+
+  navigation.pathname = "/products";
+  const { unmount } = render(<StorefrontNavigation />);
+  expect(screen.queryAllByRole("combobox", { name: "Buscar produtos" })).toHaveLength(0);
+  unmount();
+
+  navigation.pathname = "/products/capacete";
+  render(<StorefrontNavigation />);
+  expect(screen.getAllByRole("combobox", { name: "Buscar produtos", hidden: true }).length).toBeGreaterThan(0);
+});

@@ -1,6 +1,8 @@
 import type { CustomerAddress } from "@/modules/customers/queries/customer-addresses";
+import { formatPhone } from "@/modules/customers/domain/tax-id";
 import {
   formatCep,
+  formatCpf,
   isBrazilianStateCode,
   normalizeCep,
   normalizeCpf,
@@ -80,6 +82,19 @@ export function applySavedAddress(form: CheckoutFormState, address: CustomerAddr
     neighborhood: address.neighborhood,
     city: address.city,
     state: address.state,
+  };
+}
+
+/** Contact data saved in /account/profile (digits only), used only as checkout prefill. */
+export type CheckoutCustomerDefaults = { taxId: string | null; phone: string | null };
+
+/** Prefills phone and CPF; a CNPJ is left out because the payment requires the payer's CPF. */
+export function applyCustomerDefaults(form: CheckoutFormState, defaults: CheckoutCustomerDefaults): CheckoutFormState {
+  const cpf = defaults.taxId?.length === 11 ? defaults.taxId : null;
+  return {
+    ...form,
+    ...(defaults.phone ? { customerPhone: formatPhone(defaults.phone) } : {}),
+    ...(cpf ? { customerTaxId: formatCpf(cpf) } : {}),
   };
 }
 

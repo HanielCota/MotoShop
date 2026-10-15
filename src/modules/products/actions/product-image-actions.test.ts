@@ -5,6 +5,9 @@ const mocks = vi.hoisted(() => ({
   imageCount: vi.fn(),
   imageCreate: vi.fn(),
   imageFindFirst: vi.fn(),
+  imageFindMany: vi.fn(),
+  imageUpdate: vi.fn(),
+  imageDeleteMany: vi.fn(),
   deleteObject: vi.fn(),
   lock: vi.fn(),
   createUploadUrl: vi.fn(),
@@ -23,7 +26,14 @@ vi.mock("@/lib/database", () => ({
       callback({
         $queryRaw: mocks.lock,
         product: { findFirst: mocks.productFindFirst },
-        productImage: { count: mocks.imageCount, create: mocks.imageCreate, findFirst: mocks.imageFindFirst },
+        productImage: {
+          count: mocks.imageCount,
+          create: mocks.imageCreate,
+          findFirst: mocks.imageFindFirst,
+          findMany: mocks.imageFindMany,
+          update: mocks.imageUpdate,
+          deleteMany: mocks.imageDeleteMany,
+        },
       }),
   },
 }));
@@ -44,9 +54,12 @@ import {
   attachProductImageAction,
   createProductImageUploadUrlAction,
   discardProductImageUploadAction,
+  removeProductImageAction,
+  reorderProductImagesAction,
 } from "./product-image-actions";
 
 const productId = "cmf8w8m4p0000s6o5zj2q8v3k";
+const imageId = "cmf8w8m4p0001s6o5zj2q8v3k";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -134,6 +147,32 @@ describe("seller product image upload", () => {
     });
 
     expect(result.error).toMatch(/não pertence/i);
+    expect(mocks.deleteObject).not.toHaveBeenCalled();
+  });
+
+  it("does not reorder the gallery of another seller's product", async () => {
+    mocks.productFindFirst.mockResolvedValue(null);
+
+    const result = await reorderProductImagesAction({ productId, imageIds: [imageId] });
+
+    expect(result.error).toMatch(/não encontrado/i);
+    expect(mocks.productFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ id: productId, sellerId: "seller-a" }) }),
+    );
+    expect(mocks.imageFindMany).not.toHaveBeenCalled();
+    expect(mocks.imageUpdate).not.toHaveBeenCalled();
+  });
+
+  it("does not remove an image of another seller's product", async () => {
+    const result = await removeProductImageAction({ imageId });
+
+    expect(result.error).toMatch(/não encontrada/i);
+    expect(mocks.imageFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: imageId, product: expect.objectContaining({ sellerId: "seller-a" }) }),
+      }),
+    );
+    expect(mocks.imageDeleteMany).not.toHaveBeenCalled();
     expect(mocks.deleteObject).not.toHaveBeenCalled();
   });
 });

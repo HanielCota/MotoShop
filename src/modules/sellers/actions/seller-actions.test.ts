@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("server-only", () => ({}));
 
 const mocks = vi.hoisted(() => {
@@ -54,6 +55,7 @@ vi.mock("@/modules/auth/application/authorization", () => ({
   })),
 }));
 
+import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { createSellerAction, updateShippingOriginAction } from "./seller-actions";
 
 function onboardingForm() {
@@ -101,6 +103,31 @@ describe("seller onboarding", () => {
     expect(mocks.transaction).toHaveBeenCalledOnce();
     expect(mocks.lockUser).toHaveBeenCalledOnce();
     expect(mocks.sellerCreate).not.toHaveBeenCalled();
+  });
+});
+
+describe("seller onboarding identifier", () => {
+  it("turns a typed store name into a valid identifier instead of refusing it", async () => {
+    const form = onboardingForm();
+    form.set("storeSlug", "Luiz Parts Ação");
+
+    const result = await createSellerAction({}, form);
+
+    expect(result.slugError).toBeUndefined();
+    expect(mocks.storeCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ slug: "luiz-parts-acao" }) }),
+    );
+  });
+
+  it("still refuses an identifier with no letters or numbers in the field", async () => {
+    const form = onboardingForm();
+    form.set("storeSlug", "!!!");
+
+    const result = await createSellerAction({}, form);
+
+    expect(result.slugError).toBe("Informe um identificador para a loja.");
+    expect(result.values?.storeSlug).toBe("!!!");
+    expect(mocks.transaction).not.toHaveBeenCalled();
   });
 });
 
@@ -154,6 +181,26 @@ describe("shipping origin update", () => {
       next: { originName: "Loja Teste", originDocument: "*********01" },
     });
     expect(JSON.stringify(audit.data.metadata)).not.toContain("12345678901");
+  });
+
+  it("does not update or audit a store outside the seller scope", async () => {
+    mocks.storeFindFirst.mockResolvedValue(null);
+
+    const result = await updateShippingOriginAction({}, originForm());
+
+    expect(result.error).toBe("Loja não encontrada.");
+    expect(mocks.storeUpdate).not.toHaveBeenCalled();
+    expect(mocks.auditCreate).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("requires SELLER_MANAGE before reading the shipping origin", async () => {
+    vi.mocked(requireSellerAccess).mockRejectedValueOnce(new Error("FORBIDDEN"));
+
+    await expect(updateShippingOriginAction({}, originForm())).rejects.toThrow("FORBIDDEN");
+
+    expect(requireSellerAccess).toHaveBeenCalledWith("SELLER_MANAGE");
+    expect(mocks.transaction).not.toHaveBeenCalled();
   });
 });
 

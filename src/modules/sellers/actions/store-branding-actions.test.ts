@@ -8,9 +8,11 @@ const mocks = vi.hoisted(() => ({
   requireSellerAccess: vi.fn(),
   verifyImage: vi.fn(),
   deleteObject: vi.fn(),
+  createUploadUrl: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/shared/storage/public-storage-url", () => ({
@@ -28,10 +30,15 @@ vi.mock("@/lib/storage/imagekit-storage-provider", () => ({
   ImageKitStorageProvider: class {
     verifyImage = mocks.verifyImage;
     deleteObject = mocks.deleteObject;
+    createUploadUrl = mocks.createUploadUrl;
   },
 }));
 
-import { attachStoreBrandingImageAction, discardStoreBrandingUploadAction } from "./store-branding-actions";
+import {
+  attachStoreBrandingImageAction,
+  createStoreBrandingUploadUrlAction,
+  discardStoreBrandingUploadAction,
+} from "./store-branding-actions";
 
 const context = {
   seller: { id: "seller-1" },
@@ -51,6 +58,12 @@ beforeEach(() => {
   mocks.requireSellerAccess.mockResolvedValue(context);
   mocks.verifyImage.mockResolvedValue(undefined);
   mocks.deleteObject.mockResolvedValue(undefined);
+  mocks.createUploadUrl.mockImplementation(async ({ key }: { key: string }) => ({
+    key,
+    url: "https://storage.example.test/upload",
+    expiresAt: new Date("2026-10-12T12:00:00.000Z"),
+    fields: {},
+  }));
   mocks.findStore.mockResolvedValue(previousStore);
   mocks.updateStore.mockResolvedValue(updatedStore);
   mocks.createAudit.mockResolvedValue({ id: "audit-1" });
@@ -112,4 +125,51 @@ it("discards only an unassociated branding image under this seller's store prefi
     "error",
   );
   expect(mocks.deleteObject).toHaveBeenCalledOnce();
+});
+
+it("checks the seller permission before signing an upload or touching the store", async () => {
+  mocks.requireSellerAccess.mockRejectedValue(new Error("FORBIDDEN"));
+
+  const upload = await createStoreBrandingUploadUrlAction({
+    imageType: "logo",
+    contentType: "image/jpeg",
+    sizeInBytes: 1000,
+  });
+  const attach = await attachStoreBrandingImageAction({
+    imageType: "logo",
+    storageKey: "stores/seller-1/logo/12345678-1234-4234-8234-123456789abc.jpg",
+    fileId: "123456789012345678901234",
+  });
+
+  expect(upload).toHaveProperty("error");
+  expect(attach).toHaveProperty("error");
+  expect(mocks.createUploadUrl).not.toHaveBeenCalled();
+  expect(mocks.verifyImage).not.toHaveBeenCalled();
+  expect(mocks.transaction).not.toHaveBeenCalled();
+});
+
+it("signs branding uploads only under this seller's store prefix", async () => {
+  const result = await createStoreBrandingUploadUrlAction({
+    imageType: "banner",
+    contentType: "image/png",
+    sizeInBytes: 1000,
+  });
+
+  expect(result).toHaveProperty("url", "https://storage.example.test/upload");
+  expect(mocks.createUploadUrl).toHaveBeenCalledWith(
+    expect.objectContaining({ key: expect.stringMatching(/^stores\/seller-1\/banner\//) }),
+  );
+});
+
+it("does not attach a branding image stored under another seller's prefix", async () => {
+  const result = await attachStoreBrandingImageAction({
+    imageType: "logo",
+    storageKey: "stores/seller-2/logo/12345678-1234-4234-8234-123456789abc.jpg",
+    fileId: "123456789012345678901234",
+  });
+
+  expect(result.error).toMatch(/não pertence/i);
+  expect(mocks.verifyImage).not.toHaveBeenCalled();
+  expect(mocks.transaction).not.toHaveBeenCalled();
+  expect(mocks.revalidatePath).not.toHaveBeenCalled();
 });

@@ -7,7 +7,6 @@ import { type FormEvent, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DesignSelect } from "@/components/ui/design-select";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
   findFirstFitmentForManufacturer,
@@ -17,6 +16,7 @@ import {
   resolveSelectedFitment,
   type FitmentOption,
 } from "@/modules/motorcycles/domain/fitment-options";
+import { ProductSearchCombobox } from "@/modules/products/components/search/product-search-combobox";
 
 const tabClassName =
   "text-muted-foreground aria-pressed:text-foreground aria-pressed:shadow-[inset_0_-3px_var(--moto-brand)] min-h-12 flex-1 px-4 text-sm font-semibold transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none";
@@ -55,19 +55,10 @@ export function MotorcycleFinder({
 
   return (
     <div
-      className="bg-card text-card-foreground w-full max-w-3xl scroll-mt-24 overflow-hidden rounded-xl border border-white/20 shadow-2xl"
+      className="bg-card text-card-foreground w-full max-w-3xl scroll-mt-24 rounded-xl border border-white/20 shadow-2xl"
       id="minha-moto"
     >
       <div className="border-border flex border-b" role="group" aria-label="Forma de busca">
-        <button
-          className={tabClassName}
-          type="button"
-          aria-pressed={finderMode === "motorcycle"}
-          aria-controls="marketing-search-panel"
-          onClick={() => setFinderMode("motorcycle")}
-        >
-          Peças por moto
-        </button>
         <button
           className={tabClassName}
           type="button"
@@ -76,6 +67,15 @@ export function MotorcycleFinder({
           onClick={() => setFinderMode("search")}
         >
           Buscar produto
+        </button>
+        <button
+          className={tabClassName}
+          type="button"
+          aria-pressed={finderMode === "motorcycle"}
+          aria-controls="marketing-search-panel"
+          onClick={() => setFinderMode("motorcycle")}
+        >
+          Peças por moto
         </button>
       </div>
 
@@ -153,14 +153,12 @@ export function MotorcycleFinder({
               Buscar produto
             </label>
             <div className="relative min-w-0">
-              <Input
+              <ProductSearchCombobox
                 id="home-search"
-                name="q"
-                type="search"
                 value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
+                onValueChange={setSearchQuery}
                 placeholder="Ex.: filtro de ar"
-                className="h-14 rounded-md pr-12 text-base sm:h-14 sm:text-base [&::-webkit-search-cancel-button]:hidden"
+                inputClassName="h-14 rounded-md pr-12 text-base sm:h-14 sm:text-base [&::-webkit-search-cancel-button]:hidden"
               />
               {searchQuery ? (
                 <Button

@@ -12,6 +12,12 @@ const authErrorMessages: Record<string, string> = {
 
 const genericAuthErrorMessage = "Não foi possível concluir a autenticação. Confira os dados e tente novamente.";
 
+/** Wrong e-mail or password: the login offers recovery and sign-up without revealing if the account exists. */
+export function isInvalidCredentialsError(code: string | undefined, status?: number): boolean {
+  if (status === 429 || !code) return false;
+  return code === "INVALID_EMAIL_OR_PASSWORD" || code === "INVALID_CREDENTIALS";
+}
+
 /** Maps Better Auth errors to Portuguese copy; 429s (per-IP or per-account limits) share one message. */
 export function getAuthErrorMessage(code: string | undefined, status?: number): string {
   if (status === 429) return tooManyRequestsMessage;

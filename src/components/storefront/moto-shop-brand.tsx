@@ -14,6 +14,8 @@ type MotoShopBrandProps = {
 /**
  * Optimized derivatives of the official artwork (public/Banner*.png, public/LargeBanner*.png) live in
  * public/brand. The header keeps the horizontal mark; footer and auth use the main (stacked) logo.
+ * The "dark" files are the client's transparent logos (Banner2-Sem-Fundo, LogoPrincipal2-Sem-Fundo)
+ * on the site graphite (#171716), so the plate blends into the header and footer.
  */
 const logoAssets = {
   horizontal: {

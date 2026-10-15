@@ -11,13 +11,15 @@ import { FeaturedProducts } from "./featured-products";
 import styles from "./marketing-home.module.css";
 import { MotorcycleFinder } from "./motorcycle-finder";
 import { SellerCta } from "./seller-cta";
-import { TrustStrip } from "./trust-strip";
+import { HeroAssurances } from "./hero-assurances";
 
 type MarketingHomeProps = {
   fitments: FitmentOption[];
   categories: MarketingCategory[];
   featuredProducts: ProductCardData[];
   primaryFitmentId?: string | null;
+  /** Mesmo resultado que o checkout usa; falso enquanto o pagamento pelo marketplace não está liberado. */
+  paymentAvailable: boolean;
 };
 
 // O slogan quebra antes da última palavra ("OFF-ROAD!"), mantendo a direção de arte do hero.
@@ -29,7 +31,13 @@ const sloganEnd = BRAND_SLOGAN.slice(sloganBreak + 1);
  * Página inicial: composição de seções server-rendered; apenas o seletor de moto é client component.
  * Cabeçalho e rodapé vêm do layout raiz (StorefrontNavigation/SiteFooter).
  */
-export function MarketingHome({ fitments, categories, featuredProducts, primaryFitmentId }: MarketingHomeProps) {
+export function MarketingHome({
+  fitments,
+  categories,
+  featuredProducts,
+  primaryFitmentId,
+  paymentAvailable,
+}: MarketingHomeProps) {
   return (
     <main className="bg-surface-sunken overflow-x-clip">
       <section className="bg-moto-brand-foreground relative isolate text-white" aria-labelledby="home-title">
@@ -42,7 +50,7 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
           sizes="(min-width: 1024px) 56vw, 100vw"
         />
         <div className={styles.heroShade} aria-hidden="true" />
-        <div className="mx-auto w-full max-w-6xl px-4 pt-12 pb-24 sm:px-6 sm:pt-20 sm:pb-28 lg:pt-24">
+        <div className="mx-auto w-full max-w-6xl px-4 pt-12 pb-12 sm:px-6 sm:pt-20 sm:pb-16 lg:pt-24">
           <p className="text-moto-brand-surface flex items-center gap-2.5 text-xs font-bold tracking-[0.16em] uppercase">
             <span className={styles.kickerRule} aria-hidden="true" />
             Motopeças · Acessórios · Equipamentos
@@ -59,10 +67,10 @@ export function MarketingHome({ fitments, categories, featuredProducts, primaryF
             Peças, acessórios e equipamentos de lojistas parceiros. Escolha a sua moto e veja as peças compatíveis.
           </p>
           <MotorcycleFinder fitments={fitments} primaryFitmentId={primaryFitmentId} />
+          <HeroAssurances paymentAvailable={paymentAvailable} />
         </div>
       </section>
 
-      <TrustStrip />
       <CategoryShowcase categories={categories} />
       <FeaturedProducts products={featuredProducts} />
       <EssentialsSection categories={categories} />

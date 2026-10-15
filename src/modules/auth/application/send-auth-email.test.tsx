@@ -6,7 +6,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/config/get-application-base-url", () => ({ getApplicationBaseUrl: () => "https://motoshopbrasil.com.br" }));
 vi.mock("@/modules/notifications/application/send-notification-email", () => ({ sendNotificationEmail }));
 
-import { sendAuthEmail } from "./send-auth-email";
+import { sendAuthEmail, sendExistingAccountEmail } from "./send-auth-email";
 
 beforeEach(() => sendNotificationEmail.mockClear());
 
@@ -52,5 +52,19 @@ describe("authentication email", () => {
     );
     const message = sendNotificationEmail.mock.calls[0]?.[0];
     expect(renderToStaticMarkup(message.react)).toContain("callbackURL=%2Flogin%3Fverified%3D1");
+  });
+
+  it("warns an existing account at most once a day, keyed by an address hash", async () => {
+    const now = new Date("2026-10-09T12:00:00Z");
+    await sendExistingAccountEmail({ to: "Buyer@Example.test", now });
+    await sendExistingAccountEmail({ to: "buyer@example.test", now });
+    const [first, second] = sendNotificationEmail.mock.calls.map((call) => call[0]);
+    expect(first).toMatchObject({ kind: "AUTH_EXISTING_ACCOUNT", subject: "Você já tem uma conta no Moto Shop" });
+    expect(first.eventKey).toMatch(/^auth\.existing-account:[a-f0-9]{64}:2026-10-09$/);
+    expect(first.eventKey).not.toContain("buyer");
+    expect(second.eventKey).toBe(first.eventKey);
+    const html = renderToStaticMarkup(first.react);
+    expect(html).toContain("https://motoshopbrasil.com.br/login");
+    expect(html).toContain("https://motoshopbrasil.com.br/forgot-password");
   });
 });

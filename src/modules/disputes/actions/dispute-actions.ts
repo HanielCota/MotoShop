@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { resolveCustomerOrderIdentity } from "@/modules/orders/application/resolve-customer-order-access";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 import { requestDispute } from "../application/request-dispute";
 
@@ -46,6 +46,6 @@ export async function requestDisputeAction(input: unknown): Promise<DisputeActio
     revalidatePath("/admin", "layout");
     return { success: "Disputa aberta. O Moto Shop fará a mediação." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "requestDisputeAction").message };
   }
 }

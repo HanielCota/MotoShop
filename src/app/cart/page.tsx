@@ -172,17 +172,17 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
               </div>
               <div className="text-muted-foreground flex items-center justify-between gap-3">
                 <dt>Frete</dt>
-                <dd>Calculado na finalização</dd>
+                <dd>{payment.available ? "Calculado na finalização" : "Calculado por loja"}</dd>
               </div>
             </dl>
             {payment.available ? null : (
               <InlineNotice tone="warning" className="mt-4">
-                O pagamento pelo marketplace ainda não está disponível para este carrinho. Você pode revisar os dados de
-                entrega, mas nenhuma cobrança será criada.
+                As compras ainda não estão liberadas. Você pode conferir frete e entrega, mas o pagamento ainda não abre
+                e nenhum pedido é criado.
               </InlineNotice>
             )}
             <Link className={buttonVariants({ size: "lg", className: "mt-5 w-full" })} href={"/checkout" as Route}>
-              Finalizar compra
+              {payment.available ? "Finalizar compra" : "Conferir frete e entrega"}
             </Link>
             <Link
               href="/products"
@@ -203,11 +203,15 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
           >
             <div className="mx-auto flex max-w-6xl items-center gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-muted-foreground text-xs">Subtotal · frete na finalização</p>
+                {payment.available ? (
+                  <p className="text-muted-foreground text-xs">Subtotal · frete na finalização</p>
+                ) : (
+                  <p className="text-warning-foreground text-xs font-semibold">Pagamento ainda não liberado</p>
+                )}
                 <p className="text-base font-bold tabular-nums">{formatMoneyInCents(subtotalInCents)}</p>
               </div>
               <Link className={buttonVariants({ className: "shrink-0" })} href={"/checkout" as Route}>
-                Finalizar compra
+                {payment.available ? "Finalizar compra" : "Conferir frete"}
               </Link>
             </div>
           </div>

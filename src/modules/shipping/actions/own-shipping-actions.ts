@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { parsePriceInputToCents } from "@/modules/products/domain/price-input";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 import { createOwnShippingMethod, setOwnShippingMethodActive, advanceOwnShipment } from "../application/own-shipping";
 import { ownShippingMethodSchema } from "../domain/own-shipping";
 
@@ -20,7 +20,7 @@ export async function createOwnShippingMethodAction(_: OwnShippingState, form: F
     revalidatePath("/seller/shipping");
     return { success: "Modalidade criada. Ative-a quando estiver pronta para atender esta região." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "createOwnShippingMethodAction").message };
   }
 }
 
@@ -38,7 +38,7 @@ export async function setOwnShippingMethodActiveAction(_: OwnShippingState, form
     revalidatePath("/seller/shipping");
     return { success: "Disponibilidade atualizada." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "setOwnShippingMethodActiveAction").message };
   }
 }
 
@@ -58,6 +58,6 @@ export async function advanceOwnShipmentAction(_: OwnShippingState, form: FormDa
     revalidatePath("/orders", "layout");
     return { success: "Entrega atualizada." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "advanceOwnShipmentAction").message };
   }
 }
