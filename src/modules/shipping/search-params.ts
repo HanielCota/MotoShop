@@ -1,5 +1,7 @@
 import { createLoader, parseAsInteger, parseAsString, parseAsStringLiteral } from "nuqs/server";
 
+import { sellerOrderQueueValues } from "./domain/seller-order-queue";
+
 export const sellerOrderStatusValues = [
   "ALL",
   "PENDING_PAYMENT",
@@ -23,6 +25,7 @@ export const shipmentStatusValues = [
 export const sellerOrderSortValues = ["newest", "oldest"] as const;
 
 export const sellerOrdersSearchParams = {
+  queue: parseAsStringLiteral(sellerOrderQueueValues).withDefault("TO_PREPARE"),
   q: parseAsString,
   from: parseAsString,
   to: parseAsString,
