@@ -34,8 +34,9 @@ export function CheckoutAddressFields({
         Endereço de entrega
       </h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        {/* min-w-0: a grid item otherwise grows to the selected address text and scrolls the page sideways. */}
         {savedAddresses.length > 0 ? (
-          <label className="flex flex-col gap-2 text-sm font-medium sm:col-span-2">
+          <label className="flex min-w-0 flex-col gap-2 text-sm font-medium sm:col-span-2">
             Usar endereço salvo
             <DesignSelect
               aria-label="Usar endereço salvo"
