@@ -1,20 +1,11 @@
 import Link from "next/link";
-import type { Route } from "next";
-import { Heart, KeyRound, MapPin, PackageCheck, UserRound } from "lucide-react";
 
 import { ScrollableTabs } from "@/components/ui/scrollable-tabs";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { SignOutButton } from "@/modules/auth/components/sign-out-button";
 
+import { customerAccountLinks } from "../account-links";
 import { customerGreeting } from "../domain/customer-greeting";
-
-export const customerAccountLinks = [
-  { href: "/orders", label: "Meus pedidos", icon: PackageCheck },
-  { href: "/favorites", label: "Favoritos", icon: Heart },
-  { href: "/account/profile", label: "Dados cadastrais", icon: UserRound },
-  { href: "/account/password", label: "Redefinir senha", icon: KeyRound },
-  { href: "/account/addresses", label: "Meus endereços", icon: MapPin },
-] as const satisfies ReadonlyArray<{ href: Route; label: string; icon: unknown }>;
 
 function isActive(href: string, pathname: string) {
   return href === "/orders" ? pathname === href || pathname.startsWith(`${href}/`) : pathname === href;
