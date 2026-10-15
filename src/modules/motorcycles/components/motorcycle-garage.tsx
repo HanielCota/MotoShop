@@ -7,7 +7,7 @@ import { DesignCheckbox } from "@/components/ui/design-checkbox";
 import { DesignSelect } from "@/components/ui/design-select";
 
 import Link from "next/link";
-import { Bike, CheckCircle2, Plus, Star } from "lucide-react";
+import { Motorbike } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -66,18 +66,14 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
     <article className="border-border bg-card rounded-2xl border p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start gap-4">
         <div className="bg-moto-brand-surface text-brand-strong flex size-12 shrink-0 items-center justify-center rounded-xl">
-          <Bike aria-hidden="true" className="size-6" />
+          <Motorbike aria-hidden="true" className="size-6" />
         </div>
         <div className="@container min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="font-sans text-lg font-semibold tracking-normal">
               {saved.manufacturer} {saved.model}
             </h2>
-            {saved.isPrimary ? (
-              <Badge variant="brand">
-                <Star aria-hidden="true" data-icon="inline-start" /> Principal
-              </Badge>
-            ) : null}
+            {saved.isPrimary ? <Badge variant="brand">Principal</Badge> : null}
           </div>
           <MotorcycleDetails saved={saved} />
           <MotorcycleAvailability saved={saved} />
@@ -209,7 +205,7 @@ export function MotorcycleGarage({
           savedMotorcycles.map((saved) => <SavedMotorcycleCard key={saved.id} saved={saved} fitments={fitments} />)
         ) : (
           <EmptyState
-            icon={Bike}
+            icon={Motorbike}
             title="Sua garagem está vazia"
             description="Salve sua moto para voltar às peças com compatibilidade cadastrada sempre que quiser."
           />
@@ -221,7 +217,6 @@ export function MotorcycleGarage({
         aria-labelledby="add-motorcycle-title"
       >
         <div className="flex items-center gap-2">
-          <Plus aria-hidden="true" className="text-brand-strong size-5" />
           <h2 id="add-motorcycle-title" className="section-title text-foreground">
             Adicionar moto
           </h2>
@@ -257,7 +252,6 @@ export function MotorcycleGarage({
             disabled={pending || fitments.length === 0}
             className="flex min-h-11 w-full items-center justify-center gap-2 px-4"
           >
-            <CheckCircle2 aria-hidden="true" className="size-4" />
             {pending ? "Salvando..." : "Salvar moto"}
           </Button>
           {fitments.length === 0 ? (

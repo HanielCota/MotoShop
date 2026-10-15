@@ -1,6 +1,6 @@
 "use client";
 
-import { Bike, Search, X } from "lucide-react";
+import { Motorbike, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { type FormEvent, useState } from "react";
@@ -166,7 +166,7 @@ export function MotorcycleFinder({
               </DesignSelect>
             </label>
             <Button type="submit" disabled={!selectedFitment} className={cn(submitClassName, "col-span-full")}>
-              <Bike aria-hidden="true" /> Ver peças
+              <Motorbike aria-hidden="true" /> Ver peças
             </Button>
             <p className={helperClassName}>
               {fitments.length > 0

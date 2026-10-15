@@ -16,7 +16,7 @@ vi.mock("next/link", () => ({
   default: ({ href, ...props }: React.ComponentProps<"a">) => <a href={href} {...props} />,
 }));
 
-import { CartPreview } from "./cart-preview";
+import { CartPreview, cartTriggerLabel } from "./cart-preview";
 
 afterEach(() => {
   cleanup();
@@ -41,7 +41,7 @@ it("opens a cart summary and links to the full cart", async () => {
   });
   render(<CartPreview />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Visualizar carrinho" }));
+  fireEvent.click(screen.getByRole("button", { name: /^Carrinho,/ }));
 
   expect(await screen.findByText("Capacete off-road")).toBeInTheDocument();
   expect(screen.getByText("Subtotal").parentElement?.querySelector("strong")).toHaveTextContent("300,00");
@@ -68,7 +68,7 @@ it("offers to review shipping instead of finishing the purchase while payment is
   });
   render(<CartPreview />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Visualizar carrinho" }));
+  fireEvent.click(screen.getByRole("button", { name: /^Carrinho,/ }));
 
   expect(await screen.findByText("Pagamento ainda não liberado")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Conferir frete" })).toHaveAttribute("href", "/checkout");
@@ -89,7 +89,7 @@ it("lets the customer remove an item from the preview", async () => {
   actions.update.mockResolvedValue({ success: "Carrinho atualizado." });
   render(<CartPreview />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Visualizar carrinho" }));
+  fireEvent.click(screen.getByRole("button", { name: /^Carrinho,/ }));
   expect(await screen.findByText("Capacete off-road")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Remover Capacete off-road do carrinho" }));
   await waitFor(() => expect(actions.update).toHaveBeenCalledWith("item-1", 0));
@@ -114,7 +114,7 @@ it("lets the customer empty the whole cart from the preview", async () => {
   actions.clear.mockResolvedValue({ success: "Carrinho limpo." });
   render(<CartPreview />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Visualizar carrinho" }));
+  fireEvent.click(screen.getByRole("button", { name: /^Carrinho,/ }));
   expect(await screen.findByText("Capacete off-road")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Limpar carrinho" }));
   const firstDialog = await screen.findByRole("alertdialog", { name: "Limpar carrinho?" });
@@ -147,7 +147,7 @@ it("updates quantity from the preview and prevents exceeding available stock", a
   actions.update.mockResolvedValue({ success: "Carrinho atualizado." });
   render(<CartPreview />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Visualizar carrinho" }));
+  fireEvent.click(screen.getByRole("button", { name: /^Carrinho,/ }));
   expect(await screen.findByText("Capacete off-road")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Aumentar quantidade de Capacete off-road" })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "Diminuir quantidade de Capacete off-road" }));
@@ -163,7 +163,7 @@ it("shows a retry instead of an endless loading message when the cart cannot be 
   });
   render(<CartPreview />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Visualizar carrinho" }));
+  fireEvent.click(screen.getByRole("button", { name: /^Carrinho,/ }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível carregar o carrinho.");
   expect(screen.queryByText("Carregando carrinho…")).not.toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Ir para o carrinho" })).toHaveAttribute("href", "/cart");
@@ -171,4 +171,10 @@ it("shows a retry instead of an endless loading message when the cart cannot be 
   fireEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
   expect(await screen.findByText("Seu carrinho está vazio")).toBeInTheDocument();
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+
+it("reads the item count in the cart button name (IC-11)", () => {
+  expect(cartTriggerLabel(0)).toBe("Carrinho, vazio");
+  expect(cartTriggerLabel(1)).toBe("Carrinho, 1 item");
+  expect(cartTriggerLabel(3)).toBe("Carrinho, 3 itens");
 });

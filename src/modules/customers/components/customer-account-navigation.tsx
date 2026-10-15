@@ -52,12 +52,12 @@ export async function CustomerAccountNavigation({
             aria-current={isActive(href, pathname) ? "page" : undefined}
             className={`${itemClassName} text-foreground hover:bg-muted aria-[current=page]:bg-moto-brand-surface aria-[current=page]:text-brand-strong lg:aria-[current=page]:border-moto-brand aria-[current=page]:font-semibold`}
           >
-            <Icon aria-hidden="true" className="size-5 shrink-0" />
+            <Icon aria-hidden="true" className="size-4 shrink-0" />
             {label}
           </Link>
         ))}
         <SignOutButton
-          className={`${itemClassName} text-muted-foreground hover:bg-muted hover:text-foreground w-auto text-base lg:w-full lg:font-semibold [&_svg]:size-5`}
+          className={`${itemClassName} text-muted-foreground hover:bg-muted hover:text-foreground w-auto text-base lg:w-full lg:font-semibold [&_svg]:size-4`}
         />
       </ScrollableTabs>
     </aside>

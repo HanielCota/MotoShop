@@ -1,7 +1,7 @@
 import type { Metadata, Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ImageOff, ShieldCheck, ShoppingBag, Store } from "lucide-react";
+import { ImageOff, ShoppingBag, Store } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -121,7 +121,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
                                 className="object-cover"
                               />
                             ) : (
-                              <ImageOff className="text-muted-foreground size-6" />
+                              <ImageOff aria-hidden="true" className="text-muted-foreground size-6" />
                             )}
                           </Link>
                           <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:justify-between">
@@ -195,8 +195,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
             >
               Continuar comprando
             </Link>
-            <p className="text-muted-foreground mt-3 flex items-start gap-2 text-xs">
-              <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            <p className="text-muted-foreground mt-3 text-xs">
               Preços e estoque são confirmados novamente ao finalizar a compra.
             </p>
           </aside>

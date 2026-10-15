@@ -1,4 +1,5 @@
 "use client";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormMessage } from "@/components/ui/form-message";
@@ -44,6 +45,7 @@ export function CustomerAddressActions({
       <ConfirmDialog
         trigger={
           <Button type="button" variant="destructive" className="border-destructive/30 border text-xs">
+            <Trash2 aria-hidden="true" data-icon="inline-start" />
             Remover
           </Button>
         }

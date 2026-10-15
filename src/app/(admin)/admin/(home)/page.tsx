@@ -1,5 +1,6 @@
 import type { Route } from "next";
-import { AlertTriangle, Ban, Mail, PackageSearch, Scale, Store, Truck, Undo2, Webhook } from "lucide-react";
+// KPI icons show the object counted, never a state (IC-20): the label already says "com falha".
+import { FileX2, Mail, PackageSearch, Scale, Send, Store, Truck, Undo2, Webhook } from "lucide-react";
 
 import { PageHeader, SectionHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
@@ -30,7 +31,7 @@ export default async function AdminHomePage() {
       label: "Cancelamentos solicitados",
       value: counters.requestedCancellations,
       href: "/admin/cancellations?cancellationStatus=REQUESTED",
-      icon: Ban,
+      icon: FileX2,
     },
     {
       label: "Devoluções solicitadas",
@@ -64,7 +65,7 @@ export default async function AdminHomePage() {
       label: "Eventos pendentes com falha",
       value: counters.failedOutboxEvents,
       href: "/admin/outbox",
-      icon: AlertTriangle,
+      icon: Send,
     },
   ];
 

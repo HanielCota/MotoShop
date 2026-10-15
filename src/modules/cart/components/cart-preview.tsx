@@ -2,7 +2,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { Popover } from "@base-ui/react/popover";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -17,6 +17,12 @@ import { clearCartAction, getCartPreviewAction, updateCartItemAction } from "../
 import { CART_UPDATED_EVENT } from "./cart-events";
 
 type CartPreviewData = Awaited<ReturnType<typeof getCartPreviewAction>>;
+
+/** The count in the badge is part of the accessible name (IC-11): "Carrinho, 3 itens". */
+export function cartTriggerLabel(itemCount: number): string {
+  if (itemCount <= 0) return "Carrinho, vazio";
+  return `Carrinho, ${itemCount} ${itemCount === 1 ? "item" : "itens"}`;
+}
 
 export function CartPreview() {
   const [open, setOpen] = useState(false);
@@ -105,12 +111,15 @@ export function CartPreview() {
         openOnHover
         delay={250}
         closeDelay={180}
-        aria-label="Visualizar carrinho"
+        aria-label={cartTriggerLabel(data?.itemCount ?? 0)}
         className="relative inline-flex size-11 items-center justify-center rounded-md text-white/85 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
         <ShoppingBag aria-hidden="true" className="size-5" />
         {data && data.itemCount > 0 ? (
-          <span className="bg-moto-brand text-moto-brand-foreground absolute top-0.5 right-0.5 min-w-5 rounded-full px-1 text-center text-xs leading-5 font-bold">
+          <span
+            aria-hidden="true"
+            className="bg-moto-brand text-moto-brand-foreground absolute top-0.5 right-0.5 min-w-5 rounded-full px-1 text-center text-xs leading-5 font-bold"
+          >
             {data.itemCount > 99 ? "99+" : data.itemCount}
           </span>
         ) : null}
@@ -179,13 +188,14 @@ export function CartPreview() {
                       </div>
                       <Button
                         type="button"
-                        variant="link"
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-destructive shrink-0"
                         disabled={pending}
                         aria-label={`Remover ${item.name} do carrinho`}
                         onClick={() => updateItem(item.id, 0)}
                       >
-                        Remover
+                        <Trash2 aria-hidden="true" />
                       </Button>
                     </li>
                   ))}

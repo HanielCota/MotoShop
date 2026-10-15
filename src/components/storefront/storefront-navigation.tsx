@@ -133,12 +133,12 @@ function HeaderSearch({ id, className }: { id: string; className?: string }) {
         className="w-full"
         listClassName="sm:w-80"
         placeholder="Buscar peças, marcas ou lojas"
-        inputClassName="focus-visible:border-moto-brand focus-visible:ring-moto-brand/40 h-11 w-full rounded-md border border-white/20 bg-white/10 pr-11 pl-3 text-base text-white placeholder:text-white/55 focus-visible:ring-3 focus-visible:outline-none md:h-10 md:text-sm"
+        inputClassName="focus-visible:border-moto-brand focus-visible:ring-moto-brand/40 h-11 w-full rounded-md border border-white/20 bg-white/10 pr-11 pl-3 text-base text-white placeholder:text-white/55 focus-visible:ring-3 focus-visible:outline-none md:text-sm"
       />
       <button
         type="submit"
         aria-label="Buscar"
-        className="focus-visible:ring-moto-brand/60 absolute right-0 inline-flex size-10 items-center justify-center rounded-md text-white/80 hover:text-white focus-visible:ring-3 focus-visible:outline-none"
+        className="focus-visible:ring-moto-brand/60 absolute right-0 inline-flex size-11 items-center justify-center rounded-md text-white/80 hover:text-white focus-visible:ring-3 focus-visible:outline-none"
       >
         <Search aria-hidden="true" className="size-4" />
       </button>

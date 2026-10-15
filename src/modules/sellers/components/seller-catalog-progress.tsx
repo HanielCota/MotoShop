@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 
@@ -33,9 +34,12 @@ export function SellerCatalogProgress({ progress }: { progress: Progress }) {
                 className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${step.complete ? "bg-success-surface text-success-foreground" : "bg-muted text-muted-foreground"}`}
                 aria-hidden="true"
               >
-                {step.complete ? "✓" : index + 1}
+                {step.complete ? <Check className="size-3.5" /> : index + 1}
               </span>
-              <span>{step.label}</span>
+              <span>
+                {step.label}
+                <span className="sr-only">{step.complete ? " (concluído)" : " (pendente)"}</span>
+              </span>
             </li>
           ))}
         </ol>

@@ -26,6 +26,13 @@ describe("SellerCatalogProgress", () => {
     expect(screen.queryByText(/produto\(s\) publicado/i)).not.toBeInTheDocument();
   });
 
+  it("says in text which steps are done, not only with the check and color (IC-12)", () => {
+    render(<SellerCatalogProgress progress={{ editable: 1, submitted: 0, approved: 0 }} />);
+
+    expect(screen.getByText("Loja aprovada").textContent).toContain("(concluído)");
+    expect(screen.getByText("Primeiro produto publicado").textContent).toContain("(pendente)");
+  });
+
   it("leaves the overview once a product is published (UX-09)", () => {
     const { container } = render(<SellerCatalogProgress progress={{ editable: 2, submitted: 1, approved: 1 }} />);
 
