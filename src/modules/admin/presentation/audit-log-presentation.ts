@@ -49,6 +49,7 @@ export const auditActionLabels: Record<string, string> = {
   SELLER_COMMISSION_UPDATED: "Comissão da loja alterada",
   SELLER_COUPON_ACTIVATED: "Cupom da loja ativado",
   SELLER_COUPON_DEACTIVATED: "Cupom da loja desativado",
+  SELLER_COUPON_HIDDEN_FROM_PRODUCT_PAGE: "Cupom retirado da página do produto",
   SELLER_COUPON_SHOWN_ON_PRODUCT_PAGE: "Cupom exibido na página do produto",
   SELLER_MEMBER_ADDED: "Membro adicionado à equipe",
   SELLER_MEMBER_REMOVED: "Membro removido da equipe",
