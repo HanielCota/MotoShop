@@ -7,7 +7,7 @@ import { DesignCheckbox } from "@/components/ui/design-checkbox";
 import { DesignSelect } from "@/components/ui/design-select";
 
 import Link from "next/link";
-import { Motorbike, Plus, Star } from "lucide-react";
+import { Motorbike, Plus } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -73,11 +73,7 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
             <h2 className="font-sans text-lg font-semibold tracking-normal">
               {saved.manufacturer} {saved.model}
             </h2>
-            {saved.isPrimary ? (
-              <Badge variant="brand">
-                <Star aria-hidden="true" data-icon="inline-start" /> Principal
-              </Badge>
-            ) : null}
+            {saved.isPrimary ? <Badge variant="brand">Principal</Badge> : null}
           </div>
           <MotorcycleDetails saved={saved} />
           <MotorcycleAvailability saved={saved} />
