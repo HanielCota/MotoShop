@@ -49,6 +49,12 @@ export type ProductCardData = {
   isNew: boolean;
 };
 
+/** Width requested from ImageKit for card images: about 2x the widest card (~300 CSS px). */
+export const PRODUCT_CARD_IMAGE_WIDTH = 640;
+
+/** 2 columns on phones, 3 on tablets and up to 4 on desktop grids. */
+const PRODUCT_CARD_IMAGE_SIZES = "(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 25vw";
+
 /**
  * Card público de produto (server component). Usado no catálogo, nas vitrines,
  * na homepage e em favoritos para manter um único padrão visual.
@@ -94,10 +100,12 @@ export function ProductCard({
           <Image
             src={product.imageUrl}
             alt={product.imageAlt}
-            width={640}
-            height={640}
+            width={PRODUCT_CARD_IMAGE_WIDTH}
+            height={PRODUCT_CARD_IMAGE_WIDTH}
+            sizes={PRODUCT_CARD_IMAGE_SIZES}
             loading={eager ? "eager" : "lazy"}
-            unoptimized
+            // Local demo files go through the Next optimizer; ImageKit URLs are already resized via ?tr=w-.
+            unoptimized={!product.imageUrl.startsWith("/")}
             className="size-full object-contain transition-transform duration-200 group-hover/card:scale-[1.02] motion-reduce:transition-none"
           />
         ) : (
