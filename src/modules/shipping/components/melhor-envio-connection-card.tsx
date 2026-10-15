@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { ArrowUpRight, CheckCircle2, CircleAlert, Truck } from "lucide-react";
+import { CheckCircle2, CircleAlert, Truck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,7 +62,6 @@ export function MelhorEnvioConnectionCard({
             className="bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-ring inline-flex min-h-10 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             {connected ? "Reconectar conta" : "Conectar Melhor Envio"}
-            <ArrowUpRight className="size-4" aria-hidden="true" />
           </Link>
         ) : (
           <p className="rounded-lg border border-dashed px-4 py-3 text-sm">

@@ -1,4 +1,4 @@
-import { ArrowUpRight, type LucideIcon } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 
 import { SignOutButton } from "@/modules/auth/components/sign-out-button";
@@ -31,7 +31,6 @@ export function AppAreaHeader({ area, subtitle, icon: Icon }: AppAreaHeaderProps
         >
           <span className="hidden sm:inline">Ver marketplace</span>
           <span className="sm:hidden">Loja</span>
-          <ArrowUpRight className="size-4" aria-hidden="true" />
         </Link>
         <SignOutButton className="text-muted-foreground hover:text-foreground hover:bg-muted min-h-11 rounded-md" />
       </div>
