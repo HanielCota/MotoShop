@@ -6,7 +6,7 @@ it("styles standalone text links with a 44px touch target on phones and no paddi
   const classes = buttonVariants({ variant: "link", size: "link" }).split(" ");
 
   expect(classes).toEqual(
-    expect.arrayContaining(["text-brand-text", "underline", "min-h-11", "sm:min-h-9", "px-0", "w-fit"]),
+    expect.arrayContaining(["text-brand-strong", "underline", "min-h-11", "sm:min-h-9", "px-0", "w-fit"]),
   );
   expect(classes).not.toContain("h-11");
 });
