@@ -15,7 +15,14 @@ import { ShipmentActions } from "@/modules/shipping/components/shipment-actions"
 import { OwnShipmentActions } from "@/modules/shipping/components/own-shipping-forms";
 import { hasSellerPermission } from "@/modules/auth/domain/seller-permissions";
 import { canAdvanceOwnShipment } from "@/modules/shipping/domain/own-shipping";
-import { listSellerOrders } from "@/modules/shipping/queries/seller-orders";
+import { SellerOrderDelivery } from "@/modules/shipping/components/seller-order-delivery";
+import { SellerOrderQueueTabs } from "@/modules/shipping/components/seller-order-queue-tabs";
+import {
+  countSellerOrdersInQueue,
+  resolveSellerOrderQueue,
+  type SellerOrderQueue,
+} from "@/modules/shipping/domain/seller-order-queue";
+import { countSellerOrdersByStatus, listSellerOrders } from "@/modules/shipping/queries/seller-orders";
 import {
   loadSellerOrdersSearchParams,
   sellerOrderStatusValues,
@@ -38,6 +45,12 @@ const shipmentStatusOptions = getStatusOptions("shipment").filter(({ value }) =>
 );
 const orderStatusFilterOptions = [{ value: "ALL", label: "Todos" }, ...orderStatusOptions];
 const shipmentStatusFilterOptions = [{ value: "ALL", label: "Todos" }, ...shipmentStatusOptions];
+const emptyQueueTitles: Record<SellerOrderQueue, string> = {
+  TO_PREPARE: "Nenhum pedido para preparar agora.",
+  AWAITING_PAYMENT: "Nenhum pedido aguardando pagamento.",
+  SHIPPED: "Nenhum pedido enviado ainda.",
+  ALL: "Ainda não há pedidos na loja.",
+};
 const sortOptions = [
   { value: "newest", label: "Mais recentes" },
   { value: "oldest", label: "Mais antigos" },
@@ -50,12 +63,23 @@ export default async function SellerOrdersPage({
 }) {
   const context = await requireSellerAccess("ORDER_READ");
   const params = await loadSellerOrdersSearchParams(searchParams);
-  const result = await listSellerOrders(context.seller.id, params);
+  const [result, countsByStatus] = await Promise.all([
+    listSellerOrders(context.seller.id, params),
+    countSellerOrdersByStatus(context.seller.id),
+  ]);
+  const queue = resolveSellerOrderQueue(params.queue, params.status);
+  const queueCounts = {
+    TO_PREPARE: countSellerOrdersInQueue("TO_PREPARE", countsByStatus),
+    AWAITING_PAYMENT: countSellerOrdersInQueue("AWAITING_PAYMENT", countsByStatus),
+  };
   const hasFilters = Boolean(
     params.q || params.from || params.to || params.status !== "ALL" || params.shipmentStatus !== "ALL",
   );
 
   const pageHref = (page: number) => serializeSellerOrdersSearchParams(basePath, { ...params, page }) as Route;
+  // Trocar de aba limpa o status escolhido no filtro, que de outro modo anularia a aba.
+  const queueHref = (nextQueue: SellerOrderQueue) =>
+    serializeSellerOrdersSearchParams(basePath, { ...params, queue: nextQueue, status: "ALL", page: 1 }) as Route;
 
   return (
     <>
@@ -75,11 +99,13 @@ export default async function SellerOrdersPage({
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <SellerOrderQueueTabs current={queue} counts={queueCounts} hrefFor={queueHref} />
           <details className="mb-5" open={hasFilters}>
             <summary className="flex min-h-11 cursor-pointer list-none items-center font-semibold [&::-webkit-details-marker]:hidden">
               Filtros de pedidos
             </summary>
             <FilterForm resetHref={basePath} action={basePath} label="Filtrar pedidos">
+              <input type="hidden" name="queue" value={params.queue} />
               <FilterText label="Buscar pedido" name="q" value={params.q} placeholder="Número, cliente ou e-mail" />
               <FilterSelect label="Status" name="status" value={params.status} options={orderStatusFilterOptions} />
               <FilterSelect
@@ -97,15 +123,11 @@ export default async function SellerOrdersPage({
             <EmptyState
               variant="inline"
               icon={ClipboardList}
-              title={
-                hasFilters
-                  ? "Nenhum pedido corresponde aos filtros selecionados."
-                  : "Ainda não há pedidos para processar."
-              }
+              title={hasFilters ? "Nenhum pedido corresponde aos filtros selecionados." : emptyQueueTitles[queue]}
               description={
                 hasFilters
                   ? "Ajuste ou limpe os filtros para ver outros pedidos."
-                  : "Novos pedidos pagos aparecerão aqui."
+                  : "Novos pedidos pagos aparecem em A preparar."
               }
               action={hasFilters ? { label: "Limpar filtros", href: basePath } : undefined}
             />
@@ -150,33 +172,7 @@ export default async function SellerOrdersPage({
                       ) : null}
                     </div>
 
-                    {shipment?.provider === "OWN" && order.order.shippingAddress ? (
-                      <section
-                        className="bg-muted grid gap-2 rounded-md p-3 text-sm"
-                        aria-label="Dados da entrega própria"
-                      >
-                        <h4 className="font-semibold">Preparar entrega</h4>
-                        <ul className="list-inside list-disc">
-                          {order.items.map((item) => (
-                            <li key={item.id}>
-                              {item.quantity} × {item.productNameSnapshot} · {item.variantDescriptionSnapshot} · SKU{" "}
-                              {item.skuSnapshot}
-                            </li>
-                          ))}
-                        </ul>
-                        <address className="break-words not-italic">
-                          {order.order.shippingAddress.recipient}
-                          <br />
-                          {order.order.shippingAddress.street}, {order.order.shippingAddress.number}
-                          {order.order.shippingAddress.complement ? ` · ${order.order.shippingAddress.complement}` : ""}
-                          <br />
-                          {order.order.shippingAddress.neighborhood} · {order.order.shippingAddress.city}/
-                          {order.order.shippingAddress.state}
-                          <br />
-                          CEP {order.order.shippingAddress.postalCode} · Telefone {order.order.customerPhone}
-                        </address>
-                      </section>
-                    ) : null}
+                    <SellerOrderDelivery order={order} />
                     {hasSellerPermission(context.membership.role, "ORDER_UPDATE") &&
                       (shipment?.provider === "OWN" ? (
                         <OwnShipmentActions

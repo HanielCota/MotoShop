@@ -1,9 +1,15 @@
 import "server-only";
 
 import type { Prisma } from "@/generated/prisma/client";
+import type { SellerOrderStatus } from "@/generated/prisma/enums";
 import { db } from "@/lib/database";
 import { parseDateFilter } from "@/lib/date-filter";
 
+import {
+  getSellerOrderQueueStatuses,
+  resolveSellerOrderQueue,
+  type SellerOrderQueue,
+} from "../domain/seller-order-queue";
 import type { sellerOrderSortValues, sellerOrderStatusValues, shipmentStatusValues } from "../search-params";
 
 type SellerOrderFilterStatus = (typeof sellerOrderStatusValues)[number];
@@ -11,6 +17,8 @@ type ShipmentFilterStatus = (typeof shipmentStatusValues)[number];
 type SellerOrderSort = (typeof sellerOrderSortValues)[number];
 
 type SellerOrderListInput = {
+  /** Sem fila, lista todos os pedidos; a página abre em "A preparar" pelo search param. */
+  queue?: SellerOrderQueue;
   q?: string | null;
   from?: string | null;
   to?: string | null;
@@ -33,6 +41,12 @@ export async function listSellerOrders(sellerId: string, input: SellerOrderListI
         order: { include: { shippingAddress: true } },
         shipment: true,
         items: true,
+        cancellationRequests: {
+          where: { status: { in: ["REQUESTED", "APPROVED"] } },
+          select: { id: true, customerMessage: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
       },
       orderBy: { createdAt: input.sort === "oldest" ? "asc" : "desc" },
       skip: (page - 1) * pageSize,
@@ -46,10 +60,12 @@ export async function listSellerOrders(sellerId: string, input: SellerOrderListI
 /** O `sellerId` é sempre o primeiro filtro: os demais apenas restringem pedidos da própria loja. */
 function buildSellerOrderWhere(sellerId: string, input: SellerOrderListInput) {
   const query = input.q?.trim();
+  const queueStatuses = getSellerOrderQueueStatuses(resolveSellerOrderQueue(input.queue ?? "ALL", input.status));
   return {
     sellerId,
     ...buildCreatedAtFilter(input.from, input.to),
     ...(input.status !== "ALL" ? { status: input.status } : {}),
+    ...(queueStatuses ? { status: { in: [...queueStatuses] } } : {}),
     ...(input.shipmentStatus !== "ALL" ? { shipment: { status: input.shipmentStatus } } : {}),
     ...(query ? { OR: buildSellerOrderSearch(query) } : {}),
   } satisfies Prisma.SellerOrderWhereInput;
@@ -78,4 +94,12 @@ function buildSellerOrderSearch(query: string) {
       },
     },
   ];
+}
+
+/** Contagem por status para as abas da fila; sempre restrita ao `sellerId`. */
+export async function countSellerOrdersByStatus(sellerId: string) {
+  const groups = await db.sellerOrder.groupBy({ by: ["status"], where: { sellerId }, _count: { _all: true } });
+  return Object.fromEntries(groups.map((group) => [group.status, group._count._all])) as Partial<
+    Record<SellerOrderStatus, number>
+  >;
 }

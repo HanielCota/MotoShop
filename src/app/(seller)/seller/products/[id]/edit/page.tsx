@@ -42,7 +42,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       />
       {product.status === "REJECTED" && product.rejectionReason ? (
         <InlineNotice tone="error" role="note">
-          <span className="font-semibold">Motivo da rejeição:</span> {product.rejectionReason}
+          <span className="font-semibold">Motivo da recusa:</span> {product.rejectionReason}
         </InlineNotice>
       ) : null}
       <Card>

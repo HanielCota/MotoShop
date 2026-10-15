@@ -5,13 +5,19 @@ import { db } from "@/lib/database";
 import { ApplicationError } from "@/shared/errors/application-error";
 
 import { adjustAvailableInventory } from "../domain/inventory-balance";
+import {
+  getManualAdjustmentChange,
+  getManualAdjustmentReason,
+  manualAdjustmentMovementTypes,
+  validateManualAdjustment,
+  type ManualAdjustment,
+} from "../domain/manual-adjustment";
 
 type ManualAdjustmentInput = {
   sellerId: string;
   actorUserId: string;
   variantId: string;
-  /** Inteiro diferente de zero; positivo = entrada, negativo = saída. */
-  quantityChange: number;
+  adjustment: ManualAdjustment;
 };
 
 /**
@@ -19,13 +25,10 @@ type ManualAdjustmentInput = {
  * (`FOR UPDATE`) antes de ler o saldo e registra a movimentação auditável.
  */
 export async function adjustInventoryManually(input: ManualAdjustmentInput) {
-  const { sellerId, actorUserId, variantId, quantityChange } = input;
-  if (!Number.isSafeInteger(quantityChange) || quantityChange === 0) {
-    throw new ApplicationError({
-      code: "VALIDATION_ERROR",
-      message: "Informe um ajuste inteiro diferente de zero.",
-      statusCode: 400,
-    });
+  const { sellerId, actorUserId, variantId, adjustment } = input;
+  const validationError = validateManualAdjustment(adjustment);
+  if (validationError) {
+    throw new ApplicationError({ code: "VALIDATION_ERROR", message: validationError, statusCode: 400 });
   }
 
   return db.$transaction(async (tx) => {
@@ -45,6 +48,15 @@ export async function adjustInventoryManually(input: ManualAdjustmentInput) {
     const inventory = await tx.inventory.findFirst({ where: { variantId, sellerId } });
     if (!inventory)
       throw new ApplicationError({ code: "NOT_FOUND", message: "Estoque não encontrado.", statusCode: 404 });
+    // A correção depende do saldo lido sob o lock: outro ajuste ou venda pode ter mudado o número.
+    const quantityChange = getManualAdjustmentChange(adjustment, inventory.availableQuantity);
+    if (quantityChange === 0) {
+      throw new ApplicationError({
+        code: "VALIDATION_ERROR",
+        message: "O estoque já está com essa quantidade.",
+        statusCode: 400,
+      });
+    }
     const balance = adjustAvailableInventory(inventory, quantityChange);
     await tx.inventory.update({
       where: { id: inventory.id },
@@ -52,11 +64,11 @@ export async function adjustInventoryManually(input: ManualAdjustmentInput) {
     });
     await tx.inventoryMovement.create({
       data: {
-        type: quantityChange > 0 ? "MANUAL_IN" : "MANUAL_OUT",
+        type: manualAdjustmentMovementTypes[adjustment.kind],
         quantityChange,
         availableQuantityAfter: balance.availableQuantity,
         reservedQuantityAfter: balance.reservedQuantity,
-        reason: "Ajuste manual pelo lojista",
+        reason: getManualAdjustmentReason(adjustment),
         inventoryId: inventory.id,
         variantId,
         sellerId,

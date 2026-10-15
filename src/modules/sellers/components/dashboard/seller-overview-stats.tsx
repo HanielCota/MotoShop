@@ -1,11 +1,11 @@
 import { CircleDollarSign, MessageCircleQuestion, PackageOpen, PackageSearch } from "lucide-react";
 
 import { StatCard } from "@/components/ui/stat-card";
-import { formatMoneyInCents } from "@/lib/format";
+import { formatCount, formatMoneyInCents } from "@/lib/format";
 import type { SellerDashboardPermissions } from "@/modules/sellers/application/get-seller-dashboard-context";
 import {
-  countSellerLowStockVariants,
   countSellerOrdersToPrepare,
+  countSellerStockAlerts,
   countSellerUnansweredQuestions,
   getSellerMonthNetSales,
   LOW_STOCK_THRESHOLD,
@@ -22,7 +22,7 @@ export async function SellerOverviewStats({
   const [ordersToPrepare, unansweredQuestions, lowStock, monthSales] = await Promise.all([
     permissions.canReadOrders ? countSellerOrdersToPrepare(sellerId) : null,
     permissions.canManageCatalog ? countSellerUnansweredQuestions(sellerId) : null,
-    permissions.canManageCatalog ? countSellerLowStockVariants(sellerId) : null,
+    permissions.canManageCatalog ? countSellerStockAlerts(sellerId) : null,
     permissions.canReadFinances ? getSellerMonthNetSales(sellerId) : null,
   ]);
 
@@ -53,11 +53,11 @@ export async function SellerOverviewStats({
       <StatCard
         key="stock"
         label="Estoque baixo"
-        value={lowStock}
-        hint={`Variações com até ${LOW_STOCK_THRESHOLD} unidades`}
-        href="/seller#seller-stock"
+        value={lowStock.low + lowStock.out}
+        hint={`${lowStock.low} com até ${LOW_STOCK_THRESHOLD} un. · ${formatCount(lowStock.out, "esgotada", "esgotadas")}`}
+        href="/seller/products?productStock=LOW"
         icon={PackageSearch}
-        tone={lowStock > 0 ? "attention" : "default"}
+        tone={lowStock.low + lowStock.out > 0 ? "attention" : "default"}
       />
     ) : null,
     monthSales !== null ? (

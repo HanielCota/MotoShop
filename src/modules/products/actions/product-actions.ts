@@ -16,7 +16,11 @@ import {
   submitProductForReview,
 } from "../application/product-lifecycle";
 import { createSellerProduct, updateSellerProduct } from "../application/save-product";
-import { validateInventoryAdjustment } from "../domain/inventory-adjustment-input";
+import {
+  MANUAL_ADJUSTMENT_NOTE_MAX_LENGTH,
+  manualAdjustmentKinds,
+  validateManualAdjustment,
+} from "@/modules/inventory/domain/manual-adjustment";
 import { parseProductForm } from "../schemas/parse-product-form";
 
 export type ProductActionState = { error?: string; success?: string };
@@ -66,7 +70,7 @@ async function createProductAndRevalidate(
     return {
       error:
         applicationError.code === "INTERNAL_ERROR"
-          ? "Não foi possível criar o produto. Confira o slug e o SKU."
+          ? "Não foi possível criar o produto. Confira o endereço da página e o SKU."
           : applicationError.message,
     };
   }
@@ -117,7 +121,7 @@ export async function updateProductAction(
     return {
       error:
         applicationError.code === "INTERNAL_ERROR"
-          ? "Não foi possível atualizar o produto. Confira o slug e o SKU."
+          ? "Não foi possível atualizar o produto. Confira o endereço da página e o SKU."
           : applicationError.message,
     };
   }
@@ -145,17 +149,25 @@ export async function restoreProductAction(productId: string): Promise<void> {
   if (restored) revalidateSellerCatalog();
 }
 
-export async function adjustInventoryAction(variantId: string, quantityChange: number): Promise<ProductActionState> {
+const manualAdjustmentSchema = z.object({
+  kind: z.enum(manualAdjustmentKinds, "Escolha o tipo de ajuste."),
+  quantity: z.number("Informe uma quantidade em números inteiros."),
+  note: z.string().trim().max(MANUAL_ADJUSTMENT_NOTE_MAX_LENGTH).optional(),
+});
+
+export async function adjustInventoryAction(variantId: string, input: unknown): Promise<ProductActionState> {
   const context = await requireSellerAccess("PRODUCT_UPDATE");
   if (!productIdSchema.safeParse(variantId).success) return { error: "Variação inválida." };
-  const adjustmentError = validateInventoryAdjustment(quantityChange);
+  const parsed = manualAdjustmentSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira o ajuste de estoque." };
+  const adjustmentError = validateManualAdjustment(parsed.data);
   if (adjustmentError) return { error: adjustmentError };
   try {
     await adjustInventoryManually({
       sellerId: context.seller.id,
       actorUserId: context.session.user.id,
       variantId,
-      quantityChange,
+      adjustment: parsed.data,
     });
     revalidateSellerCatalog();
     revalidatePath("/products");

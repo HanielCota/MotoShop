@@ -48,7 +48,7 @@ export function DisputeStatusActions({ disputeId, status }: { disputeId: string;
               Resolver
             </Button>
             <Button type="button" size="sm" variant="outline" onClick={() => review("REJECT")} disabled={pending}>
-              Rejeitar
+              Recusar
             </Button>
           </div>
         </>

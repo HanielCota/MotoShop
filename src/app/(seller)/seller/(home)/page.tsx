@@ -109,7 +109,7 @@ export default async function SellerHomePage({ searchParams }: { searchParams: S
       ) : null}
       {permissions.canManageCatalog ? (
         <Suspense fallback={<SellerCardSkeleton rows={4} label="Carregando histórico de estoque" />}>
-          <SellerInventoryHistoryCard sellerId={seller.id} searchParams={searchParams} />
+          <SellerInventoryHistoryCard sellerId={seller.id} searchParams={searchParams} summary />
         </Suspense>
       ) : null}
     </>

@@ -15,11 +15,11 @@ const productName = (): HTMLElement => screen.getByLabelText((_, element) => ele
 it("generates the slug from the name until the seller edits it", () => {
   render(<ProductForm {...options} />);
   fireEvent.change(productName(), { target: { value: "Capacete Fóx V1" } });
-  expect(screen.getByLabelText(/^Slug/)).toHaveValue("capacete-fox-v1");
+  expect(screen.getByLabelText(/^Endereço da página/)).toHaveValue("capacete-fox-v1");
 
-  fireEvent.change(screen.getByLabelText(/^Slug/), { target: { value: "meu-slug" } });
+  fireEvent.change(screen.getByLabelText(/^Endereço da página/), { target: { value: "meu-slug" } });
   fireEvent.change(productName(), { target: { value: "Outro nome" } });
-  expect(screen.getByLabelText(/^Slug/)).toHaveValue("meu-slug");
+  expect(screen.getByLabelText(/^Endereço da página/)).toHaveValue("meu-slug");
 });
 
 it("shows inline field errors and does not call the action when invalid", async () => {

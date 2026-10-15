@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
@@ -7,7 +8,7 @@ import { formatDate, formatCount } from "@/lib/format";
 import { listSellerOptionsForAdmin } from "@/modules/sellers/queries/sellers";
 import { getStatusLabel, getStatusOptions } from "@/shared/presentation/status-labels";
 
-import { adminHref } from "../../admin-href";
+import { adminHref, adminOrderHref } from "../../admin-href";
 import { listSellerOrdersForAdmin } from "../../queries/orders";
 import { adminOrderStatusValues, loadAdminOrderSearchParams } from "../../search-params";
 import {
@@ -109,7 +110,9 @@ export async function AdminOrdersSection({ searchParams }: AdminSectionProps) {
           {result.orders.map((order) => (
             <tr key={order.id}>
               <td className={`${cellClassName} font-medium whitespace-nowrap`}>
-                {order.order.orderNumber}
+                <Link href={adminOrderHref(order.order.orderNumber)} className="underline-offset-4 hover:underline">
+                  {order.order.orderNumber}
+                </Link>
                 <p className="text-muted-foreground text-xs font-normal">
                   {formatCount(order._count.items, "item", "itens")}
                 </p>

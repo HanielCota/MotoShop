@@ -6,13 +6,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import type { SellerCatalogProgress as Progress } from "../queries/seller-catalog-progress";
 
 export function SellerCatalogProgress({ progress }: { progress: Progress }) {
-  const hasProduct = progress.editable + progress.submitted + progress.approved > 0;
-  const hasSubmitted = progress.submitted + progress.approved > 0;
+  // Com um produto publicado, os quatro passos estão concluídos: o checklist sai da visão geral.
+  if (progress.approved > 0) return null;
+
+  const hasProduct = progress.editable + progress.submitted > 0;
+  const hasSubmitted = progress.submitted > 0;
   const steps = [
     { label: "Loja aprovada", complete: true },
     { label: "Primeiro produto cadastrado", complete: hasProduct },
     { label: "Produto enviado para revisão", complete: hasSubmitted },
-    { label: "Primeiro produto publicado", complete: progress.approved > 0 },
+    { label: "Primeiro produto publicado", complete: false },
   ];
 
   return (
@@ -35,11 +38,7 @@ export function SellerCatalogProgress({ progress }: { progress: Progress }) {
             </li>
           ))}
         </ol>
-        {progress.approved > 0 ? (
-          <p className="text-muted-foreground text-sm">
-            Sua loja já tem {progress.approved} {progress.approved === 1 ? "produto publicado" : "produtos publicados"}.
-          </p>
-        ) : progress.submitted > 0 ? (
+        {progress.submitted > 0 ? (
           <p className="text-muted-foreground text-sm">
             {progress.submitted} {progress.submitted === 1 ? "produto" : "produtos"} aguardando análise pelo Moto Shop.
             Acompanhe o status em{" "}

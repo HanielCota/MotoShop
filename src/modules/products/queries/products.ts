@@ -152,7 +152,8 @@ const productReviewQueueInclude = {
   category: true,
   brand: true,
   variants: { include: { inventory: true } },
-  images: { orderBy: { sortOrder: "asc" }, take: 1 },
+  images: { orderBy: { sortOrder: "asc" }, take: 4 },
+  _count: { select: { images: true } },
   compatibilities: {
     include: { motorcycleFitment: { include: { motorcycleModel: { include: { manufacturer: true } } } } },
   },
