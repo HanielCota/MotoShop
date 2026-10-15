@@ -6,6 +6,7 @@ import { db } from "@/lib/database";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import type { SellerStatus } from "@/generated/prisma/enums";
 import { ApplicationError } from "@/shared/errors/application-error";
+import { assertRecordId } from "@/shared/validation/record-id";
 
 /**
  * A mesma decisão repetida (clique duplo no botão ou dois administradores decidindo igual) não é
@@ -29,6 +30,7 @@ async function handleUnavailableSeller(sellerId: string, targetStatus: SellerSta
 
 export async function approveSellerAction(sellerId: string): Promise<void> {
   const session = await requireAdminAccess();
+  assertRecordId(sellerId, "Loja inválida.");
   const seller = await db.seller.findFirst({ where: { id: sellerId, status: "PENDING" } });
   if (!seller) return handleUnavailableSeller(sellerId, "ACTIVE");
   await db.$transaction([
@@ -49,6 +51,7 @@ export async function approveSellerAction(sellerId: string): Promise<void> {
 
 export async function rejectSellerAction(sellerId: string): Promise<void> {
   const session = await requireAdminAccess();
+  assertRecordId(sellerId, "Loja inválida.");
   const seller = await db.seller.findFirst({ where: { id: sellerId, status: "PENDING" } });
   if (!seller) return handleUnavailableSeller(sellerId, "REJECTED");
   await db.$transaction([
@@ -69,6 +72,7 @@ export async function rejectSellerAction(sellerId: string): Promise<void> {
 
 export async function suspendSellerAction(sellerId: string): Promise<void> {
   const session = await requireAdminAccess();
+  assertRecordId(sellerId, "Loja inválida.");
   const seller = await db.seller.findFirst({ where: { id: sellerId, status: { in: ["APPROVED", "ACTIVE"] } } });
   if (!seller) return handleUnavailableSeller(sellerId, "SUSPENDED");
   await db.$transaction([
@@ -89,6 +93,7 @@ export async function suspendSellerAction(sellerId: string): Promise<void> {
 
 export async function reactivateSellerAction(sellerId: string): Promise<void> {
   const session = await requireAdminAccess();
+  assertRecordId(sellerId, "Loja inválida.");
   const seller = await db.seller.findFirst({ where: { id: sellerId, status: "SUSPENDED" } });
   if (!seller) return handleUnavailableSeller(sellerId, "ACTIVE");
   await db.$transaction([

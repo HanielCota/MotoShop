@@ -38,22 +38,27 @@ describe("product form model", () => {
   it("reports schema errors on the matching form field paths", () => {
     const values = validValues();
     values.description = "curta";
-    values.variants[0]!.priceInCents = "abc";
-    values.variants[0]!.promotionalPriceInCents = "2000,00";
+    defined(values.variants[0]).priceInCents = "abc";
+    defined(values.variants[0]).promotionalPriceInCents = "2000,00";
     const result = productFormSchema.safeParse(values);
 
     expect(result.success).toBe(false);
-    const paths = result.error!.issues.map((issue) => issue.path.join("."));
+    const paths = defined(result.error).issues.map((issue) => issue.path.join("."));
     expect(paths).toContain("description");
     expect(paths).toContain("variants.0.priceInCents");
   });
 
   it("flags duplicated SKUs on the second variant", () => {
     const values = validValues();
-    values.variants.push({ ...values.variants[0]!, title: "Preto / G", sku: "fox-v1-m" });
+    values.variants.push({ ...defined(values.variants[0]), title: "Preto / G", sku: "fox-v1-m" });
     const result = productFormSchema.safeParse(values);
 
     expect(result.success).toBe(false);
-    expect(result.error!.issues[0]).toMatchObject({ path: ["variants", 1, "sku"] });
+    expect(defined(result.error).issues[0]).toMatchObject({ path: ["variants", 1, "sku"] });
   });
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

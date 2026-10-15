@@ -8,12 +8,12 @@ import {
 
 describe("commercial form values", () => {
   it("round trips promotion dates with an explicit UTC-03 offset", () => {
-    const date = parsePromotionDate("2026-09-24T10:30")!;
+    const date = defined(parsePromotionDate("2026-09-24T10:30"));
     expect(date.toISOString()).toBe("2026-09-24T13:30:00.000Z");
     expect(formatPromotionDate(date)).toBe("2026-09-24T10:30");
   });
   it.each(["2026-02-30T10:30", "2026-09-24T25:00", "invalid", "2026-09-24"])("rejects invalid date %s", (value) => {
-    expect(Number.isNaN(parsePromotionDate(value)!.getTime())).toBe(true);
+    expect(Number.isNaN(defined(parsePromotionDate(value)).getTime())).toBe(true);
   });
   it("preserves blank measurements as inheritance, not zero", () => {
     expect(parseOptionalInteger("")).toBeNull();
@@ -27,3 +27,8 @@ describe("commercial form values", () => {
     });
   });
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

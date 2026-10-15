@@ -6,6 +6,7 @@ import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { ApplicationError } from "@/shared/errors/application-error";
+import { isRecordId } from "@/shared/validation/record-id";
 
 import { refundReturnRequest } from "../application/refund-return";
 import { reviewReturnRequest } from "../application/review-return";
@@ -39,6 +40,7 @@ export async function reviewReturnRequestAction(
   formData: FormData,
 ): Promise<ReturnAdminActionState> {
   const session = await requireAdminAccess();
+  if (!isRecordId(returnRequestId)) return { error: "Devolução inválida." };
   const parsed = reviewSchema.safeParse({
     decision: formData.get("decision"),
     note: formData.get("note") || undefined,
@@ -61,6 +63,7 @@ export async function reviewReturnRequestAction(
 
 export async function refundReturnRequestAction(returnRequestId: string): Promise<ReturnAdminActionState> {
   const session = await requireAdminAccess();
+  if (!isRecordId(returnRequestId)) return { error: "Devolução inválida." };
 
   try {
     const result = await refundReturnRequest({ returnRequestId, actorUserId: session.user.id });

@@ -70,7 +70,7 @@ export const auth = betterAuth({
   },
   hooks: {
     // Per-account limit on top of the per-IP rule above (see sign-in-account-rate-limit.ts).
-    before: createAuthMiddleware(async (ctx) => enforceSignInAccountRateLimit(ctx.path, ctx.body)),
+    before: createAuthMiddleware(async (context) => enforceSignInAccountRateLimit(context.path, context.body)),
   },
   databaseHooks: {
     user: {

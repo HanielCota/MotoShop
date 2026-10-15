@@ -90,13 +90,33 @@ type RefundReservation = {
   externalId: string;
 };
 
+type ProviderRefundResult = Awaited<ReturnType<typeof mercadoPagoProvider.refund>>;
+
+type RefundedPaymentStatus = RefundPaymentResult["paymentStatus"];
+
 async function requestAndSettleRefund(
   reservation: RefundReservation,
   input: RefundPaymentInput,
 ): Promise<RefundPaymentResult> {
-  let providerResult;
+  const providerResult = await requestProviderRefund(reservation, input);
+  await assertProviderApprovedRefund(providerResult, reservation.transactionId);
+  assertRefundedAmountMatches(providerResult, input.amountInCents);
+  const paymentStatus = await settleApprovedRefund(reservation, input.amountInCents, providerResult);
+
+  return {
+    paymentId: reservation.paymentId,
+    transactionId: reservation.transactionId,
+    amountInCents: input.amountInCents,
+    paymentStatus,
+  };
+}
+
+async function requestProviderRefund(
+  reservation: RefundReservation,
+  input: RefundPaymentInput,
+): Promise<ProviderRefundResult> {
   try {
-    providerResult = await mercadoPagoProvider.refund({
+    return await mercadoPagoProvider.refund({
       externalId: reservation.externalId,
       amountInCents: input.amountInCents,
       idempotencyKey: input.idempotencyKey,
@@ -111,43 +131,42 @@ async function requestAndSettleRefund(
     }
     throw error;
   }
+}
 
-  if (providerResult.status !== "APPROVED") {
-    if (["FAILED", "CANCELLED"].includes(providerResult.status)) {
-      await markRefundFailed(reservation.transactionId);
-      throw new ApplicationError({ code: "CONFLICT", message: "O provedor recusou o reembolso.", statusCode: 409 });
-    }
-    throw new ApplicationError({ code: "CONFLICT", message: "O reembolso ainda não foi confirmado pelo provedor." });
+async function assertProviderApprovedRefund(
+  providerResult: ProviderRefundResult,
+  transactionId: string,
+): Promise<void> {
+  if (providerResult.status === "APPROVED") return;
+
+  if (["FAILED", "CANCELLED"].includes(providerResult.status)) {
+    await markRefundFailed(transactionId);
+    throw new ApplicationError({ code: "CONFLICT", message: "O provedor recusou o reembolso.", statusCode: 409 });
   }
+  throw new ApplicationError({ code: "CONFLICT", message: "O reembolso ainda não foi confirmado pelo provedor." });
+}
 
+function assertRefundedAmountMatches(providerResult: ProviderRefundResult, requestedAmountInCents: number): void {
   // The provider reports the refunded value in reais. A mismatch means money moved differently from what was
   // requested: keep the transaction PENDING (never mark it SUCCEEDED or FAILED) so a human reviews it.
   const refundedAmount = providerResult.providerMetadata?.amount;
-  if (typeof refundedAmount === "number" && Math.round(refundedAmount * 100) !== input.amountInCents) {
-    throw new ApplicationError({
-      code: "CONFLICT",
-      message: "O valor reembolsado pelo provedor difere do solicitado. O reembolso precisa de revisão financeira.",
-      statusCode: 409,
-    });
-  }
+  if (typeof refundedAmount !== "number" || Math.round(refundedAmount * 100) === requestedAmountInCents) return;
 
-  const paymentStatus = await db.$transaction(async (tx) => {
+  throw new ApplicationError({
+    code: "CONFLICT",
+    message: "O valor reembolsado pelo provedor difere do solicitado. O reembolso precisa de revisão financeira.",
+    statusCode: 409,
+  });
+}
+
+async function settleApprovedRefund(
+  reservation: RefundReservation,
+  amountInCents: number,
+  providerResult: ProviderRefundResult,
+): Promise<RefundedPaymentStatus> {
+  return db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "payments" WHERE id = ${reservation.paymentId} FOR UPDATE`;
-    const completed = await tx.paymentTransaction.findMany({
-      where: {
-        paymentId: reservation.paymentId,
-        type: "REFUND",
-        status: "SUCCEEDED",
-        id: { not: reservation.transactionId },
-      },
-      select: { amountInCents: true },
-    });
-    const refundedAmountInCents = sumMoneyInCents([
-      ...completed.map((entry) => entry.amountInCents),
-      input.amountInCents,
-    ]);
-    const paymentStatus =
-      refundedAmountInCents === reservation.paymentAmountInCents ? "REFUNDED" : "PARTIALLY_REFUNDED";
+    const paymentStatus = await computeRefundedPaymentStatus(tx, reservation, amountInCents);
     await tx.paymentTransaction.update({
       where: { id: reservation.transactionId },
       data: {
@@ -160,12 +179,24 @@ async function requestAndSettleRefund(
     await tx.payment.update({ where: { id: reservation.paymentId }, data: { status: paymentStatus } });
     return paymentStatus;
   });
-  return {
-    paymentId: reservation.paymentId,
-    transactionId: reservation.transactionId,
-    amountInCents: input.amountInCents,
-    paymentStatus,
-  };
+}
+
+async function computeRefundedPaymentStatus(
+  tx: Prisma.TransactionClient,
+  reservation: RefundReservation,
+  amountInCents: number,
+): Promise<RefundedPaymentStatus> {
+  const completed = await tx.paymentTransaction.findMany({
+    where: {
+      paymentId: reservation.paymentId,
+      type: "REFUND",
+      status: "SUCCEEDED",
+      id: { not: reservation.transactionId },
+    },
+    select: { amountInCents: true },
+  });
+  const refundedAmountInCents = sumMoneyInCents([...completed.map((entry) => entry.amountInCents), amountInCents]);
+  return refundedAmountInCents === reservation.paymentAmountInCents ? "REFUNDED" : "PARTIALLY_REFUNDED";
 }
 
 async function markRefundFailed(transactionId: string): Promise<void> {

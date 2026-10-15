@@ -1,5 +1,6 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { useState } from "react";
 
 import { DesignSelect } from "@/components/ui/design-select";
@@ -24,9 +25,14 @@ export function ProductShippingQuote({ options }: { options: Option[] }) {
     setPending(true);
     try {
       const result = await quoteProductShippingAction({ variantId, postalCode });
-      if (result.error) setMessage(result.error);
-      else setQuotes(result.quotes);
-    } catch {
+      if (result.error) {
+        setMessage(result.error);
+        return;
+      }
+
+      setQuotes(result.quotes);
+    } catch (error) {
+      Sentry.captureException(error);
       setMessage("Não foi possível calcular o frete agora. Tente novamente.");
     } finally {
       setPending(false);

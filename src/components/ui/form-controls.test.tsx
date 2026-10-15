@@ -16,7 +16,7 @@ describe("shared form controls", () => {
     );
 
     expect(screen.getByRole("spinbutton", { name: "Quantidade" })).toHaveAttribute("aria-invalid", "true");
-    expect(new FormData(container.querySelector("form")!).get("amount")).toBe("2");
+    expect(new FormData(defined(container.querySelector("form"))).get("amount")).toBe("2");
   });
 
   it("preserves textarea constraints and disabled state", () => {
@@ -25,3 +25,8 @@ describe("shared form controls", () => {
     expect(screen.getByRole("textbox", { name: "Observação" })).toHaveAttribute("maxlength", "100");
   });
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

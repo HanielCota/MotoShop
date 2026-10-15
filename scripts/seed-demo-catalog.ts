@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { PrismaClient } from "../src/generated/prisma/client";
+import { must } from "./must";
 
 config({ path: ".env.local", quiet: true });
 
@@ -163,7 +164,10 @@ async function main() {
     if (rows.length !== products.length)
       throw new Error(`Expected ${products.length} demo products; found ${rows.length}.`);
     for (const row of rows) {
-      const definition = products.find((product) => product.slug === row.slug)!;
+      const definition = must(
+        products.find((product) => product.slug === row.slug),
+        `demo product ${row.slug}`,
+      );
       if (
         !row.isDemo ||
         row.images[0]?.storageKey !== definition.image ||
@@ -339,7 +343,7 @@ async function main() {
       }
 
       for (const definition of products) {
-        const store = storeBySlug.get(definition.storeSlug)!;
+        const store = must(storeBySlug.get(definition.storeSlug), `demo store ${definition.storeSlug}`);
         const data = {
           name: definition.name,
           description: definition.description,
@@ -349,8 +353,8 @@ async function main() {
           heightInMillimeters: definition.dimensions[0],
           widthInMillimeters: definition.dimensions[1],
           lengthInMillimeters: definition.dimensions[2],
-          categoryId: categories.get(definition.categorySlug)!,
-          brandId: brands.get(definition.brandSlug)!,
+          categoryId: must(categories.get(definition.categorySlug), `category ${definition.categorySlug}`),
+          brandId: must(brands.get(definition.brandSlug), `brand ${definition.brandSlug}`),
         };
         const product = await tx.product.upsert({
           where: { slug: definition.slug },

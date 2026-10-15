@@ -3,11 +3,11 @@
 import { Prisma } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 
-import { db } from "@/lib/database";
 import { slugify } from "@/lib/utils";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { asApplicationError } from "@/shared/errors/application-error";
 
+import { updateStoreProfile } from "../application/update-store-profile";
 import { storeProfileSchema } from "../schemas/store-profile";
 
 export type StoreProfileActionState = { error?: string; success?: string };
@@ -17,89 +17,12 @@ export async function updateStoreProfileAction(
   formData: FormData,
 ): Promise<StoreProfileActionState> {
   const context = await requireSellerAccess("SELLER_MANAGE");
-  const parsed = storeProfileSchema.safeParse({
-    name: formData.get("name"),
-    slug: slugify(String(formData.get("slug") ?? "")),
-    description: String(formData.get("description") ?? "").trim(),
-    instagramUrl: String(formData.get("instagramUrl") ?? "").trim(),
-    youtubeUrl: String(formData.get("youtubeUrl") ?? "").trim(),
-    whatsappUrl: String(formData.get("whatsappUrl") ?? "").trim(),
-    facebookUrl: String(formData.get("facebookUrl") ?? "").trim(),
-  });
-
+  const parsed = storeProfileSchema.safeParse(readStoreProfileFormInput(formData));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os dados da loja." };
 
   try {
-    const result = await db.$transaction(async (tx) => {
-      const store = await tx.store.findFirst({
-        where: { id: context.store.id, sellerId: context.seller.id },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          instagramUrl: true,
-          youtubeUrl: true,
-          whatsappUrl: true,
-          facebookUrl: true,
-        },
-      });
-      if (!store) return null;
-
-      const updatedStore = await tx.store.update({
-        where: { id: store.id, sellerId: context.seller.id },
-        data: {
-          name: parsed.data.name,
-          slug: parsed.data.slug,
-          description: parsed.data.description || null,
-          instagramUrl: parsed.data.instagramUrl || null,
-          youtubeUrl: parsed.data.youtubeUrl || null,
-          whatsappUrl: parsed.data.whatsappUrl || null,
-          facebookUrl: parsed.data.facebookUrl || null,
-        },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          description: true,
-          instagramUrl: true,
-          youtubeUrl: true,
-          whatsappUrl: true,
-          facebookUrl: true,
-        },
-      });
-
-      await tx.auditLog.create({
-        data: {
-          action: "STORE_PROFILE_UPDATED",
-          entityType: "STORE",
-          entityId: updatedStore.id,
-          actorUserId: context.session.user.id,
-          metadata: {
-            sellerId: context.seller.id,
-            previous: {
-              name: store.name,
-              slug: store.slug,
-              description: store.description,
-              instagramUrl: store.instagramUrl,
-              youtubeUrl: store.youtubeUrl,
-              whatsappUrl: store.whatsappUrl,
-              facebookUrl: store.facebookUrl,
-            },
-            current: {
-              name: updatedStore.name,
-              slug: updatedStore.slug,
-              description: updatedStore.description,
-              instagramUrl: updatedStore.instagramUrl,
-              youtubeUrl: updatedStore.youtubeUrl,
-              whatsappUrl: updatedStore.whatsappUrl,
-              facebookUrl: updatedStore.facebookUrl,
-            },
-          } as Prisma.InputJsonValue,
-        },
-      });
-      return { previousSlug: store.slug, updatedStore };
-    });
+    const scope = { storeId: context.store.id, sellerId: context.seller.id, actorUserId: context.session.user.id };
+    const result = await updateStoreProfile(scope, parsed.data);
     if (!result) return { error: "Loja não encontrada." };
 
     revalidatePath("/seller", "layout");
@@ -113,4 +36,20 @@ export async function updateStoreProfileAction(
     }
     return { error: asApplicationError(error).message };
   }
+}
+
+function readStoreProfileFormInput(formData: FormData) {
+  return {
+    name: formData.get("name"),
+    slug: slugify(String(formData.get("slug") ?? "")),
+    description: readTrimmedField(formData, "description"),
+    instagramUrl: readTrimmedField(formData, "instagramUrl"),
+    youtubeUrl: readTrimmedField(formData, "youtubeUrl"),
+    whatsappUrl: readTrimmedField(formData, "whatsappUrl"),
+    facebookUrl: readTrimmedField(formData, "facebookUrl"),
+  };
+}
+
+function readTrimmedField(formData: FormData, name: string): string {
+  return String(formData.get(name) ?? "").trim();
 }

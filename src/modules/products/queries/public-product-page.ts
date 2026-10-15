@@ -19,6 +19,10 @@ export type PublicProductFilter = {
   promotion?: "ALL" | "ON_SALE";
 };
 
+function nonNegativeSafeInteger(value: number | null | undefined) {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
 // PostgreSQL computes the same small ranking signals as product-ranking.ts before
 // pagination. Raw SQL stays encapsulated here; values are always bound parameters.
 export async function findPublicProductPage(input: PublicProductFilter, now: Date) {
@@ -31,10 +35,8 @@ export async function findPublicProductPage(input: PublicProductFilter, now: Dat
     : input.motorcycleFitmentId
       ? [input.motorcycleFitmentId]
       : [];
-  const min =
-    Number.isSafeInteger(input.minPriceInCents) && (input.minPriceInCents ?? -1) >= 0 ? input.minPriceInCents! : null;
-  const max =
-    Number.isSafeInteger(input.maxPriceInCents) && (input.maxPriceInCents ?? -1) >= 0 ? input.maxPriceInCents! : null;
+  const min = nonNegativeSafeInteger(input.minPriceInCents);
+  const max = nonNegativeSafeInteger(input.maxPriceInCents);
   const cte = Prisma.sql`WITH offers AS (
     SELECT v."productId", v.sku,
       CASE WHEN v."promotionalPriceInCents" IS NOT NULL AND (v."promotionStartsAt" IS NULL OR v."promotionStartsAt" <= ${now}) AND (v."promotionEndsAt" IS NULL OR v."promotionEndsAt" >= ${now}) THEN v."promotionalPriceInCents" ELSE v."priceInCents" END AS price,

@@ -43,7 +43,8 @@ export function useCheckoutSubmit({
             if (!cardRef.current) throw new Error("Aguarde o carregamento dos campos do cartão.");
             const tokenized = await cardRef.current.tokenize();
             Object.entries(tokenized).forEach(([key, value]) => formData.append(key, value));
-          } else formData.append("paymentMethodId", "pix");
+          }
+          if (input.paymentType !== "card") formData.append("paymentMethodId", "pix");
           idempotencyKey.current ??= crypto.randomUUID();
           formData.append("checkoutIdempotencyKey", idempotencyKey.current);
           formData.append("shippingSelections", JSON.stringify(input.selections));

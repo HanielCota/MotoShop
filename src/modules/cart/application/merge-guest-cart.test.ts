@@ -74,7 +74,7 @@ it("sums quantities per variant, capped by stock and the 99-unit limit, skipping
 
 it("checks variants with the shared purchasable predicate requiring stock", async () => {
   await mergeGuestCartIntoUserCart(input);
-  const where = tx.productVariant.findMany.mock.calls[0]![0].where;
+  const where = defined(tx.productVariant.findMany.mock.calls[0])[0].where;
   expect(where.OR[0]).toEqual(
     expect.objectContaining({
       active: true,
@@ -88,7 +88,7 @@ it("locks both carts before reading items and only reads ownerless guest carts",
   await mergeGuestCartIntoUserCart(input);
   expect(tx.$queryRaw).toHaveBeenCalledTimes(4);
   expect(tx.$queryRaw.mock.invocationCallOrder[3]).toBeLessThan(
-    tx.productVariant.findMany.mock.invocationCallOrder[0]!,
+    defined(tx.productVariant.findMany.mock.invocationCallOrder[0]),
   );
   expect(tx.cart.findFirst).toHaveBeenCalledWith(
     expect.objectContaining({ where: { guestAccessTokenHash: "guest-hash", userId: null, status: "ACTIVE" } }),
@@ -123,5 +123,10 @@ it("creates the user's active cart when they have none", async () => {
   expect(tx.cart.create).toHaveBeenCalledWith(
     expect.objectContaining({ data: { userId: "user-1", status: "ACTIVE" } }),
   );
-  expect(upsertCalls()[0]!.create.cartId).toBe("new-user-cart");
+  expect(defined(upsertCalls()[0]).create.cartId).toBe("new-user-cart");
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

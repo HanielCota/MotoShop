@@ -11,23 +11,31 @@ export function getSafeRedirectPath(next: string | null | undefined, fallback = 
   if (!next.startsWith("/")) return fallback;
   if (next.startsWith("//") || next.startsWith("/\\")) return fallback;
   if (CONTROL_CHARACTERS.test(next) || next.includes("\\")) return fallback;
-  let decoded: string;
-  try {
-    decoded = decodeURIComponent(next);
-  } catch {
-    return fallback;
-  }
+  const decoded = tryDecodeUriComponent(next);
+  if (decoded === null) return fallback;
   if (CONTROL_CHARACTERS.test(decoded) || decoded.includes("\\") || /^\/[\s/]/.test(decoded)) return fallback;
 
-  let url: URL;
-  try {
-    url = new URL(next, PLACEHOLDER_ORIGIN);
-  } catch {
-    return fallback;
-  }
+  const url = tryParseUrl(next, PLACEHOLDER_ORIGIN);
+  if (!url) return fallback;
   if (url.origin !== PLACEHOLDER_ORIGIN) return fallback;
   // Segmentos "." e ".." são resolvidos pelo parser: "/..//evil.com" vira "//evil.com",
   // que o navegador trataria como URL de outra origem.
   if (url.pathname.startsWith("//")) return fallback;
   return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function tryDecodeUriComponent(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
+function tryParseUrl(value: string, base: string): URL | null {
+  try {
+    return new URL(value, base);
+  } catch {
+    return null;
+  }
 }

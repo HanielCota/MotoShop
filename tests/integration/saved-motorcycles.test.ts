@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { testDb } from "../support/database";
+import { must } from "../support/must";
 
 vi.mock("@/lib/database", async () => ({ db: (await import("../support/database")).testDb }));
 
@@ -58,8 +59,14 @@ describe("garagem pessoal", () => {
     expect(mine.filter((motorcycle) => motorcycle.isPrimary)).toHaveLength(1);
     expect((await getPrimarySavedMotorcycle(ownerId))?.motorcycleFitmentId).toBe(firstFitmentId);
     expect(await listSavedMotorcycles(otherId)).toHaveLength(0);
-    const first = mine.find((motorcycle) => motorcycle.motorcycleFitmentId === firstFitmentId)!;
-    const second = mine.find((motorcycle) => motorcycle.motorcycleFitmentId === secondFitmentId)!;
+    const first = must(
+      mine.find((motorcycle) => motorcycle.motorcycleFitmentId === firstFitmentId),
+      "first saved motorcycle",
+    );
+    const second = must(
+      mine.find((motorcycle) => motorcycle.motorcycleFitmentId === secondFitmentId),
+      "second saved motorcycle",
+    );
 
     await expect(changeSavedMotorcycle(otherId, first.id, thirdFitmentId)).rejects.toMatchObject({ code: "NOT_FOUND" });
     await expect(setPrimarySavedMotorcycle(otherId, second.id)).rejects.toMatchObject({ code: "NOT_FOUND" });

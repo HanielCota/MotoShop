@@ -123,7 +123,7 @@ describe("Melhor Envio OAuth callback", () => {
     expect(mocks.exchange).toHaveBeenCalledWith("one-time-code");
     expect(mocks.persist).toHaveBeenCalledWith("seller-1", expect.anything());
     expect(response.headers.get("set-cookie")).toContain("Max-Age=0");
-    expect(mocks.exchange.mock.invocationCallOrder[0]).toBeLessThan(mocks.persist.mock.invocationCallOrder[0]!);
+    expect(mocks.exchange.mock.invocationCallOrder[0]).toBeLessThan(defined(mocks.persist.mock.invocationCallOrder[0]));
   });
 
   it("returns a generic failure and logs only safe metadata when exchange or persistence fails", async () => {
@@ -142,3 +142,8 @@ describe("Melhor Envio OAuth callback", () => {
     expect(mocks.persist).not.toHaveBeenCalled();
   });
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}

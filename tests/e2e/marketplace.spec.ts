@@ -1,21 +1,21 @@
 import { randomUUID } from "node:crypto";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { cleanupFixtures, testDb } from "../support/database";
+import { must, requireEnv } from "../support/must";
 
 async function noHorizontalOverflow(page: Page) {
   const layout = await page.evaluate(() => {
     const overflowingElements = Array.from(document.querySelectorAll<HTMLElement>("body *"))
       .map((element) => {
         const rect = element.getBoundingClientRect();
+        const form = element.closest("form");
         return {
           tag: element.tagName,
           id: element.id,
           className: typeof element.className === "string" ? element.className : "",
           text: element.innerText?.slice(0, 80),
-          formClassName: element.closest("form")?.className,
-          formWidth: element.closest("form")
-            ? Math.round(element.closest("form")!.getBoundingClientRect().width)
-            : null,
+          formClassName: form?.className,
+          formWidth: form ? Math.round(form.getBoundingClientRect().width) : null,
           left: Math.round(rect.left),
           right: Math.round(rect.right),
           width: Math.round(rect.width),
@@ -37,6 +37,36 @@ async function chooseOption(page: Page, label: string, optionName: string) {
   await page.getByRole("option", { name: optionName, exact: true }).click();
 }
 
+async function checkCardFields(page: Page, testInfo: TestInfo) {
+  const cardMethod = page.getByRole("radio", { name: /Cartão de crédito/ });
+  if (await cardMethod.isDisabled()) {
+    await expect(page.getByRole("radio", { name: "Pix", exact: true })).toBeEnabled();
+    await expect(page.getByText("Cartão ainda indisponível. Você pode continuar com Pix.")).toBeVisible();
+    return;
+  }
+
+  await cardMethod.check();
+  await expect(page.getByLabel("Nome no cartão")).toBeVisible();
+  await expect(page.locator("#motoshop-cardNumber iframe")).toBeVisible();
+  await expect(page.locator("#motoshop-expirationDate iframe")).toBeVisible();
+  await expect(page.locator("#motoshop-securityCode iframe")).toBeVisible();
+  await noHorizontalOverflow(page);
+  await page.screenshot({ path: testInfo.outputPath("checkout-card.png"), fullPage: true, caret: "initial" });
+}
+
+async function checkPaymentOptions(page: Page, testInfo: TestInfo) {
+  const paymentUnavailable = page.getByRole("status").filter({ hasText: /temporariamente indisponível/ });
+  if (await paymentUnavailable.count()) {
+    await expect(paymentUnavailable).toBeVisible();
+    await expect(page.getByRole("button", { name: "Pagamento indisponível" })).toBeDisabled();
+    return;
+  }
+
+  await checkCardFields(page, testInfo);
+  await page.getByRole("radio", { name: "Pix", exact: true }).check();
+  await expect(page.locator("#motoshop-cardNumber")).toHaveCount(0);
+}
+
 test("store registration → approval → product → publication → catalog → cart → own shipping", async ({
   page,
   browser,
@@ -44,16 +74,17 @@ test("store registration → approval → product → publication → catalog �
   const run = randomUUID().slice(0, 8);
   const sellerEmail = `e2e-seller-${run}@example.test`;
   const staffEmail = `e2e-orders-${run}@example.test`;
-  const adminEmail = process.env.E2E_ADMIN_EMAIL!;
+  const adminEmail = requireEnv("E2E_ADMIN_EMAIL");
   const password = `Test-${randomUUID()}!`;
   const staffPassword = `Staff-${randomUUID()}!`;
   const slug = `e2e-${run}`;
   const productName = `Capacete Teste ${run}`;
   const couponCode = `E2E${run.toUpperCase()}`;
   const sellerCouponCode = `SEL${run.toUpperCase()}`;
-  const admin = await browser.newContext({ baseURL: testInfo.project.use.baseURL!, viewport: page.viewportSize() });
-  const staffRegistration = await browser.newContext({ baseURL: testInfo.project.use.baseURL! });
-  const staff = await browser.newContext({ baseURL: testInfo.project.use.baseURL!, viewport: page.viewportSize() });
+  const baseURL = must(testInfo.project.use.baseURL, "Playwright baseURL");
+  const admin = await browser.newContext({ baseURL, viewport: page.viewportSize() });
+  const staffRegistration = await browser.newContext({ baseURL });
+  const staff = await browser.newContext({ baseURL, viewport: page.viewportSize() });
   try {
     await page.goto("/login?next=/seller");
     await page.getByRole("button", { name: "Ainda não tenho conta" }).click();
@@ -399,27 +430,7 @@ test("store registration → approval → product → publication → catalog �
       };`,
       }),
     );
-    const paymentUnavailable = page.getByRole("status").filter({ hasText: /temporariamente indisponível/ });
-    if (await paymentUnavailable.count()) {
-      await expect(paymentUnavailable).toBeVisible();
-      await expect(page.getByRole("button", { name: "Pagamento indisponível" })).toBeDisabled();
-    } else {
-      const cardMethod = page.getByRole("radio", { name: /Cartão de crédito/ });
-      if (await cardMethod.isDisabled()) {
-        await expect(page.getByRole("radio", { name: "Pix", exact: true })).toBeEnabled();
-        await expect(page.getByText("Cartão ainda indisponível. Você pode continuar com Pix.")).toBeVisible();
-      } else {
-        await cardMethod.check();
-        await expect(page.getByLabel("Nome no cartão")).toBeVisible();
-        await expect(page.locator("#motoshop-cardNumber iframe")).toBeVisible();
-        await expect(page.locator("#motoshop-expirationDate iframe")).toBeVisible();
-        await expect(page.locator("#motoshop-securityCode iframe")).toBeVisible();
-        await noHorizontalOverflow(page);
-        await page.screenshot({ path: testInfo.outputPath("checkout-card.png"), fullPage: true, caret: "initial" });
-      }
-      await page.getByRole("radio", { name: "Pix", exact: true }).check();
-      await expect(page.locator("#motoshop-cardNumber")).toHaveCount(0);
-    }
+    await checkPaymentOptions(page, testInfo);
     // No payment button is pressed: the checkout service is tested separately with an injected fake.
   } finally {
     testInfo.setTimeout(testInfo.timeout + 30_000);

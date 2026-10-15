@@ -71,45 +71,10 @@ export async function confirmShipmentLabelCancelled(input: {
   actorUserId: string;
   confirmedOrderNumber: string;
 }): Promise<void> {
-  const shipment = await db.shipment.findUnique({
-    where: { id: input.shipmentId },
-    select: {
-      id: true,
-      provider: true,
-      externalShipmentId: true,
-      providerMetadata: true,
-      sellerOrder: { select: { order: { select: { orderNumber: true } } } },
-    },
-  });
-  if (!shipment || shipment.provider !== "MELHOR_ENVIO" || !shipment.externalShipmentId) {
-    throw new ApplicationError({ code: "NOT_FOUND", message: "Etiqueta não encontrada." });
-  }
-  if (!hasLabelCancellationFlag(shipment.providerMetadata)) {
-    throw new ApplicationError({
-      code: "CONFLICT",
-      message: "Esta etiqueta não está aguardando cancelamento no Melhor Envio.",
-      statusCode: 409,
-    });
-  }
-  if (input.confirmedOrderNumber !== shipment.sellerOrder.order.orderNumber) {
-    throw new ApplicationError({
-      code: "VALIDATION_ERROR",
-      message: "Digite exatamente o número do pedido exibido para confirmar a conferência.",
-    });
-  }
+  const shipment = await findFlaggedLabelForConfirmation(input.shipmentId, input.confirmedOrderNumber);
 
   await db.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT id FROM "shipments" WHERE id = ${shipment.id} FOR UPDATE`;
-    const current = await tx.shipment.findUnique({
-      where: { id: shipment.id },
-      select: { externalShipmentId: true, providerMetadata: true },
-    });
-    if (
-      current?.externalShipmentId !== shipment.externalShipmentId ||
-      !hasLabelCancellationFlag(current.providerMetadata)
-    ) {
-      throw new ApplicationError({ code: "CONFLICT", message: "A etiqueta já foi atualizada.", statusCode: 409 });
-    }
+    const current = await lockFlaggedLabel(tx, shipment.id, shipment.externalShipmentId);
     await tx.shipment.update({
       where: { id: shipment.id },
       data: {
@@ -130,9 +95,55 @@ export async function confirmShipmentLabelCancelled(input: {
         actorUserId: input.actorUserId,
         metadata: {
           externalShipmentId: shipment.externalShipmentId,
-          orderNumber: shipment.sellerOrder.order.orderNumber,
+          orderNumber: shipment.orderNumber,
         },
       },
     });
   });
+}
+
+async function findFlaggedLabelForConfirmation(shipmentId: string, confirmedOrderNumber: string) {
+  const shipment = await db.shipment.findUnique({
+    where: { id: shipmentId },
+    select: {
+      id: true,
+      provider: true,
+      externalShipmentId: true,
+      providerMetadata: true,
+      sellerOrder: { select: { order: { select: { orderNumber: true } } } },
+    },
+  });
+  if (!shipment || shipment.provider !== "MELHOR_ENVIO" || !shipment.externalShipmentId) {
+    throw new ApplicationError({ code: "NOT_FOUND", message: "Etiqueta não encontrada." });
+  }
+  if (!hasLabelCancellationFlag(shipment.providerMetadata)) {
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "Esta etiqueta não está aguardando cancelamento no Melhor Envio.",
+      statusCode: 409,
+    });
+  }
+  const orderNumber = shipment.sellerOrder.order.orderNumber;
+  if (confirmedOrderNumber !== orderNumber) {
+    throw new ApplicationError({
+      code: "VALIDATION_ERROR",
+      message: "Digite exatamente o número do pedido exibido para confirmar a conferência.",
+    });
+  }
+
+  return { id: shipment.id, externalShipmentId: shipment.externalShipmentId, orderNumber };
+}
+
+/** Trava o envio e confirma que a mesma etiqueta continua sinalizada para cancelamento. */
+async function lockFlaggedLabel(tx: Prisma.TransactionClient, shipmentId: string, externalShipmentId: string) {
+  await tx.$queryRaw`SELECT id FROM "shipments" WHERE id = ${shipmentId} FOR UPDATE`;
+  const current = await tx.shipment.findUnique({
+    where: { id: shipmentId },
+    select: { externalShipmentId: true, providerMetadata: true },
+  });
+  if (current?.externalShipmentId !== externalShipmentId || !hasLabelCancellationFlag(current.providerMetadata)) {
+    throw new ApplicationError({ code: "CONFLICT", message: "A etiqueta já foi atualizada.", statusCode: 409 });
+  }
+
+  return current;
 }

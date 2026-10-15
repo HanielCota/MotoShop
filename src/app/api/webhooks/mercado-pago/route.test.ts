@@ -84,7 +84,7 @@ it("persists a signed payment notification before enqueueing it", async () => {
     name: "motoshop/payment.webhook.received",
     data: { webhookEventId: "event-1" },
   });
-  expect(mocks.create.mock.invocationCallOrder[0]).toBeLessThan(mocks.send.mock.invocationCallOrder[0]!);
+  expect(mocks.create.mock.invocationCallOrder[0]).toBeLessThan(defined(mocks.send.mock.invocationCallOrder[0]));
 });
 
 it("does not enqueue an already processed notification again", async () => {
@@ -142,3 +142,8 @@ it("refuses oversized bodies before parsing, with or without Content-Length", as
   expect(chunked.status).toBe(413);
   expect(mocks.create).not.toHaveBeenCalled();
 });
+
+function defined<T>(value: T | null | undefined): T {
+  if (value === null || value === undefined) throw new Error("Expected value to be defined");
+  return value;
+}
