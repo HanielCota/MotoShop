@@ -27,16 +27,8 @@ type PendingInvite = { id: string; email: string; role: string; daysLeft: number
 const initialState: SellerMemberActionState = {};
 const COPY_FAILED_MESSAGE = "Não foi possível copiar. Selecione o link abaixo e copie.";
 
-function RoleOptions() {
-  return (
-    <>
-      <option value="ADMIN">Administrador</option>
-      <option value="CATALOG">Catálogo</option>
-      <option value="ORDERS">Pedidos</option>
-      <option value="FINANCE">Financeiro</option>
-    </>
-  );
-}
+// O DesignSelect só lê <option> filhos diretos: um componente intermediário fazia aparecer o valor cru.
+const roleOptions = ["ADMIN", "CATALOG", "ORDERS", "FINANCE"] as const;
 
 /** Copia o link; se o navegador recusar, mostra o link para a pessoa copiar à mão. */
 function useCopyLink() {
@@ -87,7 +79,11 @@ function InviteForm() {
       <label className="flex flex-col gap-2 text-sm font-medium">
         Perfil
         <DesignSelect aria-label="Perfil" name="role" defaultValue="CATALOG">
-          <RoleOptions />
+          {roleOptions.map((role) => (
+            <option key={role} value={role}>
+              {getSellerMemberRoleLabel(role)}
+            </option>
+          ))}
         </DesignSelect>
       </label>
       <Button type="submit" disabled={pending} className="rounded-md font-semibold">
@@ -196,7 +192,11 @@ export function SellerTeamManager({ members, invites }: { members: Member[]; inv
                     defaultValue={member.role}
                     size="sm"
                   >
-                    <RoleOptions />
+                    {roleOptions.map((role) => (
+                      <option key={role} value={role}>
+                        {getSellerMemberRoleLabel(role)}
+                      </option>
+                    ))}
                   </DesignSelect>
                   <Button type="submit" variant="outline" size="sm">
                     Salvar perfil
