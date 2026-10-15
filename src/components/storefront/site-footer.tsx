@@ -4,13 +4,13 @@ import Link from "next/link";
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
 import { BRAND_ABOUT_PARAGRAPHS } from "@/config/brand";
 
+import { FooterAccountLink } from "./footer-account-link";
 import { PaymentMethodIcons } from "./payment-method-icons";
 
 const quickLinks: { label: string; href: Route }[] = [
   { label: "Comprar", href: "/products" },
   { label: "Vender", href: "/seller" },
   { label: "Pedidos", href: "/orders" },
-  { label: "Entrar", href: "/login" },
 ];
 
 // Only pages that exist; "Sobre", "Trocas e Devoluções", "Políticas" etc. join when the client sends the text.
@@ -58,6 +58,9 @@ export function SiteFooter() {
                 </Link>
               </li>
             ))}
+            <li>
+              <FooterAccountLink className={footerLinkClassName} />
+            </li>
           </ul>
         </nav>
 
