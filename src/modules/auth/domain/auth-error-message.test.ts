@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getAuthErrorMessage, isInvalidCredentialsError } from "./auth-error-message";
+import { getAuthErrorMessage, isEmailNotVerifiedError, isInvalidCredentialsError } from "./auth-error-message";
 
 describe("getAuthErrorMessage", () => {
   it("shows the email verification guidance in Portuguese", () => {
@@ -28,5 +28,16 @@ describe("isInvalidCredentialsError", () => {
     [undefined, 500, false],
   ])("code %s with status %s → %s", (code, status, expected) => {
     expect(isInvalidCredentialsError(code, status)).toBe(expected);
+  });
+});
+
+describe("isEmailNotVerifiedError", () => {
+  it.each([
+    ["EMAIL_NOT_VERIFIED", 403, true],
+    ["EMAIL_NOT_VERIFIED", 429, false],
+    ["INVALID_EMAIL_OR_PASSWORD", 401, false],
+    [undefined, 500, false],
+  ])("code %s with status %s → %s", (code, status, expected) => {
+    expect(isEmailNotVerifiedError(code, status)).toBe(expected);
   });
 });

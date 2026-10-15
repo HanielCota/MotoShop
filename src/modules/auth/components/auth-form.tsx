@@ -13,7 +13,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
 
-import { getAuthErrorMessage, isInvalidCredentialsError } from "../domain/auth-error-message";
+import { getAuthErrorMessage, isEmailNotVerifiedError, isInvalidCredentialsError } from "../domain/auth-error-message";
 import { parseAuthUserName } from "../domain/auth-user-name";
 import { getSafeRedirectPath } from "../domain/safe-redirect";
 
@@ -54,6 +54,8 @@ export function AuthForm({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
   const [showCredentialsHelp, setShowCredentialsHelp] = useState(false);
+  // E-mail whose sign-in hit EMAIL_NOT_VERIFIED; the resend link is offered only for it.
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<string>();
   const [pending, setPending] = useState(false);
@@ -63,6 +65,7 @@ export function AuthForm({
     setPassword("");
     setError(undefined);
     setShowCredentialsHelp(false);
+    setUnverifiedEmail(undefined);
     setFieldErrors({});
     // A History API nativa é integrada ao roteador do Next.js e não refaz a navegação.
     const params = new URLSearchParams(window.location.search);
@@ -80,6 +83,7 @@ export function AuthForm({
     event.preventDefault();
     setError(undefined);
     setShowCredentialsHelp(false);
+    setUnverifiedEmail(undefined);
     setNotice(undefined);
 
     const errors = validate(mode, { name, email, password });
@@ -100,6 +104,8 @@ export function AuthForm({
       if (result.error) {
         setError(getAuthErrorMessage(result.error.code, result.error.status));
         setShowCredentialsHelp(mode === "sign-in" && isInvalidCredentialsError(result.error.code, result.error.status));
+        if (mode === "sign-in" && isEmailNotVerifiedError(result.error.code, result.error.status))
+          setUnverifiedEmail(email);
         return;
       }
 
@@ -192,7 +198,7 @@ export function AuthForm({
         )}
       </FormField>
       {searchParams.has("error") ? (
-        <FormMessage error="Não foi possível confirmar o e-mail. Solicite outro link de confirmação." />
+        <FormMessage error="Não foi possível confirmar o e-mail. Entre com seu e-mail e senha para receber outro link." />
       ) : searchParams.get("verified") === "1" ? (
         <FormMessage success="E-mail confirmado. Entre com sua senha." />
       ) : null}
@@ -220,27 +226,34 @@ export function AuthForm({
               Esqueci minha senha
             </Link>
           )}
-          <button
-            type="button"
-            className="text-brand-text inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline disabled:opacity-50"
-            disabled={pending || !email}
-            onClick={async () => {
-              setPending(true);
-              setError(undefined);
-              setNotice(undefined);
-              try {
-                const result = await authClient.sendVerificationEmail({ email, callbackURL: "/login?verified=1" });
-                setNotice(result.error ? undefined : "Se esta conta precisar de confirmação, enviaremos um novo link.");
-                if (result.error) setError("Não foi possível solicitar o link agora. Tente novamente em instantes.");
-              } catch {
-                setError("Não foi possível conectar. Verifique sua conexão e tente novamente.");
-              } finally {
-                setPending(false);
-              }
-            }}
-          >
-            Reenviar confirmação
-          </button>
+          {unverifiedEmail ? (
+            <button
+              type="button"
+              className="text-brand-text inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline disabled:opacity-50"
+              disabled={pending}
+              onClick={async () => {
+                setPending(true);
+                setError(undefined);
+                setNotice(undefined);
+                try {
+                  const result = await authClient.sendVerificationEmail({
+                    email: unverifiedEmail,
+                    callbackURL: "/login?verified=1",
+                  });
+                  setNotice(
+                    result.error ? undefined : "Se esta conta precisar de confirmação, enviaremos um novo link.",
+                  );
+                  if (result.error) setError("Não foi possível solicitar o link agora. Tente novamente em instantes.");
+                } catch {
+                  setError("Não foi possível conectar. Verifique sua conexão e tente novamente.");
+                } finally {
+                  setPending(false);
+                }
+              }}
+            >
+              Reenviar confirmação
+            </button>
+          ) : null}
         </div>
       ) : null}
       {showCredentialsHelp ? null : (
