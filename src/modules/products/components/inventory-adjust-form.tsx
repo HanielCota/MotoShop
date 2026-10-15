@@ -44,7 +44,8 @@ export function InventoryAdjustForm({ variantId }: { variantId: string }) {
       </label>
       <Input
         id={`inventory-${variantId}`}
-        className="h-9 w-32 text-sm"
+        size="sm"
+        className="w-32"
         type="number"
         step="1"
         value={quantityChange}
