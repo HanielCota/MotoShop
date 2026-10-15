@@ -14,7 +14,7 @@ import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { archiveProductAction, restoreProductAction } from "@/modules/products/actions/product-actions";
-import { InventoryAdjustForm } from "@/modules/products/components/inventory-adjust-form";
+import { InventoryAdjustDialog } from "@/modules/products/components/inventory-adjust-dialog";
 import { formatPriceInputFromCents } from "@/modules/products/domain/price-input";
 import { ProductSubmissionAction } from "@/modules/products/components/product-submission-action";
 import { listProductBrands, listProductCategories, listSellerProducts } from "@/modules/products/queries/products";
@@ -219,7 +219,6 @@ export async function SellerProductsCard({
                                 {variant.inventory?.availableQuantity ?? 0}
                               </span>
                             </div>
-                            <InventoryAdjustForm variantId={variant.id} />
                           </div>
                         ))}
                       </div>
@@ -231,6 +230,17 @@ export async function SellerProductsCard({
                     ) : null}
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {product.variants.length > 0 ? (
+                      <InventoryAdjustDialog
+                        productName={product.name}
+                        variants={product.variants.map((variant) => ({
+                          id: variant.id,
+                          title: variant.title,
+                          sku: variant.sku,
+                          availableQuantity: variant.inventory?.availableQuantity ?? 0,
+                        }))}
+                      />
+                    ) : null}
                     {product.status === "APPROVED" ? (
                       <Link
                         href={`/products/${product.slug}`}
