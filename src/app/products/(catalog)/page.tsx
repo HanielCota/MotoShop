@@ -4,6 +4,7 @@ import type { Metadata, Route } from "next";
 import { Bike, X } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { DesignSelect } from "@/components/ui/design-select";
 import { InlineNotice } from "@/components/ui/inline-notice";
 import { PageHeader } from "@/components/ui/page-header";
@@ -157,7 +158,7 @@ export default async function ProductsPage({
   const options = { fitments, categories, brands, sellers, attributes };
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={pageContainerClassName("default", "flex flex-col gap-6 py-8 sm:py-10")}>
       <PageHeader
         eyebrow="Catálogo"
         title="Peças, acessórios e equipamentos"

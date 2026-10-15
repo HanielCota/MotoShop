@@ -3,11 +3,12 @@ import Link from "next/link";
 
 import { essentials, isCategoryHrefActive } from "../content/home-content";
 import { SectionHeading } from "./section-heading";
+import { pageContainerClassName } from "@/components/ui/page-container";
 
 export function EssentialsSection({ categories }: { categories: { slug: string }[] }) {
   return (
     <section className="bg-card py-14 sm:py-20" aria-labelledby="home-essentials-title">
-      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+      <div className={pageContainerClassName()}>
         <SectionHeading
           kicker="Manutenção"
           title="Itens de manutenção"

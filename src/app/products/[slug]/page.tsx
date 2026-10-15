@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata, Route } from "next";
 
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -162,7 +163,7 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
 
   // pb extra no mobile: espaço para a barra fixa de "Adicionar" (ProductBuyBox).
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 pt-8 pb-28 sm:px-6 sm:pt-12 md:pb-12">
+    <main className={pageContainerClassName("default", "flex flex-col gap-8 pt-8 pb-28 sm:pt-12 md:pb-12")}>
       {!product.isDemo ? (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
       ) : null}

@@ -1,3 +1,4 @@
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { Pagination } from "@/components/ui/pagination";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DesignSelect } from "@/components/ui/design-select";
@@ -91,7 +92,7 @@ export function PublicCatalogLanding({
   });
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6">
+    <main className={pageContainerClassName("default", "flex flex-col gap-8 py-10")}>
       <PageHeader
         eyebrow="Catálogo"
         title={title}

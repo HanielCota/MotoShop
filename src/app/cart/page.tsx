@@ -6,8 +6,10 @@ import { ImageOff, ShieldCheck, ShoppingBag, Store } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineNotice } from "@/components/ui/inline-notice";
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatMoneyInCents } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { CartItemControls } from "@/modules/cart/components/cart-item-controls";
 import { VisualCartPreview } from "@/modules/cart/components/visual-preview";
 import { getActiveCart } from "@/modules/cart/queries/cart";
@@ -15,7 +17,6 @@ import { getCheckoutPaymentAvailability } from "@/modules/payments/application/a
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 
 import { getCartThumbnails } from "./cart-thumbnails";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Carrinho",
@@ -39,7 +40,10 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
 
   return (
     <main
-      className={`mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-10 sm:px-6 ${items.length > 0 ? "pb-32 lg:pb-10" : "pb-10"}`}
+      className={pageContainerClassName(
+        "default",
+        cn("flex flex-col gap-6 pt-10", items.length > 0 ? "pb-32 lg:pb-10" : "pb-10"),
+      )}
     >
       <PageHeader
         eyebrow="Sua compra"

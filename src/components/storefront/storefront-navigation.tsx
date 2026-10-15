@@ -6,6 +6,7 @@ import { ChevronDown, Menu, Search, UserRound, X } from "lucide-react";
 import { Menu as BaseMenu } from "@base-ui/react/menu";
 import { useRef, useState } from "react";
 
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
 import { SignOutButton } from "@/modules/auth/components/sign-out-button";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
@@ -38,7 +39,7 @@ export function StorefrontNavigation() {
         menuButton.current?.focus();
       }}
     >
-      <div className="mx-auto flex min-h-[68px] w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
+      <div className={pageContainerClassName("default", "flex min-h-[68px] items-center gap-3")}>
         <MotoShopBrand />
 
         <nav

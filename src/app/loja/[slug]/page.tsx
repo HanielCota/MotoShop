@@ -1,4 +1,5 @@
 import { Button, buttonVariants } from "@/components/ui/button";
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { Pagination } from "@/components/ui/pagination";
 import { DesignSelect } from "@/components/ui/design-select";
 import Link from "next/link";
@@ -134,7 +135,7 @@ export default async function PublicStorePage({
   })();
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
+    <main className={pageContainerClassName("default", "flex flex-col gap-8 py-8 sm:py-12")}>
       <section
         className="bg-moto-brand-foreground relative isolate overflow-hidden rounded-[1.75rem] text-white shadow-[0_24px_70px_-50px_rgba(0,0,0,0.8)]"
         aria-labelledby="store-name"

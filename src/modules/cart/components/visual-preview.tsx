@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
@@ -108,7 +109,7 @@ function PreviewItem({ item }: { item: PreviewItemData }) {
 
 export function VisualCartPreview() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6">
+    <main className={pageContainerClassName("default", "flex flex-col gap-6 py-10")}>
       <PageHeader eyebrow="Sua compra" title="Carrinho" />
       <PreviewNotice />
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
@@ -144,7 +145,7 @@ export function VisualCartPreview() {
 
 export function VisualCheckoutPreview() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6">
+    <main className={pageContainerClassName("default", "flex flex-col gap-6 py-10")}>
       <PageHeader eyebrow="Compra segura" title="Finalizar compra" />
       <PreviewNotice />
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
