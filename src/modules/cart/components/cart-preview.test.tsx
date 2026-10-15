@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 const actions = vi.hoisted(() => ({
@@ -117,12 +117,16 @@ it("lets the customer empty the whole cart from the preview", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Visualizar carrinho" }));
   expect(await screen.findByText("Capacete off-road")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Limpar carrinho" }));
-  fireEvent.click(screen.getByRole("button", { name: "Manter itens" }));
-  expect(screen.queryByRole("button", { name: "Sim, limpar" })).not.toBeInTheDocument();
+  const firstDialog = await screen.findByRole("alertdialog", { name: "Limpar carrinho?" });
+  expect(firstDialog).toHaveTextContent("O item sai do carrinho.");
+  fireEvent.click(within(firstDialog).getByRole("button", { name: "Cancelar" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
   expect(screen.getByText("Capacete off-road")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Limpar carrinho" }));
   expect(actions.clear).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: "Sim, limpar" }));
+
+  fireEvent.click(screen.getByRole("button", { name: "Limpar carrinho" }));
+  const dialog = await screen.findByRole("alertdialog");
+  fireEvent.click(within(dialog).getByRole("button", { name: "Limpar carrinho" }));
 
   await waitFor(() => expect(actions.clear).toHaveBeenCalledOnce());
   expect(await screen.findByText("Carrinho limpo.")).toBeInTheDocument();
