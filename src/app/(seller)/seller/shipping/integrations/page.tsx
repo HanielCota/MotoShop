@@ -8,6 +8,7 @@ import { requireSellerPageContext } from "@/modules/sellers/application/get-sell
 import { hasSellerShippingIntegration } from "@/modules/sellers/queries/seller-shipping-methods";
 import { MelhorEnvioConnectionCard } from "@/modules/shipping/components/melhor-envio-connection-card";
 import { parseSearchParams, searchParam, type RawSearchParams } from "@/shared/validation/search-params";
+import { buttonVariants } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Integrações de frete · Central do Lojista",
@@ -48,10 +49,7 @@ export default async function SellerShippingIntegrationsPage({
           <CardDescription>Continue gerenciando suas opções manuais na tela de frete próprio.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Link
-            className="text-brand-strong inline-flex min-h-11 items-center text-sm font-semibold underline-offset-4 hover:underline"
-            href={"/seller/shipping" as Route}
-          >
+          <Link className={buttonVariants({ variant: "link", size: "link" })} href={"/seller/shipping" as Route}>
             Abrir configuração de frete próprio
           </Link>
         </CardContent>

@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { DesignSelect } from "@/components/ui/design-select";
 import Link from "next/link";
@@ -280,7 +280,7 @@ export default async function PublicStorePage({
                   </Button>
                   <Link
                     href={clearProductFiltersHref as Route}
-                    className="text-muted-foreground hover:text-foreground inline-flex min-h-10 items-center text-sm underline underline-offset-4"
+                    className={buttonVariants({ variant: "link-muted", size: "link" })}
                   >
                     Limpar
                   </Link>

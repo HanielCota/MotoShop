@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Textarea } from "@/components/ui/textarea";
 import { DesignSelect } from "@/components/ui/design-select";
@@ -196,7 +196,7 @@ export function ReviewForm({
                   type="button"
                   onClick={() => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}
                   aria-label={`Remover ${file.name}`}
-                  className="text-muted-foreground hover:text-foreground inline-flex min-h-10 items-center rounded-md px-2 underline underline-offset-2"
+                  className={buttonVariants({ variant: "link-muted", size: "link" })}
                 >
                   Remover
                 </button>

@@ -22,6 +22,7 @@ import {
   newestFirstSortOptions,
 } from "../admin-ui";
 import type { AdminSectionProps } from "./types";
+import { buttonVariants } from "@/components/ui/button";
 
 export async function AdminWebhooksSection({ searchParams }: AdminSectionProps) {
   const params = await loadAdminWebhookSearchParams(searchParams);
@@ -86,10 +87,7 @@ export async function AdminWebhooksSection({ searchParams }: AdminSectionProps) 
                   {event.error ? <p className="text-destructive max-w-sm text-xs break-words">{event.error}</p> : null}
                   {event.status === "FAILED" ? (
                     <ActionForm action={retryWebhookEventAction.bind(null, event.id)}>
-                      <button
-                        type="submit"
-                        className="text-brand-text text-xs font-medium underline underline-offset-4"
-                      >
+                      <button type="submit" className={buttonVariants({ variant: "link", size: "link-xs" })}>
                         Reprocessar
                       </button>
                     </ActionForm>

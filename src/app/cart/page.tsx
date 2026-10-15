@@ -15,6 +15,7 @@ import { getCheckoutPaymentAvailability } from "@/modules/payments/application/a
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 
 import { getCartThumbnails } from "./cart-thumbnails";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Carrinho",
@@ -186,7 +187,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
             </Link>
             <Link
               href="/products"
-              className="text-muted-foreground hover:text-foreground mt-3 flex min-h-11 items-center justify-center text-sm underline underline-offset-4"
+              className={cn(buttonVariants({ variant: "link-muted", size: "link" }), "mt-3 flex w-full")}
             >
               Continuar comprando
             </Link>

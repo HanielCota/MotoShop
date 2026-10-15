@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { DesignSelect } from "@/components/ui/design-select";
 import Link from "next/link";
@@ -16,6 +16,7 @@ import { listFavoriteProducts } from "@/modules/favorites/queries/favorites";
 import { loadFavoriteSearchParams } from "@/modules/favorites/search-params";
 import { toProductCardData } from "@/modules/products/components/product-grid";
 import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Meus favoritos",
@@ -97,7 +98,7 @@ export default async function FavoritesPage({
         {hasFilters ? (
           <Link
             href="/favorites"
-            className="text-brand-strong inline-flex min-h-10 items-center self-center text-sm underline underline-offset-4 sm:col-span-full"
+            className={cn(buttonVariants({ variant: "link", size: "link" }), "self-center sm:col-span-full")}
           >
             Limpar filtros
           </Link>

@@ -12,6 +12,7 @@ import {
   type StoreBrandingResult,
 } from "../actions/store-branding-actions";
 import { uploadImageToImageKit } from "@/shared/storage/upload-image";
+import { buttonVariants } from "@/components/ui/button";
 
 type StoreBrandingImages = {
   logoUrl: string | null;
@@ -184,7 +185,7 @@ function BrandingImageField({
         type="button"
         disabled={disabled}
         onClick={() => fileInputRef.current?.click()}
-        className="text-brand-text focus-visible:ring-ring/40 inline-flex min-h-10 items-center rounded-md text-sm font-medium underline underline-offset-4 focus-visible:ring-3 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+        className={buttonVariants({ variant: "link", size: "link" })}
       >
         {imageUrl ? "Substituir imagem" : "Enviar imagem"}
       </button>

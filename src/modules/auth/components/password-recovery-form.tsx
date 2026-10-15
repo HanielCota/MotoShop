@@ -1,5 +1,5 @@
 "use client";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { useState, type FormEvent } from "react";
@@ -60,10 +60,7 @@ export function PasswordRecoveryForm() {
           </Button>
         </>
       )}
-      <Link
-        href="/login"
-        className="text-brand-strong inline-flex min-h-10 items-center text-sm font-medium underline-offset-4 hover:underline"
-      >
+      <Link href="/login" className={buttonVariants({ variant: "link", size: "link" })}>
         Voltar para entrar
       </Link>
     </form>

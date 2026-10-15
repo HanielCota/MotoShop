@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { FormMessage } from "@/components/ui/form-message";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -72,10 +72,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
           </Button>
         </>
       )}
-      <Link
-        href="/login"
-        className="text-brand-strong inline-flex min-h-10 items-center text-sm font-medium underline-offset-4 hover:underline"
-      >
+      <Link href="/login" className={buttonVariants({ variant: "link", size: "link" })}>
         Ir para o login
       </Link>
     </form>

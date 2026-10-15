@@ -31,7 +31,10 @@ const buttonVariants = cva(
         /** Final confirmation of an irreversible action (e.g. inside ConfirmDialog); white on red keeps 7:1. */
         "destructive-solid":
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:border-destructive/40 focus-visible:ring-destructive/30",
-        link: "text-brand-text underline-offset-4 hover:underline",
+        /** Standalone text link for an action or navigation; pair with `size="link"` (or `link-xs`). */
+        link: "text-brand-text underline underline-offset-4 hover:text-brand-strong",
+        /** Secondary text link (clear filters, back, cancel). */
+        "link-muted": "text-muted-foreground underline underline-offset-4 hover:text-foreground",
       },
       size: {
         default: "h-11 gap-1.5 px-4 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
@@ -46,6 +49,10 @@ const buttonVariants = cva(
         compact: smallSize,
         /** @deprecated alias legado de `icon-sm`. */
         "icon-xs": "size-9",
+        /** Text links: no padding, 44px touch target on phones and 36px from `sm` up. */
+        link: "h-auto min-h-11 w-fit px-0 sm:min-h-9",
+        /** Small text links in dense tables (Admin). */
+        "link-xs": "h-auto min-h-11 w-fit px-0 text-xs sm:min-h-9",
       },
     },
     defaultVariants: {

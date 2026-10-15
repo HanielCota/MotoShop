@@ -10,6 +10,7 @@ import {
   listSavedMotorcycles,
 } from "@/modules/motorcycles/queries/saved-motorcycles";
 import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
+import { buttonVariants } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Minhas motos",
@@ -33,10 +34,7 @@ export default async function MyMotorcyclesPage() {
         title="Minhas motos"
         description="Guarde as configurações das suas motos. A principal aparece como atalho no catálogo e ajuda a conferir a compatibilidade dos produtos."
         actions={
-          <Link
-            href="/products"
-            className="text-brand-strong inline-flex min-h-10 items-center text-sm font-medium underline underline-offset-4"
-          >
+          <Link href="/products" className={buttonVariants({ variant: "link", size: "link" })}>
             Explorar catálogo
           </Link>
         }

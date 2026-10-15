@@ -22,6 +22,7 @@ import {
   newestFirstSortOptions,
 } from "../admin-ui";
 import type { AdminSectionProps } from "./types";
+import { buttonVariants } from "@/components/ui/button";
 
 export async function AdminEmailsSection({ searchParams }: AdminSectionProps) {
   const params = await loadAdminNotificationSearchParams(searchParams);
@@ -94,7 +95,7 @@ export async function AdminEmailsSection({ searchParams }: AdminSectionProps) {
                 <StatusBadge domain="notification" status={delivery.status} />
                 {delivery.retryable ? (
                   <ActionForm action={resendNotificationDeliveryAction.bind(null, delivery.id)} className="mt-1">
-                    <button type="submit" className="text-brand-text text-xs font-medium underline underline-offset-4">
+                    <button type="submit" className={buttonVariants({ variant: "link", size: "link-xs" })}>
                       Reenviar
                     </button>
                   </ActionForm>

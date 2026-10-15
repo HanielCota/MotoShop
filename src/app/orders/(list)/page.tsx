@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { DesignSelect } from "@/components/ui/design-select";
 import { DateFilterInput } from "@/components/ui/date-filter-input";
@@ -240,7 +240,7 @@ export default async function CustomerOrdersPage({
                     />
                   ) : null}
                   <Link
-                    className="text-brand-strong text-sm font-medium underline underline-offset-4"
+                    className={buttonVariants({ variant: "link", size: "link" })}
                     href={`/orders/${order.orderNumber}` as Route}
                   >
                     Ver detalhes
