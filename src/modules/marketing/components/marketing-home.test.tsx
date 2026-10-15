@@ -184,6 +184,15 @@ describe("marketing homepage", () => {
     expect(screen.queryByText("Demonstração")).not.toBeInTheDocument();
   });
 
+  it("shows featured products before the categories on phones and keeps the order from md up", () => {
+    renderHome("", { featuredProducts: [makeProduct("capacete", "Capacete")] });
+    const featured = document.querySelector(`[aria-labelledby="featured-products-title"]`)?.parentElement;
+    const categories = document.querySelector(`[aria-labelledby="home-categories-title"]`)?.parentElement;
+
+    expect(featured).toHaveClass("order-1", "md:order-2");
+    expect(categories).toHaveClass("order-2", "md:order-1");
+  });
+
   it("links approved featured products to their details without invented installments", () => {
     renderHome("", {
       featuredProducts: [
