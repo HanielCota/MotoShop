@@ -48,10 +48,10 @@ function variantAttributeCondition(input: PublicProductFilter) {
   const size = normalizeAttribute(input.size);
   if (!gender && !color && !size) return Prisma.empty;
 
-  return Prisma.sql`AND EXISTS (SELECT 1 FROM product_variants va WHERE va."productId" = p.id AND va.active = true
-      ${gender ? Prisma.sql`AND va.gender = ${gender}::"VariantGender"` : Prisma.empty}
-      ${color ? Prisma.sql`AND lower(va.color) = lower(${color})` : Prisma.empty}
-      ${size ? Prisma.sql`AND lower(va.size) = lower(${size})` : Prisma.empty})`;
+  return Prisma.sql`
+      ${gender ? Prisma.sql`AND v.gender = ${gender}::"VariantGender"` : Prisma.empty}
+      ${color ? Prisma.sql`AND lower(v.color) = lower(${color})` : Prisma.empty}
+      ${size ? Prisma.sql`AND lower(v.size) = lower(${size})` : Prisma.empty}`;
 }
 
 function nonNegativeSafeInteger(value: number | null | undefined) {
@@ -79,6 +79,7 @@ export async function findPublicProductPage(input: PublicProductFilter, now: Dat
       COALESCE(i."availableQuantity", 0) > 0 AS available,
       v."promotionStartsAt", v."updatedAt" AS "variantUpdatedAt"
     FROM product_variants v LEFT JOIN inventories i ON i."variantId" = v.id WHERE v.active = true
+      ${variantAttributeCondition(input)}
   ), matches AS (
     SELECT p.id, p."createdAt", MIN(o.price) AS price, bool_or(o.sale) AS "onSale",
       MAX(CASE WHEN o.sale THEN COALESCE(o."promotionStartsAt", o."variantUpdatedAt") END) AS "offerStartedAt",
@@ -92,7 +93,6 @@ export async function findPublicProductPage(input: PublicProductFilter, now: Dat
       ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
       ${input.brandId ? Prisma.sql`AND p."brandId" = ${input.brandId}` : Prisma.empty}
       ${input.sellerId ? Prisma.sql`AND p."sellerId" = ${input.sellerId}` : Prisma.empty}
-      ${variantAttributeCondition(input)}
       ${fitments.length ? Prisma.sql`AND EXISTS (SELECT 1 FROM product_compatibilities pc WHERE pc."productId" = p.id AND pc."motorcycleFitmentId" IN (${Prisma.join(fitments)}))` : Prisma.empty}
       ${query ? Prisma.sql`AND (p.name ILIKE ${pattern} OR p.description ILIKE ${pattern} OR b.name ILIKE ${pattern} OR c.name ILIKE ${pattern} OR st.name ILIKE ${pattern} OR EXISTS (SELECT 1 FROM offers sk WHERE sk."productId" = p.id AND sk.sku ILIKE ${pattern}))` : Prisma.empty}
     GROUP BY p.id
