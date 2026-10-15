@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { db } from "@/lib/database";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
@@ -49,19 +50,37 @@ export async function approveSellerAction(sellerId: string): Promise<void> {
   revalidatePath("/seller", "layout");
 }
 
-export async function rejectSellerAction(sellerId: string): Promise<void> {
+const rejectSellerSchema = z.object({
+  reason: z
+    .string("Informe o motivo da recusa.")
+    .trim()
+    .min(5, "Informe o motivo da recusa com pelo menos 5 caracteres.")
+    .max(1000, "Use no máximo 1000 caracteres no motivo."),
+});
+
+export type RejectSellerResult = { error?: string } | void;
+
+/** Recusa exige motivo, gravado na loja (o lojista vê na Central) e na auditoria (BUG-005). */
+export async function rejectSellerAction(sellerId: string, input: unknown): Promise<RejectSellerResult> {
   const session = await requireAdminAccess();
   assertRecordId(sellerId, "Loja inválida.");
+  const parsed = rejectSellerSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Informe o motivo da recusa." };
+
   const seller = await db.seller.findFirst({ where: { id: sellerId, status: "PENDING" } });
   if (!seller) return handleUnavailableSeller(sellerId, "REJECTED");
+  const { reason } = parsed.data;
   await db.$transaction([
-    db.seller.update({ where: { id: seller.id, status: seller.status }, data: { status: "REJECTED" } }),
+    db.seller.update({
+      where: { id: seller.id, status: seller.status },
+      data: { status: "REJECTED", rejectionReason: reason },
+    }),
     db.auditLog.create({
       data: {
         action: "SELLER_REJECTED",
         entityType: "Seller",
         entityId: seller.id,
-        metadata: { previousStatus: seller.status, nextStatus: "REJECTED" },
+        metadata: { previousStatus: seller.status, nextStatus: "REJECTED", reason },
         actorUserId: session.user.id,
       },
     }),

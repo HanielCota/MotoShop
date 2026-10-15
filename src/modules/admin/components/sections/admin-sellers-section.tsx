@@ -91,11 +91,24 @@ export async function AdminSellersSection({ searchParams }: AdminSectionProps) {
                     confirmLabel="Aprovar loja"
                     onConfirm={approveSellerAction.bind(null, seller.id)}
                   />
-                  <ActionForm action={rejectSellerAction.bind(null, seller.id)}>
-                    <Button type="submit" variant="outline" size="sm">
-                      Recusar
-                    </Button>
-                  </ActionForm>
+                  <ConfirmDialog
+                    trigger={
+                      <Button type="button" variant="outline" size="sm">
+                        Recusar
+                      </Button>
+                    }
+                    title={`Recusar o cadastro da ${seller.store?.name ?? "loja"}?`}
+                    description="O lojista vê este motivo na Central do Lojista."
+                    reason={{
+                      label: "Motivo da recusa",
+                      required: true,
+                      placeholder: "Ex.: CNPJ não confere com o nome da loja.",
+                      maxLength: 1000,
+                    }}
+                    confirmLabel="Recusar loja"
+                    tone="destructive"
+                    onConfirm={rejectSellerAction.bind(null, seller.id)}
+                  />
                 </div>
               ) : seller.status === "SUSPENDED" ? (
                 <ActionForm action={reactivateSellerAction.bind(null, seller.id)} className="shrink-0">

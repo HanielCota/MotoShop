@@ -79,7 +79,7 @@ const adminActions: Array<[string, () => Promise<unknown>]> = [
   ["reviewReturnRequestAction", () => reviewReturnRequestAction(recordId, formData({ decision: "APPROVE" }))],
   ["refundReturnRequestAction", () => refundReturnRequestAction(recordId)],
   ["approveSellerAction", () => approveSellerAction(recordId)],
-  ["rejectSellerAction", () => rejectSellerAction(recordId)],
+  ["rejectSellerAction", () => rejectSellerAction(recordId, { reason: "Motivo de teste" })],
   ["suspendSellerAction", () => suspendSellerAction(recordId)],
   ["reactivateSellerAction", () => reactivateSellerAction(recordId)],
   [
