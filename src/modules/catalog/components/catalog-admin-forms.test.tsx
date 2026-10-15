@@ -1,5 +1,5 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ refuse: vi.fn() }));
 vi.mock("../actions/admin-catalog-actions", () => ({
@@ -11,9 +11,22 @@ vi.mock("../actions/admin-catalog-actions", () => ({
 }));
 
 import { catalogFormValidators } from "../schemas/catalog-input";
-import { CategoryForm, MotorcycleFitmentForm } from "./catalog-admin-forms";
+import { BrandForm, CategoryForm, MotorcycleFitmentForm } from "./catalog-admin-forms";
 
 afterEach(cleanup);
+beforeEach(() => vi.resetAllMocks());
+
+it("keeps the latest brand name across repeated offline submissions", async () => {
+  mocks.refuse.mockRejectedValue(new TypeError("Failed to fetch"));
+  render(<BrandForm />);
+
+  for (const name of ["Marca digitada", "Marca corrigida"]) {
+    fireEvent.change(screen.getByLabelText("Nome da marca"), { target: { value: name } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Adicionar" })));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível conectar");
+    expect(screen.getByLabelText("Nome da marca")).toHaveValue(name);
+  }
+});
 
 it("keeps the category fields when the server refuses them", async () => {
   mocks.refuse.mockResolvedValue({ error: "Informe a ordem de exibição como número inteiro, de 0 a 100000." });

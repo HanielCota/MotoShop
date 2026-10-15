@@ -26,7 +26,13 @@ export function withNetworkErrorState<State extends StateWithError, Payload>(
       return await action(state, payload);
     } catch (error) {
       if (!isNetworkError(error)) throw error;
-      return { ...state, error: NETWORK_ERROR_MESSAGE };
+      // React resets uncontrolled inputs when the action resolves, even with an error state.
+      // Keep this submission's text values so forms can restore their defaultValue fields.
+      const values =
+        payload instanceof FormData
+          ? Object.fromEntries([...payload.entries()].filter((entry) => typeof entry[1] === "string"))
+          : undefined;
+      return { ...state, ...(values ? { values } : {}), success: undefined, error: NETWORK_ERROR_MESSAGE };
     }
   };
 }
