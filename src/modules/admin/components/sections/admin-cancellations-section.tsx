@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Ban } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
@@ -9,7 +10,7 @@ import { listCancellationRequestsForAdmin } from "@/modules/returns/queries/admi
 import { listSellerOptionsForAdmin } from "@/modules/sellers/queries/sellers";
 import { getStatusLabel } from "@/shared/presentation/status-labels";
 
-import { adminHref } from "../../admin-href";
+import { adminHref, adminOrderHref } from "../../admin-href";
 import { adminCancellationStatusValues, loadAdminCancellationSearchParams } from "../../search-params";
 import {
   AdminCard,
@@ -95,7 +96,14 @@ export async function AdminCancellationsSection({ searchParams }: AdminSectionPr
             <li key={request.id} className="flex flex-col gap-4 py-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-semibold">Pedido {request.order.orderNumber}</h3>
+                  <h3 className="font-semibold">
+                    <Link
+                      href={adminOrderHref(request.order.orderNumber)}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      Pedido {request.order.orderNumber}
+                    </Link>
+                  </h3>
                   <StatusBadge domain="cancellation" status={request.status} />
                 </div>
                 <p className="text-muted-foreground text-sm break-words">

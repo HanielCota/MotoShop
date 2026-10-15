@@ -32,7 +32,16 @@ const paymentMethodLabels: Record<string, string> = {
   hipercard: "Cartão Hipercard",
 };
 
-export function PaymentSection({ orderNumber, payments }: { orderNumber: string; payments: CustomerOrderPayment[] }) {
+export function PaymentSection({
+  orderNumber,
+  payments,
+  readOnly = false,
+}: {
+  orderNumber: string;
+  payments: CustomerOrderPayment[];
+  /** Admin: só o histórico, sem código Pix nem a reconsulta do cliente. */
+  readOnly?: boolean;
+}) {
   return (
     <section className="space-y-4">
       <SectionHeader title="Pagamento" description="Status e histórico de transações do pedido." />
@@ -42,7 +51,7 @@ export function PaymentSection({ orderNumber, payments }: { orderNumber: string;
             <EmptyState variant="inline" title="Nenhum pagamento registrado" />
           ) : (
             payments.map((payment) => {
-              const pixInstructions = getPixInstructions(payment);
+              const pixInstructions = readOnly ? null : getPixInstructions(payment);
               return (
                 <div key={payment.id} className="border-border rounded-lg border p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -57,7 +66,8 @@ export function PaymentSection({ orderNumber, payments }: { orderNumber: string;
                     <StatusBadge domain="payment" status={payment.status} />
                   </div>
                   {pixInstructions ? <PixPaymentInstructions {...pixInstructions} /> : null}
-                  {payment.method === "pix" &&
+                  {!readOnly &&
+                  payment.method === "pix" &&
                   ["PENDING", "PROCESSING"].includes(payment.status) &&
                   !pixInstructions ? (
                     <p className="text-muted-foreground mt-3 text-sm">
@@ -75,7 +85,7 @@ export function PaymentSection({ orderNumber, payments }: { orderNumber: string;
                       ))}
                     </ul>
                   ) : null}
-                  {["PENDING", "PROCESSING", "AUTHORIZED"].includes(payment.status) ? (
+                  {!readOnly && ["PENDING", "PROCESSING", "AUTHORIZED"].includes(payment.status) ? (
                     <div className="mt-3">
                       <PaymentRefreshForm orderNumber={orderNumber} />
                     </div>
