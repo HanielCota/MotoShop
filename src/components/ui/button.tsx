@@ -32,7 +32,7 @@ const buttonVariantClasses = cva(
         "destructive-solid":
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:border-destructive/40 focus-visible:ring-destructive/30",
         /** Standalone text link for an action or navigation; pair with `size="link"` (or `link-xs`). */
-        link: "text-brand-text underline underline-offset-4 hover:text-brand-strong",
+        link: "text-brand-strong underline underline-offset-4 hover:text-brand-strong",
         /** Secondary text link (clear filters, back, cancel). */
         "link-muted": "text-muted-foreground underline underline-offset-4 hover:text-foreground",
       },

@@ -78,7 +78,7 @@
   --color-moto-brand-surface: var(--moto-brand-surface);
   --color-moto-brand-foreground: var(--moto-brand-foreground);
   --color-brand-strong: var(--moto-brand-strong);
-  --color-brand-text: var(--moto-brand-text);
+  --shadow-sticky-bar: 0 -4px 16px rgb(0 0 0 / 0.08);
   --color-surface-sunken: var(--surface-sunken);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
@@ -116,7 +116,6 @@
   --moto-brand-foreground: #171716;
   --moto-brand-strong: #a63a0b;
   /* Texto/link na cor da marca: #fe6900 não atinge 4.5:1 sobre fundo claro. */
-  --moto-brand-text: var(--moto-brand-strong);
   --moto-brand-surface: #fff4eb;
   --surface-sunken: oklch(0.955 0.009 78);
   --success: oklch(0.52 0.13 155);
