@@ -4,10 +4,8 @@ export const reviewMediaTypes = {
   "image/jpeg": { extension: "jpg", mediaType: "image" as const, maxSizeInBytes: 5 * 1024 * 1024 },
   "image/png": { extension: "png", mediaType: "image" as const, maxSizeInBytes: 5 * 1024 * 1024 },
   "image/webp": { extension: "webp", mediaType: "image" as const, maxSizeInBytes: 5 * 1024 * 1024 },
-  "video/mp4": { extension: "mp4", mediaType: "video" as const, maxSizeInBytes: 10 * 1024 * 1024 },
-  "video/webm": { extension: "webm", mediaType: "video" as const, maxSizeInBytes: 10 * 1024 * 1024 },
-  "video/quicktime": { extension: "mov", mediaType: "video" as const, maxSizeInBytes: 10 * 1024 * 1024 },
 } as const;
+// Client decision (08/10/2026): videos are out of scope in reviews. Old video media still render.
 
 type ReviewMediaContentType = keyof typeof reviewMediaTypes;
 
@@ -19,7 +17,13 @@ export const uploadedReviewMediaSchema = z.object({
 
 export const reviewSchema = z.object({
   orderItemId: z.cuid(),
-  productRatingTenths: z.coerce.number().int().min(1).max(50),
+  // Whole stars only (10, 20…50 tenths): the decimal belongs to the average, never to one review.
+  productRatingTenths: z.coerce
+    .number()
+    .int()
+    .min(10)
+    .max(50)
+    .refine((tenths) => tenths % 10 === 0, "Escolha uma nota de 1 a 5 estrelas."),
   sellerRating: z.coerce.number().int().min(1).max(5).optional(),
   comment: z.string().trim().max(1000).optional(),
   media: z.array(uploadedReviewMediaSchema).max(3),
