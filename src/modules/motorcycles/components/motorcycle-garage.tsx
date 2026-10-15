@@ -7,7 +7,7 @@ import { DesignCheckbox } from "@/components/ui/design-checkbox";
 import { DesignSelect } from "@/components/ui/design-select";
 
 import Link from "next/link";
-import { Motorbike, Plus } from "lucide-react";
+import { Motorbike } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -217,7 +217,6 @@ export function MotorcycleGarage({
         aria-labelledby="add-motorcycle-title"
       >
         <div className="flex items-center gap-2">
-          <Plus aria-hidden="true" className="text-brand-strong size-5" />
           <h2 id="add-motorcycle-title" className="section-title text-foreground">
             Adicionar moto
           </h2>
