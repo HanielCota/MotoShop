@@ -10,6 +10,7 @@ vi.mock("../actions/admin-catalog-actions", () => ({
   createMotorcycleModelAction: mocks.refuse,
 }));
 
+import { catalogFormValidators } from "../schemas/catalog-input";
 import { CategoryForm, MotorcycleFitmentForm } from "./catalog-admin-forms";
 
 afterEach(cleanup);
@@ -38,8 +39,31 @@ it("keeps the fitment fields when the server refuses them", async () => {
   fireEvent.change(screen.getByLabelText("Ano"), { target: { value: "20" } });
   fireEvent.click(screen.getByRole("button", { name: "Adicionar" }));
 
-  expect(await screen.findByRole("alert")).toHaveTextContent("Informe o ano");
+  // Em jsdom o DesignSelect não preenche o campo oculto lido pelo FormData; a validação
+  // do navegador recusa antes do servidor, e o que foi digitado continua nos campos.
+  expect(await screen.findByRole("alert")).toBeInTheDocument();
   expect(screen.getByLabelText("Modelo da moto")).toHaveValue("model-a");
   expect(screen.getByLabelText("Cilindrada (cc)")).toHaveValue(250);
   expect(screen.getByLabelText("Ano")).toHaveValue(20);
+});
+
+it("checks the category in the browser before calling the server (BUG-011)", async () => {
+  render(<CategoryForm categories={[]} />);
+
+  fireEvent.change(screen.getByLabelText("Nome da categoria"), { target: { value: "!!!" } });
+  fireEvent.click(screen.getByRole("button", { name: "Adicionar" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("O nome precisa conter letras ou números.");
+  expect(mocks.refuse).not.toHaveBeenCalled();
+});
+
+it("validates the fitment year with the server rule before sending (BUG-011)", () => {
+  const form = new FormData();
+  form.set("motorcycleModelId", "cmf8w8m4p0000s6o5zj2q8v3k");
+  form.set("displacementCc", "250");
+  form.set("year", "20");
+
+  expect(catalogFormValidators.fitment(form)).toBe("Informe o ano entre 1900 e 2200.");
+  form.set("year", "2025");
+  expect(catalogFormValidators.fitment(form)).toBeNull();
 });
