@@ -3,24 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Menu, Search, UserRound, X } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { Menu as BaseMenu } from "@base-ui/react/menu";
+import { useRef, useState } from "react";
 
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
 import { SignOutButton } from "@/modules/auth/components/sign-out-button";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
 import { CartPreview } from "@/modules/cart/components/cart-preview";
+import { customerAccountLinks } from "@/modules/customers/account-links";
 import { ProductSearchCombobox } from "@/modules/products/components/search/product-search-combobox";
 
 import { isStorefrontPath, sellerLinkLabel } from "./storefront-routes";
-
-/** Atalhos da área do cliente exibidos no menu da conta. */
-export const accountLinks = [
-  { href: "/orders", label: "Meus pedidos" },
-  { href: "/favorites", label: "Favoritos" },
-  { href: "/account/profile", label: "Dados cadastrais" },
-  { href: "/account/password", label: "Redefinir senha" },
-  { href: "/account/addresses", label: "Meus endereços" },
-] as const;
 
 const iconButtonClassName =
   "inline-flex size-11 items-center justify-center rounded-md text-white/85 transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-3 focus-visible:ring-moto-brand/60 focus-visible:outline-none";
@@ -150,21 +143,12 @@ function HeaderSearch({ id, className }: { id: string; className?: string }) {
   );
 }
 
+const accountMenuItemClassName =
+  "data-[highlighted]:bg-muted flex min-h-10 w-full items-center rounded-md px-3 text-sm font-medium outline-none";
+
 function AccountMenu() {
   const { data: session } = authClient.useSession();
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuId = useId();
-
-  useEffect(() => {
-    if (!open) return;
-    function handlePointerDown(event: PointerEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
-    }
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [open]);
 
   if (!session?.user) {
     return (
@@ -175,56 +159,37 @@ function AccountMenu() {
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="relative"
-      onKeyDown={(event) => {
-        if (event.key !== "Escape" || !open) return;
-        event.stopPropagation();
-        setOpen(false);
-        triggerRef.current?.focus();
-      }}
-    >
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-label="Minha conta"
-        aria-expanded={open}
-        aria-controls={menuId}
-        onClick={() => setOpen((value) => !value)}
-        className={`${iconButtonClassName} w-auto gap-0.5 px-2`}
-      >
+    <BaseMenu.Root open={open} onOpenChange={setOpen} modal={false}>
+      <BaseMenu.Trigger aria-label="Minha conta" className={`${iconButtonClassName} w-auto gap-0.5 px-2`}>
         <UserRound aria-hidden="true" className="size-5" />
         <ChevronDown aria-hidden="true" className="size-3.5" />
-      </button>
-      <div
-        id={menuId}
-        hidden={!open}
-        className="bg-popover text-popover-foreground border-border absolute right-0 z-50 mt-2 w-56 rounded-xl border p-1.5 shadow-lg"
-      >
-        <p className="text-muted-foreground truncate px-3 pt-1.5 pb-2 text-xs">
-          {session.user.name ? `Olá, ${session.user.name}` : "Minha conta"}
-        </p>
-        <ul aria-label="Minha conta">
-          {accountLinks.map((link) => (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="hover:bg-muted focus-visible:bg-muted flex min-h-10 items-center rounded-md px-3 text-sm font-medium focus-visible:outline-none"
+      </BaseMenu.Trigger>
+      <BaseMenu.Portal>
+        <BaseMenu.Positioner side="bottom" align="end" sideOffset={8} className="z-[60]">
+          <BaseMenu.Popup className="bg-popover text-popover-foreground border-border w-56 rounded-xl border p-1.5 shadow-lg outline-none">
+            <p className="text-muted-foreground truncate px-3 pt-1.5 pb-2 text-xs">
+              {session.user.name ? `Olá, ${session.user.name}` : "Minha conta"}
+            </p>
+            {customerAccountLinks.map((link) => (
+              <BaseMenu.LinkItem
+                key={link.href}
+                closeOnClick
+                render={<Link href={link.href} />}
+                className={accountMenuItemClassName}
               >
                 {link.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <div className="border-border mt-1.5 border-t pt-1.5">
-          <SignOutButton
-            onSignedOut={() => setOpen(false)}
-            className="hover:bg-muted focus-visible:bg-muted w-full focus-visible:outline-none"
-          />
-        </div>
-      </div>
-    </div>
+              </BaseMenu.LinkItem>
+            ))}
+            <BaseMenu.Separator className="border-border my-1.5 border-t" />
+            <BaseMenu.Item
+              closeOnClick={false}
+              nativeButton
+              render={<SignOutButton onSignedOut={() => setOpen(false)} />}
+              className={accountMenuItemClassName}
+            />
+          </BaseMenu.Popup>
+        </BaseMenu.Positioner>
+      </BaseMenu.Portal>
+    </BaseMenu.Root>
   );
 }

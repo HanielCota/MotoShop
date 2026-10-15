@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
@@ -59,22 +59,26 @@ it("uses both horizontal logo variants for the hover transition", () => {
   ]);
 });
 
-it("gives signed-in customers an account menu with their shortcuts", () => {
+it("gives signed-in customers an account menu with their shortcuts", async () => {
   authMocks.useSession.mockReturnValue({ data: { user: { id: "buyer", name: "Comprador" } } });
   render(<StorefrontNavigation />);
   const trigger = screen.getByRole("button", { name: "Minha conta" });
   expect(trigger).toHaveAttribute("aria-expanded", "false");
   fireEvent.click(trigger);
   expect(trigger).toHaveAttribute("aria-expanded", "true");
-  expect(screen.getByRole("link", { name: "Meus pedidos" })).toHaveAttribute("href", "/orders");
-  expect(screen.getByRole("link", { name: "Favoritos" })).toHaveAttribute("href", "/favorites");
-  expect(screen.getByRole("link", { name: "Dados cadastrais" })).toHaveAttribute("href", "/account/profile");
-  expect(screen.getByRole("link", { name: "Redefinir senha" })).toHaveAttribute("href", "/account/password");
-  expect(screen.getByRole("link", { name: "Meus endereços" })).toHaveAttribute("href", "/account/addresses");
-  fireEvent.keyDown(screen.getByRole("link", { name: "Meus pedidos" }), { key: "Escape" });
-  expect(trigger).toHaveAttribute("aria-expanded", "false");
-  expect(trigger).toHaveFocus();
-  expect(screen.queryByRole("link", { name: "Compatibilidade" })).not.toBeInTheDocument();
+  const menu = await screen.findByRole("menu");
+  const items = within(menu).getAllByRole("menuitem");
+  expect(items.map((item) => [item.textContent, item.getAttribute("href")])).toEqual([
+    ["Meus pedidos", "/orders"],
+    ["Favoritos", "/favorites"],
+    ["Dados cadastrais", "/account/profile"],
+    ["Redefinir senha", "/account/password"],
+    ["Meus endereços", "/account/addresses"],
+    ["Sair", null],
+  ]);
+  fireEvent.keyDown(items[0] as HTMLElement, { key: "Escape" });
+  await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "false"));
+  await waitFor(() => expect(trigger).toHaveFocus());
   authMocks.useSession.mockReset();
 });
 
