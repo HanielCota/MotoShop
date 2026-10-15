@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { Route } from "next";
-import type { ReactNode } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -23,35 +22,23 @@ export function formatFitmentLabel(fitment: FitmentSummary, options: { includeDi
 }
 
 /**
- * "Peças para a sua moto": status de compatibilidade, seletor da moto do cliente
- * (salvo na conta quando autenticado) e lista estruturada de motos compatíveis.
+ * "Peças para a sua moto": lista estruturada de motos compatíveis informadas pela loja.
+ * A escolha da moto do cliente fica na faixa "Sua moto", perto do preço.
  */
 export function ProductCompatibilityCard({
   compatibilities,
   selectedFitmentId,
-  status,
-  picker,
 }: {
   compatibilities: { id: string; motorcycleFitmentId: string; motorcycleFitment: FitmentSummary }[];
   selectedFitmentId: string | null;
-  status: ReactNode;
-  picker: ReactNode;
 }) {
   return (
     <Card id="compatibilidade" className="scroll-mt-24">
       <CardHeader>
         <CardTitle>Peças para a sua moto</CardTitle>
-        <CardDescription>
-          {selectedFitmentId
-            ? "Confira abaixo se esta peça serve na moto escolhida."
-            : "Informe sua moto para conferir se esta peça é compatível."}
-        </CardDescription>
+        <CardDescription>Motos em que a loja confirmou que esta peça serve.</CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-6 lg:grid-cols-2 lg:gap-8">
-        <div className="min-w-0 space-y-4">
-          {status}
-          {picker}
-        </div>
+      <CardContent>
         <div className="min-w-0">
           <h3 className="text-foreground font-sans text-sm font-semibold tracking-normal">
             Motos compatíveis informadas pela loja

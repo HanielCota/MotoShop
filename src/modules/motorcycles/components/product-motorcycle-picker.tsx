@@ -74,7 +74,7 @@ export function ProductMotorcyclePicker({
     }
     setMessage({});
     if (!signedIn) {
-      router.replace(`${withMotoParam(productHref, fitmentId)}#compatibilidade` as Route, { scroll: false });
+      router.replace(`${withMotoParam(productHref, fitmentId)}#sua-moto` as Route, { scroll: false });
       return;
     }
     startTransition(async () => {
@@ -83,7 +83,7 @@ export function ProductMotorcyclePicker({
       setMessage(result);
       if (!result.error) {
         // A moto salva passa a ser a referência; remove a escolha temporária da URL.
-        router.replace(`${withMotoParam(productHref, null)}#compatibilidade` as Route, { scroll: false });
+        router.replace(`${withMotoParam(productHref, null)}#sua-moto` as Route, { scroll: false });
         router.refresh();
       }
     });
