@@ -3,12 +3,11 @@
 import { Prisma } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 
-import { slugify } from "@/lib/utils";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { toActionError } from "@/shared/errors/action-error";
 
 import { updateStoreProfile } from "../application/update-store-profile";
-import { storeProfileSchema } from "../schemas/store-profile";
+import { readStoreProfileFormInput, storeProfileSchema } from "../schemas/store-profile";
 import { splitStoreSlugIssue } from "../schemas/store-slug";
 import { readSubmittedValues } from "@/shared/forms/submitted-values";
 
@@ -54,20 +53,4 @@ export async function updateStoreProfileAction(
     }
     return { error: toActionError(error, "updateStoreProfileAction").message, values };
   }
-}
-
-function readStoreProfileFormInput(formData: FormData) {
-  return {
-    name: formData.get("name"),
-    slug: slugify(String(formData.get("slug") ?? "")),
-    description: readTrimmedField(formData, "description"),
-    instagramUrl: readTrimmedField(formData, "instagramUrl"),
-    youtubeUrl: readTrimmedField(formData, "youtubeUrl"),
-    whatsappUrl: readTrimmedField(formData, "whatsappUrl"),
-    facebookUrl: readTrimmedField(formData, "facebookUrl"),
-  };
-}
-
-function readTrimmedField(formData: FormData, name: string): string {
-  return String(formData.get(name) ?? "").trim();
 }

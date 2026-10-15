@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { useActionState } from "react";
 
 import { updateStoreProfileAction, type StoreProfileActionState } from "../actions/store-profile-actions";
+import { validateStoreProfileForm } from "../schemas/store-profile";
 import { STORE_SLUG_EXAMPLE } from "../schemas/store-slug";
+import { useClientValidation } from "@/shared/forms/client-validation";
 
 type StoreProfileFormProps = {
   store: {
@@ -26,10 +28,13 @@ const initialState: StoreProfileActionState = {};
 
 export function StoreProfileForm({ store }: StoreProfileFormProps) {
   const [state, action, pending] = useActionState(updateStoreProfileAction, initialState);
+  const { clientError, onSubmit } = useClientValidation(validateStoreProfileForm);
+  const slugError = clientError ? clientError.slugError : state.slugError;
+  const formError = clientError ? (clientError.error ?? null) : (state.error ?? null);
   const values = state.values ?? storeFormValues(store);
 
   return (
-    <form action={action} noValidate className="grid gap-4">
+    <form action={action} onSubmit={onSubmit} noValidate className="grid gap-4">
       <label className="flex flex-col gap-2 text-sm font-medium">
         Nome público
         <Input name="name" defaultValue={values.name} required maxLength={120} />
@@ -37,7 +42,7 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
       <FormField
         id="store-slug"
         label="Identificador da loja"
-        error={state.slugError}
+        error={slugError}
         hint={
           <>
             {STORE_SLUG_EXAMPLE}
@@ -100,7 +105,7 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
           Os links preenchidos ficam visíveis na vitrine pública da loja.
         </p>
       </fieldset>
-      <FormMessage error={state.error ?? null} success={state.success ?? null} />
+      <FormMessage error={formError} success={clientError ? null : (state.success ?? null)} />
       <Button type="submit" className="rounded-md px-4" disabled={pending}>
         {pending ? "Salvando..." : "Salvar perfil público"}
       </Button>
