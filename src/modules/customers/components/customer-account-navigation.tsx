@@ -12,7 +12,7 @@ function isActive(href: string, pathname: string) {
 }
 
 const itemClassName =
-  "flex min-h-11 shrink-0 items-center gap-3 rounded-lg px-3 text-base font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none lg:min-h-14 lg:rounded-none lg:border-l-4 lg:border-transparent lg:px-5";
+  "flex min-h-11 shrink-0 items-center gap-3 rounded-md px-3 text-base font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none lg:min-h-14 lg:rounded-none lg:border-l-4 lg:border-transparent lg:px-5";
 
 /**
  * Menu "Serviços" da conta do cliente. No desktop é uma coluna com separadores;

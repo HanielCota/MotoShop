@@ -27,13 +27,13 @@ export function AppAreaHeader({ area, subtitle, icon: Icon }: AppAreaHeaderProps
       <div className="flex shrink-0 items-center gap-1">
         <Link
           href="/products"
-          className="text-muted-foreground hover:text-foreground hover:bg-muted inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors"
+          className="text-muted-foreground hover:text-foreground hover:bg-muted inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 text-sm font-medium transition-colors"
         >
           <span className="hidden sm:inline">Ver marketplace</span>
           <span className="sm:hidden">Loja</span>
           <ArrowUpRight className="size-4" aria-hidden="true" />
         </Link>
-        <SignOutButton className="text-muted-foreground hover:text-foreground hover:bg-muted min-h-11 rounded-lg" />
+        <SignOutButton className="text-muted-foreground hover:text-foreground hover:bg-muted min-h-11 rounded-md" />
       </div>
     </header>
   );
