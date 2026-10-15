@@ -1,6 +1,6 @@
 import { Webhook } from "lucide-react";
 
-import { ActionForm } from "@/components/ui/action-form";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -86,11 +86,17 @@ export async function AdminWebhooksSection({ searchParams }: AdminSectionProps) 
                 <div className="flex flex-col items-start gap-1">
                   {event.error ? <p className="text-destructive max-w-sm text-xs break-words">{event.error}</p> : null}
                   {event.status === "FAILED" ? (
-                    <ActionForm action={retryWebhookEventAction.bind(null, event.id)}>
-                      <button type="submit" className={buttonVariants({ variant: "link", size: "link-xs" })}>
-                        Reprocessar
-                      </button>
-                    </ActionForm>
+                    <ConfirmDialog
+                      trigger={
+                        <button type="button" className={buttonVariants({ variant: "link", size: "link-xs" })}>
+                          Reprocessar
+                        </button>
+                      }
+                      title="Reprocessar este webhook?"
+                      description="O evento volta para a fila e pode atualizar pedido, pagamento ou envio."
+                      confirmLabel="Reprocessar"
+                      onConfirm={retryWebhookEventAction.bind(null, event.id)}
+                    />
                   ) : null}
                   {!event.error && event.status !== "FAILED" ? (
                     <span className="text-muted-foreground text-xs">—</span>

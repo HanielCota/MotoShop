@@ -1,6 +1,6 @@
 import { Mail } from "lucide-react";
 
-import { ActionForm } from "@/components/ui/action-form";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -94,11 +94,17 @@ export async function AdminEmailsSection({ searchParams }: AdminSectionProps) {
               <td className={cellClassName}>
                 <StatusBadge domain="notification" status={delivery.status} />
                 {delivery.retryable ? (
-                  <ActionForm action={resendNotificationDeliveryAction.bind(null, delivery.id)} className="mt-1">
-                    <button type="submit" className={buttonVariants({ variant: "link", size: "link-xs" })}>
-                      Reenviar
-                    </button>
-                  </ActionForm>
+                  <ConfirmDialog
+                    trigger={
+                      <button type="button" className={`${buttonVariants({ variant: "link", size: "link-xs" })} mt-1`}>
+                        Reenviar
+                      </button>
+                    }
+                    title="Reenviar este e-mail?"
+                    description="A pessoa recebe a mesma mensagem de novo."
+                    confirmLabel="Reenviar"
+                    onConfirm={resendNotificationDeliveryAction.bind(null, delivery.id)}
+                  />
                 ) : null}
               </td>
               <td className={`${cellClassName} text-muted-foreground whitespace-nowrap`}>

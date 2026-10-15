@@ -5,6 +5,7 @@ import { ActionForm } from "@/components/ui/action-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterForm, FilterSelect, FilterText } from "@/components/ui/filter-form";
 import { Pagination } from "@/components/ui/pagination";
@@ -106,7 +107,7 @@ export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: 
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <CouponProductPageToggle couponId={coupon.id} shown={coupon.showOnProductPage} />
-                    <CouponActiveToggle couponId={coupon.id} active={coupon.active} />
+                    <CouponActiveToggle couponId={coupon.id} code={coupon.code} active={coupon.active} />
                   </div>
                 </li>
               ))}
@@ -156,7 +157,7 @@ export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: 
                       <td className="py-3 text-right">
                         <div className="flex flex-wrap justify-end gap-2">
                           <CouponProductPageToggle couponId={coupon.id} shown={coupon.showOnProductPage} />
-                          <CouponActiveToggle couponId={coupon.id} active={coupon.active} />
+                          <CouponActiveToggle couponId={coupon.id} code={coupon.code} active={coupon.active} />
                         </div>
                       </td>
                     </tr>
@@ -199,11 +200,28 @@ function couponUsageLabel(coupon: CouponSummary): string {
     : `${used} ${used === 1 ? "uso" : "usos"}`;
 }
 
-function CouponActiveToggle({ couponId, active }: { couponId: string; active: boolean }) {
+function CouponActiveToggle({ couponId, code, active }: { couponId: string; code: string; active: boolean }) {
+  if (active) {
+    return (
+      <ConfirmDialog
+        trigger={
+          <Button type="button" variant="outline" size="sm">
+            Desativar
+          </Button>
+        }
+        title={`Desativar o cupom ${code}?`}
+        description="Clientes deixam de poder usar o cupom até você reativar."
+        confirmLabel="Desativar"
+        tone="destructive"
+        onConfirm={setSellerCouponActiveAction.bind(null, couponId, false)}
+      />
+    );
+  }
+
   return (
-    <ActionForm action={setSellerCouponActiveAction.bind(null, couponId, !active)}>
+    <ActionForm action={setSellerCouponActiveAction.bind(null, couponId, true)}>
       <Button type="submit" variant="outline" size="sm">
-        {active ? "Desativar" : "Ativar"}
+        Ativar
       </Button>
     </ActionForm>
   );

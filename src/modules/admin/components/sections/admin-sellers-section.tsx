@@ -2,6 +2,7 @@ import { Store } from "lucide-react";
 
 import { ActionForm } from "@/components/ui/action-form";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -79,11 +80,17 @@ export async function AdminSellersSection({ searchParams }: AdminSectionProps) {
               </div>
               {seller.status === "PENDING" ? (
                 <div className="flex shrink-0 gap-2">
-                  <ActionForm action={approveSellerAction.bind(null, seller.id)}>
-                    <Button type="submit" size="sm">
-                      Aprovar
-                    </Button>
-                  </ActionForm>
+                  <ConfirmDialog
+                    trigger={
+                      <Button type="button" size="sm">
+                        Aprovar
+                      </Button>
+                    }
+                    title={`Aprovar a ${seller.store?.name ?? "loja"}?`}
+                    description="A loja passa a cadastrar produtos e enviar para aprovação."
+                    confirmLabel="Aprovar loja"
+                    onConfirm={approveSellerAction.bind(null, seller.id)}
+                  />
                   <ActionForm action={rejectSellerAction.bind(null, seller.id)}>
                     <Button type="submit" variant="outline" size="sm">
                       Recusar
@@ -97,11 +104,18 @@ export async function AdminSellersSection({ searchParams }: AdminSectionProps) {
                   </Button>
                 </ActionForm>
               ) : seller.status === "APPROVED" || seller.status === "ACTIVE" ? (
-                <ActionForm action={suspendSellerAction.bind(null, seller.id)} className="shrink-0">
-                  <Button type="submit" variant="outline" size="sm">
-                    Suspender
-                  </Button>
-                </ActionForm>
+                <ConfirmDialog
+                  trigger={
+                    <Button type="button" variant="outline" size="sm" className="shrink-0">
+                      Suspender
+                    </Button>
+                  }
+                  title={`Suspender a ${seller.store?.name ?? "loja"}?`}
+                  description="Os produtos saem da vitrine e a equipe perde o acesso à Central do Lojista até a loja ser reativada."
+                  confirmLabel="Suspender loja"
+                  tone="destructive"
+                  onConfirm={suspendSellerAction.bind(null, seller.id)}
+                />
               ) : null}
             </li>
           ))}
