@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
-import { Upload } from "lucide-react";
+import { Trash2, Upload } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
@@ -228,6 +228,7 @@ export function ProductImageManager({
                     aria-label="Remover imagem"
                     disabled={uploading || busyImageId !== undefined}
                   >
+                    <Trash2 aria-hidden="true" data-icon="inline-start" />
                     Remover
                   </AlertDialog.Trigger>
                   <AlertDialog.Portal>

@@ -2,7 +2,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { Popover } from "@base-ui/react/popover";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -179,13 +179,14 @@ export function CartPreview() {
                       </div>
                       <Button
                         type="button"
-                        variant="link"
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-destructive shrink-0"
                         disabled={pending}
                         aria-label={`Remover ${item.name} do carrinho`}
                         onClick={() => updateItem(item.id, 0)}
                       >
-                        Remover
+                        <Trash2 aria-hidden="true" />
                       </Button>
                     </li>
                   ))}

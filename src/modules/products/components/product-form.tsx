@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { startTransition, useState } from "react";
 import {
   Controller,
@@ -371,7 +371,6 @@ function VariantsEditor({
                 onClick={() => remove(index)}
                 className="text-destructive hover:text-destructive justify-self-start sm:col-span-4"
               >
-                <Trash2 aria-hidden="true" data-icon="inline-start" />
                 Remover variação
               </Button>
             ) : (
