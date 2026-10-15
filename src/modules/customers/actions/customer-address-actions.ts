@@ -8,47 +8,16 @@ import { requireAuthenticatedUser } from "@/modules/auth/application/authorizati
 import { ApplicationError } from "@/shared/errors/application-error";
 import { toActionError } from "@/shared/errors/action-error";
 
-import { isBrazilianStateCode } from "../domain/brazilian-address";
-
-const addressSchema = z.object({
-  label: z.string().trim().min(2, "Informe um nome para o endereço.").max(40),
-  recipient: z.string().trim().min(2, "Informe o destinatário.").max(120),
-  postalCode: z
-    .string()
-    .trim()
-    .regex(/^\d{8}$/, "Informe um CEP com 8 números."),
-  street: z.string().trim().min(2, "Informe a rua.").max(160),
-  number: z.string().trim().min(1, "Informe o número.").max(20),
-  complement: z.string().trim().max(80).optional(),
-  neighborhood: z.string().trim().min(2, "Informe o bairro.").max(100),
-  city: z.string().trim().min(2, "Informe a cidade.").max(100),
-  state: z.string().trim().toUpperCase().refine(isBrazilianStateCode, "Informe uma UF válida, como SP ou RJ."),
-  isDefault: z.boolean().default(false),
-});
+import { parseCustomerAddressForm } from "../schemas/customer-address";
 
 export type CustomerAddressActionState = { error?: string; success?: string };
-
-function parseAddressForm(formData: FormData) {
-  return addressSchema.safeParse({
-    label: formData.get("label"),
-    recipient: formData.get("recipient"),
-    postalCode: String(formData.get("postalCode") ?? "").replace(/\D/g, ""),
-    street: formData.get("street"),
-    number: formData.get("number"),
-    complement: formData.get("complement") || undefined,
-    neighborhood: formData.get("neighborhood"),
-    city: formData.get("city"),
-    state: formData.get("state"),
-    isDefault: formData.get("isDefault") === "on",
-  });
-}
 
 export async function createCustomerAddressAction(
   _previousState: CustomerAddressActionState,
   formData: FormData,
 ): Promise<CustomerAddressActionState> {
   const session = await requireAuthenticatedUser("/account/addresses");
-  const parsed = parseAddressForm(formData);
+  const parsed = parseCustomerAddressForm(formData);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira o endereço." };
 
   try {
