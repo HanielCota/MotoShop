@@ -145,7 +145,6 @@ export function PaymentMethodIcons() {
             aria-label={method.name}
             className="block rounded-[4px] ring-1 ring-white/20"
           >
-            <title>{method.name}</title>
             {method.mark}
           </svg>
         </li>
