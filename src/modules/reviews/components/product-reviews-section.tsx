@@ -98,9 +98,10 @@ export function ProductReviewsSection({
                   defaultValue={params.reviewRating ?? ""}
                 >
                   <option value="">Todas as notas</option>
-                  {[5, 4, 3, 2, 1].map((rating) => (
+                  {/* "1 estrela ou mais" would equal "Todas as notas", and 5 is the top: no "ou mais". */}
+                  {[5, 4, 3, 2].map((rating) => (
                     <option key={rating} value={rating}>
-                      {rating} estrela{rating === 1 ? "" : "s"} ou mais
+                      {rating === 5 ? "5 estrelas" : `${rating} estrelas ou mais`}
                     </option>
                   ))}
                 </DesignSelect>

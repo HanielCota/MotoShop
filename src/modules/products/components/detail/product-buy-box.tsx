@@ -60,6 +60,8 @@ export function ProductBuyBox({
           <p className="text-muted-foreground mt-1 text-sm">
             <span className="sr-only">Preço anterior: </span>
             <span className="mr-2 line-through">{formatMoneyInCents(selected.priceInCents)}</span>
+            {/* Keeps screen readers from reading the old price and the offer as one word. */}
+            <span className="sr-only">. </span>
             <span className="text-brand-strong font-semibold">
               Oferta{discountPercentage > 0 ? ` · ${discountPercentage}% off` : ""}
             </span>

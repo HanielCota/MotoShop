@@ -41,4 +41,12 @@ describe("ProductBuyBox", () => {
     expect(screen.queryByRole("button", { name: "Adicionar ao carrinho" })).not.toBeInTheDocument();
     expect(screen.queryByText(paymentNotice)).not.toBeInTheDocument();
   });
+
+  it("reads the old price and the offer as separate phrases", () => {
+    const onSale = { ...variant, priceInCents: 89990, currentPriceInCents: 79990, onSale: true };
+    render(<ProductBuyBox variants={[onSale]} isDemo={false} hasPriceRange={false} paymentAvailable />);
+
+    const oldPrice = screen.getByText(/Preço anterior/).parentElement;
+    expect(oldPrice?.textContent?.replace(/\s/g, " ")).toMatch(/R\$ 899,90\. Oferta · 11% off/);
+  });
 });
