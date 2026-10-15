@@ -234,7 +234,7 @@ export default async function PublicStorePage({
             <CatalogFiltersPanel activeCount={activeProductFilterCount}>
               <form
                 key={JSON.stringify(storeParams)}
-                className="grid min-w-0 content-start gap-4 [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:min-w-0"
+                className="grid min-w-0 content-start gap-4 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:min-w-0"
                 method="get"
                 action="#produtos"
               >

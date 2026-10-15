@@ -103,7 +103,7 @@ export function PublicCatalogLanding({
           <form
             method="get"
             action={baseHref}
-            className="grid min-w-0 content-start gap-4 [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:w-full"
+            className="grid min-w-0 content-start gap-4 [&_[data-slot=select-trigger]]:w-full"
           >
             {sort !== "relevance" ? <input type="hidden" name="sort" value={sort} /> : null}
             <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
