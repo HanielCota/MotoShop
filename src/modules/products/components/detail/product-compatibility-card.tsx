@@ -43,7 +43,11 @@ export function ProductCompatibilityCard({
         <CardTitle>
           <h2 className="text-xl">Peças para a sua moto</h2>
         </CardTitle>
-        <CardDescription>Informe sua moto para conferir se esta peça é compatível.</CardDescription>
+        <CardDescription>
+          {selectedFitmentId
+            ? "Confira abaixo se esta peça serve na moto escolhida."
+            : "Informe sua moto para conferir se esta peça é compatível."}
+        </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6 lg:grid-cols-2 lg:gap-8">
         <div className="min-w-0 space-y-4">
