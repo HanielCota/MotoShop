@@ -100,7 +100,7 @@ export function CategoryForm({ categories }: { categories: Option[] }) {
         </DesignSelect>
       </Field>
       <Field label="Ordem de exibição">
-        <Input name="sortOrder" type="number" min="0" defaultValue={state.values?.sortOrder ?? "0"} />
+        <Input name="sortOrder" inputMode="numeric" autoComplete="off" defaultValue={state.values?.sortOrder ?? "0"} />
       </Field>
     </FormShell>
   );
@@ -170,8 +170,8 @@ export function MotorcycleFitmentForm({ models }: { models: Option[] }) {
         <Field label="Cilindrada (cc)">
           <Input
             name="displacementCc"
-            type="number"
-            min="1"
+            inputMode="numeric"
+            autoComplete="off"
             placeholder="Ex.: 250"
             defaultValue={state.values?.displacementCc ?? ""}
             required
@@ -180,9 +180,9 @@ export function MotorcycleFitmentForm({ models }: { models: Option[] }) {
         <Field label="Ano">
           <Input
             name="year"
-            type="number"
-            min="1900"
-            max="2200"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={4}
             placeholder="Ex.: 2025"
             defaultValue={state.values?.year ?? ""}
             required

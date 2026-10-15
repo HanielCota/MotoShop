@@ -154,9 +154,8 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
           <Input
             {...field}
             name="globalUsageLimit"
-            type="number"
             inputMode="numeric"
-            min="1"
+            autoComplete="off"
             value={values.globalUsageLimit}
             onChange={(event) => updateValue("globalUsageLimit", event.target.value)}
           />
@@ -167,9 +166,8 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
           <Input
             {...field}
             name="perCustomerUsageLimit"
-            type="number"
             inputMode="numeric"
-            min="1"
+            autoComplete="off"
             value={values.perCustomerUsageLimit}
             onChange={(event) => updateValue("perCustomerUsageLimit", event.target.value)}
           />

@@ -40,11 +40,8 @@ export function MeasurementFields({
               <Input
                 {...control}
                 {...register(isVariant ? (`variants.${variantIndex}.${name}` as const) : name)}
-                type="number"
                 inputMode="numeric"
-                min="1"
-                max="2147483647"
-                step="1"
+                autoComplete="off"
               />
             )}
           </FormField>

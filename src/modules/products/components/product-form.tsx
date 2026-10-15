@@ -294,13 +294,7 @@ function VariantsEditor({
             </FormField>
             <FormField id={fieldId("stock")} label="Estoque" required error={variantErrors?.stock?.message}>
               {(control) => (
-                <Input
-                  {...control}
-                  {...register(`variants.${index}.stock`)}
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                />
+                <Input {...control} {...register(`variants.${index}.stock`)} inputMode="numeric" autoComplete="off" />
               )}
             </FormField>
             <VariantAttributeFields control={control} register={register} errors={variantErrors} index={index} />

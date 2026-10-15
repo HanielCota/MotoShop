@@ -55,3 +55,10 @@ it("uses text date and time fields for the promotion instead of the native picke
     expect(screen.getByLabelText("Término da promoção")).toHaveAccessibleDescription(/Data final inválida/),
   );
 });
+
+it("does not use native number fields that change with the mouse wheel (DN-07)", () => {
+  const { container } = render(<ProductForm {...options} />);
+
+  expect(container.querySelector('input[type="number"]')).toBeNull();
+  expect(screen.getByLabelText(/^Estoque/)).toHaveAttribute("inputmode", "numeric");
+});

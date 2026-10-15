@@ -50,7 +50,7 @@ export function OwnShippingMethodForm() {
       </label>
       <label className="grid gap-2">
         Prazo em dias úteis
-        <Input name="estimatedDeliveryDays" type="number" min={1} max={365} required />
+        <Input name="estimatedDeliveryDays" inputMode="numeric" autoComplete="off" maxLength={3} />
       </label>
       <div className="sm:col-span-2">
         <Feedback state={state} clientError={clientError} />
