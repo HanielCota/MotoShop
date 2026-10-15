@@ -14,6 +14,7 @@ it("keeps old ISO links working", () => {
 it("ignores impossible or malformed dates instead of filtering by them", () => {
   expect(parseDateBoundary("99/99/2026", false)).toBeUndefined();
   expect(parseDateBoundary("31/02/2026", false)).toBeUndefined();
-  expect(parseDateBoundary("10-05-2026", false)).toBeUndefined();
+  expect(parseDateBoundary("2026/05/10", false)).toBeUndefined();
+  expect(parseDateBoundary("10-05-2026", false)).toBeDefined();
   expect(buildCreatedAtBoundaryFilter("99/99/2026", "")).toEqual({});
 });
