@@ -1,8 +1,13 @@
-import { AlertTriangle, Check, Circle, Clock, Truck, X } from "lucide-react";
+import { Check, Circle, CircleX, Clock, TriangleAlert, Truck } from "lucide-react";
 import type { ComponentProps } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { getStatusPresentation, type StatusDomain, type StatusTone } from "@/shared/presentation/status-labels";
+import {
+  getStatusPresentation,
+  type StatusDomain,
+  type StatusMeaning,
+  type StatusTone,
+} from "@/shared/presentation/status-labels";
 
 const toneVariant = {
   neutral: "neutral",
@@ -13,15 +18,16 @@ const toneVariant = {
   brand: "brand",
 } as const satisfies Record<StatusTone, ComponentProps<typeof Badge>["variant"]>;
 
-// Ícone acompanha a cor para que o status não dependa só de cor (WCAG 1.4.1).
-const toneIcon = {
-  neutral: Circle,
-  info: Clock,
-  success: Check,
-  warning: AlertTriangle,
-  danger: X,
-  brand: Truck,
-} as const;
+// O ícone segue o significado do status, não a cor, para que o status não dependa só de cor
+// (WCAG 1.4.1) e o mesmo símbolo signifique sempre a mesma coisa (IC-01). `X` fica para fechar/limpar.
+const meaningIcon = {
+  waiting: Clock,
+  done: Check,
+  transit: Truck,
+  attention: TriangleAlert,
+  failed: CircleX,
+  idle: Circle,
+} as const satisfies Record<StatusMeaning, unknown>;
 
 type StatusBadgeProps = Omit<ComponentProps<typeof Badge>, "variant" | "children"> & {
   domain: StatusDomain;
@@ -32,7 +38,7 @@ type StatusBadgeProps = Omit<ComponentProps<typeof Badge>, "variant" | "children
 
 export function StatusBadge({ domain, status, label, ...props }: StatusBadgeProps) {
   const presentation = getStatusPresentation(domain, status);
-  const Icon = toneIcon[presentation.tone];
+  const Icon = meaningIcon[presentation.meaning];
 
   return (
     <Badge variant={toneVariant[presentation.tone]} data-status={status} {...props}>
