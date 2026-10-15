@@ -42,11 +42,17 @@ function luminance([red, green, blue]: Rgb): number {
 }
 
 function over(foreground: Rgb, background: Rgb, alpha: number): Rgb {
-  return [0, 1, 2].map((index) => foreground[index] * alpha + background[index] * (1 - alpha)) as Rgb;
+  const blend = (front: number, back: number) => front * alpha + back * (1 - alpha);
+  return [
+    blend(foreground[0], background[0]),
+    blend(foreground[1], background[1]),
+    blend(foreground[2], background[2]),
+  ];
 }
 
 function contrast(first: Rgb, second: Rgb): number {
-  const [lighter, darker] = [luminance(first), luminance(second)].sort((x, y) => y - x);
+  const lighter = Math.max(luminance(first), luminance(second));
+  const darker = Math.min(luminance(first), luminance(second));
   return (lighter + 0.05) / (darker + 0.05);
 }
 
