@@ -27,7 +27,7 @@ export function SellerCta() {
             )}
             href="/seller"
           >
-            Quero vender no Moto Shop
+            Venda no Moto Shop
           </Link>
           <Link
             className={cn(

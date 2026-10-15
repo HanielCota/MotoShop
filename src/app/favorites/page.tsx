@@ -53,11 +53,7 @@ export default async function FavoritesPage({
 
   return (
     <CustomerAccountShell pathname="/favorites" userName={session.user.name}>
-      <PageHeader
-        eyebrow="Minha conta"
-        title="Meus favoritos"
-        description="Guarde produtos para revisitar antes da próxima sessão."
-      />
+      <PageHeader eyebrow="Minha conta" title="Meus favoritos" description="Guarde produtos para ver depois." />
 
       <form
         className="border-border bg-card grid gap-3 rounded-xl border p-4 sm:grid-cols-[1fr_180px_180px_auto] sm:items-end [&_[data-slot=select-trigger]]:w-full"

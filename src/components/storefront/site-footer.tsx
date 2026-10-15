@@ -10,12 +10,12 @@ import { PaymentMethodIcons } from "./payment-method-icons";
 
 const quickLinks: { label: string; href: Route }[] = [
   { label: "Comprar", href: "/products" },
-  { label: "Vender", href: "/seller" },
+  { label: "Venda no Moto Shop", href: "/seller" },
   { label: "Pedidos", href: "/orders" },
 ];
 
 // Only pages that exist; "Sobre", "Trocas e Devoluções", "Políticas" etc. join when the client sends the text.
-const institutionalLinks: { label: string; href: Route }[] = [{ label: "Seja um Lojista", href: "/seller" }];
+const institutionalLinks: { label: string; href: Route }[] = [{ label: "Venda no Moto Shop", href: "/seller" }];
 
 const serviceHours = [
   { days: "Segunda a Sexta", hours: "08h30 às 18h30" },

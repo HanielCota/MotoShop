@@ -255,7 +255,7 @@ export function AuthForm({
       ) : null}
       {showCredentialsHelp ? null : (
         <div className="border-border text-muted-foreground mt-1 border-t pt-5 text-center text-sm">
-          {mode === "sign-in" ? "Novo por aqui?" : "Já faz parte do Moto Shop?"}{" "}
+          {mode === "sign-in" ? "Primeira vez aqui?" : "Já faz parte do Moto Shop?"}{" "}
           <button
             type="button"
             className="text-foreground hover:text-brand-strong inline-flex min-h-11 items-center font-semibold underline underline-offset-4 disabled:opacity-50"
