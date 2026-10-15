@@ -191,7 +191,7 @@ export function AuthForm({
               clearFieldError("password");
             }}
             autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
-            placeholder="Pelo menos 8 caracteres"
+            placeholder={mode === "sign-up" ? "Pelo menos 8 caracteres" : undefined}
             className="bg-card h-12 px-4 pr-12"
             required
           />
