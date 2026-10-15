@@ -1,7 +1,9 @@
-import { render, screen } from "@testing-library/react";
-import { expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, expect, it } from "vitest";
 
 import CheckoutSuccessPage from "./page";
+
+afterEach(cleanup);
 
 it("does not claim an order was created when the order number is missing", async () => {
   render(await CheckoutSuccessPage({ searchParams: Promise.resolve({}) }));
