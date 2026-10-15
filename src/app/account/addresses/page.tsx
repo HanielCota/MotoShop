@@ -32,25 +32,30 @@ export default async function CustomerAddressesPage({
     <CustomerAccountShell pathname="/account/addresses" userName={session.user.name}>
       <PageHeader eyebrow="Minha conta" title="Meus endereços" description="Deixe o próximo checkout mais rápido." />
 
-      <form
-        className="border-border bg-card flex flex-wrap items-end gap-3 rounded-xl border p-4"
-        method="get"
-        role="search"
-      >
-        <label className="flex min-w-0 flex-1 flex-col gap-2 text-sm font-medium sm:min-w-64 sm:flex-none">
-          Buscar endereço
-          <Input
-            type="search"
-            className="h-11"
-            name="addressQ"
-            defaultValue={params.addressQ ?? ""}
-            placeholder="Rótulo, destinatário, cidade ou CEP"
-          />
-        </label>
-        <Button type="submit" size="lg" className="px-4">
-          Buscar
-        </Button>
-      </form>
+      {/* No address yet: only the empty state and the form to add one, without a search for nothing. */}
+      {addresses.length > 0 || Boolean(params.addressQ?.trim()) ? (
+        <>
+          <form
+            className="border-border bg-card flex flex-wrap items-end gap-3 rounded-xl border p-4"
+            method="get"
+            role="search"
+          >
+            <label className="flex min-w-0 flex-1 flex-col gap-2 text-sm font-medium sm:min-w-64 sm:flex-none">
+              Buscar endereço
+              <Input
+                type="search"
+                className="h-11"
+                name="addressQ"
+                defaultValue={params.addressQ ?? ""}
+                placeholder="Rótulo, destinatário, cidade ou CEP"
+              />
+            </label>
+            <Button type="submit" size="lg" className="px-4">
+              Buscar
+            </Button>
+          </form>
+        </>
+      ) : null}
 
       {addresses.length > 0 ? (
         <section aria-label="Endereços cadastrados">

@@ -11,8 +11,8 @@ import { RequestReturnForm } from "@/modules/returns/components/request-return-f
 import { canRequestCancellation } from "@/modules/returns/domain/cancellation-eligibility";
 import { canRequestReturn, getReturnableQuantity } from "@/modules/returns/domain/return-eligibility";
 import { ReviewForm } from "@/modules/reviews/components/review-form";
-import { getStatusLabel } from "@/shared/presentation/status-labels";
 
+import { DisputeDetails, ReturnDetails } from "./after-sales-details";
 import { ShipmentTracking } from "./shipment-tracking";
 import type { CustomerOrderItem, CustomerSellerOrder } from "./types";
 import { Disclosure } from "@/components/ui/disclosure";
@@ -70,16 +70,16 @@ export function SellerOrderSection({
             </span>
           </InlineNotice>
         ) : null}
-        {latestDispute ? (
-          <InlineNotice tone="warning" role="status">
-            <span className="inline-flex flex-wrap items-center gap-2">
-              Disputa com mediação do Moto Shop
-              <StatusBadge domain="dispute" status={latestDispute.status} />
-            </span>
-          </InlineNotice>
-        ) : null}
+        {latestDispute ? <DisputeDetails dispute={latestDispute} /> : null}
 
-        <ShipmentTracking shipment={sellerOrder.shipment} />
+        {/* Before payment no delivery step has started; a checked "Aguardando envio" would mislead. */}
+        {sellerOrder.status === "PENDING_PAYMENT" ? (
+          <p className="bg-surface-sunken text-muted-foreground rounded-lg p-3 text-sm">
+            O envio começa depois que o pagamento for confirmado.
+          </p>
+        ) : (
+          <ShipmentTracking shipment={sellerOrder.shipment} />
+        )}
 
         <div>
           <h4 className="text-foreground mb-2 text-sm font-semibold">Itens</h4>
@@ -153,15 +153,9 @@ function OrderItemRow({
         </div>
         <div className="flex flex-col items-start gap-1 sm:items-end">
           <span className="text-foreground font-medium">{formatMoneyInCents(item.totalAmountInCents)}</span>
-          {latestReturn ? (
-            <StatusBadge
-              domain="return"
-              status={latestReturn.status}
-              label={`Devolução: ${getStatusLabel("return", latestReturn.status)}`}
-            />
-          ) : null}
         </div>
       </div>
+      {latestReturn ? <ReturnDetails request={latestReturn} /> : null}
       {returnAllowed || showReview ? (
         <div className="flex flex-col gap-3">
           {showReview ? (

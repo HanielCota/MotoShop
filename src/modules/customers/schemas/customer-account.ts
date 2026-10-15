@@ -62,4 +62,10 @@ export const customerContactSchema = z.object(
 );
 
 export type CustomerContactFormInput = z.input<typeof customerContactSchema>;
+
+/** The profile card edits name and contact together; each part is still saved by its own action. */
+export const customerProfileSchema = customerNameSchema.extend(customerContactSchema.shape);
+
+export type CustomerProfileFormInput = z.input<typeof customerProfileSchema>;
+export type CustomerProfileInput = z.output<typeof customerProfileSchema>;
 export type CustomerContactInput = z.output<typeof customerContactSchema>;
