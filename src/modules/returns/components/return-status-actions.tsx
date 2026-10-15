@@ -49,10 +49,13 @@ export function ReturnStatusActions({
               const result = await callServerAction(() => reviewReturnRequestAction(returnRequestId, formData));
               setFeedback(result);
             }}
-            className="flex min-w-0 flex-1 gap-2"
+            className="flex min-w-0 flex-1 items-end gap-2"
           >
             <input type="hidden" name="decision" value="REJECT" />
-            <Input name="note" placeholder="Motivo da recusa" required className="min-w-0 flex-1" />
+            <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium">
+              Motivo da recusa
+              <Input name="note" placeholder="Explique ao cliente por que recusou" required className="min-w-0" />
+            </label>
             <Button type="submit" variant="outline" size="sm" disabled={pending}>
               Recusar
             </Button>

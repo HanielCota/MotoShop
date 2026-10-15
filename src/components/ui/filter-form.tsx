@@ -5,7 +5,9 @@ import type { ReactNode } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DateFilterInput } from "@/components/ui/date-filter-input";
 import { DesignSelect } from "@/components/ui/design-select";
+import { InlineNotice } from "@/components/ui/inline-notice";
 import { Input } from "@/components/ui/input";
+import { formatDateFilter, isInvertedDateRange } from "@/lib/date-filter";
 
 /** Formulário GET de filtros com layout consistente entre as seções. */
 export function FilterForm({
@@ -102,6 +104,7 @@ export function FilterDateRange({
   from: string | null | undefined;
   to: string | null | undefined;
 }) {
+  const inverted = isInvertedDateRange(from, to);
   return (
     <>
       <FilterField label="De">
@@ -110,6 +113,13 @@ export function FilterDateRange({
       <FilterField label="Até">
         <DateFilterInput size="sm" name={toName} value={to ?? null} />
       </FilterField>
+      {inverted ? (
+        // Sem o aviso, o período invertido só mostra "0 resultados" (BUG-012).
+        <InlineNotice tone="warning" className="sm:col-span-2 lg:col-span-4">
+          A data inicial ({formatDateFilter(from)}) é depois da final ({formatDateFilter(to)}). Ajuste o período para
+          ver resultados.
+        </InlineNotice>
+      ) : null}
     </>
   );
 }

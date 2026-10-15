@@ -18,7 +18,15 @@ import { loadCouponSearchParams } from "@/modules/coupons/search-params";
 
 import { adminHref } from "../../admin-href";
 import { clampAdminPage } from "../../search-params";
-import { AdminCard, AdminFilterForm, AdminTable, cellClassName, FilterSelect, FilterText } from "../admin-ui";
+import {
+  AdminCard,
+  AdminFilterForm,
+  AdminList,
+  AdminTable,
+  cellClassName,
+  FilterSelect,
+  FilterText,
+} from "../admin-ui";
 import type { AdminSectionProps } from "./types";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -77,62 +85,51 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
           description="Crie um cupom acima ou ajuste os filtros."
         />
       ) : (
-        <AdminTable
-          caption="Cupons do marketplace"
-          columns={["Código", "Tipo", "Desconto", "Status", "Uso", "Validade", "Ação"]}
-        >
-          {result.coupons.map((coupon) => (
-            <tr key={coupon.id}>
-              <td className={`${cellClassName} font-semibold`}>{coupon.code}</td>
-              <td className={`${cellClassName} whitespace-nowrap`}>{couponKindLabels[getCouponKind(coupon)]}</td>
-              <td className={`${cellClassName} whitespace-nowrap`}>
-                {coupon.discountType === "PERCENTAGE"
-                  ? `${(coupon.percentageBps ?? 0) / 100}%`
-                  : formatMoneyInCents(coupon.fixedAmountInCents ?? 0)}
-              </td>
-              <td className={cellClassName}>
-                <Badge variant={coupon.active ? "success" : "neutral"}>{coupon.active ? "Ativo" : "Inativo"}</Badge>
-              </td>
-              <td className={`${cellClassName} tabular-nums`}>
-                {coupon._count.redemptions}
-                {coupon.globalUsageLimit !== null ? `/${coupon.globalUsageLimit}` : ""}
-              </td>
-              <td className={`${cellClassName} text-muted-foreground whitespace-nowrap`}>
-                {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "Sem prazo"}
-              </td>
-              <td className={`${cellClassName} space-y-1`}>
-                {isSellerFundedCampaign(coupon) ? (
-                  <Link
-                    href={participantsHref(coupon.id)}
-                    className={buttonVariants({ variant: "link", size: "link-xs" })}
-                  >
-                    Ver lojas ({coupon._count.sellerParticipations})
-                  </Link>
-                ) : null}
-                {coupon.active ? (
-                  <ConfirmDialog
-                    trigger={
-                      <button type="button" className={buttonVariants({ variant: "link", size: "link-xs" })}>
-                        Desativar
-                      </button>
-                    }
-                    title={`Desativar o cupom ${coupon.code}?`}
-                    description="Clientes deixam de poder usar o cupom até ele ser reativado."
-                    confirmLabel="Desativar"
-                    tone="destructive"
-                    onConfirm={setMarketplaceCouponActiveAction.bind(null, coupon.id, false)}
-                  />
-                ) : (
-                  <ActionForm action={setMarketplaceCouponActiveAction.bind(null, coupon.id, true)}>
-                    <button type="submit" className={buttonVariants({ variant: "link", size: "link-xs" })}>
-                      Ativar
-                    </button>
-                  </ActionForm>
-                )}
-              </td>
-            </tr>
-          ))}
-        </AdminTable>
+        <>
+          {/* No celular, cada cupom vira um cartão com as ações à vista (BUG-024). */}
+          <div className="md:hidden">
+            <AdminList label="Cupons do marketplace">
+              {result.coupons.map((coupon) => (
+                <li key={coupon.id} className="flex flex-col gap-1 py-3 text-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold break-all">{coupon.code}</p>
+                    <Badge variant={coupon.active ? "success" : "neutral"}>{coupon.active ? "Ativo" : "Inativo"}</Badge>
+                  </div>
+                  <p className="text-muted-foreground">
+                    {couponKindLabels[getCouponKind(coupon)]} · {couponDiscountLabel(coupon)} de desconto
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {couponUsageLabel(coupon)} usos · {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "sem prazo"}
+                  </p>
+                  <CouponActions coupon={coupon} participantsHref={participantsHref(coupon.id)} />
+                </li>
+              ))}
+            </AdminList>
+          </div>
+          <AdminTable
+            caption="Cupons do marketplace"
+            columns={["Código", "Tipo", "Desconto", "Status", "Uso", "Validade", "Ação"]}
+            className="hidden md:block"
+          >
+            {result.coupons.map((coupon) => (
+              <tr key={coupon.id}>
+                <td className={`${cellClassName} font-semibold`}>{coupon.code}</td>
+                <td className={`${cellClassName} whitespace-nowrap`}>{couponKindLabels[getCouponKind(coupon)]}</td>
+                <td className={`${cellClassName} whitespace-nowrap`}>{couponDiscountLabel(coupon)}</td>
+                <td className={cellClassName}>
+                  <Badge variant={coupon.active ? "success" : "neutral"}>{coupon.active ? "Ativo" : "Inativo"}</Badge>
+                </td>
+                <td className={`${cellClassName} tabular-nums`}>{couponUsageLabel(coupon)}</td>
+                <td className={`${cellClassName} text-muted-foreground whitespace-nowrap`}>
+                  {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "Sem prazo"}
+                </td>
+                <td className={cellClassName}>
+                  <CouponActions coupon={coupon} participantsHref={participantsHref(coupon.id)} />
+                </td>
+              </tr>
+            ))}
+          </AdminTable>
+        </>
       )}
       {campaign ? <CampaignParticipants code={campaign.code} participants={campaign.participants} /> : null}
       {result.pageCount > 1 ? (
@@ -146,6 +143,50 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
         />
       ) : null}
     </AdminCard>
+  );
+}
+
+type MarketplaceCouponRow = Awaited<ReturnType<typeof listMarketplaceCoupons>>["coupons"][number];
+
+function couponDiscountLabel(coupon: MarketplaceCouponRow) {
+  return coupon.discountType === "PERCENTAGE"
+    ? `${(coupon.percentageBps ?? 0) / 100}%`
+    : formatMoneyInCents(coupon.fixedAmountInCents ?? 0);
+}
+
+function couponUsageLabel(coupon: MarketplaceCouponRow) {
+  return `${coupon._count.redemptions}${coupon.globalUsageLimit !== null ? `/${coupon.globalUsageLimit}` : ""}`;
+}
+
+function CouponActions({ coupon, participantsHref }: { coupon: MarketplaceCouponRow; participantsHref: Route }) {
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-1">
+      {isSellerFundedCampaign(coupon) ? (
+        <Link href={participantsHref} className={buttonVariants({ variant: "link", size: "link-xs" })}>
+          Ver lojas ({coupon._count.sellerParticipations})
+        </Link>
+      ) : null}
+      {coupon.active ? (
+        <ConfirmDialog
+          trigger={
+            <button type="button" className={buttonVariants({ variant: "link", size: "link-xs" })}>
+              Desativar
+            </button>
+          }
+          title={`Desativar o cupom ${coupon.code}?`}
+          description="Clientes deixam de poder usar o cupom até ele ser reativado."
+          confirmLabel="Desativar"
+          tone="destructive"
+          onConfirm={setMarketplaceCouponActiveAction.bind(null, coupon.id, false)}
+        />
+      ) : (
+        <ActionForm action={setMarketplaceCouponActiveAction.bind(null, coupon.id, true)}>
+          <button type="submit" className={buttonVariants({ variant: "link", size: "link-xs" })}>
+            Ativar
+          </button>
+        </ActionForm>
+      )}
+    </div>
   );
 }
 

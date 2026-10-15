@@ -15,6 +15,8 @@ export type ProductLifecycleResult = { ok: true } | { ok: false; error: string }
 type SellerActor = { sellerId: string; userId: string };
 
 const editableStatuses = [ProductStatus.DRAFT, ProductStatus.REJECTED];
+/** Aprovado não é editável, só arquivável (BUG-006); volta como rascunho e passa de novo pela aprovação. */
+const archivableStatuses = [...editableStatuses, ProductStatus.APPROVED];
 
 export async function submitProductForReview(actor: SellerActor, productId: string): Promise<ProductLifecycleResult> {
   const product = await db.product.findFirst({
@@ -47,7 +49,7 @@ export async function submitProductForReview(actor: SellerActor, productId: stri
 /** Arquiva um rascunho ou produto rejeitado. Retorna `false` se nada mudou. */
 export async function archiveSellerProduct(actor: SellerActor, productId: string): Promise<boolean> {
   const product = await db.product.findFirst({
-    where: { id: productId, sellerId: actor.sellerId, status: { in: editableStatuses } },
+    where: { id: productId, sellerId: actor.sellerId, status: { in: archivableStatuses } },
     select: { id: true, status: true },
   });
   if (!product) return false;

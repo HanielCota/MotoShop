@@ -4,6 +4,7 @@ import { Package } from "lucide-react";
 
 import { ActionForm } from "@/components/ui/action-form";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FilterField, FilterForm, FilterSelect, FilterText } from "@/components/ui/filter-form";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -269,6 +270,21 @@ export async function SellerProductsCard({
                           Arquivar
                         </Button>
                       </ActionForm>
+                    ) : null}
+                    {product.status === "APPROVED" ? (
+                      // Publicado só sai da vitrine com confirmação: para voltar, passa de novo pela aprovação (BUG-006).
+                      <ConfirmDialog
+                        trigger={
+                          <Button type="button" size="sm" variant="ghost">
+                            Arquivar
+                          </Button>
+                        }
+                        title={`Arquivar ${product.name}?`}
+                        description="Arquivar tira o produto da vitrine. Para voltar, ele volta como rascunho e passa de novo pela aprovação."
+                        confirmLabel="Arquivar produto"
+                        tone="destructive"
+                        onConfirm={archiveProductAction.bind(null, product.id)}
+                      />
                     ) : null}
                   </div>
                 </li>
