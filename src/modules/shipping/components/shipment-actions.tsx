@@ -89,21 +89,15 @@ export function ShipmentActions({
           </span>
         ) : hasShipment && !hasTrackingCode ? (
           <form action={generateAction}>
-            <Button type="submit" size="sm" disabled={generatePending}>
-              {generatePending ? "Gerando..." : "Gerar etiqueta"}
+            <Button pending={generatePending} pendingLabel="Gerando…" type="submit" size="sm">
+              Gerar etiqueta
             </Button>
           </form>
         ) : null}
         {hasShipment ? (
           <form action={trackingAction}>
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-
-              disabled={trackingPending}
-            >
-              {trackingPending ? "Atualizando..." : "Atualizar rastreio"}
+            <Button pending={trackingPending} pendingLabel="Atualizando…" type="submit" variant="ghost" size="sm">
+              Atualizar rastreio
             </Button>
           </form>
         ) : null}

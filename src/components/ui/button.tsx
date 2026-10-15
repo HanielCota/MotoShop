@@ -62,13 +62,34 @@ const buttonVariants = cva(
   },
 );
 
+type ButtonProps = ButtonPrimitive.Props &
+  VariantProps<typeof buttonVariants> & {
+    /** Action in progress: disables the button, sets `aria-busy` and shows `pendingLabel` (ex.: "Salvando…"). */
+    pending?: boolean | undefined;
+    pendingLabel?: string | undefined;
+  };
+
 function Button({
   className,
   variant = "default",
   size = "default",
+  pending = false,
+  pendingLabel,
+  disabled,
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
-  return <ButtonPrimitive data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props} />;
+}: ButtonProps) {
+  return (
+    <ButtonPrimitive
+      data-slot="button"
+      className={cn(buttonVariants({ variant, size, className }))}
+      disabled={pending || disabled}
+      aria-busy={pending || undefined}
+      {...props}
+    >
+      {pending && pendingLabel ? pendingLabel : children}
+    </ButtonPrimitive>
+  );
 }
 
-export { Button, buttonVariants };
+export { Button, buttonVariants, type ButtonProps };

@@ -67,8 +67,15 @@ export function CheckoutAddressFields({
             autoComplete="postal-code"
             required
           />
-          <Button type="button" variant="outline" className="mt-7" disabled={isQuoting} onClick={onQuote}>
-            {isQuoting ? "Calculando…" : "Calcular frete"}
+          <Button
+            pending={isQuoting}
+            pendingLabel="Calculando…"
+            type="button"
+            variant="outline"
+            className="mt-7"
+            onClick={onQuote}
+          >
+            Calcular frete
           </Button>
         </div>
         <CheckoutFormField

@@ -71,8 +71,8 @@ export function RequestCancellationForm({
               <Dialog.Close disabled={isPending} className={buttonVariants({ variant: "outline" })}>
                 Voltar
               </Dialog.Close>
-              <Button type="button" variant="destructive" onClick={submit} disabled={isPending}>
-                {isPending ? "Enviando..." : "Enviar solicitação"}
+              <Button pending={isPending} pendingLabel="Enviando…" type="button" variant="destructive" onClick={submit}>
+                Enviar solicitação
               </Button>
             </div>
             <FormMessage error={feedback.error ?? null} />

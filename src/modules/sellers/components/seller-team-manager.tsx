@@ -44,8 +44,8 @@ export function SellerTeamManager({ members }: { members: Member[] }) {
             <option value="FINANCE">Financeiro</option>
           </DesignSelect>
         </label>
-        <Button type="submit" disabled={pending} className="rounded-md font-semibold">
-          {pending ? "Adicionando..." : "Adicionar membro"}
+        <Button pending={pending} pendingLabel="Adicionando…" type="submit" className="rounded-md font-semibold">
+          Adicionar membro
         </Button>
         <FormMessage error={state.error ?? null} success={state.success ?? null} className="sm:col-span-3" />
       </form>

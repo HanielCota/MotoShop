@@ -12,8 +12,8 @@ export function PaymentRefreshForm({ orderNumber }: { orderNumber: string }) {
   return (
     <form action={formAction} className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
       <input type="hidden" name="orderNumber" value={orderNumber} />
-      <Button variant="outline" type="submit" disabled={pending}>
-        {pending ? "Consultando..." : "Atualizar status"}
+      <Button pending={pending} pendingLabel="Consultando…" variant="outline" type="submit">
+        Atualizar status
       </Button>
       {state.error ? (
         <p role="alert" className="text-destructive text-xs">

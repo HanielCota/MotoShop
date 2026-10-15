@@ -31,8 +31,8 @@ export function ClaimGuestOrderForm({ orderNumber }: { orderNumber: string }) {
         </p>
         <FormMessage error={state.error ?? null} className="mt-2" />
       </div>
-      <Button type="submit" disabled={pending}>
-        {pending ? "Vinculando..." : "Vincular pedido"}
+      <Button pending={pending} pendingLabel="Vinculando…" type="submit">
+        Vincular pedido
       </Button>
     </form>
   );

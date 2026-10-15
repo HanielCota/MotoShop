@@ -27,8 +27,8 @@ export function ProductStatusActions({ productId, hasImages = true }: { productI
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         {hasImages ? (
-          <Button size="sm" type="button" onClick={approve} disabled={pending}>
-            {pending ? "Salvando..." : "Aprovar"}
+          <Button pending={pending} pendingLabel="Salvando…" size="sm" type="button" onClick={approve}>
+            Aprovar
           </Button>
         ) : (
           // Sem foto, a aprovação pede confirmação: o produto entra na loja sem imagem (UX-14).

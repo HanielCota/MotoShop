@@ -201,8 +201,8 @@ export function InventoryAdjustDialog({
               <Dialog.Close disabled={pending} render={<Button type="button" variant="outline" />}>
                 Cancelar
               </Dialog.Close>
-              <Button type="button" onClick={save} disabled={pending}>
-                {pending ? "Salvando..." : "Salvar ajuste"}
+              <Button pending={pending} pendingLabel="Salvando…" type="button" onClick={save}>
+                Salvar ajuste
               </Button>
             </div>
           </Dialog.Popup>

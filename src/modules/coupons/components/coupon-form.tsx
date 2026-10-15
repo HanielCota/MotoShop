@@ -192,8 +192,8 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
         </label>
       ) : null}
       <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-        <Button type="submit" disabled={pending} className="font-semibold">
-          {pending ? "Criando..." : "Criar cupom"}
+        <Button pending={pending} pendingLabel="Criando…" type="submit" className="font-semibold">
+          Criar cupom
         </Button>
         <FormMessage
           error={clientError ?? state.error ?? null}

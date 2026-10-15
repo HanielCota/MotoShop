@@ -53,8 +53,8 @@ export function ShipmentRecoveryForms({
             <Input name="confirmedOrderNumber" required maxLength={40} autoComplete="off" />
           </label>
           <FormMessage error={labelState.error ?? null} success={labelState.success ?? null} />
-          <Button type="submit" size="sm" disabled={labelPending}>
-            {labelPending ? "Registrando…" : "Confirmar cancelamento da etiqueta"}
+          <Button pending={labelPending} pendingLabel="Registrando…" type="submit" size="sm">
+            Confirmar cancelamento da etiqueta
           </Button>
         </form>
       </div>

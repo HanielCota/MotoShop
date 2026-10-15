@@ -55,8 +55,13 @@ export function PasswordRecoveryForm() {
             />
           </label>
           <FormMessage error={error ?? null} />
-          <Button type="submit" disabled={pending} className="h-12 rounded-lg px-4 font-semibold">
-            {pending ? "Aguarde..." : "Enviar link de recuperação"}
+          <Button
+            pending={pending}
+            pendingLabel="Aguarde…"
+            type="submit"
+            className="h-12 rounded-lg px-4 font-semibold"
+          >
+            Enviar link de recuperação
           </Button>
         </>
       )}

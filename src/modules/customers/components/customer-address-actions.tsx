@@ -30,8 +30,14 @@ export function CustomerAddressActions({
     <div className="flex flex-wrap items-center gap-2">
       {!isDefault ? (
         <form action={defaultAction}>
-          <Button type="submit" variant="outline" disabled={defaultPending} className="text-xs">
-            {defaultPending ? "Atualizando..." : "Usar como padrão"}
+          <Button
+            pending={defaultPending}
+            pendingLabel="Atualizando…"
+            type="submit"
+            variant="outline"
+            className="text-xs"
+          >
+            Usar como padrão
           </Button>
         </form>
       ) : null}

@@ -167,8 +167,13 @@ export function CustomerAddressForm() {
       </label>
       <div className="flex flex-col gap-3 sm:col-span-2">
         <FormMessage error={state.error ?? null} success={state.success ?? null} />
-        <Button type="submit" disabled={pending} className="w-fit rounded-md px-4 font-semibold">
-          {pending ? "Salvando..." : "Salvar endereço"}
+        <Button
+          pending={pending}
+          pendingLabel="Salvando…"
+          type="submit"
+          className="w-fit rounded-md px-4 font-semibold"
+        >
+          Salvar endereço
         </Button>
       </div>
     </form>

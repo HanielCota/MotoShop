@@ -52,8 +52,8 @@ export function OwnShippingMethodForm() {
       <div className="sm:col-span-2">
         <Feedback state={state} clientError={clientError} />
       </div>
-      <Button type="submit" size="lg" className="px-4" disabled={pending}>
-        {pending ? "Salvando…" : "Criar modalidade"}
+      <Button pending={pending} pendingLabel="Salvando…" type="submit" size="lg" className="px-4">
+        Criar modalidade
       </Button>
     </form>
   );

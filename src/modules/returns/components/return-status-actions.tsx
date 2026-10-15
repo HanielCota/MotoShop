@@ -31,8 +31,8 @@ export function ReturnStatusActions({ returnRequestId, status }: { returnRequest
     <div className="flex flex-col gap-2">
       {canReview ? (
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" type="button" onClick={() => review("APPROVE")} disabled={pending}>
-            {pending ? "Salvando..." : "Aprovar"}
+          <Button pending={pending} pendingLabel="Salvando…" size="sm" type="button" onClick={() => review("APPROVE")}>
+            Aprovar
           </Button>
           <form
             action={async (formData) => {
@@ -50,12 +50,21 @@ export function ReturnStatusActions({ returnRequestId, status }: { returnRequest
         </div>
       ) : null}
       {canReceive ? (
-        <Button variant="outline" size="sm" type="button" onClick={() => review("RECEIVE")} disabled={pending}>
-          {pending ? "Registrando..." : "Registrar recebimento"}
+        <Button
+          pending={pending}
+          pendingLabel="Registrando…"
+          variant="outline"
+          size="sm"
+          type="button"
+          onClick={() => review("RECEIVE")}
+        >
+          Registrar recebimento
         </Button>
       ) : null}
       {canRefund ? (
         <Button
+          pending={pending}
+          pendingLabel="Reembolsando…"
           size="sm"
           type="button"
           onClick={() =>
@@ -64,9 +73,8 @@ export function ReturnStatusActions({ returnRequestId, status }: { returnRequest
               setFeedback(result);
             })
           }
-          disabled={pending}
         >
-          {pending ? "Reembolsando..." : "Processar reembolso"}
+          Processar reembolso
         </Button>
       ) : null}
       <FormMessage error={feedback.error ?? null} success={feedback.success ?? null} className="text-xs" />

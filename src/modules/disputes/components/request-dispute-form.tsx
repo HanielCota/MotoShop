@@ -72,8 +72,8 @@ export function RequestDisputeForm({ orderNumber, sellerOrderId }: { orderNumber
         className="bg-background w-full"
       />
       <FormMessage error={feedback.error ?? null} success={feedback.success ?? null} />
-      <Button type="submit" disabled={pending || Boolean(feedback.success)}>
-        {pending ? "Abrindo disputa..." : "Enviar para mediação"}
+      <Button pending={pending} pendingLabel="Abrindo disputa…" type="submit" disabled={Boolean(feedback.success)}>
+        Enviar para mediação
       </Button>
     </form>
   );

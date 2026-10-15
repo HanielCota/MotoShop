@@ -94,8 +94,14 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
         ) : null}
         {!saved.isPrimary && saved.available ? (
           <form action={primaryAction}>
-            <Button type="submit" variant="outline" disabled={primaryPending} className="px-4">
-              {primaryPending ? "Atualizando..." : "Definir como principal"}
+            <Button
+              pending={primaryPending}
+              pendingLabel="Atualizando…"
+              type="submit"
+              variant="outline"
+              className="px-4"
+            >
+              Definir como principal
             </Button>
           </form>
         ) : null}
@@ -148,8 +154,14 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
               ))}
             </DesignSelect>
           </label>
-          <Button size="lg" type="submit" disabled={editPending} className="min-h-11 rounded-md px-5 font-semibold">
-            {editPending ? "Salvando..." : "Salvar alteração"}
+          <Button
+            pending={editPending}
+            pendingLabel="Salvando…"
+            size="lg"
+            type="submit"
+            className="min-h-11 rounded-md px-5 font-semibold"
+          >
+            Salvar alteração
           </Button>
           <ActionMessage state={editState} />
         </form>
