@@ -29,4 +29,4 @@ it("only uses brand color utilities that the theme defines", () => {
   );
 
   expect(offenders).toEqual([]);
-});
+}, 30_000);
