@@ -152,7 +152,7 @@ export default async function ProductsPage({
     <main className={pageContainerClassName("default", "flex flex-col gap-6 py-8 sm:py-10")}>
       <PageHeader
         eyebrow="Catálogo"
-        title="Peças, acessórios e equipamentos"
+        title={query.q ? `Resultados para “${query.q}”` : "Peças, acessórios e equipamentos"}
         description="Produtos de lojistas parceiros do Moto Shop."
       />
 
@@ -235,6 +235,7 @@ export default async function ProductsPage({
               clearHref,
               totalWithoutMoto,
               motoLabel: activeMotoLabel(fitments, activeMoto),
+              suggestedCategories: categories.filter((category) => !category.parentId).slice(0, 4),
             })}
           />
           <Pagination

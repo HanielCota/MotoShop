@@ -18,7 +18,7 @@ export function CatalogSearchBand({
       inputId="catalog-search"
       defaultValue={defaultValue}
       preservedEntries={preservedEntries}
-      placeholder="Buscar peças, acessórios ou equipamentos"
+      placeholder="Buscar peças"
       iconOnlyOnPhone
     />
   );
