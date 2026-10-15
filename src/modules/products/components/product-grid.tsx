@@ -2,13 +2,18 @@ import type { Route } from "next";
 import { PackageSearch } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { ProductCard, type ProductCardData } from "@/components/storefront/product-card";
+import {
+  EAGER_PRODUCT_CARDS,
+  PRODUCT_CARD_IMAGE_WIDTH,
+  ProductCard,
+  type ProductCardData,
+} from "@/components/storefront/product-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { getProductOffer } from "@/modules/products/domain/product-offer";
 import { isNewProduct } from "@/modules/products/domain/product-novelty";
 import { getCurrentPriceInCents, hasActivePromotion } from "@/modules/products/domain/pricing";
-import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
+import { getPublicStorageImageUrl } from "@/shared/storage/public-storage-url";
 import type { listApprovedProducts } from "@/modules/products/queries/products";
 
 type ApprovedProduct = Awaited<ReturnType<typeof listApprovedProducts>>["products"][number];
@@ -46,7 +51,7 @@ export function toProductCardData(product: CardSourceProduct, now = new Date()):
     id: product.id,
     name: product.name,
     href: `/products/${product.slug}`,
-    imageUrl: image ? getPublicStorageUrl(image.storageKey) : null,
+    imageUrl: image ? getPublicStorageImageUrl(image.storageKey, PRODUCT_CARD_IMAGE_WIDTH) : null,
     imageAlt: image?.altText ?? product.name,
     category: { label: getCategoryLabel(product.category), href: `/categoria/${product.category.slug}` as Route },
     brand: { name: product.brand.name, href: `/marca/${product.brand.slug}` as Route },
@@ -87,7 +92,7 @@ export function ProductGrid({
     <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
       {products.map((product, index) => (
         <li key={product.id} className="flex min-w-0">
-          <ProductCard product={toProductCardData(product, now)} eager={index === 0} />
+          <ProductCard product={toProductCardData(product, now)} eager={index < EAGER_PRODUCT_CARDS} />
         </li>
       ))}
     </ul>

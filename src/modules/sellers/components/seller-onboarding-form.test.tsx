@@ -30,3 +30,15 @@ it("goes back to suggesting when the seller clears the identifier", () => {
 
   expect(slug).toHaveValue("racing-parts");
 });
+
+it("shows the identifier problem under the field before calling the server (BUG-011)", async () => {
+  const { createSellerAction } = await import("@/modules/sellers/actions/seller-actions");
+  render(<SellerOnboardingForm />);
+  fireEvent.change(screen.getByLabelText("Nome da loja"), { target: { value: "Luiz Parts" } });
+  fireEvent.change(screen.getByLabelText("Identificador da loja"), { target: { value: "!!!" } });
+  fireEvent.click(screen.getByRole("button", { name: "Solicitar cadastro da loja" }));
+
+  expect(await screen.findByText("Informe um identificador para a loja.")).toBeInTheDocument();
+  expect(screen.getByLabelText("Identificador da loja")).toHaveAttribute("aria-invalid", "true");
+  expect(createSellerAction).not.toHaveBeenCalled();
+});

@@ -10,6 +10,7 @@ import {
   rejectProductAction,
   type ProductActionState,
 } from "@/modules/products/actions/product-actions";
+import { callServerAction } from "@/shared/forms/server-action-submit";
 
 export function ProductStatusActions({ productId }: { productId: string }) {
   const [pending, startTransition] = useTransition();
@@ -17,7 +18,7 @@ export function ProductStatusActions({ productId }: { productId: string }) {
 
   function approve() {
     startTransition(async () => {
-      setResult(await approveProductAction(productId));
+      setResult(await callServerAction(() => approveProductAction(productId)));
     });
   }
 
@@ -30,7 +31,7 @@ export function ProductStatusActions({ productId }: { productId: string }) {
         <form
           action={(formData) =>
             startTransition(async () => {
-              setResult(await rejectProductAction(productId, formData));
+              setResult(await callServerAction(() => rejectProductAction(productId, formData)));
             })
           }
           className="flex flex-1 gap-2"

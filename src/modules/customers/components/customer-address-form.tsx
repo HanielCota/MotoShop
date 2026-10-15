@@ -1,15 +1,22 @@
 "use client";
 
-import { useActionState, useId, useState, type HTMLInputAutoCompleteAttribute } from "react";
+import { useId, useState, type HTMLInputAutoCompleteAttribute } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DesignCheckbox } from "@/components/ui/design-checkbox";
+import { FormField } from "@/components/ui/form-field";
 import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
 
 import { createCustomerAddressAction, type CustomerAddressActionState } from "../actions/customer-address-actions";
 import { formatCep } from "../domain/brazilian-address";
+import {
+  customerAddressFieldErrors,
+  parseCustomerAddressForm,
+  type CustomerAddressFieldErrors,
+} from "../schemas/customer-address";
 import { useCepAutofill } from "./use-cep-autofill";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: CustomerAddressActionState = {};
 const emptyAddress = {
@@ -28,9 +35,18 @@ type AddressValues = typeof emptyAddress;
 export function CustomerAddressForm() {
   const [values, setValues] = useState<AddressValues>(emptyAddress);
   const [isDefault, setIsDefault] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<CustomerAddressFieldErrors>({});
   const cep = useCepAutofill(setValues);
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useServerActionState(
     async (previousState: CustomerAddressActionState, formData: FormData) => {
+      // Same schema as the server: empty or invalid fields are flagged here, without a round trip.
+      const parsed = parseCustomerAddressForm(formData);
+      if (!parsed.success) {
+        setFieldErrors(customerAddressFieldErrors(parsed.error));
+        return { error: "Confira os campos destacados." };
+      }
+
+      setFieldErrors({});
       const result = await createCustomerAddressAction(previousState, formData);
       if (result.success) {
         setValues(emptyAddress);
@@ -45,6 +61,7 @@ export function CustomerAddressForm() {
   function setValue(name: keyof AddressValues, value: string) {
     const nextValue = name === "postalCode" ? formatCep(value) : name === "state" ? value.toUpperCase() : value;
     setValues((current) => ({ ...current, [name]: nextValue }));
+    setFieldErrors((current) => ({ ...current, [name]: undefined }));
     if (name === "postalCode") cep.lookup(nextValue);
   }
 
@@ -54,6 +71,7 @@ export function CustomerAddressForm() {
       <Field
         label="Nome do endereço"
         name="label"
+        error={fieldErrors.label}
         placeholder="Casa, oficina..."
         value={values.label}
         onChange={(value) => setValue("label", value)}
@@ -64,6 +82,7 @@ export function CustomerAddressForm() {
       <Field
         label="Destinatário"
         name="recipient"
+        error={fieldErrors.recipient}
         value={values.recipient}
         onChange={(value) => setValue("recipient", value)}
         autoComplete="name"
@@ -73,6 +92,7 @@ export function CustomerAddressForm() {
       <Field
         label="CEP"
         name="postalCode"
+        error={fieldErrors.postalCode}
         inputMode="numeric"
         placeholder="00000-000"
         maxLength={9}
@@ -85,6 +105,7 @@ export function CustomerAddressForm() {
       <Field
         label="Rua"
         name="street"
+        error={fieldErrors.street}
         autoComplete="address-line1"
         maxLength={160}
         value={values.street}
@@ -94,6 +115,7 @@ export function CustomerAddressForm() {
       <Field
         label="Número"
         name="number"
+        error={fieldErrors.number}
         inputMode="numeric"
         maxLength={20}
         value={values.number}
@@ -103,6 +125,7 @@ export function CustomerAddressForm() {
       <Field
         label="Complemento (opcional)"
         name="complement"
+        error={fieldErrors.complement}
         autoComplete="address-line2"
         maxLength={80}
         value={values.complement}
@@ -111,6 +134,7 @@ export function CustomerAddressForm() {
       <Field
         label="Bairro"
         name="neighborhood"
+        error={fieldErrors.neighborhood}
         autoComplete="address-level3"
         maxLength={100}
         value={values.neighborhood}
@@ -120,6 +144,7 @@ export function CustomerAddressForm() {
       <Field
         label="Cidade"
         name="city"
+        error={fieldErrors.city}
         autoComplete="address-level2"
         maxLength={100}
         value={values.city}
@@ -129,6 +154,7 @@ export function CustomerAddressForm() {
       <Field
         label="UF"
         name="state"
+        error={fieldErrors.state}
         autoComplete="address-level1"
         maxLength={2}
         value={values.state}
@@ -152,6 +178,7 @@ export function CustomerAddressForm() {
 function Field({
   label,
   name,
+  error,
   placeholder,
   inputMode,
   maxLength,
@@ -163,6 +190,7 @@ function Field({
 }: {
   label: string;
   name: string;
+  error?: string | undefined;
   placeholder?: string | undefined;
   inputMode?: "numeric" | undefined;
   maxLength?: number | undefined;
@@ -173,29 +201,21 @@ function Field({
   required?: boolean | undefined;
 }) {
   const id = useId();
-  const hintId = `${id}-hint`;
   return (
-    <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-sm font-medium">
-        {label}
-      </label>
-      <Input
-        id={id}
-        name={name}
-        placeholder={placeholder}
-        inputMode={inputMode}
-        maxLength={maxLength}
-        autoComplete={autoComplete}
-        aria-describedby={hint ? hintId : undefined}
-        value={value}
-        onChange={(event) => onChange(event.currentTarget.value)}
-        required={required}
-      />
-      {hint ? (
-        <p id={hintId} aria-live="polite" className="text-muted-foreground text-xs">
-          {hint}
-        </p>
-      ) : null}
-    </div>
+    <FormField id={id} label={label} hint={hint} hintLive error={error}>
+      {(control) => (
+        <Input
+          {...control}
+          name={name}
+          placeholder={placeholder}
+          inputMode={inputMode}
+          maxLength={maxLength}
+          autoComplete={autoComplete}
+          value={value}
+          onChange={(event) => onChange(event.currentTarget.value)}
+          required={required}
+        />
+      )}
+    </FormField>
   );
 }

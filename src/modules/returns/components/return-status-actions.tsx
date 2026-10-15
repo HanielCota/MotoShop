@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useState, useTransition } from "react";
 
 import { refundReturnRequestAction, reviewReturnRequestAction } from "../actions/admin-return-actions";
+import { callServerAction } from "@/shared/forms/server-action-submit";
 
 type Feedback = { error?: string; success?: string };
 
@@ -21,7 +22,7 @@ export function ReturnStatusActions({ returnRequestId, status }: { returnRequest
     formData.set("decision", decision);
     if (note) formData.set("note", note);
     startTransition(async () => {
-      const result = await reviewReturnRequestAction(returnRequestId, formData);
+      const result = await callServerAction(() => reviewReturnRequestAction(returnRequestId, formData));
       setFeedback(result);
     });
   }
@@ -35,7 +36,7 @@ export function ReturnStatusActions({ returnRequestId, status }: { returnRequest
           </Button>
           <form
             action={async (formData) => {
-              const result = await reviewReturnRequestAction(returnRequestId, formData);
+              const result = await callServerAction(() => reviewReturnRequestAction(returnRequestId, formData));
               setFeedback(result);
             }}
             className="flex min-w-0 flex-1 gap-2"
@@ -59,7 +60,7 @@ export function ReturnStatusActions({ returnRequestId, status }: { returnRequest
           type="button"
           onClick={() =>
             startTransition(async () => {
-              const result = await refundReturnRequestAction(returnRequestId);
+              const result = await callServerAction(() => refundReturnRequestAction(returnRequestId));
               setFeedback(result);
             })
           }

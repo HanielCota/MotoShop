@@ -49,9 +49,10 @@ export default async function CheckoutPage({
     );
   }
 
-  const [savedAddresses, customerDefaults] = session
+  const [savedAddresses, customerContact] = session
     ? await Promise.all([listCustomerAddresses(session.user.id), getCustomerContact(session.user.id)])
     : [[], undefined];
+  const customerDefaults = session && customerContact ? { ...customerContact, email: session.user.email } : undefined;
   const now = new Date();
   const items = cart.items.map((item) => ({
     id: item.id,

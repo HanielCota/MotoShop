@@ -2,14 +2,13 @@
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 
-import { useActionState } from "react";
-
 import {
   generateSellerOrderShipmentAction,
   purchaseSellerOrderShipmentAction,
   refreshSellerOrderTrackingAction,
   type FulfillmentActionState,
 } from "../actions/fulfillment-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 type ShipmentActionsProps = {
   sellerOrderId: string;
@@ -28,7 +27,7 @@ export function ShipmentActions({
   hasTrackingCode,
   generationState,
 }: ShipmentActionsProps) {
-  const [purchaseState, purchaseAction, purchasePending] = useActionState(
+  const [purchaseState, purchaseAction, purchasePending] = useServerActionState(
     async (previousState: FulfillmentActionState, formData: FormData) => {
       void previousState;
       void formData;
@@ -36,7 +35,7 @@ export function ShipmentActions({
     },
     initialState,
   );
-  const [generateState, generateAction, generatePending] = useActionState(
+  const [generateState, generateAction, generatePending] = useServerActionState(
     async (previousState: FulfillmentActionState, formData: FormData) => {
       void previousState;
       void formData;
@@ -44,7 +43,7 @@ export function ShipmentActions({
     },
     initialState,
   );
-  const [trackingState, trackingAction, trackingPending] = useActionState(
+  const [trackingState, trackingAction, trackingPending] = useServerActionState(
     async (previousState: FulfillmentActionState, formData: FormData) => {
       void previousState;
       void formData;

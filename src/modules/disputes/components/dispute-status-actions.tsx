@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useState, useTransition } from "react";
 
 import { reviewDisputeAction } from "../actions/admin-dispute-actions";
+import { callServerAction } from "@/shared/forms/server-action-submit";
 
 type Feedback = { error?: string; success?: string };
 
@@ -19,7 +20,7 @@ export function DisputeStatusActions({ disputeId, status }: { disputeId: string;
     formData.set("decision", decision);
     if (note) formData.set("note", note);
     startTransition(async () => {
-      const result = await reviewDisputeAction(disputeId, formData);
+      const result = await callServerAction(() => reviewDisputeAction(disputeId, formData));
       setFeedback(result);
     });
   }

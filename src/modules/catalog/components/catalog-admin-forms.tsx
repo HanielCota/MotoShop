@@ -1,10 +1,9 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { type ClientFormValidator, useClientValidation } from "@/shared/forms/client-validation";
 
 import { DesignSelect } from "@/components/ui/design-select";
-
-import { useActionState } from "react";
 
 import {
   createBrandAction,
@@ -14,6 +13,8 @@ import {
   createMotorcycleModelAction,
   type CatalogActionState,
 } from "../actions/admin-catalog-actions";
+import { catalogFormValidators } from "../schemas/catalog-input";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 type Option = { id: string; label: string };
 type CatalogFormState = CatalogActionState & { values?: Record<string, string> };
@@ -25,7 +26,7 @@ const initialState: CatalogFormState = {};
  * recusa o envio, guardamos o que foi digitado para devolver aos campos.
  */
 function useCatalogForm(catalogAction: CatalogAction) {
-  return useActionState(async (previous: CatalogFormState, formData: FormData): Promise<CatalogFormState> => {
+  return useServerActionState(async (previous: CatalogFormState, formData: FormData): Promise<CatalogFormState> => {
     const result = await catalogAction(previous, formData);
     if (!result.error) return result;
     return { ...result, values: readTextEntries(formData) };
@@ -37,15 +38,16 @@ function readTextEntries(formData: FormData) {
   return Object.fromEntries(entries);
 }
 
-function Feedback({ state }: { state: CatalogActionState }) {
+function Feedback({ state, clientError }: { state: CatalogActionState; clientError: string | null }) {
+  const error = clientError ?? state.error;
   return (
     <>
-      {state.error ? (
+      {error ? (
         <p role="alert" className="text-destructive text-sm">
-          {state.error}
+          {error}
         </p>
       ) : null}
-      {state.success ? (
+      {!clientError && state.success ? (
         <p role="status" className="text-success-foreground text-sm">
           {state.success}
         </p>
@@ -68,19 +70,22 @@ function FormShell({
   action,
   state,
   pending,
+  validate,
 }: {
   children: React.ReactNode;
   action: (data: FormData) => void;
   state: CatalogFormState;
   pending: boolean;
+  validate: ClientFormValidator;
 }) {
+  const { clientError, onSubmit } = useClientValidation(validate);
   return (
-    <form action={action} noValidate className="space-y-3 rounded-lg border p-4">
+    <form action={action} onSubmit={onSubmit} noValidate className="space-y-3 rounded-lg border p-4">
       {children}
       <Button type="submit" disabled={pending} className="rounded-md font-semibold">
         {pending ? "Salvando..." : "Adicionar"}
       </Button>
-      <Feedback state={state} />
+      <Feedback state={state} clientError={clientError} />
     </form>
   );
 }
@@ -88,7 +93,7 @@ function FormShell({
 export function CategoryForm({ categories }: { categories: Option[] }) {
   const [state, action, pending] = useCatalogForm(createCategoryAction);
   return (
-    <FormShell action={action} state={state} pending={pending}>
+    <FormShell action={action} state={state} pending={pending} validate={catalogFormValidators.category}>
       <Field label="Nome da categoria">
         <Input name="name" placeholder="Ex.: Capacetes" defaultValue={state.values?.name ?? ""} required />
       </Field>
@@ -112,7 +117,7 @@ export function CategoryForm({ categories }: { categories: Option[] }) {
 export function BrandForm() {
   const [state, action, pending] = useCatalogForm(createBrandAction);
   return (
-    <FormShell action={action} state={state} pending={pending}>
+    <FormShell action={action} state={state} pending={pending} validate={catalogFormValidators.brand}>
       <Field label="Nome da marca">
         <Input name="name" placeholder="Ex.: Fox" defaultValue={state.values?.name ?? ""} required />
       </Field>
@@ -123,7 +128,7 @@ export function BrandForm() {
 export function MotorcycleManufacturerForm() {
   const [state, action, pending] = useCatalogForm(createMotorcycleManufacturerAction);
   return (
-    <FormShell action={action} state={state} pending={pending}>
+    <FormShell action={action} state={state} pending={pending} validate={catalogFormValidators.manufacturer}>
       <Field label="Fabricante">
         <Input name="name" placeholder="Ex.: Honda" defaultValue={state.values?.name ?? ""} required />
       </Field>
@@ -134,7 +139,7 @@ export function MotorcycleManufacturerForm() {
 export function MotorcycleModelForm({ manufacturers }: { manufacturers: Option[] }) {
   const [state, action, pending] = useCatalogForm(createMotorcycleModelAction);
   return (
-    <FormShell action={action} state={state} pending={pending}>
+    <FormShell action={action} state={state} pending={pending} validate={catalogFormValidators.model}>
       <Field label="Fabricante">
         <DesignSelect name="manufacturerId" required defaultValue={state.values?.manufacturerId ?? ""}>
           <option value="">Selecione</option>
@@ -155,7 +160,7 @@ export function MotorcycleModelForm({ manufacturers }: { manufacturers: Option[]
 export function MotorcycleFitmentForm({ models }: { models: Option[] }) {
   const [state, action, pending] = useCatalogForm(createMotorcycleFitmentAction);
   return (
-    <FormShell action={action} state={state} pending={pending}>
+    <FormShell action={action} state={state} pending={pending} validate={catalogFormValidators.fitment}>
       <Field label="Modelo da moto">
         <DesignSelect name="motorcycleModelId" required defaultValue={state.values?.motorcycleModelId ?? ""}>
           <option value="">Selecione</option>

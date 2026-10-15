@@ -1,10 +1,12 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+
+const mocks = vi.hoisted(() => ({ remove: vi.fn() }));
 
 vi.mock("../actions/saved-motorcycle-actions", () => ({
   addSavedMotorcycleAction: vi.fn(),
   changeSavedMotorcycleAction: vi.fn(),
-  removeSavedMotorcycleAction: vi.fn(),
+  removeSavedMotorcycleAction: mocks.remove,
   setPrimarySavedMotorcycleAction: vi.fn(),
 }));
 
@@ -63,4 +65,17 @@ it("says no equipment was found and hides the catalog link when nothing is compa
   expect(ktm.getByText("Não encontramos nenhum equipamento para esta moto.")).toBeInTheDocument();
   expect(ktm.getByText("Factory Edition")).toBeInTheDocument();
   expect(ktm.queryByRole("link", { name: "Ver peças compatíveis" })).not.toBeInTheDocument();
+});
+
+it("asks before removing a saved motorcycle and warns when it is the primary one", async () => {
+  mocks.remove.mockResolvedValue({ success: "Moto removida." });
+  render(<MotorcycleGarage fitments={[]} savedMotorcycles={[saved()]} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Remover Honda CRF 250R · padrão · 250 cc · 2025" }));
+  const dialog = await screen.findByRole("alertdialog", { name: "Remover moto?" });
+  expect(dialog).toHaveTextContent("A próxima moto salva vira a principal.");
+  expect(mocks.remove).not.toHaveBeenCalled();
+
+  fireEvent.click(within(dialog).getByRole("button", { name: "Remover moto" }));
+  await waitFor(() => expect(mocks.remove).toHaveBeenCalledWith("saved-1", {}));
 });

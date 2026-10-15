@@ -3,6 +3,10 @@ import type { ComponentProps } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
 const navigation = vi.hoisted(() => ({ pathname: "/" }));
+const auth = vi.hoisted(() => ({ session: null as { user: { id: string } } | null }));
+vi.mock("@/modules/auth/infrastructure/auth-client", () => ({
+  authClient: { useSession: () => ({ data: auth.session }) },
+}));
 vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname }));
 vi.mock("next/link", () => ({ default: (props: ComponentProps<"a">) => <a {...props} /> }));
 vi.mock("next/image", () => ({
@@ -13,7 +17,10 @@ vi.mock("next/image", () => ({
 import { SiteFooter } from "./site-footer";
 import { StorefrontOnly } from "./storefront-only";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  auth.session = null;
+});
 
 function renderFooter() {
   return render(
@@ -88,4 +95,18 @@ it("hides the storefront footer in the seller and admin areas", () => {
     expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
     cleanup();
   }
+});
+
+it("offers sign-in to visitors and the account to signed-in customers", () => {
+  navigation.pathname = "/products";
+  const { unmount } = renderFooter();
+  const shortcuts = within(screen.getByRole("navigation", { name: "Atalhos" }));
+  expect(shortcuts.getByRole("link", { name: "Entrar" })).toHaveAttribute("href", "/login");
+  unmount();
+
+  auth.session = { user: { id: "user-1" } };
+  renderFooter();
+  const signedIn = within(screen.getByRole("navigation", { name: "Atalhos" }));
+  expect(signedIn.queryByRole("link", { name: "Entrar" })).not.toBeInTheDocument();
+  expect(signedIn.getByRole("link", { name: "Minha conta" })).toHaveAttribute("href", "/account/profile");
 });

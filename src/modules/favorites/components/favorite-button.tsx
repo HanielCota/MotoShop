@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 
 import { toggleFavoriteAction } from "../actions/favorite-actions";
+import { callServerAction } from "@/shared/forms/server-action-submit";
 
 export function FavoriteButton({ productId, initialIsFavorite }: { productId: string; initialIsFavorite: boolean }) {
   const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
@@ -15,7 +16,7 @@ export function FavoriteButton({ productId, initialIsFavorite }: { productId: st
   function handleToggle() {
     setError(undefined);
     startTransition(async () => {
-      const result = await toggleFavoriteAction(productId);
+      const result = await callServerAction(() => toggleFavoriteAction(productId));
       if (result.error) {
         setError(result.error);
         return;

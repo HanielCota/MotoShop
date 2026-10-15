@@ -6,9 +6,8 @@ import { Input } from "@/components/ui/input";
 
 import { DesignSelect } from "@/components/ui/design-select";
 
-import { useActionState } from "react";
-
 import { requestReturnAction, type ReturnActionState } from "../actions/return-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 type RequestReturnFormProps = {
   orderNumber: string;
@@ -21,18 +20,21 @@ const initialState: ReturnActionState = {};
 const inputClassName = "h-9";
 
 export function RequestReturnForm({ orderNumber, orderItemId, maxQuantity, idempotencyKey }: RequestReturnFormProps) {
-  const [state, action, pending] = useActionState(async (previousState: ReturnActionState, formData: FormData) => {
-    void previousState;
-    const input = {
-      orderNumber,
-      orderItemId,
-      quantity: Number(formData.get("quantity")),
-      reason: String(formData.get("reason") ?? ""),
-      customerMessage: String(formData.get("customerMessage") ?? "").trim(),
-      idempotencyKey,
-    };
-    return requestReturnAction(input);
-  }, initialState);
+  const [state, action, pending] = useServerActionState(
+    async (previousState: ReturnActionState, formData: FormData) => {
+      void previousState;
+      const input = {
+        orderNumber,
+        orderItemId,
+        quantity: Number(formData.get("quantity")),
+        reason: String(formData.get("reason") ?? ""),
+        customerMessage: String(formData.get("customerMessage") ?? "").trim(),
+        idempotencyKey,
+      };
+      return requestReturnAction(input);
+    },
+    initialState,
+  );
 
   return (
     <form action={action} className="bg-surface-sunken grid gap-3 rounded-lg border p-3 sm:grid-cols-2">

@@ -75,7 +75,11 @@ export default async function CustomerAddressesPage({
                       <br />
                       CEP {address.postalCode}
                     </p>
-                    <CustomerAddressActions addressId={address.id} isDefault={address.isDefault} />
+                    <CustomerAddressActions
+                      addressId={address.id}
+                      label={address.label}
+                      isDefault={address.isDefault}
+                    />
                   </CardContent>
                 </Card>
               </li>

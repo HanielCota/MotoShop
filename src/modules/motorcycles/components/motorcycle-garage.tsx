@@ -9,9 +9,10 @@ import Link from "next/link";
 import { Bike, CheckCircle2, Plus, Star } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormMessage } from "@/components/ui/form-message";
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import {
   addSavedMotorcycleAction,
@@ -20,6 +21,7 @@ import {
   setPrimarySavedMotorcycleAction,
   type SavedMotorcycleActionState,
 } from "../actions/saved-motorcycle-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 type FitmentOption = { id: string; label: string };
 type SavedMotorcycle = {
@@ -43,18 +45,19 @@ function ActionMessage({ state }: { state: SavedMotorcycleActionState }) {
   return <FormMessage error={state.error ?? null} success={state.success ?? null} />;
 }
 
+function removalDescription(saved: SavedMotorcycle) {
+  const nextPrimary = saved.isPrimary ? " A próxima moto salva vira a principal." : "";
+  return `A ${saved.manufacturer} ${saved.model} sai da sua garagem.${nextPrimary} Você pode adicioná-la de novo quando quiser.`;
+}
+
 function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitments: FitmentOption[] }) {
   const [editing, setEditing] = useState(false);
-  const [editState, editAction, editPending] = useActionState(
+  const [editState, editAction, editPending] = useServerActionState(
     changeSavedMotorcycleAction.bind(null, saved.id),
     initialState,
   );
-  const [primaryState, primaryAction, primaryPending] = useActionState(
+  const [primaryState, primaryAction, primaryPending] = useServerActionState(
     setPrimarySavedMotorcycleAction.bind(null, saved.id),
-    initialState,
-  );
-  const [removeState, removeAction, removePending] = useActionState(
-    removeSavedMotorcycleAction.bind(null, saved.id),
     initialState,
   );
 
@@ -105,17 +108,24 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
         >
           {editing ? "Cancelar edição" : "Editar"}
         </Button>
-        <form action={removeAction}>
-          <Button
-            type="submit"
-            variant="outline"
-            disabled={removePending}
-            aria-label={`Remover ${saved.label}`}
-            className="text-destructive hover:bg-destructive/10 px-4"
-          >
-            {removePending ? "Removendo..." : "Remover"}
-          </Button>
-        </form>
+        <ConfirmDialog
+          trigger={
+            <Button
+              type="button"
+              variant="outline"
+              aria-label={`Remover ${saved.label}`}
+              className="text-destructive hover:bg-destructive/10 px-4"
+            >
+              Remover
+            </Button>
+          }
+          title="Remover moto?"
+          description={removalDescription(saved)}
+          confirmLabel="Remover moto"
+          pendingLabel="Removendo..."
+          tone="destructive"
+          onConfirm={() => removeSavedMotorcycleAction(saved.id, initialState)}
+        />
       </div>
 
       {editing ? (
@@ -146,7 +156,6 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
       ) : null}
       <div className="mt-3 space-y-1" aria-live="polite">
         <ActionMessage state={primaryState} />
-        <ActionMessage state={removeState} />
       </div>
     </article>
   );
@@ -191,7 +200,7 @@ export function MotorcycleGarage({
   fitments: FitmentOption[];
   savedMotorcycles: SavedMotorcycle[];
 }) {
-  const [state, formAction, pending] = useActionState(addSavedMotorcycleAction, initialState);
+  const [state, formAction, pending] = useServerActionState(addSavedMotorcycleAction, initialState);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,360px)] lg:items-start">

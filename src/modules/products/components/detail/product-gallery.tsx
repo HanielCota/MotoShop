@@ -28,7 +28,8 @@ export function ProductGallery({
             src={active.url}
             alt={active.alt}
             fill
-            priority={activeIndex === 0}
+            loading={activeIndex === 0 ? "eager" : "lazy"}
+            fetchPriority={activeIndex === 0 ? "high" : "auto"}
             unoptimized
             sizes="(max-width: 767px) 100vw, 50vw"
             className="object-contain"

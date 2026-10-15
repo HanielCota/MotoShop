@@ -1,5 +1,5 @@
 import { PageSkeleton } from "@/components/ui/skeleton";
 
-export default function SellerLoading() {
+export function SellerPageSkeleton() {
   return <PageSkeleton rows={4} label="Carregando a Central do Lojista" />;
 }

@@ -3,9 +3,8 @@ import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { useActionState } from "react";
-
 import { updateShippingOriginAction, type SellerActionState } from "../actions/seller-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 type ShippingOriginFormProps = {
   store: {
@@ -27,7 +26,7 @@ type ShippingOriginFormProps = {
 const initialState: SellerActionState = {};
 
 export function ShippingOriginForm({ store }: ShippingOriginFormProps) {
-  const [state, action, pending] = useActionState(updateShippingOriginAction, initialState);
+  const [state, action, pending] = useServerActionState(updateShippingOriginAction, initialState);
 
   return (
     <form action={action} className="grid gap-4 sm:grid-cols-2">

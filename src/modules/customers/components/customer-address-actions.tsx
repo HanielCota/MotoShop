@@ -1,24 +1,28 @@
 "use client";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormMessage } from "@/components/ui/form-message";
-
-import { useActionState } from "react";
 
 import {
   deleteCustomerAddressAction,
   setDefaultCustomerAddressAction,
   type CustomerAddressActionState,
 } from "../actions/customer-address-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: CustomerAddressActionState = {};
 
-export function CustomerAddressActions({ addressId, isDefault }: { addressId: string; isDefault: boolean }) {
-  const [defaultState, defaultAction, defaultPending] = useActionState(
+export function CustomerAddressActions({
+  addressId,
+  label,
+  isDefault,
+}: {
+  addressId: string;
+  label: string;
+  isDefault: boolean;
+}) {
+  const [defaultState, defaultAction, defaultPending] = useServerActionState(
     async () => setDefaultCustomerAddressAction(addressId),
-    initialState,
-  );
-  const [deleteState, deleteAction, deletePending] = useActionState(
-    async () => deleteCustomerAddressAction(addressId),
     initialState,
   );
 
@@ -31,17 +35,20 @@ export function CustomerAddressActions({ addressId, isDefault }: { addressId: st
           </Button>
         </form>
       ) : null}
-      <form action={deleteAction}>
-        <Button
-          type="submit"
-          variant="destructive"
-          disabled={deletePending}
-          className="border-destructive/30 border text-xs"
-        >
-          {deletePending ? "Removendo..." : "Remover"}
-        </Button>
-      </form>
-      <FormMessage error={defaultState.error ?? deleteState.error ?? null} className="w-full text-xs" />
+      <ConfirmDialog
+        trigger={
+          <Button type="button" variant="destructive" className="border-destructive/30 border text-xs">
+            Remover
+          </Button>
+        }
+        title="Remover endereço?"
+        description={`O endereço “${label}” sai da sua lista. Pedidos já feitos continuam com o endereço de entrega original.`}
+        confirmLabel="Remover endereço"
+        pendingLabel="Removendo..."
+        tone="destructive"
+        onConfirm={() => deleteCustomerAddressAction(addressId)}
+      />
+      <FormMessage error={defaultState.error ?? null} className="w-full text-xs" />
     </div>
   );
 }

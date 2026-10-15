@@ -1,16 +1,32 @@
 import { z } from "zod";
 
+import { parsePriceInputToCents } from "@/modules/products/domain/price-input";
+import { firstIssueMessage } from "@/shared/forms/first-issue-message";
+
 const postalCode = z
   .string()
   .transform((value) => value.replace(/\D/g, ""))
-  .pipe(z.string().regex(/^\d{8}$/));
+  .pipe(z.string().regex(/^\d{8}$/, "Informe o CEP com 8 números."));
+const deliveryDaysMessage = "Informe o prazo em dias úteis, de 1 a 365.";
 export const ownShippingMethodSchema = z
   .object({
-    name: z.string().trim().min(3).max(80),
+    name: z
+      .string()
+      .trim()
+      .min(3, "Use pelo menos 3 caracteres no nome da entrega.")
+      .max(80, "Use no máximo 80 caracteres no nome da entrega."),
     postalCodeStart: postalCode,
     postalCodeEnd: postalCode,
-    priceInCents: z.number().int().min(0).max(100_000_000),
-    estimatedDeliveryDays: z.coerce.number().int().min(1).max(365),
+    priceInCents: z
+      .number({ error: "Informe o valor em reais, ex.: 15,00." })
+      .int("Informe o valor em reais, ex.: 15,00.")
+      .min(0, "O valor não pode ser negativo.")
+      .max(100_000_000, "O valor informado é maior que o permitido."),
+    estimatedDeliveryDays: z.coerce
+      .number({ error: deliveryDaysMessage })
+      .int(deliveryDaysMessage)
+      .min(1, deliveryDaysMessage)
+      .max(365, deliveryDaysMessage),
   })
   .refine((value) => value.postalCodeStart <= value.postalCodeEnd, {
     message: "O CEP inicial deve ser menor ou igual ao CEP final.",
@@ -18,6 +34,18 @@ export const ownShippingMethodSchema = z
   });
 
 export type OwnShippingMethodInput = z.infer<typeof ownShippingMethodSchema>;
+
+export const OWN_SHIPPING_FORM_ERROR = "Confira o nome, os CEPs, o valor e o prazo de entrega.";
+
+/** Lê o formulário de modalidade como a action recebe (valor em reais vira centavos). */
+export function readOwnShippingMethodForm(form: FormData) {
+  return { ...Object.fromEntries(form), priceInCents: parsePriceInputToCents(form.get("price") ?? undefined) };
+}
+
+/** Mesma regra no servidor e no navegador (BUG-011). */
+export function validateOwnShippingMethodForm(form: FormData): string | null {
+  return firstIssueMessage(ownShippingMethodSchema, readOwnShippingMethodForm(form), OWN_SHIPPING_FORM_ERROR);
+}
 export function quoteOwnShipping(
   methods: Array<OwnShippingMethodInput & { id: string; active: boolean }>,
   destination: string,

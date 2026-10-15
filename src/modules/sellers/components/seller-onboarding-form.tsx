@@ -6,17 +6,23 @@ import { Input } from "@/components/ui/input";
 
 import { DesignSelect } from "@/components/ui/design-select";
 
-import { useActionState, useRef } from "react";
+import { useRef } from "react";
 
 import { slugify } from "@/lib/utils";
 
 import { createSellerAction, type SellerActionState } from "@/modules/sellers/actions/seller-actions";
+import { validateSellerOnboardingForm } from "@/modules/sellers/schemas/seller-onboarding";
 import { STORE_SLUG_EXAMPLE } from "@/modules/sellers/schemas/store-slug";
+import { useClientValidation } from "@/shared/forms/client-validation";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: SellerActionState = {};
 
 export function SellerOnboardingForm() {
-  const [state, action, pending] = useActionState(createSellerAction, initialState);
+  const [state, action, pending] = useServerActionState(createSellerAction, initialState);
+  const { clientError, onSubmit } = useClientValidation(validateSellerOnboardingForm);
+  const slugError = clientError ? clientError.slugError : state.slugError;
+  const formError = clientError ? (clientError.error ?? null) : (state.error ?? null);
   const slugInput = useRef<HTMLInputElement>(null);
   // Sugere o identificador a partir do nome até a pessoa editar o identificador à mão.
   const slugEditedByHand = useRef(false);
@@ -27,7 +33,7 @@ export function SellerOnboardingForm() {
   }
 
   return (
-    <form action={action} noValidate className="grid gap-4 sm:grid-cols-2">
+    <form action={action} onSubmit={onSubmit} noValidate className="grid gap-4 sm:grid-cols-2">
       <label className="flex flex-col gap-2 text-sm font-medium">
         Nome da loja
         <Input
@@ -38,7 +44,7 @@ export function SellerOnboardingForm() {
           required
         />
       </label>
-      <FormField id="store-slug" label="Identificador da loja" hint={STORE_SLUG_EXAMPLE} error={state.slugError}>
+      <FormField id="store-slug" label="Identificador da loja" hint={STORE_SLUG_EXAMPLE} error={slugError}>
         {(field) => (
           <Input
             {...field}
@@ -75,7 +81,7 @@ export function SellerOnboardingForm() {
           <option value="INDIVIDUAL">CPF / pessoa física</option>
         </DesignSelect>
       </label>
-      <FormMessage error={state.error ?? null} success={state.success ?? null} className="sm:col-span-2" />
+      <FormMessage error={formError} success={clientError ? null : (state.success ?? null)} className="sm:col-span-2" />
       <Button type="submit" className="rounded-md px-4 sm:col-span-2" disabled={pending}>
         {pending ? "Enviando..." : "Solicitar cadastro da loja"}
       </Button>

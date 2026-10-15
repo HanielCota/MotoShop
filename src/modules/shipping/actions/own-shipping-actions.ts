@@ -2,19 +2,17 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
-import { parsePriceInputToCents } from "@/modules/products/domain/price-input";
 import { toActionError } from "@/shared/errors/action-error";
 import { createOwnShippingMethod, setOwnShippingMethodActive, advanceOwnShipment } from "../application/own-shipping";
-import { ownShippingMethodSchema } from "../domain/own-shipping";
+import { OWN_SHIPPING_FORM_ERROR, ownShippingMethodSchema, readOwnShippingMethodForm } from "../domain/own-shipping";
 
 export type OwnShippingState = { error?: string; success?: string };
 export async function createOwnShippingMethodAction(_: OwnShippingState, form: FormData): Promise<OwnShippingState> {
   const context = await requireSellerAccess("SELLER_MANAGE");
-  const data = ownShippingMethodSchema.safeParse({
-    ...Object.fromEntries(form),
-    priceInCents: parsePriceInputToCents(form.get("price") ?? undefined),
-  });
-  if (!data.success) return { error: "Confira o nome, os CEPs, o valor e o prazo de entrega." };
+  const data = ownShippingMethodSchema.safeParse(readOwnShippingMethodForm(form));
+  if (!data.success) {
+    return { error: data.error.issues[0]?.message ?? OWN_SHIPPING_FORM_ERROR };
+  }
   try {
     await createOwnShippingMethod(context.seller.id, context.session.user.id, data.data);
     revalidatePath("/seller/shipping");

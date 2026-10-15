@@ -9,6 +9,7 @@ import {
   reviewCancellationRequestAction,
   type CancellationAdminActionState,
 } from "../actions/admin-cancellation-actions";
+import { callServerAction } from "@/shared/forms/server-action-submit";
 
 export function CancellationStatusActions({
   cancellationRequestId,
@@ -24,7 +25,7 @@ export function CancellationStatusActions({
     const formData = new FormData();
     formData.set("decision", decision);
     startTransition(async () => {
-      setFeedback(await reviewCancellationRequestAction(cancellationRequestId, formData));
+      setFeedback(await callServerAction(() => reviewCancellationRequestAction(cancellationRequestId, formData)));
     });
   }
 

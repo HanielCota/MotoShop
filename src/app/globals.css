@@ -123,7 +123,8 @@
   --muted-foreground: oklch(0.48 0.012 70);
   --accent: oklch(0.94 0.018 68);
   --accent-foreground: oklch(0.25 0.025 45);
-  --destructive: oklch(0.577 0.245 27.325);
+  /* Darker and inside sRGB so text on the 10% and 20% tints keeps 4.5:1 on background, card and muted. */
+  --destructive: oklch(0.47 0.185 27.325);
   --border: oklch(0.88 0.012 75);
   --input: oklch(0.85 0.014 75);
   --ring: oklch(0.53 0.16 45);

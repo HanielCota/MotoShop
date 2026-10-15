@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { Package } from "lucide-react";
 
+import { ActionForm } from "@/components/ui/action-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DesignSelect } from "@/components/ui/design-select";
@@ -245,19 +246,19 @@ export async function SellerProductsCard({
                       </Link>
                     ) : null}
                     {product.status === "ARCHIVED" ? (
-                      <form action={restoreProductAction.bind(null, product.id)}>
+                      <ActionForm action={restoreProductAction.bind(null, product.id)}>
                         <Button type="submit" size="sm">
                           Restaurar
                         </Button>
-                      </form>
+                      </ActionForm>
                     ) : null}
                     {editable ? <ProductSubmissionAction productId={product.id} /> : null}
                     {editable ? (
-                      <form action={archiveProductAction.bind(null, product.id)}>
+                      <ActionForm action={archiveProductAction.bind(null, product.id)}>
                         <Button type="submit" size="sm" variant="ghost">
                           Arquivar
                         </Button>
-                      </form>
+                      </ActionForm>
                     ) : null}
                   </div>
                 </li>

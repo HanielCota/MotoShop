@@ -24,3 +24,12 @@ export function getAuthErrorMessage(code: string | undefined, status?: number): 
   if (!code) return genericAuthErrorMessage;
   return authErrorMessages[code] ?? genericAuthErrorMessage;
 }
+
+/**
+ * Only a sign-in with the right password reaches Better Auth's verification check, so offering
+ * "Reenviar confirmação" after this error reveals nothing the person did not already prove.
+ */
+export function isEmailNotVerifiedError(code: string | undefined, status?: number): boolean {
+  if (status === 429) return false;
+  return code === "EMAIL_NOT_VERIFIED";
+}

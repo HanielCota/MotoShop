@@ -1,7 +1,5 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
@@ -10,6 +8,7 @@ import {
   reconcileShipmentPurchaseAction,
   type ShipmentRecoveryActionState,
 } from "@/modules/admin/actions/shipment-recovery-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: ShipmentRecoveryActionState = {};
 
@@ -25,15 +24,15 @@ export function ShipmentRecoveryForms({
   /** Etiqueta paga de pedido cancelado: exige cancelamento manual no Melhor Envio. */
   labelCancellationRequired?: boolean;
 }) {
-  const [purchaseState, confirmPurchase, purchasePending] = useActionState(
+  const [purchaseState, confirmPurchase, purchasePending] = useServerActionState(
     reconcileShipmentPurchaseAction,
     initialState,
   );
-  const [notPurchasedState, confirmNotPurchased, notPurchasedPending] = useActionState(
+  const [notPurchasedState, confirmNotPurchased, notPurchasedPending] = useServerActionState(
     reconcileShipmentPurchaseAction,
     initialState,
   );
-  const [labelState, confirmLabelCancelled, labelPending] = useActionState(
+  const [labelState, confirmLabelCancelled, labelPending] = useServerActionState(
     confirmShipmentLabelCancelledAction,
     initialState,
   );

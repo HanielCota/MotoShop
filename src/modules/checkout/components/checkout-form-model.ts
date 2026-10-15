@@ -85,14 +85,15 @@ export function applySavedAddress(form: CheckoutFormState, address: CustomerAddr
   };
 }
 
-/** Contact data saved in /account/profile (digits only), used only as checkout prefill. */
-export type CheckoutCustomerDefaults = { taxId: string | null; phone: string | null };
+/** Signed-in customer data used only as checkout prefill: account e-mail and the /account/profile contact (digits only). */
+export type CheckoutCustomerDefaults = { email?: string | null; taxId: string | null; phone: string | null };
 
-/** Prefills phone and CPF; a CNPJ is left out because the payment requires the payer's CPF. */
+/** Prefills e-mail, phone and CPF; a CNPJ is left out because the payment requires the payer's CPF. */
 export function applyCustomerDefaults(form: CheckoutFormState, defaults: CheckoutCustomerDefaults): CheckoutFormState {
   const cpf = defaults.taxId?.length === 11 ? defaults.taxId : null;
   return {
     ...form,
+    ...(defaults.email ? { customerEmail: defaults.email } : {}),
     ...(defaults.phone ? { customerPhone: formatPhone(defaults.phone) } : {}),
     ...(cpf ? { customerTaxId: formatCpf(cpf) } : {}),
   };

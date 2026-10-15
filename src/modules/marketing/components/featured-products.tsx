@@ -1,6 +1,6 @@
 import { PackageSearch } from "lucide-react";
 
-import { ProductCard, type ProductCardData } from "@/components/storefront/product-card";
+import { EAGER_PRODUCT_CARDS, ProductCard, type ProductCardData } from "@/components/storefront/product-card";
 import { EmptyState } from "@/components/ui/empty-state";
 
 import { SectionHeading } from "./section-heading";
@@ -25,7 +25,7 @@ export function FeaturedProducts({ products }: { products: ProductCardData[] }) 
         <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
           {products.map((product, index) => (
             <li key={product.id} className="flex min-w-0">
-              <ProductCard product={product} eager={index === 0} />
+              <ProductCard product={product} eager={index < EAGER_PRODUCT_CARDS} />
             </li>
           ))}
         </ul>
