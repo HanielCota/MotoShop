@@ -21,7 +21,7 @@ const schema = z
       "CONFIRMED_GENERATED",
       "CONFIRMED_NOT_GENERATED",
     ]),
-    confirmedOrderNumber: z.string().trim().min(1).max(40),
+    confirmedOrderNumber: z.string().trim().min(1, "Digite o número do pedido para confirmar.").max(40),
     externalShipmentId: z.string().trim().max(100).optional(),
   })
   .superRefine((data, context) => {

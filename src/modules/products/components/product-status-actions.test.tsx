@@ -43,3 +43,12 @@ it("uses the same 'Recusar' wording as the other queues", () => {
   expect(screen.getByRole("button", { name: "Recusar" })).toBeInTheDocument();
   expect(screen.getByLabelText("Motivo da recusa")).toBeInTheDocument();
 });
+
+it("explains a missing rejection reason in Portuguese instead of the browser bubble (DN-03)", async () => {
+  render(<ProductStatusActions productId="cproduct0001" />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Recusar" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Informe o motivo da recusa com pelo menos 5 caracteres.");
+  expect(mocks.reject).not.toHaveBeenCalled();
+});

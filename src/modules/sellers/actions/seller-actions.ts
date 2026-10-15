@@ -9,7 +9,7 @@ import { toActionError } from "@/shared/errors/action-error";
 
 import { updateShippingOrigin } from "../application/update-shipping-origin";
 import { readSellerOnboardingInput, sellerOnboardingSchema } from "../schemas/seller-onboarding";
-import { shippingOriginSchema } from "../schemas/shipping-origin";
+import { readShippingOriginFormInput, shippingOriginSchema } from "../schemas/shipping-origin";
 import { splitStoreSlugIssue } from "../schemas/store-slug";
 import { readSubmittedValues } from "@/shared/forms/submitted-values";
 
@@ -85,25 +85,4 @@ export async function updateShippingOriginAction(
   } catch (error) {
     return { error: toActionError(error, "updateShippingOriginAction").message };
   }
-}
-
-function readShippingOriginFormInput(formData: FormData) {
-  return {
-    originName: formData.get("originName"),
-    originEmail: formData.get("originEmail"),
-    originPhone: formData.get("originPhone"),
-    originDocument: readDigits(formData, "originDocument"),
-    originPostalCode: readDigits(formData, "originPostalCode"),
-    originStreet: formData.get("originStreet"),
-    originNumber: formData.get("originNumber"),
-    originComplement: formData.get("originComplement") || undefined,
-    originNeighborhood: formData.get("originNeighborhood"),
-    originCity: formData.get("originCity"),
-    originState: formData.get("originState"),
-    originStateRegister: formData.get("originStateRegister") || undefined,
-  };
-}
-
-function readDigits(formData: FormData, name: string): string {
-  return String(formData.get(name) ?? "").replace(/\D/g, "");
 }

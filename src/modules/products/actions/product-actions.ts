@@ -195,18 +195,19 @@ export async function approveProductAction(productId: string): Promise<ProductAc
 }
 
 const MAX_REJECTION_REASON_LENGTH = 1000;
+const PRODUCT_REJECTION_REASON_MESSAGE = "Informe o motivo da recusa com pelo menos 5 caracteres.";
 
 export async function rejectProductAction(productId: string, formData: FormData): Promise<ProductActionState> {
   const session = await requireAdminAccess();
   if (!productIdSchema.safeParse(productId).success) return { error: "Produto inválido." };
   const cleanReason = String(formData.get("reason") ?? "").trim();
-  if (cleanReason.length < 5) return { error: "Informe o motivo da rejeição." };
+  if (cleanReason.length < 5) return { error: PRODUCT_REJECTION_REASON_MESSAGE };
   // O motivo é exibido ao lojista e copiado para a auditoria: sem limite, um payload forjado grava megabytes.
   if (cleanReason.length > MAX_REJECTION_REASON_LENGTH)
-    return { error: `Use no máximo ${MAX_REJECTION_REASON_LENGTH} caracteres no motivo da rejeição.` };
+    return { error: `Use no máximo ${MAX_REJECTION_REASON_LENGTH} caracteres no motivo da recusa.` };
   const result = await rejectSubmittedProduct({ userId: session.user.id }, productId, cleanReason);
   if (!result.ok) return { error: result.error };
   revalidatePath("/admin", "layout");
   revalidateSellerCatalog();
-  return { success: "Produto rejeitado." };
+  return { success: "Produto recusado." };
 }
