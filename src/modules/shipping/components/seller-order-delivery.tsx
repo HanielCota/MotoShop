@@ -1,4 +1,6 @@
 import { InlineNotice } from "@/components/ui/inline-notice";
+import { formatCep } from "@/modules/customers/domain/brazilian-address";
+import { formatPhone } from "@/modules/customers/domain/tax-id";
 
 import { canPrepareSellerOrder, canShowSellerOrderDeliveryData } from "../domain/seller-order-queue";
 import type { listSellerOrders } from "../queries/seller-orders";
@@ -36,7 +38,7 @@ export function SellerOrderDelivery({ order }: { order: SellerOrderListItem }) {
         <br />
         {address.neighborhood} · {address.city}/{address.state}
         <br />
-        CEP {address.postalCode} · Telefone {order.order.customerPhone}
+        CEP {formatCep(address.postalCode)} · Telefone {formatPhone(order.order.customerPhone)}
       </address>
     </section>
   );
