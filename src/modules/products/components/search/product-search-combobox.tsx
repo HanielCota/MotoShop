@@ -104,6 +104,7 @@ export function ProductSearchCombobox({
     id,
     name,
     type: "search",
+    enterKeyHint: "search",
     role: "combobox",
     autoComplete: "off",
     placeholder,

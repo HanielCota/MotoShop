@@ -18,6 +18,8 @@ describe("ProductFitmentBanner", () => {
     expect(screen.getByText("A loja não informou compatibilidade")).toBeInTheDocument();
     expect(screen.getByText(/Antes de comprar, pergunte à loja se esta peça serve\./)).toBeInTheDocument();
     expect(screen.queryByText(/veja a lista de motos compatíveis/)).not.toBeInTheDocument();
+    // Neutral, not a warning: gear that fits any bike has no compatibility list.
+    expect(screen.getByRole("status")).not.toHaveClass("bg-warning-surface");
   });
 
   it("still points to the compatible list when the motorcycle is not in it", () => {

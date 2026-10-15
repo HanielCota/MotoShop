@@ -63,7 +63,7 @@ export function ProductBuyBox({
             {/* Keeps screen readers from reading the old price and the offer as one word. */}
             <span className="sr-only">. </span>
             <span className="text-brand-strong font-semibold">
-              Oferta{discountPercentage > 0 ? ` · ${discountPercentage}% off` : ""}
+              Oferta{discountPercentage > 0 ? ` · ${discountPercentage}% de desconto` : ""}
             </span>
           </p>
         ) : null}

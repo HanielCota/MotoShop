@@ -1,9 +1,7 @@
 import Image from "next/image";
 import type { Route } from "next";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DesignSelect } from "@/components/ui/design-select";
 import { Pagination } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/format";
 import {
@@ -14,6 +12,7 @@ import { toStarRating, type RatingDistribution } from "@/modules/products/domain
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 
 import { formatRating } from "../domain/rating";
+import { ReviewLinkSelect } from "./review-link-select";
 import { ReviewStars } from "./review-stars";
 
 type ProductReview = {
@@ -26,6 +25,20 @@ type ProductReview = {
 };
 
 const SECTION_ID = "avaliacoes";
+// With only a few reviews the filters take more room than the reviews themselves.
+const MIN_REVIEWS_FOR_FILTERS = 5;
+// "1 estrela ou mais" would equal "Todas as notas", and 5 is the top: no "ou mais".
+const ratingOptions = [
+  { value: "", label: "Todas as notas" },
+  ...[5, 4, 3, 2].map((rating) => ({
+    value: String(rating),
+    label: rating === 5 ? "5 estrelas" : `${rating} estrelas ou mais`,
+  })),
+];
+const sortOptions = [
+  { value: "newest", label: "Mais recentes" },
+  { value: "oldest", label: "Mais antigas" },
+] as const;
 
 export function ProductReviewsSection({
   slug,
@@ -47,8 +60,9 @@ export function ProductReviewsSection({
   page: number;
   pageCount: number;
 }) {
-  const pageHref = (reviewPage: number) =>
-    buildProductInteractionHref(slug, params, { reviewPage }, SECTION_ID) as Route;
+  const interactionHref = (overrides: Partial<ProductInteractionParams>) =>
+    buildProductInteractionHref(slug, params, overrides, SECTION_ID) as Route;
+  const pageHref = (reviewPage: number) => interactionHref({ reviewPage });
   const filtered = params.reviewRating !== null;
 
   return (
@@ -81,50 +95,25 @@ export function ProductReviewsSection({
               {filtered ? "Nenhuma avaliação com essa nota mínima." : "Este produto ainda não tem avaliações."}
             </p>
           )}
-          {reviewCount > 0 || filtered ? (
-            <form
-              className="bg-surface-sunken grid gap-3 rounded-lg p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end lg:grid-cols-1"
-              method="get"
-              action={`#${SECTION_ID}`}
-            >
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Nota mínima
-                <DesignSelect
-                  aria-label="Filtrar por nota"
-                  className="h-10"
-                  name="reviewRating"
-                  defaultValue={params.reviewRating ?? ""}
-                >
-                  <option value="">Todas as notas</option>
-                  {/* "1 estrela ou mais" would equal "Todas as notas", and 5 is the top: no "ou mais". */}
-                  {[5, 4, 3, 2].map((rating) => (
-                    <option key={rating} value={rating}>
-                      {rating === 5 ? "5 estrelas" : `${rating} estrelas ou mais`}
-                    </option>
-                  ))}
-                </DesignSelect>
-              </label>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Ordenar avaliações
-                <DesignSelect
-                  aria-label="Ordenar avaliações"
-                  className="h-10"
-                  name="reviewSort"
-                  defaultValue={params.reviewSort}
-                >
-                  <option value="newest">Mais recentes</option>
-                  <option value="oldest">Mais antigas</option>
-                </DesignSelect>
-              </label>
-              {params.questionSort !== "newest" ? (
-                <input type="hidden" name="questionSort" value={params.questionSort} />
-              ) : null}
-              {params.questionPage > 1 ? <input type="hidden" name="questionPage" value={params.questionPage} /> : null}
-              {params.moto ? <input type="hidden" name="moto" value={params.moto} /> : null}
-              <Button type="submit" variant="outline">
-                Aplicar
-              </Button>
-            </form>
+          {reviewCount >= MIN_REVIEWS_FOR_FILTERS || filtered ? (
+            <div className="bg-surface-sunken grid gap-3 rounded-lg p-3 sm:grid-cols-2 lg:grid-cols-1">
+              <ReviewLinkSelect
+                label="Nota mínima"
+                value={params.reviewRating === null ? "" : String(params.reviewRating)}
+                options={ratingOptions.map((option) => ({
+                  ...option,
+                  href: interactionHref({ reviewRating: option.value ? Number(option.value) : null, reviewPage: 1 }),
+                }))}
+              />
+              <ReviewLinkSelect
+                label="Ordenar avaliações"
+                value={params.reviewSort}
+                options={sortOptions.map((option) => ({
+                  ...option,
+                  href: interactionHref({ reviewSort: option.value, reviewPage: 1 }),
+                }))}
+              />
+            </div>
           ) : null}
         </div>
         <div className="min-w-0 space-y-4">

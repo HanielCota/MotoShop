@@ -87,3 +87,11 @@ it("offers the resend only after EMAIL_NOT_VERIFIED and sends it to that sign-in
   expect(await screen.findByRole("status")).toHaveTextContent("enviaremos um novo link");
   expect(mocks.resend).toHaveBeenCalledWith({ email: "rider@example.test", callbackURL: "/login?verified=1" });
 });
+
+it("hints the password length only when creating an account", () => {
+  render(<AuthForm emailEnabled verificationRequired={false} />);
+  expect(screen.getByLabelText("Senha")).not.toHaveAttribute("placeholder");
+
+  fireEvent.click(screen.getByRole("button", { name: "Ainda não tenho conta" }));
+  expect(screen.getByLabelText("Senha")).toHaveAttribute("placeholder", "Pelo menos 8 caracteres");
+});

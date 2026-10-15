@@ -72,7 +72,7 @@ it("gives signed-in customers an account menu with their shortcuts", async () =>
     ["Meus pedidos", "/orders"],
     ["Favoritos", "/favorites"],
     ["Dados cadastrais", "/account/profile"],
-    ["Redefinir senha", "/account/password"],
+    ["Alterar senha", "/account/password"],
     ["Meus endereços", "/account/addresses"],
     ["Sair", null],
   ]);

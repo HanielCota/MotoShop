@@ -15,7 +15,7 @@ const itemClassName =
   "flex min-h-11 shrink-0 items-center gap-3 rounded-md px-3 text-base font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none lg:min-h-14 lg:rounded-none lg:border-l-4 lg:border-transparent lg:px-5";
 
 /**
- * Menu "Serviços" da conta do cliente. No desktop é uma coluna com separadores;
+ * Menu "Minha conta" do cliente. No desktop é uma coluna com separadores;
  * no mobile vira abas roláveis que mantêm a aba atual visível. `userName` evita
  * buscar a sessão de novo quando a página já a carregou.
  */
@@ -35,12 +35,12 @@ export async function CustomerAccountNavigation({
     >
       <div className="border-border flex flex-row-reverse items-baseline justify-between gap-3 px-4 pt-3 pb-1 lg:block lg:border-b lg:px-5 lg:py-4">
         <p id="customer-account-services" className="eyebrow text-muted-foreground lg:text-sm">
-          Serviços
+          Minha conta
         </p>
         <p className="text-lg font-semibold lg:mt-1 lg:text-xl">{customerGreeting(name)}</p>
       </div>
       <ScrollableTabs
-        aria-label="Serviços da minha conta"
+        aria-label="Minha conta"
         activeKey={pathname}
         fadeFromClassName="from-card"
         className="divide-border gap-1 p-2 lg:flex-col lg:gap-0 lg:divide-y lg:overflow-visible lg:p-0"

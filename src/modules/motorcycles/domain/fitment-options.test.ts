@@ -16,10 +16,10 @@ const fitments = [
 ];
 
 describe("fitment options", () => {
-  it("prioritizes URL selection, then primary, then first", () => {
+  it("prioritizes URL selection, then primary, and picks nothing without either", () => {
     expect(resolveSelectedFitment(fitments, "y450", "h24")?.id).toBe("y450");
     expect(resolveSelectedFitment(fitments, "unknown", "h24")?.id).toBe("h24");
-    expect(resolveSelectedFitment(fitments, null)?.id).toBe("h25");
+    expect(resolveSelectedFitment(fitments, null)).toBeUndefined();
     expect(resolveSelectedFitment([], "h25")).toBeUndefined();
   });
 

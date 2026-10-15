@@ -7,6 +7,6 @@ export const customerAccountLinks = [
   { href: "/orders", label: "Meus pedidos", icon: domainIcons.order },
   { href: "/favorites", label: "Favoritos", icon: Heart },
   { href: "/account/profile", label: "Dados cadastrais", icon: UserRound },
-  { href: "/account/password", label: "Redefinir senha", icon: KeyRound },
+  { href: "/account/password", label: "Alterar senha", icon: KeyRound },
   { href: "/account/addresses", label: "Meus endereços", icon: MapPin },
 ] as const satisfies ReadonlyArray<{ href: Route; label: string; icon: unknown }>;

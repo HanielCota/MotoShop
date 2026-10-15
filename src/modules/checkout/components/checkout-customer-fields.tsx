@@ -51,7 +51,7 @@ export function CheckoutCustomerFields({
           required
         />
         <CheckoutFormField
-          label="CPF do comprador"
+          label="Seu CPF"
           name="customerTaxId"
           value={form.customerTaxId}
           onChange={onChange}

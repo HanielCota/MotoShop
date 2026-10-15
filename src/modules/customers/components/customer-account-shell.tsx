@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { CustomerAccountNavigation } from "./customer-account-navigation";
 import { pageContainerClassName } from "@/components/ui/page-container";
 
-/** Shared frame of every customer-account page: "Serviços" navigation, then the page content. */
+/** Shared frame of every customer-account page: "Minha conta" navigation, then the page content. */
 export function CustomerAccountShell({
   pathname,
   userName,

@@ -156,7 +156,7 @@ export function VisualCheckoutPreview() {
               <PreviewField label="Nome completo" value="Comprador de demonstração" />
               <PreviewField label="E-mail" value="cliente@exemplo.com" />
               <PreviewField label="Telefone" value="(11) 90000-0000" />
-              <PreviewField label="CPF do comprador" value="Somente no pedido real" />
+              <PreviewField label="Seu CPF" value="Somente no pedido real" />
             </div>
           </section>
           <section className="bg-card rounded-xl border p-4 sm:p-6">

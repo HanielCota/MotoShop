@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import type { Metadata, Route } from "next";
 import { Bike, X } from "lucide-react";
 
@@ -46,6 +45,7 @@ import {
   type CatalogQuery,
 } from "../catalog-query";
 import { cn } from "@/lib/utils";
+import { catalogEmptyState } from "../catalog-empty-state";
 
 export const metadata: Metadata = {
   title: "Catálogo",
@@ -103,17 +103,8 @@ export default async function ProductsPage({
   ]);
   const primaryMotorcycle = session ? await getPrimarySavedMotorcycle(session.user.id) : null;
   const primaryFitment = fitments.find((fitment) => fitment.id === primaryMotorcycle?.motorcycleFitmentId);
-  // AGENTS.md: the effective motorcycle filter always lives in the URL (?moto=). When the primary
-  // motorcycle is applied by default, make it explicit so the link stays shareable.
-  if (params.moto === null && primaryFitment) {
-    const explicit = new URLSearchParams();
-    for (const [key, value] of Object.entries(await searchParams)) {
-      for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value])
-        explicit.append(key, entry);
-    }
-    explicit.set("moto", primaryFitment.id);
-    redirect(`/products?${explicit.toString()}` as Route);
-  }
+  // AGENTS.md: the primary motorcycle is an explicit shortcut (the banner below), never applied on its own:
+  // search, categories and the "Catálogo" link show every product, including gear that fits any bike.
   const activeMoto = params.moto === "all" ? "" : (params.moto ?? "");
   const query: CatalogQuery = {
     q: params.q,
@@ -133,24 +124,24 @@ export default async function ProductsPage({
     page: params.page,
   };
   const hasInvalidPriceRange = query.minPrice !== null && query.maxPrice !== null && query.minPrice > query.maxPrice;
+  const listingInput = {
+    query: query.q,
+    categoryId: query.category,
+    brandId: query.brand,
+    sellerId: query.seller,
+    sort: query.sort,
+    availability: query.availability,
+    minPriceInCents: query.minPrice,
+    maxPriceInCents: query.maxPrice,
+    promotion: query.promotion,
+    gender: query.gender,
+    color: query.color,
+    size: query.size,
+  };
   const result = hasInvalidPriceRange
     ? { products: [], total: 0, page: 1, pageCount: 1 }
-    : await listApprovedProducts({
-        query: query.q,
-        motorcycleFitmentId: activeMoto || null,
-        categoryId: query.category,
-        brandId: query.brand,
-        sellerId: query.seller,
-        sort: query.sort,
-        availability: query.availability,
-        minPriceInCents: query.minPrice,
-        maxPriceInCents: query.maxPrice,
-        promotion: query.promotion,
-        gender: query.gender,
-        color: query.color,
-        size: query.size,
-        page: query.page,
-      });
+    : await listApprovedProducts({ ...listingInput, motorcycleFitmentId: activeMoto || null, page: query.page });
+  const totalWithoutMoto = await countWithoutMotorcycle(listingInput, { activeMoto, empty: result.total === 0 });
 
   const activeFilterCount = countActiveCatalogFilters(query);
   const chips = buildFilterChips(query, { fitments, categories, brands, sellers });
@@ -161,7 +152,7 @@ export default async function ProductsPage({
     <main className={pageContainerClassName("default", "flex flex-col gap-6 py-8 sm:py-10")}>
       <PageHeader
         eyebrow="Catálogo"
-        title="Peças, acessórios e equipamentos"
+        title={query.q ? `Resultados para “${query.q}”` : "Peças, acessórios e equipamentos"}
         description="Produtos de lojistas parceiros do Moto Shop."
       />
 
@@ -237,15 +228,15 @@ export default async function ProductsPage({
 
           <ProductGrid
             products={result.products}
-            emptyTitle={activeFilterCount > 0 ? "Nenhum produto encontrado" : "Catálogo em preparação"}
-            emptyMessage={
-              hasInvalidPriceRange
-                ? "A faixa de preço está invertida. Corrija os valores para ver os produtos."
-                : activeFilterCount > 0
-                  ? "Ajuste ou limpe os filtros para tentar novamente."
-                  : "Ainda não há produtos publicados no catálogo."
-            }
-            emptyAction={activeFilterCount > 0 ? { label: "Limpar filtros", href: clearHref } : undefined}
+            {...catalogEmptyState({
+              query,
+              activeFilterCount,
+              hasInvalidPriceRange,
+              clearHref,
+              totalWithoutMoto,
+              motoLabel: activeMotoLabel(fitments, activeMoto),
+              suggestedCategories: categories.filter((category) => !category.parentId).slice(0, 4),
+            })}
           />
           <Pagination
             ariaLabel="Paginação de produtos"
@@ -259,6 +250,24 @@ export default async function ProductsPage({
       </div>
     </main>
   );
+}
+
+type ListingInput = Omit<Parameters<typeof listApprovedProducts>[0], "motorcycleFitmentId" | "page">;
+
+/** Only for an empty result filtered by motorcycle: how many products the same search has without it. */
+async function countWithoutMotorcycle(
+  listingInput: ListingInput,
+  { activeMoto, empty }: { activeMoto: string; empty: boolean },
+) {
+  if (!activeMoto || !empty) return 0;
+
+  const withoutMoto = await listApprovedProducts({ ...listingInput, motorcycleFitmentId: null, page: 1 });
+  return withoutMoto.total;
+}
+
+function activeMotoLabel(fitments: Fitment[], activeMoto: string) {
+  const fitment = fitments.find((option) => option.id === activeMoto);
+  return fitment ? fitmentLabel(fitment) : "moto escolhida";
 }
 
 function PrimaryMotorcycleBanner({

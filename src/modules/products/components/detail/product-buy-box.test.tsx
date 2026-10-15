@@ -47,6 +47,6 @@ describe("ProductBuyBox", () => {
     render(<ProductBuyBox variants={[onSale]} isDemo={false} hasPriceRange={false} paymentAvailable />);
 
     const oldPrice = screen.getByText(/Preço anterior/).parentElement;
-    expect(oldPrice?.textContent?.replace(/\s/g, " ")).toMatch(/R\$ 899,90\. Oferta · 11% off/);
+    expect(oldPrice?.textContent?.replace(/\s/g, " ")).toMatch(/R\$ 899,90\. Oferta · 11% de desconto/);
   });
 });
