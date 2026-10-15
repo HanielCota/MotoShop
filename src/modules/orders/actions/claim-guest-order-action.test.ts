@@ -10,6 +10,11 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/navigation", () => ({
+  redirect: (url: string) => {
+    throw new Error(`redirect:${url}`);
+  },
+}));
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("@/modules/auth/application/authorization", () => ({ getCurrentSession: mocks.session }));
 vi.mock("@/modules/orders/application/claim-guest-order", () => ({ claimGuestOrder: mocks.claim }));
@@ -42,10 +47,10 @@ describe("claimGuestOrderAction", () => {
     mocks.resolve.mockResolvedValue({ guestAccessTokenHash: "guest-hash" });
   });
 
-  it("claims with the guest identity behind the order cookie and clears the cookie afterwards", async () => {
+  it("claims with the guest identity behind the order cookie, clears the cookie and opens the order", async () => {
     mocks.readCookie.mockResolvedValue(token);
 
-    expect(await claimGuestOrderAction({}, form())).toEqual({ success: true });
+    await expect(claimGuestOrderAction({}, form())).rejects.toThrow("redirect:/orders/MS-1");
     expect(mocks.resolve).toHaveBeenCalledWith({ orderNumber: "MS-1", accessToken: token });
     expect(mocks.claim).toHaveBeenCalledWith({
       orderNumber: "MS-1",
