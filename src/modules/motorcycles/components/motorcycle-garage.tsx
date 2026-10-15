@@ -1,4 +1,5 @@
 "use client";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import { DesignCheckbox } from "@/components/ui/design-checkbox";
@@ -73,9 +74,9 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
               {saved.manufacturer} {saved.model}
             </h2>
             {saved.isPrimary ? (
-              <span className="bg-moto-brand-surface text-brand-strong inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold">
-                <Star aria-hidden="true" className="size-3.5" /> Principal
-              </span>
+              <Badge variant="brand">
+                <Star aria-hidden="true" data-icon="inline-start" /> Principal
+              </Badge>
             ) : null}
           </div>
           <MotorcycleDetails saved={saved} />

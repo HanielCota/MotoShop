@@ -19,6 +19,8 @@ const badgeVariants = cva(
         info: "border-info/20 bg-info-surface text-info",
         brand: "border-moto-brand/30 bg-moto-brand-surface text-brand-strong",
         neutral: "border-border bg-muted text-muted-foreground",
+        /** Dark pill on light surfaces ("Novidade", "Demonstração"). */
+        inverse: "bg-foreground text-background",
       },
     },
     defaultVariants: {

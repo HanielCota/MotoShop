@@ -185,13 +185,9 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline">{categoryLabel}</Badge>
             <Badge variant="neutral">{product.brand.name}</Badge>
-            {offer.hasPromotion ? (
-              <Badge className="bg-moto-brand text-moto-brand-foreground border-0">Oferta</Badge>
-            ) : null}
+            {offer.hasPromotion ? <Badge>Oferta</Badge> : null}
             {product.seller.subscriptions.length > 0 ? <Badge variant="brand">Patrocinado · Loja VIP</Badge> : null}
-            {isNewProduct(product, new Date()) ? (
-              <Badge className="bg-foreground text-background">Novidade</Badge>
-            ) : null}
+            {isNewProduct(product, new Date()) ? <Badge variant="inverse">Novidade</Badge> : null}
           </div>
           <h1 id="product-title" className="text-foreground mt-5 text-3xl leading-tight sm:text-4xl">
             {product.name}
