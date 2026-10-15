@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 
 import { ActionForm } from "@/components/ui/action-form";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DesignSelect } from "@/components/ui/design-select";
 import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
@@ -201,11 +202,19 @@ export function SellerTeamManager({ members, invites }: { members: Member[]; inv
                     Salvar perfil
                   </Button>
                 </ActionForm>
-                <ActionForm action={removeSellerMemberAction.bind(null, member.id)}>
-                  <Button type="submit" variant="outline" size="sm" className="text-destructive">
-                    Remover
-                  </Button>
-                </ActionForm>
+                {/* Tira o acesso da pessoa à Central: pede confirmação (BUG-004). */}
+                <ConfirmDialog
+                  trigger={
+                    <Button type="button" variant="outline" size="sm" className="text-destructive">
+                      Remover
+                    </Button>
+                  }
+                  title={`Remover ${member.name || member.email} da equipe?`}
+                  description="A pessoa perde o acesso à Central do Lojista desta loja. Para voltar, é preciso um novo convite."
+                  confirmLabel="Remover"
+                  tone="destructive"
+                  onConfirm={() => removeSellerMemberAction(member.id)}
+                />
               </div>
             )}
           </div>
