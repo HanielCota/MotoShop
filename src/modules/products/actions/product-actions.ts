@@ -70,7 +70,7 @@ async function createProductAndRevalidate(
     return {
       error:
         applicationError.code === "INTERNAL_ERROR"
-          ? "Não foi possível criar o produto. Confira o slug e o SKU."
+          ? "Não foi possível criar o produto. Confira o endereço da página e o SKU."
           : applicationError.message,
     };
   }
@@ -121,7 +121,7 @@ export async function updateProductAction(
     return {
       error:
         applicationError.code === "INTERNAL_ERROR"
-          ? "Não foi possível atualizar o produto. Confira o slug e o SKU."
+          ? "Não foi possível atualizar o produto. Confira o endereço da página e o SKU."
           : applicationError.message,
     };
   }

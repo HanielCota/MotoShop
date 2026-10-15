@@ -25,7 +25,7 @@ it("answers every product validation problem in Portuguese (BUG-007)", () => {
 
   expect(result.success).toBe(false);
   expect(messages(result)).toContain("Use no máximo 160 caracteres no nome.");
-  expect(messages(result)).toContain("Use pelo menos 3 letras ou números no slug.");
+  expect(messages(result)).toContain("Use pelo menos 3 letras ou números no endereço da página.");
   expect(messages(result).filter((message) => englishZodMessage.test(message))).toEqual([]);
 });
 

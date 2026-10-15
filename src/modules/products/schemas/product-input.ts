@@ -37,9 +37,9 @@ export const productInputSchema = z.object({
   slug: z
     .string()
     .trim()
-    .min(3, "Use pelo menos 3 letras ou números no slug.")
-    .max(160, "Use no máximo 160 caracteres no slug.")
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use um slug válido."),
+    .min(3, "Use pelo menos 3 letras ou números no endereço da página.")
+    .max(160, "Use no máximo 160 caracteres no endereço da página.")
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use apenas letras minúsculas, números e hífens no endereço da página."),
   description: z
     .string()
     .trim()
