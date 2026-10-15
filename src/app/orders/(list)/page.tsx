@@ -94,96 +94,101 @@ export default async function CustomerOrdersPage({
         description="Acompanhe o pagamento e a entrega de cada compra."
       />
 
-      <p className="text-muted-foreground text-sm" aria-live="polite">
-        {result.total} {result.total === 1 ? "pedido encontrado" : "pedidos encontrados"}
-      </p>
-      <details className="border-border bg-card rounded-xl border p-4" open={hasFilters}>
-        <summary className="cursor-pointer list-none font-semibold [&::-webkit-details-marker]:hidden">
-          Filtros avançados{" "}
-          <span className="text-muted-foreground text-sm font-normal">(status, loja, valor e período)</span>
-        </summary>
-        <form className="mt-4 grid gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-4" method="get">
-          <label className="flex min-w-0 flex-col gap-2 text-sm font-medium sm:col-span-2 lg:col-span-2">
-            Buscar pedido
-            <Input name="orderQ" defaultValue={params.orderQ ?? ""} placeholder="Número, produto ou SKU" />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Valor mínimo (R$)
-            <Input
-              name="orderMinTotal"
-              type="text"
-              inputMode="decimal"
-              defaultValue={params.orderMinTotal ?? ""}
-              placeholder="Ex.: 50,00"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Valor máximo (R$)
-            <Input
-              name="orderMaxTotal"
-              type="text"
-              inputMode="decimal"
-              defaultValue={params.orderMaxTotal ?? ""}
-              placeholder="Ex.: 1000,00"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Envio
-            <DesignSelect aria-label="Envio" name="shipmentStatus" defaultValue={params.shipmentStatus}>
-              <option value="ALL">Todos</option>
-              {statusOptions("shipment", customerShipmentStatusValues).map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </DesignSelect>
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Buscar loja
-            <Input name="storeQ" defaultValue={params.storeQ ?? ""} placeholder="Nome da loja" />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Filtrar por status
-            <DesignSelect aria-label="Filtrar por status" name="orderStatus" defaultValue={params.orderStatus}>
-              <option value="ALL">Todos os pedidos</option>
-              {statusOptions("order", customerOrderStatusValues).map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </DesignSelect>
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Pagamento
-            <DesignSelect aria-label="Pagamento" name="paymentStatus" defaultValue={params.paymentStatus}>
-              <option value="ALL">Todos</option>
-              {statusOptions("payment", customerPaymentStatusValues).map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </DesignSelect>
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            De
-            <DateFilterInput name="orderFrom" value={params.orderFrom} />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Até
-            <DateFilterInput name="orderTo" value={params.orderTo} />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Ordenação
-            <DesignSelect aria-label="Ordenação" name="orderSort" defaultValue={params.orderSort}>
-              <option value="newest">Mais recentes</option>
-              <option value="oldest">Mais antigos</option>
-              <option value="total_high">Maior valor</option>
-              <option value="total_low">Menor valor</option>
-            </DesignSelect>
-          </label>
-          <Button type="submit">Filtrar</Button>
-        </form>
-      </details>
+      {/* No order yet and no filter: only the empty state, without a count or filters for nothing. */}
+      {allOrders.total > 0 || hasFilters ? (
+        <>
+          <p className="text-muted-foreground text-sm" aria-live="polite">
+            {result.total} {result.total === 1 ? "pedido encontrado" : "pedidos encontrados"}
+          </p>
+          <details className="border-border bg-card rounded-xl border p-4" open={hasFilters}>
+            <summary className="cursor-pointer list-none font-semibold [&::-webkit-details-marker]:hidden">
+              Filtros avançados{" "}
+              <span className="text-muted-foreground text-sm font-normal">(status, loja, valor e período)</span>
+            </summary>
+            <form className="mt-4 grid gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-4" method="get">
+              <label className="flex min-w-0 flex-col gap-2 text-sm font-medium sm:col-span-2 lg:col-span-2">
+                Buscar pedido
+                <Input name="orderQ" defaultValue={params.orderQ ?? ""} placeholder="Número, produto ou SKU" />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Valor mínimo (R$)
+                <Input
+                  name="orderMinTotal"
+                  type="text"
+                  inputMode="decimal"
+                  defaultValue={params.orderMinTotal ?? ""}
+                  placeholder="Ex.: 50,00"
+                />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Valor máximo (R$)
+                <Input
+                  name="orderMaxTotal"
+                  type="text"
+                  inputMode="decimal"
+                  defaultValue={params.orderMaxTotal ?? ""}
+                  placeholder="Ex.: 1000,00"
+                />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Envio
+                <DesignSelect aria-label="Envio" name="shipmentStatus" defaultValue={params.shipmentStatus}>
+                  <option value="ALL">Todos</option>
+                  {statusOptions("shipment", customerShipmentStatusValues).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </DesignSelect>
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Buscar loja
+                <Input name="storeQ" defaultValue={params.storeQ ?? ""} placeholder="Nome da loja" />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Filtrar por status
+                <DesignSelect aria-label="Filtrar por status" name="orderStatus" defaultValue={params.orderStatus}>
+                  <option value="ALL">Todos os pedidos</option>
+                  {statusOptions("order", customerOrderStatusValues).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </DesignSelect>
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Pagamento
+                <DesignSelect aria-label="Pagamento" name="paymentStatus" defaultValue={params.paymentStatus}>
+                  <option value="ALL">Todos</option>
+                  {statusOptions("payment", customerPaymentStatusValues).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </DesignSelect>
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                De
+                <DateFilterInput name="orderFrom" value={params.orderFrom} />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Até
+                <DateFilterInput name="orderTo" value={params.orderTo} />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Ordenação
+                <DesignSelect aria-label="Ordenação" name="orderSort" defaultValue={params.orderSort}>
+                  <option value="newest">Mais recentes</option>
+                  <option value="oldest">Mais antigos</option>
+                  <option value="total_high">Maior valor</option>
+                  <option value="total_low">Menor valor</option>
+                </DesignSelect>
+              </label>
+              <Button type="submit">Filtrar</Button>
+            </form>
+          </details>
+        </>
+      ) : null}
       {result.orders.length === 0 ? (
         hasInvertedPeriod ? (
           <EmptyState
