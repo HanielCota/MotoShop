@@ -64,6 +64,16 @@ describe("ProductSearchCombobox", () => {
     expect(input).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("does not ask for suggestions for a query longer than the endpoint accepts", async () => {
+    const { input } = renderSearch();
+
+    fireEvent.change(input, { target: { value: "a".repeat(81) } });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(input).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("lists suggestions with name, price and the demo mark", async () => {
     const { input } = renderSearch();
 

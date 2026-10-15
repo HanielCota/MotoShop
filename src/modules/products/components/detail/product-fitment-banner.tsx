@@ -8,6 +8,13 @@ export type FitmentStatus =
   | { kind: "unknown"; motorcycleLabel: string }
   | { kind: "no-motorcycle" };
 
+// Without any compatibility informed there is no list to check, so the customer is sent to the store.
+const fitmentHint = {
+  fits: " · confira também a versão do seu modelo.",
+  "does-not-fit": " · veja a lista de motos compatíveis.",
+  unknown: ". Antes de comprar, pergunte à loja se esta peça serve.",
+} as const;
+
 const linkClassName =
   "inline-flex min-h-10 items-center rounded-sm font-semibold underline underline-offset-4 focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none";
 
@@ -50,9 +57,7 @@ export function ProductFitmentBanner({ status }: { status: FitmentStatus }) {
         <p className="font-semibold">{message}</p>
         <p className="mt-0.5">
           Sua moto: {status.motorcycleLabel}
-          {status.kind === "fits"
-            ? " · confira também a versão do seu modelo."
-            : " · veja a lista de motos compatíveis."}
+          {fitmentHint[status.kind]}
         </p>
         <a href="#compatibilidade" className={cn(linkClassName, "min-h-8 text-xs")}>
           Trocar moto
