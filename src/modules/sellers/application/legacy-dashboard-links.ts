@@ -2,6 +2,9 @@
  * Antes da divisão da Central do Lojista, filtros e paginação de produtos e cupons
  * viviam em `/seller?…`. Mantém esses links funcionando redirecionando para as novas rotas.
  */
+// O histórico de estoque saiu da visão geral (UX-09); seus filtros não têm prefixo.
+const inventoryHistoryKeys = ["q", "movementType", "from", "to", "sort"] as const;
+
 const legacyTargets = [
   { prefix: "product", pathname: "/seller/products" },
   { prefix: "coupon", pathname: "/seller/coupons" },
@@ -19,5 +22,16 @@ export function getLegacySellerDashboardRedirect(query: Record<string, string | 
     }
     return `${pathname}?${params.toString()}`;
   }
-  return null;
+  return getLegacyInventoryHistoryRedirect(query);
+}
+
+function getLegacyInventoryHistoryRedirect(query: Record<string, string | string[] | undefined>): string | null {
+  const params = new URLSearchParams();
+  for (const key of inventoryHistoryKeys) {
+    const value = query[key];
+    if (value === undefined) continue;
+    for (const item of Array.isArray(value) ? value : [value]) params.append(key, item);
+  }
+  const search = params.toString();
+  return search ? `/seller/products/inventory-history?${search}` : null;
 }

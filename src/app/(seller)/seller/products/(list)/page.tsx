@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { History, Plus } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -28,12 +28,21 @@ export default async function SellerProductsPage({
         title="Produtos"
         description="Cadastre, edite, envie para aprovação e ajuste o estoque de cada variação."
         actions={
-          permissions.canCreateProduct ? (
-            <Link href="/seller/products/new" className={buttonVariants({ size: "lg" })}>
-              <Plus aria-hidden="true" />
-              Novo produto
+          <>
+            <Link
+              href="/seller/products/inventory-history"
+              className={buttonVariants({ variant: "outline", size: "lg" })}
+            >
+              <History aria-hidden="true" />
+              Histórico de estoque
             </Link>
-          ) : null
+            {permissions.canCreateProduct ? (
+              <Link href="/seller/products/new" className={buttonVariants({ size: "lg" })}>
+                <Plus aria-hidden="true" />
+                Novo produto
+              </Link>
+            ) : null}
+          </>
         }
       />
       <Suspense fallback={<SellerCardSkeleton rows={5} label="Carregando produtos" />}>

@@ -27,14 +27,14 @@ export async function countSellerUnansweredQuestions(sellerId: string) {
   return db.productQuestion.count({ where: { sellerId, hiddenAt: null, answeredAt: null } });
 }
 
-export async function countSellerLowStockVariants(sellerId: string, threshold = LOW_STOCK_THRESHOLD) {
-  return db.inventory.count({
-    where: {
-      sellerId,
-      availableQuantity: { lte: threshold },
-      variant: { sellerId, active: true, product: { sellerId } },
-    },
-  });
+/** Variações ativas com estoque baixo (1 a 5) e esgotadas, como os filtros LOW e OUT da lista de produtos. */
+export async function countSellerStockAlerts(sellerId: string, threshold = LOW_STOCK_THRESHOLD) {
+  const activeVariant = { variant: { sellerId, active: true, product: { sellerId } } };
+  const [low, out] = await Promise.all([
+    db.inventory.count({ where: { sellerId, availableQuantity: { gt: 0, lte: threshold }, ...activeVariant } }),
+    db.inventory.count({ where: { sellerId, availableQuantity: { lte: 0 }, ...activeVariant } }),
+  ]);
+  return { low, out };
 }
 
 export async function getSellerMonthNetSales(sellerId: string) {

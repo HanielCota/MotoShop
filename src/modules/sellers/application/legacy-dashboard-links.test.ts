@@ -3,8 +3,14 @@ import { describe, expect, it } from "vitest";
 import { getLegacySellerDashboardRedirect } from "./legacy-dashboard-links";
 
 describe("getLegacySellerDashboardRedirect", () => {
-  it("keeps the overview when only inventory filters are present", () => {
-    expect(getLegacySellerDashboardRedirect({ q: "capacete", movementType: "SALE" })).toBeNull();
+  it("sends legacy inventory history filters to the history page (UX-09)", () => {
+    expect(getLegacySellerDashboardRedirect({ q: "capacete", movementType: "SALE" })).toBe(
+      "/seller/products/inventory-history?q=capacete&movementType=SALE",
+    );
+  });
+
+  it("keeps the overview for the permission notice", () => {
+    expect(getLegacySellerDashboardRedirect({ error: "permission" })).toBeNull();
   });
 
   it("sends legacy product filters to the products page", () => {

@@ -12,32 +12,40 @@ import { inventoryMovementLabels } from "@/shared/presentation/status-labels";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-/** Histórico auditável de estoque; lê seus próprios filtros (`q`, `movementType`, `from`, `to`, `sort`). */
+export const INVENTORY_HISTORY_PATH = "/seller/products/inventory-history";
+
 const movementTypeOptions = [
   { value: "ALL", label: "Todos" },
   ...Object.entries(inventoryMovementLabels).map(([value, label]) => ({ value, label })),
 ];
+const SUMMARY_LIMIT = 5;
 const sortOptions = [
   { value: "newest", label: "Mais recentes" },
   { value: "oldest", label: "Mais antigos" },
 ];
 
+/**
+ * Histórico auditável de estoque; lê seus próprios filtros (`q`, `movementType`, `from`, `to`, `sort`).
+ * No resumo da visão geral, mostra só as últimas movimentações e o link para a página completa.
+ */
 export async function SellerInventoryHistoryCard({
   sellerId,
   searchParams,
+  summary = false,
 }: {
   sellerId: string;
   searchParams: SearchParams;
+  summary?: boolean;
 }) {
-  const params = await loadInventorySearchParams(searchParams);
+  const params = summary ? null : await loadInventorySearchParams(searchParams);
+  const filters = params
+    ? { q: params.q, type: params.movementType, from: params.from, to: params.to, sort: params.sort }
+    : {};
   const movements = await listSellerInventoryMovements(sellerId, {
-    q: params.q,
-    type: params.movementType,
-    from: params.from,
-    to: params.to,
-    sort: params.sort,
+    ...filters,
+    limit: summary ? SUMMARY_LIMIT : 50,
   });
-  const hasFilters = Boolean(params.q || params.from || params.to || params.movementType !== "ALL");
+  const hasFilters = Boolean(params && (params.q || params.from || params.to || params.movementType !== "ALL"));
 
   return (
     <Card id="seller-history" className="scroll-mt-24">
@@ -45,22 +53,32 @@ export async function SellerInventoryHistoryCard({
         <CardTitle>
           <h2 className="text-lg">Histórico de estoque</h2>
         </CardTitle>
-        <CardDescription>Últimas movimentações auditáveis das variações da loja.</CardDescription>
+        <CardDescription>
+          {summary
+            ? `${SUMMARY_LIMIT} movimentações mais recentes das variações da loja.`
+            : "Movimentações auditáveis das variações da loja (até 50 por consulta)."}
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="mb-4">
-          <FilterForm resetHref="/seller#seller-history" action="/seller#seller-history" label="Filtrar movimentações">
-            <FilterText label="Buscar produto ou SKU" name="q" value={params.q} placeholder="Nome, variação ou SKU" />
-            <FilterSelect
-              label="Tipo de movimentação"
-              name="movementType"
-              value={params.movementType}
-              options={movementTypeOptions}
-            />
-            <FilterDateRange fromName="from" toName="to" from={params.from} to={params.to} />
-            <FilterSelect label="Ordenação" name="sort" value={params.sort} options={sortOptions} />
-          </FilterForm>
-        </div>
+        {params ? (
+          <div className="mb-4">
+            <FilterForm
+              resetHref={INVENTORY_HISTORY_PATH}
+              action={INVENTORY_HISTORY_PATH}
+              label="Filtrar movimentações"
+            >
+              <FilterText label="Buscar produto ou SKU" name="q" value={params.q} placeholder="Nome, variação ou SKU" />
+              <FilterSelect
+                label="Tipo de movimentação"
+                name="movementType"
+                value={params.movementType}
+                options={movementTypeOptions}
+              />
+              <FilterDateRange fromName="from" toName="to" from={params.from} to={params.to} />
+              <FilterSelect label="Ordenação" name="sort" value={params.sort} options={sortOptions} />
+            </FilterForm>
+          </div>
+        ) : null}
         {movements.length === 0 ? (
           <EmptyState
             variant="inline"
@@ -71,7 +89,7 @@ export async function SellerInventoryHistoryCard({
                 ? "Ajuste ou limpe os filtros para ver outras movimentações."
                 : "Vendas, reservas e ajustes manuais aparecerão aqui."
             }
-            action={hasFilters ? { label: "Limpar filtros", href: "/seller#seller-history" } : undefined}
+            action={hasFilters ? { label: "Limpar filtros", href: INVENTORY_HISTORY_PATH } : undefined}
           />
         ) : (
           <ul className="divide-border divide-y">
@@ -110,6 +128,14 @@ export async function SellerInventoryHistoryCard({
             ))}
           </ul>
         )}
+        {summary ? (
+          <Link
+            href={INVENTORY_HISTORY_PATH}
+            className="text-brand-strong mt-2 inline-flex min-h-11 items-center text-sm font-medium underline-offset-4 hover:underline"
+          >
+            Ver histórico completo
+          </Link>
+        ) : null}
       </CardContent>
     </Card>
   );

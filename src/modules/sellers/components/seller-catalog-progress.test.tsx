@@ -25,4 +25,10 @@ describe("SellerCatalogProgress", () => {
     expect(screen.getByText(/aguardando análise pelo Moto Shop/i)).toBeInTheDocument();
     expect(screen.queryByText(/produto\(s\) publicado/i)).not.toBeInTheDocument();
   });
+
+  it("leaves the overview once a product is published (UX-09)", () => {
+    const { container } = render(<SellerCatalogProgress progress={{ editable: 2, submitted: 1, approved: 1 }} />);
+
+    expect(container).toBeEmptyDOMElement();
+  });
 });
