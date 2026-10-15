@@ -203,10 +203,31 @@
 
   input:not([type="hidden"]):focus-visible,
   textarea:focus-visible,
-  button:focus-visible,
-  summary:focus-visible {
+  button:focus-visible {
     outline-color: var(--ring);
     outline-offset: 2px;
+  }
+
+  /* DN-05: links, summaries and custom buttons get the DS focus ring instead of the browser outline. */
+  a:focus-visible,
+  summary:focus-visible,
+  [role="button"]:not(button):focus-visible {
+    outline: none;
+    border-radius: var(--radius-sm);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 50%, transparent);
+  }
+
+  /* DN-02: no native clear "x" in search fields (clearing, when offered, is a DS button). */
+  input[type="search"]::-webkit-search-cancel-button,
+  input[type="search"]::-webkit-search-decoration {
+    appearance: none;
+    display: none;
+  }
+
+  /* DN-04: Edge adds its own reveal/clear buttons; PasswordInput already has the DS eye. */
+  input::-ms-reveal,
+  input::-ms-clear {
+    display: none;
   }
 
   input:-webkit-autofill,
@@ -232,6 +253,22 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+}
+
+/* DN-06: keep the autofill disguise (inset shadow) together with the DS ring. Unlayered on purpose:
+   the ring utilities also use box-shadow and would otherwise replace the disguise. */
+input:-webkit-autofill:focus-visible,
+textarea:-webkit-autofill:focus-visible {
+  box-shadow:
+    0 0 0 1000px var(--background) inset,
+    0 0 0 3px color-mix(in oklch, var(--ring) 40%, transparent);
+}
+
+input:-webkit-autofill[aria-invalid="true"],
+textarea:-webkit-autofill[aria-invalid="true"] {
+  box-shadow:
+    0 0 0 1000px var(--background) inset,
+    0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {

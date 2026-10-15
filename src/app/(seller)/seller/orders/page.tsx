@@ -2,7 +2,6 @@ import { FilterDateRange, FilterForm, FilterSelect, FilterText } from "@/compone
 import { Pagination } from "@/components/ui/pagination";
 import type { Metadata, Route } from "next";
 import { createSerializer } from "nuqs/server";
-import { ClipboardList } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -29,6 +28,7 @@ import {
   sellerOrdersSearchParams,
   shipmentStatusValues,
 } from "@/modules/shipping/search-params";
+import { domainIcons } from "@/shared/presentation/domain-icons";
 
 export const metadata: Metadata = {
   title: "Pedidos · Central do Lojista",
@@ -120,7 +120,7 @@ export default async function SellerOrdersPage({
           {result.orders.length === 0 ? (
             <EmptyState
               variant="inline"
-              icon={ClipboardList}
+              icon={domainIcons.order}
               title={hasFilters ? "Nenhum pedido corresponde aos filtros selecionados." : emptyQueueTitles[queue]}
               description={
                 hasFilters

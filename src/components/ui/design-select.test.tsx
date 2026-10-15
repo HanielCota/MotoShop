@@ -29,13 +29,13 @@ describe("DesignSelect", () => {
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
     expect(screen.getByRole("combobox", { name: "Marca" })).toHaveTextContent("Selecione");
-    expect(defined(form).checkValidity()).toBe(false);
+    expect(screen.getByRole("combobox", { name: "Marca" })).toHaveAttribute("aria-required", "true");
     selectOption("Marca", "Fox");
     expect(new FormData(defined(form)).get("brandId")).toBe("fox");
     expect(defined(form).checkValidity()).toBe(true);
     selectOption("Marca", "Selecione");
     expect(new FormData(defined(form)).get("brandId")).toBe("");
-    expect(defined(form).checkValidity()).toBe(false);
+    expect(defined(form).checkValidity()).toBe(true);
   });
 
   it("submits every selected motorcycle as a separate value", () => {
@@ -66,6 +66,20 @@ describe("DesignSelect", () => {
     );
     fireEvent.click(screen.getByRole("combobox", { name: "Modelo" }));
     expect(screen.queryByRole("option", { name: "YZ" })).not.toBeInTheDocument();
+  });
+
+  it("announces required without the browser validation bubble", () => {
+    const { container } = render(
+      <form>
+        <DesignSelect aria-label="Moto" name="fitmentId" required defaultValue="">
+          <option value="">Selecione</option>
+          <option value="crf">CRF 250R</option>
+        </DesignSelect>
+      </form>,
+    );
+
+    expect(screen.getByRole("combobox", { name: "Moto" })).toHaveAttribute("aria-required", "true");
+    expect(defined(container.querySelector("form")).checkValidity()).toBe(true);
   });
 
   it("opens the list beside the trigger instead of over it, so small screens keep room for options", () => {

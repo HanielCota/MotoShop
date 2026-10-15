@@ -5,109 +5,116 @@
  */
 export type StatusTone = "neutral" | "info" | "success" | "warning" | "danger" | "brand";
 
-export type StatusPresentation = { label: string; tone: StatusTone };
+/**
+ * What the status means, which picks its icon (IC-01): the icon follows the meaning, the tone only
+ * the color. waiting = depends on someone else; done = finished well; transit = on the way;
+ * attention = needs action; failed = refused, failed or cancelled; idle = not started or archived.
+ */
+export type StatusMeaning = "waiting" | "done" | "transit" | "attention" | "failed" | "idle";
+
+export type StatusPresentation = { label: string; tone: StatusTone; meaning: StatusMeaning };
 
 type StatusMap = Record<string, StatusPresentation>;
 
 const order: StatusMap = {
-  PENDING_PAYMENT: { label: "Aguardando pagamento", tone: "warning" },
-  PAID: { label: "Pago", tone: "info" },
-  PROCESSING: { label: "Em preparação", tone: "info" },
-  PARTIALLY_SHIPPED: { label: "Parcialmente enviado", tone: "info" },
-  SHIPPED: { label: "Enviado", tone: "brand" },
-  DELIVERED: { label: "Entregue", tone: "success" },
-  PARTIALLY_CANCELLED: { label: "Parcialmente cancelado", tone: "warning" },
-  CANCELLATION_REQUESTED: { label: "Cancelamento em análise", tone: "warning" },
-  CANCELLED: { label: "Cancelado", tone: "danger" },
+  PENDING_PAYMENT: { label: "Aguardando pagamento", tone: "warning", meaning: "waiting" },
+  PAID: { label: "Pago", tone: "info", meaning: "done" },
+  PROCESSING: { label: "Em preparação", tone: "info", meaning: "waiting" },
+  PARTIALLY_SHIPPED: { label: "Parcialmente enviado", tone: "info", meaning: "transit" },
+  SHIPPED: { label: "Enviado", tone: "brand", meaning: "transit" },
+  DELIVERED: { label: "Entregue", tone: "success", meaning: "done" },
+  PARTIALLY_CANCELLED: { label: "Parcialmente cancelado", tone: "warning", meaning: "attention" },
+  CANCELLATION_REQUESTED: { label: "Cancelamento em análise", tone: "warning", meaning: "waiting" },
+  CANCELLED: { label: "Cancelado", tone: "danger", meaning: "failed" },
 };
 
 const shipment: StatusMap = {
-  PENDING: { label: "Aguardando envio", tone: "neutral" },
-  READY_TO_SHIP: { label: "Etiqueta pronta", tone: "info" },
-  SHIPPED: { label: "Postado", tone: "brand" },
-  IN_TRANSIT: { label: "Em trânsito", tone: "brand" },
-  DELIVERED: { label: "Entregue", tone: "success" },
-  EXCEPTION: { label: "Problema no envio", tone: "danger" },
-  CANCELLED: { label: "Envio cancelado", tone: "danger" },
+  PENDING: { label: "Aguardando envio", tone: "neutral", meaning: "waiting" },
+  READY_TO_SHIP: { label: "Etiqueta pronta", tone: "info", meaning: "done" },
+  SHIPPED: { label: "Postado", tone: "brand", meaning: "transit" },
+  IN_TRANSIT: { label: "Em trânsito", tone: "brand", meaning: "transit" },
+  DELIVERED: { label: "Entregue", tone: "success", meaning: "done" },
+  EXCEPTION: { label: "Problema no envio", tone: "danger", meaning: "attention" },
+  CANCELLED: { label: "Envio cancelado", tone: "danger", meaning: "failed" },
 };
 
 const payment: StatusMap = {
-  PENDING: { label: "Pendente", tone: "warning" },
-  PROCESSING: { label: "Processando", tone: "info" },
-  AUTHORIZED: { label: "Autorizado", tone: "info" },
-  APPROVED: { label: "Aprovado", tone: "success" },
-  FAILED: { label: "Recusado", tone: "danger" },
-  CANCELLED: { label: "Cancelado", tone: "danger" },
-  PARTIALLY_REFUNDED: { label: "Parcialmente reembolsado", tone: "warning" },
-  REFUNDED: { label: "Reembolsado", tone: "neutral" },
+  PENDING: { label: "Pendente", tone: "warning", meaning: "waiting" },
+  PROCESSING: { label: "Processando", tone: "info", meaning: "waiting" },
+  AUTHORIZED: { label: "Autorizado", tone: "info", meaning: "waiting" },
+  APPROVED: { label: "Aprovado", tone: "success", meaning: "done" },
+  FAILED: { label: "Recusado", tone: "danger", meaning: "failed" },
+  CANCELLED: { label: "Cancelado", tone: "danger", meaning: "failed" },
+  PARTIALLY_REFUNDED: { label: "Parcialmente reembolsado", tone: "warning", meaning: "done" },
+  REFUNDED: { label: "Reembolsado", tone: "neutral", meaning: "done" },
 };
 
 const returnRequest: StatusMap = {
-  REQUESTED: { label: "Solicitada", tone: "warning" },
-  UNDER_REVIEW: { label: "Em análise", tone: "info" },
-  APPROVED: { label: "Aprovada", tone: "info" },
-  WAITING_RETURN: { label: "Aguardando postagem", tone: "info" },
-  RETURNED: { label: "Recebida pela loja", tone: "brand" },
-  REFUNDED: { label: "Reembolsada", tone: "success" },
-  REJECTED: { label: "Recusada", tone: "danger" },
+  REQUESTED: { label: "Solicitada", tone: "warning", meaning: "waiting" },
+  UNDER_REVIEW: { label: "Em análise", tone: "info", meaning: "waiting" },
+  APPROVED: { label: "Aprovada", tone: "info", meaning: "done" },
+  WAITING_RETURN: { label: "Aguardando postagem", tone: "info", meaning: "waiting" },
+  RETURNED: { label: "Recebida pela loja", tone: "brand", meaning: "done" },
+  REFUNDED: { label: "Reembolsada", tone: "success", meaning: "done" },
+  REJECTED: { label: "Recusada", tone: "danger", meaning: "failed" },
 };
 
 const cancellation: StatusMap = {
-  REQUESTED: { label: "Solicitado", tone: "warning" },
-  APPROVED: { label: "Aprovado", tone: "info" },
-  REFUNDED: { label: "Reembolsado", tone: "success" },
-  REJECTED: { label: "Recusado", tone: "danger" },
+  REQUESTED: { label: "Solicitado", tone: "warning", meaning: "waiting" },
+  APPROVED: { label: "Aprovado", tone: "info", meaning: "done" },
+  REFUNDED: { label: "Reembolsado", tone: "success", meaning: "done" },
+  REJECTED: { label: "Recusado", tone: "danger", meaning: "failed" },
 };
 
 const dispute: StatusMap = {
-  OPEN: { label: "Aberta", tone: "warning" },
-  UNDER_REVIEW: { label: "Em análise", tone: "info" },
-  RESOLVED: { label: "Resolvida", tone: "success" },
-  REJECTED: { label: "Rejeitada", tone: "danger" },
+  OPEN: { label: "Aberta", tone: "warning", meaning: "waiting" },
+  UNDER_REVIEW: { label: "Em análise", tone: "info", meaning: "waiting" },
+  RESOLVED: { label: "Resolvida", tone: "success", meaning: "done" },
+  REJECTED: { label: "Rejeitada", tone: "danger", meaning: "failed" },
 };
 
 const seller: StatusMap = {
-  PENDING: { label: "Em análise", tone: "warning" },
-  APPROVED: { label: "Aprovado", tone: "success" },
-  ACTIVE: { label: "Ativo", tone: "success" },
-  SUSPENDED: { label: "Suspenso", tone: "warning" },
-  BLOCKED: { label: "Bloqueado", tone: "danger" },
-  REJECTED: { label: "Recusado", tone: "danger" },
+  PENDING: { label: "Em análise", tone: "warning", meaning: "waiting" },
+  APPROVED: { label: "Aprovado", tone: "success", meaning: "done" },
+  ACTIVE: { label: "Ativo", tone: "success", meaning: "done" },
+  SUSPENDED: { label: "Suspenso", tone: "warning", meaning: "attention" },
+  BLOCKED: { label: "Bloqueado", tone: "danger", meaning: "failed" },
+  REJECTED: { label: "Recusado", tone: "danger", meaning: "failed" },
 };
 
 const product: StatusMap = {
-  DRAFT: { label: "Rascunho", tone: "neutral" },
-  SUBMITTED: { label: "Em análise", tone: "warning" },
-  APPROVED: { label: "Publicado", tone: "success" },
-  REJECTED: { label: "Recusado", tone: "danger" },
-  ARCHIVED: { label: "Arquivado", tone: "neutral" },
+  DRAFT: { label: "Rascunho", tone: "neutral", meaning: "idle" },
+  SUBMITTED: { label: "Em análise", tone: "warning", meaning: "waiting" },
+  APPROVED: { label: "Publicado", tone: "success", meaning: "done" },
+  REJECTED: { label: "Recusado", tone: "danger", meaning: "failed" },
+  ARCHIVED: { label: "Arquivado", tone: "neutral", meaning: "idle" },
 };
 
 const webhook: StatusMap = {
-  RECEIVED: { label: "Recebido", tone: "neutral" },
-  PROCESSING: { label: "Processando", tone: "info" },
-  PROCESSED: { label: "Processado", tone: "success" },
-  FAILED: { label: "Falhou", tone: "danger" },
+  RECEIVED: { label: "Recebido", tone: "neutral", meaning: "idle" },
+  PROCESSING: { label: "Processando", tone: "info", meaning: "waiting" },
+  PROCESSED: { label: "Processado", tone: "success", meaning: "done" },
+  FAILED: { label: "Falhou", tone: "danger", meaning: "failed" },
 };
 
 const notification: StatusMap = {
-  PROCESSING: { label: "Processando", tone: "info" },
-  SENT: { label: "Enviado", tone: "success" },
-  FAILED: { label: "Falhou", tone: "danger" },
+  PROCESSING: { label: "Processando", tone: "info", meaning: "waiting" },
+  SENT: { label: "Enviado", tone: "success", meaning: "done" },
+  FAILED: { label: "Falhou", tone: "danger", meaning: "failed" },
 };
 
 const outbox: StatusMap = {
-  PENDING: { label: "Pendente", tone: "warning" },
-  PROCESSING: { label: "Processando", tone: "info" },
-  DISPATCHED: { label: "Despachado", tone: "success" },
-  FAILED: { label: "Falhou", tone: "danger" },
+  PENDING: { label: "Pendente", tone: "warning", meaning: "waiting" },
+  PROCESSING: { label: "Processando", tone: "info", meaning: "waiting" },
+  DISPATCHED: { label: "Despachado", tone: "success", meaning: "done" },
+  FAILED: { label: "Falhou", tone: "danger", meaning: "failed" },
 };
 
 const subscription: StatusMap = {
-  ACTIVE: { label: "Ativa", tone: "success" },
-  PAST_DUE: { label: "Em atraso", tone: "warning" },
-  CANCELLED: { label: "Cancelada", tone: "danger" },
-  EXPIRED: { label: "Expirada", tone: "neutral" },
+  ACTIVE: { label: "Ativa", tone: "success", meaning: "done" },
+  PAST_DUE: { label: "Em atraso", tone: "warning", meaning: "attention" },
+  CANCELLED: { label: "Cancelada", tone: "danger", meaning: "failed" },
+  EXPIRED: { label: "Expirada", tone: "neutral", meaning: "idle" },
 };
 
 const statusMaps = {
@@ -129,7 +136,7 @@ const statusMaps = {
 export type StatusDomain = keyof typeof statusMaps;
 
 export function getStatusPresentation(domain: StatusDomain, status: string): StatusPresentation {
-  return statusMaps[domain][status] ?? { label: humanizeStatus(status), tone: "neutral" };
+  return statusMaps[domain][status] ?? { label: humanizeStatus(status), tone: "neutral", meaning: "idle" };
 }
 
 export function getStatusLabel(domain: StatusDomain, status: string): string {

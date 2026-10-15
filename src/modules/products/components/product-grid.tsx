@@ -1,5 +1,4 @@
 import type { Route } from "next";
-import { PackageSearch } from "lucide-react";
 import type { ReactNode } from "react";
 
 import {
@@ -15,6 +14,7 @@ import { isNewProduct } from "@/modules/products/domain/product-novelty";
 import { getCurrentPriceInCents, hasActivePromotion } from "@/modules/products/domain/pricing";
 import { getPublicStorageImageUrl } from "@/shared/storage/public-storage-url";
 import type { listApprovedProducts } from "@/modules/products/queries/products";
+import { domainIcons } from "@/shared/presentation/domain-icons";
 
 type ApprovedProduct = Awaited<ReturnType<typeof listApprovedProducts>>["products"][number];
 
@@ -82,7 +82,7 @@ export function ProductGrid({
   if (products.length === 0) {
     return (
       <div role="status">
-        <EmptyState icon={PackageSearch} title={emptyTitle} description={emptyMessage} action={emptyAction} />
+        <EmptyState icon={domainIcons.notFound} title={emptyTitle} description={emptyMessage} action={emptyAction} />
       </div>
     );
   }

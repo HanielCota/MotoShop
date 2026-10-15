@@ -1,4 +1,4 @@
-import { CircleDollarSign, MessageCircleQuestion, PackageOpen, PackageSearch } from "lucide-react";
+import { CircleDollarSign, MessageCircleQuestion } from "lucide-react";
 
 import { StatCard } from "@/components/ui/stat-card";
 import { formatCount, formatMoneyInCents } from "@/lib/format";
@@ -10,6 +10,7 @@ import {
   getSellerMonthNetSales,
   LOW_STOCK_THRESHOLD,
 } from "@/modules/sellers/queries/seller-overview-metrics";
+import { domainIcons } from "@/shared/presentation/domain-icons";
 
 /** Indicadores da visão geral; cada cartão só aparece para quem pode abrir a página de destino. */
 export async function SellerOverviewStats({
@@ -34,7 +35,7 @@ export async function SellerOverviewStats({
         value={ordersToPrepare}
         hint="Pagos ou em processamento"
         href="/seller/orders"
-        icon={PackageOpen}
+        icon={domainIcons.order}
         tone={ordersToPrepare > 0 ? "attention" : "default"}
       />
     ) : null,
@@ -56,7 +57,7 @@ export async function SellerOverviewStats({
         value={lowStock.low + lowStock.out}
         hint={`${lowStock.low} com até ${LOW_STOCK_THRESHOLD} un. · ${formatCount(lowStock.out, "esgotada", "esgotadas")}`}
         href="/seller/products?productStock=LOW"
-        icon={PackageSearch}
+        icon={domainIcons.stock}
         tone={lowStock.low + lowStock.out > 0 ? "attention" : "default"}
       />
     ) : null,

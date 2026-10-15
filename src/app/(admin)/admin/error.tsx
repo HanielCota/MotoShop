@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle } from "lucide-react";
+import { CircleX } from "lucide-react";
 import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 
@@ -29,7 +29,7 @@ export default function AdminError({
   return (
     <StatusPage
       role="alert"
-      icon={AlertTriangle}
+      icon={CircleX}
       title="Não foi possível carregar esta área"
       description={
         <>

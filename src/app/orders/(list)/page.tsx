@@ -6,8 +6,6 @@ import { DateFilterInput } from "@/components/ui/date-filter-input";
 import Link from "next/link";
 import type { Metadata, Route } from "next";
 
-import { PackageSearch, ShoppingBag } from "lucide-react";
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -25,6 +23,7 @@ import {
 import { getStatusLabel, type StatusDomain } from "@/shared/presentation/status-labels";
 import { parseMoneyFilterToCents } from "@/modules/orders/domain/money-filter";
 import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
+import { domainIcons } from "@/shared/presentation/domain-icons";
 
 export const metadata: Metadata = {
   title: "Meus pedidos",
@@ -187,21 +186,21 @@ export default async function CustomerOrdersPage({
       {result.orders.length === 0 ? (
         hasInvertedPeriod ? (
           <EmptyState
-            icon={PackageSearch}
+            icon={domainIcons.notFound}
             title="Período invertido"
             description="A data inicial está depois da data final. Ajuste o período e filtre de novo."
             action={{ label: "Limpar filtros", href: "/orders" }}
           />
         ) : hasFilters && allOrders.total > 0 ? (
           <EmptyState
-            icon={PackageSearch}
+            icon={domainIcons.notFound}
             title="Nenhum pedido encontrado"
             description="Nenhum pedido corresponde aos filtros selecionados."
             action={{ label: "Limpar filtros", href: "/orders" }}
           />
         ) : (
           <EmptyState
-            icon={ShoppingBag}
+            icon={domainIcons.order}
             title="Você ainda não fez nenhum pedido"
             description="Quando comprar, você acompanha pagamento e entregas por aqui."
             action={{ label: "Explorar produtos", href: "/products" }}
