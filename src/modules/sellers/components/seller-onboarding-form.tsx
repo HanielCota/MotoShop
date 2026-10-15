@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 
 import { DesignSelect } from "@/components/ui/design-select";
 
-import { useActionState, useRef } from "react";
+import { useRef } from "react";
 
 import { slugify } from "@/lib/utils";
 
@@ -14,11 +14,12 @@ import { createSellerAction, type SellerActionState } from "@/modules/sellers/ac
 import { validateSellerOnboardingForm } from "@/modules/sellers/schemas/seller-onboarding";
 import { STORE_SLUG_EXAMPLE } from "@/modules/sellers/schemas/store-slug";
 import { useClientValidation } from "@/shared/forms/client-validation";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: SellerActionState = {};
 
 export function SellerOnboardingForm() {
-  const [state, action, pending] = useActionState(createSellerAction, initialState);
+  const [state, action, pending] = useServerActionState(createSellerAction, initialState);
   const { clientError, onSubmit } = useClientValidation(validateSellerOnboardingForm);
   const slugError = clientError ? clientError.slugError : state.slugError;
   const formError = clientError ? (clientError.error ?? null) : (state.error ?? null);

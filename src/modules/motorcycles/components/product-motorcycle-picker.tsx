@@ -12,6 +12,7 @@ import { FormMessage } from "@/components/ui/form-message";
 
 import { savePrimaryMotorcycleFromProductAction } from "../actions/saved-motorcycle-actions";
 import { formatFitmentVariantLabel, type FitmentOption } from "../domain/fitment-options";
+import { callServerAction } from "@/shared/forms/server-action-submit";
 
 function unique(values: string[]) {
   return [...new Set(values)];
@@ -79,7 +80,7 @@ export function ProductMotorcyclePicker({
     }
     startTransition(async () => {
       const [productPath = productHref] = productHref.split("?");
-      const result = await savePrimaryMotorcycleFromProductAction(fitmentId, productPath);
+      const result = await callServerAction(() => savePrimaryMotorcycleFromProductAction(fitmentId, productPath));
       setMessage(result);
       if (!result.error) {
         // A moto salva passa a ser a referência; remove a escolha temporária da URL.

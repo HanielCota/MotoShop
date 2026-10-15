@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DesignCheckbox } from "@/components/ui/design-checkbox";
@@ -17,6 +17,7 @@ import {
 } from "../actions/coupon-actions";
 import { couponKindLabels } from "../domain/coupon-kind";
 import { validateCouponForm } from "../schemas/coupon-input";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 type MarketplaceCouponKind = "SELLER_FUNDED_CAMPAIGN" | "MARKETPLACE";
 const couponKindHints: Record<MarketplaceCouponKind, string> = {
@@ -38,7 +39,7 @@ const emptyValues = {
 /** Amounts are typed in % and R$; the server converts them to basis points and cents. */
 export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" }) {
   const action = ownerType === "MARKETPLACE" ? createMarketplaceCouponAction : createSellerCouponAction;
-  const [state, formAction, pending] = useActionState(action, initialState);
+  const [state, formAction, pending] = useServerActionState(action, initialState);
   const { clientError, onSubmit } = useClientValidation(validateCouponForm);
   const [values, setValues] = useState(emptyValues);
   const [showOnProductPage, setShowOnProductPage] = useState(false);

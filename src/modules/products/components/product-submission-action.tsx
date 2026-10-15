@@ -7,6 +7,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { submitProductAction, type ProductActionState } from "@/modules/products/actions/product-actions";
+import { callServerAction } from "@/shared/forms/server-action-submit";
 
 export function ProductSubmissionAction({
   productId,
@@ -22,7 +23,7 @@ export function ProductSubmissionAction({
 
   function submit() {
     startTransition(async () => {
-      const next = await submitProductAction(productId);
+      const next = await callServerAction(() => submitProductAction(productId));
       setResult(next);
       if (next.success && redirectTo) router.push(redirectTo);
     });

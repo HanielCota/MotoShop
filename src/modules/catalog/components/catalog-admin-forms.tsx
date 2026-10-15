@@ -5,8 +5,6 @@ import { type ClientFormValidator, useClientValidation } from "@/shared/forms/cl
 
 import { DesignSelect } from "@/components/ui/design-select";
 
-import { useActionState } from "react";
-
 import {
   createBrandAction,
   createCategoryAction,
@@ -16,6 +14,7 @@ import {
   type CatalogActionState,
 } from "../actions/admin-catalog-actions";
 import { catalogFormValidators } from "../schemas/catalog-input";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 type Option = { id: string; label: string };
 type CatalogFormState = CatalogActionState & { values?: Record<string, string> };
@@ -27,7 +26,7 @@ const initialState: CatalogFormState = {};
  * recusa o envio, guardamos o que foi digitado para devolver aos campos.
  */
 function useCatalogForm(catalogAction: CatalogAction) {
-  return useActionState(async (previous: CatalogFormState, formData: FormData): Promise<CatalogFormState> => {
+  return useServerActionState(async (previous: CatalogFormState, formData: FormData): Promise<CatalogFormState> => {
     const result = await catalogAction(previous, formData);
     if (!result.error) return result;
     return { ...result, values: readTextEntries(formData) };

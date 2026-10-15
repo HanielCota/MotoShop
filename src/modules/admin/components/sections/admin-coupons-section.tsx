@@ -2,6 +2,7 @@ import { TicketPercent } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 
+import { ActionForm } from "@/components/ui/action-form";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
@@ -106,11 +107,11 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
                     Ver lojas ({coupon._count.sellerParticipations})
                   </Link>
                 ) : null}
-                <form action={setMarketplaceCouponActiveAction.bind(null, coupon.id, !coupon.active)}>
+                <ActionForm action={setMarketplaceCouponActiveAction.bind(null, coupon.id, !coupon.active)}>
                   <button type="submit" className="text-brand-text text-xs font-medium underline underline-offset-4">
                     {coupon.active ? "Desativar" : "Ativar"}
                   </button>
-                </form>
+                </ActionForm>
               </td>
             </tr>
           ))}

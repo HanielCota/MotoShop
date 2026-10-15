@@ -11,6 +11,7 @@ import {
   parseInventoryAdjustmentInput,
   validateInventoryAdjustment,
 } from "@/modules/products/domain/inventory-adjustment-input";
+import { callServerAction } from "@/shared/forms/server-action-submit";
 
 export function InventoryAdjustForm({ variantId }: { variantId: string }) {
   const router = useRouter();
@@ -27,7 +28,7 @@ export function InventoryAdjustForm({ variantId }: { variantId: string }) {
       return;
     }
     startTransition(async () => {
-      const result = await adjustInventoryAction(variantId, adjustment);
+      const result = await callServerAction(() => adjustInventoryAction(variantId, adjustment));
       setResult(result);
       if (result.success) {
         setQuantityChange("");

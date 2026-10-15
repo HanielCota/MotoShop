@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { ActionForm } from "@/components/ui/action-form";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -52,11 +53,11 @@ function CatalogRow({
           </Badge>
         ) : null}
       </span>
-      <form action={toggle}>
+      <ActionForm action={toggle}>
         <button type="submit" className="text-brand-text shrink-0 text-xs font-medium underline underline-offset-4">
           {active ? "Desativar" : "Ativar"}
         </button>
-      </form>
+      </ActionForm>
     </li>
   );
 }

@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Trash2 } from "lucide-react";
-import { startTransition, useActionState, useState } from "react";
+import { startTransition, useState } from "react";
 import {
   Controller,
   useFieldArray,
@@ -37,6 +37,7 @@ import {
   type ProductFormValues,
   type VariantFormValues,
 } from "./product-form-model";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 export type { VariantDraft } from "./product-form-model";
 
@@ -47,7 +48,7 @@ export type ProductFormOptions = { categories: Option[]; brands: Option[]; fitme
 const initialState: ProductActionState = {};
 
 export function ProductForm({ categories, brands, fitments }: ProductFormOptions) {
-  const [state, action, pending] = useActionState(createProductAction, initialState);
+  const [state, action, pending] = useServerActionState(createProductAction, initialState);
 
   return (
     <ProductFormFields

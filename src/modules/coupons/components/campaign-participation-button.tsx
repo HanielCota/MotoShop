@@ -1,7 +1,5 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 
@@ -10,11 +8,12 @@ import {
   leaveMarketplaceCouponAction,
   type CouponActionState,
 } from "../actions/coupon-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: CouponActionState = {};
 
 export function CampaignParticipationButton({ couponId, joined }: { couponId: string; joined: boolean }) {
-  const [state, formAction, pending] = useActionState(async () => {
+  const [state, formAction, pending] = useServerActionState(async () => {
     return joined ? leaveMarketplaceCouponAction(couponId) : joinMarketplaceCouponAction(couponId);
   }, initialState);
 

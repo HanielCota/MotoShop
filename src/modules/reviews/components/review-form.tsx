@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
@@ -15,6 +15,7 @@ import {
 } from "@/modules/reviews/actions/review-actions";
 
 import { formatRating } from "../domain/rating";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: ReviewActionState = {};
 const allowedTypes: Record<string, number> = {
@@ -34,7 +35,7 @@ export function ReviewForm({
   orderItemId: string;
   sellerAlreadyReviewed: boolean;
 }) {
-  const [state, formAction, pending] = useActionState(createReviewAction, initialState);
+  const [state, formAction, pending] = useServerActionState(createReviewAction, initialState);
   const [ratingTenths, setRatingTenths] = useState(50);
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);

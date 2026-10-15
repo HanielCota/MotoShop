@@ -3,11 +3,10 @@ import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
-import { useActionState } from "react";
-
 import { answerProductQuestionAction, type QuestionActionState } from "@/modules/questions/actions/question-actions";
 import { validateAnswerForm } from "@/modules/questions/schemas/question-input";
 import { useClientValidation } from "@/shared/forms/client-validation";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: QuestionActionState = {};
 
@@ -18,7 +17,10 @@ export function AnswerQuestionForm({
   questionId: string;
   currentAnswer?: string | null;
 }) {
-  const [state, formAction, pending] = useActionState(answerProductQuestionAction.bind(null, questionId), initialState);
+  const [state, formAction, pending] = useServerActionState(
+    answerProductQuestionAction.bind(null, questionId),
+    initialState,
+  );
   const { clientError, onSubmit } = useClientValidation(validateAnswerForm);
 
   return (

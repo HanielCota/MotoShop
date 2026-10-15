@@ -3,18 +3,19 @@ import { Button } from "@/components/ui/button";
 
 import { DesignCheckbox } from "@/components/ui/design-checkbox";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import {
   updateNotificationPreferencesAction,
   type NotificationPreferenceActionState,
 } from "../actions/notification-preference-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: NotificationPreferenceActionState = {};
 
 export function NotificationPreferencesForm({ emailOrderUpdatesEnabled }: { emailOrderUpdatesEnabled: boolean }) {
   const [enabled, setEnabled] = useState(emailOrderUpdatesEnabled);
-  const [state, action, pending] = useActionState(
+  const [state, action, pending] = useServerActionState(
     async (previousState: NotificationPreferenceActionState, formData: FormData) => {
       const result = await updateNotificationPreferencesAction(previousState, formData);
       if (result.success) setEnabled(formData.get("emailOrderUpdatesEnabled") === "on");

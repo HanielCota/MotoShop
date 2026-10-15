@@ -1,11 +1,10 @@
 "use client";
+import { ActionForm } from "@/components/ui/action-form";
 import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { DesignSelect } from "@/components/ui/design-select";
-
-import { useActionState } from "react";
 
 import {
   addSellerMemberAction,
@@ -13,6 +12,7 @@ import {
   updateSellerMemberRoleAction,
   type SellerMemberActionState,
 } from "@/modules/sellers/actions/seller-member-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 type Member = { id: string; name: string; email: string; role: string };
 const initialState: SellerMemberActionState = {};
@@ -26,7 +26,7 @@ function roleLabel(role: string) {
 }
 
 export function SellerTeamManager({ members }: { members: Member[] }) {
-  const [state, formAction, pending] = useActionState(addSellerMemberAction, initialState);
+  const [state, formAction, pending] = useServerActionState(addSellerMemberAction, initialState);
 
   return (
     <div className="space-y-4">
@@ -63,7 +63,7 @@ export function SellerTeamManager({ members }: { members: Member[] }) {
               <span className="text-muted-foreground text-xs">Responsável principal</span>
             ) : (
               <div className="flex flex-wrap gap-2">
-                <form action={updateSellerMemberRoleAction.bind(null, member.id)} className="flex gap-2">
+                <ActionForm action={updateSellerMemberRoleAction.bind(null, member.id)} className="flex gap-2">
                   <DesignSelect
                     aria-label={`Perfil de ${member.name || member.email}`}
                     name="role"
@@ -78,12 +78,12 @@ export function SellerTeamManager({ members }: { members: Member[] }) {
                   <Button type="submit" variant="outline" size="sm">
                     Salvar perfil
                   </Button>
-                </form>
-                <form action={removeSellerMemberAction.bind(null, member.id)}>
+                </ActionForm>
+                <ActionForm action={removeSellerMemberAction.bind(null, member.id)}>
                   <Button type="submit" variant="outline" size="sm" className="text-destructive">
                     Remover
                   </Button>
-                </form>
+                </ActionForm>
               </div>
             )}
           </div>

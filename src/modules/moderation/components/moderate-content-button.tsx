@@ -1,15 +1,14 @@
 "use client";
 import { Button } from "@/components/ui/button";
 
-import { useActionState } from "react";
-
 import { moderateContentAction, type ModerateContentState } from "../actions/moderate-content-action";
 import type { ModerationKind } from "../queries/moderation-queue";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: ModerateContentState = {};
 
 export function ModerateContentButton({ kind, id, hidden }: { kind: ModerationKind; id: string; hidden: boolean }) {
-  const [state, action, pending] = useActionState(moderateContentAction, initialState);
+  const [state, action, pending] = useServerActionState(moderateContentAction, initialState);
   return (
     <form action={action} className="flex flex-col items-start gap-1">
       <input type="hidden" name="kind" value={kind} />

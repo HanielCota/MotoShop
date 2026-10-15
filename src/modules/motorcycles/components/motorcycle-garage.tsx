@@ -12,7 +12,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FormMessage } from "@/components/ui/form-message";
-import { useActionState, useState } from "react";
+import { useState } from "react";
 
 import {
   addSavedMotorcycleAction,
@@ -21,6 +21,7 @@ import {
   setPrimarySavedMotorcycleAction,
   type SavedMotorcycleActionState,
 } from "../actions/saved-motorcycle-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 type FitmentOption = { id: string; label: string };
 type SavedMotorcycle = {
@@ -51,11 +52,11 @@ function removalDescription(saved: SavedMotorcycle) {
 
 function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitments: FitmentOption[] }) {
   const [editing, setEditing] = useState(false);
-  const [editState, editAction, editPending] = useActionState(
+  const [editState, editAction, editPending] = useServerActionState(
     changeSavedMotorcycleAction.bind(null, saved.id),
     initialState,
   );
-  const [primaryState, primaryAction, primaryPending] = useActionState(
+  const [primaryState, primaryAction, primaryPending] = useServerActionState(
     setPrimarySavedMotorcycleAction.bind(null, saved.id),
     initialState,
   );
@@ -199,7 +200,7 @@ export function MotorcycleGarage({
   fitments: FitmentOption[];
   savedMotorcycles: SavedMotorcycle[];
 }) {
-  const [state, formAction, pending] = useActionState(addSavedMotorcycleAction, initialState);
+  const [state, formAction, pending] = useServerActionState(addSavedMotorcycleAction, initialState);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,360px)] lg:items-start">
