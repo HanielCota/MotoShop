@@ -58,7 +58,7 @@ export function FilterText({
 }) {
   return (
     <FilterField label={label}>
-      <Input className="h-9" name={name} defaultValue={value ?? ""} placeholder={placeholder} />
+      <Input size="sm" name={name} defaultValue={value ?? ""} placeholder={placeholder} />
     </FilterField>
   );
 }
@@ -76,7 +76,7 @@ export function FilterSelect({
 }) {
   return (
     <FilterField label={label}>
-      <DesignSelect aria-label={label} className="h-9" name={name} defaultValue={value}>
+      <DesignSelect aria-label={label} size="sm" name={name} defaultValue={value}>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -101,10 +101,10 @@ export function FilterDateRange({
   return (
     <>
       <FilterField label="De">
-        <DateFilterInput className="h-9" name={fromName} value={from ?? null} />
+        <DateFilterInput size="sm" name={fromName} value={from ?? null} />
       </FilterField>
       <FilterField label="Até">
-        <DateFilterInput className="h-9" name={toName} value={to ?? null} />
+        <DateFilterInput size="sm" name={toName} value={to ?? null} />
       </FilterField>
     </>
   );

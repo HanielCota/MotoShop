@@ -4,6 +4,7 @@ import { Select } from "@base-ui/react/select";
 import { Check, ChevronDown } from "lucide-react";
 import { Children, isValidElement, type ReactNode } from "react";
 
+import { fieldSizeClasses, type FieldSize } from "@/components/ui/field-size";
 import { cn } from "@/lib/utils";
 
 type OptionProps = {
@@ -14,6 +15,8 @@ type OptionProps = {
 type DesignSelectProps = {
   children: ReactNode;
   className?: string;
+  /** Same height scale as `Input` and `Button` (see `field-size.ts`). */
+  size?: FieldSize | undefined;
   name?: string;
   required?: boolean;
   disabled?: boolean;
@@ -32,6 +35,7 @@ type DesignSelectProps = {
 export function DesignSelect({
   children,
   className,
+  size = "default",
   name,
   required,
   disabled,
@@ -72,7 +76,8 @@ export function DesignSelect({
         aria-invalid={ariaInvalid || undefined}
         aria-describedby={ariaDescribedBy}
         className={cn(
-          "border-input bg-background text-foreground flex h-11 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-left text-base transition-colors sm:h-10 sm:text-sm",
+          "border-input bg-background text-foreground flex w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-left text-base transition-colors sm:text-sm",
+          fieldSizeClasses[size],
           "hover:not-data-disabled:border-primary/60 focus-visible:ring-ring/40 focus-visible:ring-3 focus-visible:outline-none",
           "aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-invalid:ring-3",
           "data-placeholder:text-muted-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50",
