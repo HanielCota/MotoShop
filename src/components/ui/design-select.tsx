@@ -75,6 +75,8 @@ export function DesignSelect({
         id={id}
         aria-label={ariaLabel ?? (id ? undefined : name)}
         aria-invalid={ariaInvalid || undefined}
+        // DN-08: "required" is announced, not enforced by the browser bubble; forms validate inline.
+        aria-required={required || undefined}
         aria-describedby={ariaDescribedBy}
         className={cn(
           "border-input bg-background text-foreground flex w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-left text-base transition-colors sm:text-sm",
@@ -129,7 +131,6 @@ export function DesignSelect({
         multiple
         items={items.filter((item): item is { value: string; label: ReactNode } => item.value !== null)}
         name={name}
-        required={required}
         disabled={disabled}
         defaultValue={Array.isArray(initialValue) ? initialValue : []}
         value={Array.isArray(selectedValue) ? selectedValue : undefined}
@@ -144,7 +145,6 @@ export function DesignSelect({
     <Select.Root
       items={items}
       name={name}
-      required={required}
       disabled={disabled}
       defaultValue={typeof initialValue === "string" ? initialValue : initialValue === null ? null : undefined}
       value={typeof selectedValue === "string" ? selectedValue : selectedValue === null ? null : undefined}
