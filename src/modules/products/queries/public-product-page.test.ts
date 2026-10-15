@@ -35,12 +35,10 @@ describe("findPublicProductPage", () => {
     await findPublicProductPage({ gender: "FEMALE", color: " Preto ", size: "m" }, new Date());
 
     const statement = defined(mocks.queryRaw.mock.calls[0])[0] as { sql: string; values: unknown[] };
-    expect(statement.sql).toContain(
-      'EXISTS (SELECT 1 FROM product_variants va WHERE va."productId" = p.id AND va.active = true',
-    );
-    expect(statement.sql).toContain('va.gender = ?::"VariantGender"');
-    expect(statement.sql).toContain("lower(va.color) = lower(?)");
-    expect(statement.sql).toContain("lower(va.size) = lower(?)");
+    const offers = statement.sql.split("), matches AS (")[0];
+    expect(offers).toContain('v.gender = ?::"VariantGender"');
+    expect(offers).toContain("lower(v.color) = lower(?)");
+    expect(offers).toContain("lower(v.size) = lower(?)");
     expect(statement.values).toEqual(expect.arrayContaining(["FEMALE", "Preto", "m"]));
   });
 
@@ -48,7 +46,7 @@ describe("findPublicProductPage", () => {
     await findPublicProductPage({ gender: "OTHER" as never, color: "  ", size: "x".repeat(51) }, new Date());
 
     const statement = defined(mocks.queryRaw.mock.calls[0])[0] as { sql: string };
-    expect(statement.sql).not.toContain("product_variants va");
+    expect(statement.sql).not.toMatch(/v\.(gender|color|size)/);
   });
 
   it("keeps relevance as the default order", async () => {
