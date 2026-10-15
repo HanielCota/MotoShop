@@ -5,12 +5,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 
-import { useActionState } from "react";
-
 import { updateStoreProfileAction, type StoreProfileActionState } from "../actions/store-profile-actions";
 import { validateStoreProfileForm } from "../schemas/store-profile";
 import { STORE_SLUG_EXAMPLE } from "../schemas/store-slug";
 import { useClientValidation } from "@/shared/forms/client-validation";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 type StoreProfileFormProps = {
   store: {
@@ -27,7 +26,7 @@ type StoreProfileFormProps = {
 const initialState: StoreProfileActionState = {};
 
 export function StoreProfileForm({ store }: StoreProfileFormProps) {
-  const [state, action, pending] = useActionState(updateStoreProfileAction, initialState);
+  const [state, action, pending] = useServerActionState(updateStoreProfileAction, initialState);
   const { clientError, onSubmit } = useClientValidation(validateStoreProfileForm);
   const slugError = clientError ? clientError.slugError : state.slugError;
   const formError = clientError ? (clientError.error ?? null) : (state.error ?? null);

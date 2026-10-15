@@ -2,7 +2,6 @@
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
-import { useActionState } from "react";
 import {
   createOwnShippingMethodAction,
   setOwnShippingMethodActiveAction,
@@ -11,6 +10,7 @@ import {
 } from "../actions/own-shipping-actions";
 import { validateOwnShippingMethodForm } from "../domain/own-shipping";
 import { useClientValidation } from "@/shared/forms/client-validation";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initial: OwnShippingState = {};
 function Feedback({ state, clientError = null }: { state: OwnShippingState; clientError?: string | null }) {
@@ -19,7 +19,7 @@ function Feedback({ state, clientError = null }: { state: OwnShippingState; clie
   );
 }
 export function OwnShippingMethodForm() {
-  const [state, action, pending] = useActionState(createOwnShippingMethodAction, initial);
+  const [state, action, pending] = useServerActionState(createOwnShippingMethodAction, initial);
   const { clientError, onSubmit } = useClientValidation(validateOwnShippingMethodForm);
   return (
     <form action={action} onSubmit={onSubmit} noValidate className="grid gap-4 sm:grid-cols-2">
@@ -59,7 +59,7 @@ export function OwnShippingMethodForm() {
   );
 }
 export function OwnShippingToggle({ id, active }: { id: string; active: boolean }) {
-  const [state, action, pending] = useActionState(setOwnShippingMethodActiveAction, initial);
+  const [state, action, pending] = useServerActionState(setOwnShippingMethodActiveAction, initial);
   return (
     <form action={action} className="grid gap-2">
       <input type="hidden" name="id" value={id} />
@@ -80,7 +80,7 @@ export function OwnShipmentActions({
   canShip: boolean;
   canDeliver: boolean;
 }) {
-  const [state, action, pending] = useActionState(advanceOwnShipmentAction, initial);
+  const [state, action, pending] = useServerActionState(advanceOwnShipmentAction, initial);
   if (!canShip && !canDeliver) return null;
   return (
     <form action={action} className="grid gap-3">

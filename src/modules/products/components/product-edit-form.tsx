@@ -1,12 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { updateProductAction, type ProductActionState } from "@/modules/products/actions/product-actions";
 
 import { type Measurements } from "../domain/product-commercial-fields";
 import { ProductFormFields, type ProductFormOptions } from "./product-form";
 import { toProductFormValues, type VariantDraft } from "./product-form-model";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 type ProductValues = Measurements & {
   id: string;
@@ -31,7 +30,7 @@ export function ProductEditForm({
 }: {
   product: ProductValues;
 } & ProductFormOptions) {
-  const [state, action, pending] = useActionState(updateProductAction.bind(null, product.id), initialState);
+  const [state, action, pending] = useServerActionState(updateProductAction.bind(null, product.id), initialState);
 
   return (
     <ProductFormFields

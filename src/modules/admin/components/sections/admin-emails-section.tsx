@@ -1,5 +1,6 @@
 import { Mail } from "lucide-react";
 
+import { ActionForm } from "@/components/ui/action-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -92,11 +93,11 @@ export async function AdminEmailsSection({ searchParams }: AdminSectionProps) {
               <td className={cellClassName}>
                 <StatusBadge domain="notification" status={delivery.status} />
                 {delivery.retryable ? (
-                  <form action={resendNotificationDeliveryAction.bind(null, delivery.id)} className="mt-1">
+                  <ActionForm action={resendNotificationDeliveryAction.bind(null, delivery.id)} className="mt-1">
                     <button type="submit" className="text-brand-text text-xs font-medium underline underline-offset-4">
                       Reenviar
                     </button>
-                  </form>
+                  </ActionForm>
                 ) : null}
               </td>
               <td className={`${cellClassName} text-muted-foreground whitespace-nowrap`}>

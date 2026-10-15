@@ -3,8 +3,6 @@ import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
 
-import { useActionState } from "react";
-
 import { formatPriceInputFromCents } from "@/modules/products/domain/price-input";
 import { useClientValidation } from "@/shared/forms/client-validation";
 
@@ -14,11 +12,12 @@ import {
   updateMarketplaceCommissionAction,
   type CommissionActionState,
 } from "../actions/marketplace-configuration-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: CommissionActionState = {};
 
 export function CommissionForm({ defaultCommissionBps }: { defaultCommissionBps: number | null }) {
-  const [state, formAction, pending] = useActionState(updateMarketplaceCommissionAction, initialState);
+  const [state, formAction, pending] = useServerActionState(updateMarketplaceCommissionAction, initialState);
   const { clientError, onSubmit } = useClientValidation(validateDefaultCommissionForm);
   return (
     <form action={formAction} onSubmit={onSubmit} noValidate className="flex flex-col gap-3 sm:flex-row sm:items-end">

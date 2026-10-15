@@ -1,6 +1,7 @@
 import type { Route } from "next";
 import { TicketPercent } from "lucide-react";
 
+import { ActionForm } from "@/components/ui/action-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -212,20 +213,20 @@ function couponUsageLabel(coupon: CouponSummary): string {
 
 function CouponActiveToggle({ couponId, active }: { couponId: string; active: boolean }) {
   return (
-    <form action={setSellerCouponActiveAction.bind(null, couponId, !active)}>
+    <ActionForm action={setSellerCouponActiveAction.bind(null, couponId, !active)}>
       <Button type="submit" variant="outline" size="sm">
         {active ? "Desativar" : "Ativar"}
       </Button>
-    </form>
+    </ActionForm>
   );
 }
 
 function CouponProductPageToggle({ couponId, shown }: { couponId: string; shown: boolean }) {
   return (
-    <form action={setSellerCouponProductPageAction.bind(null, couponId, !shown)}>
+    <ActionForm action={setSellerCouponProductPageAction.bind(null, couponId, !shown)}>
       <Button type="submit" variant="outline" size="sm">
         {shown ? "Ocultar do produto" : "Mostrar no produto"}
       </Button>
-    </form>
+    </ActionForm>
   );
 }

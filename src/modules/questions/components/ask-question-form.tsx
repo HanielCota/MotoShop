@@ -1,16 +1,18 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Textarea } from "@/components/ui/textarea";
 import { askProductQuestionAction, type QuestionActionState } from "@/modules/questions/actions/question-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: QuestionActionState = {};
 
 export function AskQuestionForm({ productId }: { productId: string }) {
-  const [state, formAction, pending] = useActionState(askProductQuestionAction.bind(null, productId), initialState);
+  const [state, formAction, pending] = useServerActionState(
+    askProductQuestionAction.bind(null, productId),
+    initialState,
+  );
 
   return (
     <form action={formAction} noValidate className="border-border bg-card space-y-3 rounded-xl border p-4">

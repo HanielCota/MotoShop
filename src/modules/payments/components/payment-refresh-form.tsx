@@ -1,14 +1,13 @@
 "use client";
 import { Button } from "@/components/ui/button";
 
-import { useActionState } from "react";
-
 import { refreshPendingPaymentAction, type PaymentActionState } from "../actions/payment-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: PaymentActionState = {};
 
 export function PaymentRefreshForm({ orderNumber }: { orderNumber: string }) {
-  const [state, formAction, pending] = useActionState(refreshPendingPaymentAction, initialState);
+  const [state, formAction, pending] = useServerActionState(refreshPendingPaymentAction, initialState);
 
   return (
     <form action={formAction} className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">

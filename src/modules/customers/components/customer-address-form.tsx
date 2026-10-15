@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId, useState, type HTMLInputAutoCompleteAttribute } from "react";
+import { useId, useState, type HTMLInputAutoCompleteAttribute } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DesignCheckbox } from "@/components/ui/design-checkbox";
@@ -16,6 +16,7 @@ import {
   type CustomerAddressFieldErrors,
 } from "../schemas/customer-address";
 import { useCepAutofill } from "./use-cep-autofill";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: CustomerAddressActionState = {};
 const emptyAddress = {
@@ -36,7 +37,7 @@ export function CustomerAddressForm() {
   const [isDefault, setIsDefault] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<CustomerAddressFieldErrors>({});
   const cep = useCepAutofill(setValues);
-  const [state, formAction, pending] = useActionState(
+  const [state, formAction, pending] = useServerActionState(
     async (previousState: CustomerAddressActionState, formData: FormData) => {
       // Same schema as the server: empty or invalid fields are flagged here, without a round trip.
       const parsed = parseCustomerAddressForm(formData);

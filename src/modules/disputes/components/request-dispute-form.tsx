@@ -8,6 +8,7 @@ import { DesignSelect } from "@/components/ui/design-select";
 import { useState, useTransition } from "react";
 
 import { requestDisputeAction, type DisputeActionState } from "../actions/dispute-actions";
+import { callServerAction } from "@/shared/forms/server-action-submit";
 
 const reasons = [
   ["ITEM_PROBLEM", "Problema com o item"],
@@ -25,13 +26,15 @@ export function RequestDisputeForm({ orderNumber, sellerOrderId }: { orderNumber
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     startTransition(async () => {
-      const result = await requestDisputeAction({
-        orderNumber,
-        sellerOrderId,
-        reason,
-        description,
-        idempotencyKey: crypto.randomUUID(),
-      });
+      const result = await callServerAction(() =>
+        requestDisputeAction({
+          orderNumber,
+          sellerOrderId,
+          reason,
+          description,
+          idempotencyKey: crypto.randomUUID(),
+        }),
+      );
       setFeedback(result);
       if (result.success) setDescription("");
     });

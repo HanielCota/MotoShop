@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 
 import { DesignSelect } from "@/components/ui/design-select";
 
-import { useActionState } from "react";
-
 import { activateVipSubscriptionAction, type SubscriptionActionState } from "../actions/admin-subscription-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: SubscriptionActionState = {};
 
@@ -15,7 +14,7 @@ export function VipSubscriptionForm({
 }: {
   sellers: Array<{ id: string; name: string; hasActiveVip: boolean }>;
 }) {
-  const [state, formAction, pending] = useActionState(activateVipSubscriptionAction, initialState);
+  const [state, formAction, pending] = useServerActionState(activateVipSubscriptionAction, initialState);
 
   return (
     <form

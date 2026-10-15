@@ -1,5 +1,6 @@
 import { Webhook } from "lucide-react";
 
+import { ActionForm } from "@/components/ui/action-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -84,14 +85,14 @@ export async function AdminWebhooksSection({ searchParams }: AdminSectionProps) 
                 <div className="flex flex-col items-start gap-1">
                   {event.error ? <p className="text-destructive max-w-sm text-xs break-words">{event.error}</p> : null}
                   {event.status === "FAILED" ? (
-                    <form action={retryWebhookEventAction.bind(null, event.id)}>
+                    <ActionForm action={retryWebhookEventAction.bind(null, event.id)}>
                       <button
                         type="submit"
                         className="text-brand-text text-xs font-medium underline underline-offset-4"
                       >
                         Reprocessar
                       </button>
-                    </form>
+                    </ActionForm>
                   ) : null}
                   {!event.error && event.status !== "FAILED" ? (
                     <span className="text-muted-foreground text-xs">—</span>

@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
 
-import { startTransition, useActionState } from "react";
+import { startTransition } from "react";
 import { formatPriceInputFromCents } from "@/modules/products/domain/price-input";
 import { updateSellerCommissionAction, type SellerCommissionState } from "../actions/seller-commission-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: SellerCommissionState = {};
 
@@ -16,7 +17,10 @@ export function SellerCommissionForm({
   sellerId: string;
   commissionBpsOverride: number | null;
 }) {
-  const [state, action, pending] = useActionState(updateSellerCommissionAction.bind(null, sellerId), initialState);
+  const [state, action, pending] = useServerActionState(
+    updateSellerCommissionAction.bind(null, sellerId),
+    initialState,
+  );
   const previous = state.savedValue !== undefined ? state.savedValue : commissionBpsOverride;
   return (
     <form

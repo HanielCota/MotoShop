@@ -3,13 +3,12 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormMessage } from "@/components/ui/form-message";
 
-import { useActionState } from "react";
-
 import {
   deleteCustomerAddressAction,
   setDefaultCustomerAddressAction,
   type CustomerAddressActionState,
 } from "../actions/customer-address-actions";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: CustomerAddressActionState = {};
 
@@ -22,7 +21,7 @@ export function CustomerAddressActions({
   label: string;
   isDefault: boolean;
 }) {
-  const [defaultState, defaultAction, defaultPending] = useActionState(
+  const [defaultState, defaultAction, defaultPending] = useServerActionState(
     async () => setDefaultCustomerAddressAction(addressId),
     initialState,
   );

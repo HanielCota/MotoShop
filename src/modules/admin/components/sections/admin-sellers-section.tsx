@@ -1,5 +1,6 @@
 import { Store } from "lucide-react";
 
+import { ActionForm } from "@/components/ui/action-form";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
@@ -78,29 +79,29 @@ export async function AdminSellersSection({ searchParams }: AdminSectionProps) {
               </div>
               {seller.status === "PENDING" ? (
                 <div className="flex shrink-0 gap-2">
-                  <form action={approveSellerAction.bind(null, seller.id)}>
+                  <ActionForm action={approveSellerAction.bind(null, seller.id)}>
                     <Button type="submit" size="sm" className="rounded-md">
                       Aprovar
                     </Button>
-                  </form>
-                  <form action={rejectSellerAction.bind(null, seller.id)}>
+                  </ActionForm>
+                  <ActionForm action={rejectSellerAction.bind(null, seller.id)}>
                     <Button type="submit" variant="outline" size="sm" className="rounded-md">
                       Rejeitar
                     </Button>
-                  </form>
+                  </ActionForm>
                 </div>
               ) : seller.status === "SUSPENDED" ? (
-                <form action={reactivateSellerAction.bind(null, seller.id)} className="shrink-0">
+                <ActionForm action={reactivateSellerAction.bind(null, seller.id)} className="shrink-0">
                   <Button type="submit" size="sm" className="rounded-md">
                     Reativar
                   </Button>
-                </form>
+                </ActionForm>
               ) : seller.status === "APPROVED" || seller.status === "ACTIVE" ? (
-                <form action={suspendSellerAction.bind(null, seller.id)} className="shrink-0">
+                <ActionForm action={suspendSellerAction.bind(null, seller.id)} className="shrink-0">
                   <Button type="submit" variant="outline" size="sm" className="rounded-md">
                     Suspender
                   </Button>
-                </form>
+                </ActionForm>
               ) : null}
             </li>
           ))}
