@@ -4,14 +4,14 @@
  * Only touches sellers whose store slug starts with "review-". Reverse with the review seed.
  */
 import { config } from "dotenv";
+import { requireScriptDatabaseUrl } from "./database-guard";
 import { PrismaNeon } from "@prisma/adapter-neon";
 
 import { PrismaClient } from "../src/generated/prisma/client";
 
 config({ path: ".env.local", quiet: true });
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error("DATABASE_URL is required.");
+const databaseUrl = requireScriptDatabaseUrl(process.env, "db:hide:review");
 
 const database = new PrismaClient({ adapter: new PrismaNeon({ connectionString: databaseUrl }) });
 

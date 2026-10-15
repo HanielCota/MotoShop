@@ -15,6 +15,7 @@
  *   --dry-run  apenas conta o que seria removido (nenhuma escrita no banco nem nos arquivos).
  */
 import { config } from "dotenv";
+import { requireScriptDatabaseUrl } from "./database-guard";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { existsSync, readdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
@@ -31,8 +32,7 @@ import {
 
 config({ path: ".env.local", quiet: true });
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error("DATABASE_URL is required.");
+const databaseUrl = requireScriptDatabaseUrl(process.env, "db:remove:review");
 
 const dryRun = process.argv.includes("--dry-run");
 const db = new PrismaClient({ adapter: new PrismaNeon({ connectionString: databaseUrl }) });
@@ -327,6 +327,13 @@ async function main() {
         () => tx.brand.count({ where: brandWhere }),
         () => tx.brand.deleteMany({ where: brandWhere }),
       );
+      // Seller opt-ins to campaigns reference both coupons and sellers of the review scope.
+      const participationWhere = { OR: [{ couponId: { in: couponIds } }, { sellerId: { in: sellerIds } }] };
+      await apply(
+        "CouponSellerParticipation",
+        () => tx.couponSellerParticipation.count({ where: participationWhere }),
+        () => tx.couponSellerParticipation.deleteMany({ where: participationWhere }),
+      );
       const couponWhere = { id: { in: couponIds } };
       await apply(
         "Coupon",
@@ -409,6 +416,11 @@ async function main() {
 
   console.log(dryRun ? "DRY RUN: nada foi removido. Contagem do que seria removido:" : "Removido:");
   console.log(JSON.stringify({ ...counts, localImageFiles: files }, null, 2));
+  // The generated images are versioned while the site is a demo: deleting them locally is not enough.
+  if (!dryRun && files > 0)
+    console.log(
+      "As imagens public/images/demo/review-*.webp são versionadas: commite a remoção (git add -A public/images/demo).",
+    );
 }
 
 try {

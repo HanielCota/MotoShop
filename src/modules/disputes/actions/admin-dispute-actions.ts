@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 import { isRecordId } from "@/shared/validation/record-id";
 
 import { reviewDispute } from "../application/review-dispute";
@@ -43,6 +43,6 @@ export async function reviewDisputeAction(disputeId: string, formData: FormData)
     revalidatePath(`/orders/${result.orderNumber}`);
     return { success: successMessages[result.nextStatus] };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "reviewDisputeAction").message };
   }
 }

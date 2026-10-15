@@ -1,4 +1,5 @@
 import { allocateDiscountAcrossSubtotals, calculateCouponDiscount } from "@/modules/coupons/domain/coupon-discount";
+import { getCouponKind, isSellerFundedCampaign } from "@/modules/coupons/domain/coupon-kind";
 import { calculateCommissionInCents, sumMoneyInCents } from "@/modules/orders/domain/money";
 import { calculateOrderTotals } from "@/modules/orders/domain/order-totals";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
@@ -29,6 +30,8 @@ export type SellerChargeCoupon = Parameters<typeof calculateCouponDiscount>[0] &
   ownerType: "MARKETPLACE" | "SELLER";
   sellerId: string | null;
   fundedBy: "MARKETPLACE" | "SELLER";
+  /** Sellers currently joined to a seller-funded campaign; ignored by the other coupon kinds. */
+  participatingSellerIds?: readonly string[] | undefined;
 };
 
 export type PricedSellerChargeItem<Item extends SellerChargeItem> = Item & {
@@ -110,24 +113,37 @@ function createRawSellerCharge<Item extends SellerChargeItem, Quote extends Sell
   };
 }
 
-/** Coupon discount per seller, in the same order as `rawCharges`. */
+/**
+ * Coupon discount per seller, in the same order as `rawCharges`. The discount is computed on
+ * the eligible sellers' subtotal and split proportionally among them; the others get zero.
+ */
 function allocateCouponDiscounts(
   rawCharges: ReadonlyArray<{ sellerId: string; totals: { itemsSubtotalInCents: number } }>,
   coupon: SellerChargeCoupon | undefined,
 ): number[] {
   if (!coupon) return rawCharges.map(() => 0);
 
-  const rawSubtotals = rawCharges.map((charge) => charge.totals.itemsSubtotalInCents);
-  if (coupon.ownerType === "MARKETPLACE") {
-    return allocateDiscountAcrossSubtotals(
-      rawSubtotals,
-      calculateCouponDiscount(coupon, sumMoneyInCents(rawSubtotals)),
-    );
-  }
+  const eligibleSubtotals = rawCharges.map((charge) =>
+    isSellerEligibleForCoupon(coupon, charge.sellerId) ? charge.totals.itemsSubtotalInCents : 0,
+  );
+  if (isSellerFundedCampaign(coupon) && eligibleSubtotals.every((subtotal) => subtotal === 0))
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "Este cupom não vale para as lojas do seu carrinho.",
+      statusCode: 409,
+    });
 
-  const sellerSubtotal = rawCharges.find((charge) => charge.sellerId === coupon.sellerId)?.totals.itemsSubtotalInCents;
-  const couponDiscount = calculateCouponDiscount(coupon, sellerSubtotal ?? 0);
-  return rawCharges.map((charge) => (charge.sellerId === coupon.sellerId ? couponDiscount : 0));
+  return allocateDiscountAcrossSubtotals(
+    eligibleSubtotals,
+    calculateCouponDiscount(coupon, sumMoneyInCents(eligibleSubtotals)),
+  );
+}
+
+function isSellerEligibleForCoupon(coupon: SellerChargeCoupon, sellerId: string): boolean {
+  const kind = getCouponKind(coupon);
+  if (kind === "MARKETPLACE") return true;
+  if (kind === "SELLER") return coupon.sellerId === sellerId;
+  return coupon.participatingSellerIds?.includes(sellerId) ?? false;
 }
 
 function completeSellerCharge<Item extends SellerChargeItem, Quote extends SellerChargeShippingQuote>(
@@ -142,11 +158,11 @@ function completeSellerCharge<Item extends SellerChargeItem, Quote extends Selle
     shippingAmountInCents: charge.shipping.priceInCents,
   });
   const commissionBps = charge.items[0]?.variant.product.seller.commissionBpsOverride ?? defaultCommissionBps;
-  // TODO(regra-de-negócio): a comissão incide sobre o subtotal BRUTO dos itens (antes do cupom).
-  // Para cupom financiado pelo seller isso significa comissão sobre um valor que o cliente não pagou.
-  // Confirmar com produto se a base deve ser o subtotal líquido (itemsSubtotal - desconto do seller).
-  const commissionInCents = calculateCommissionInCents(totals.itemsSubtotalInCents, commissionBps);
   const sellerFundedDiscount = coupon?.fundedBy === "SELLER" ? discountInCents : 0;
+  const commissionInCents = calculateCommissionInCents(
+    commissionBaseInCents(totals.itemsSubtotalInCents, sellerFundedDiscount),
+    commissionBps,
+  );
   const sellerNetAmountInCents = totals.itemsSubtotalInCents - sellerFundedDiscount - commissionInCents;
   assertSellerChargeIsPayable({ charge, totals, commissionInCents, sellerNetAmountInCents, coupon });
 
@@ -159,6 +175,15 @@ function completeSellerCharge<Item extends SellerChargeItem, Quote extends Selle
     sellerDiscountInCents: sellerFundedDiscount,
     sellerNetAmountInCents,
   };
+}
+
+/**
+ * Commission is charged on what the seller actually sells: the items subtotal after the coupon
+ * discount the seller pays for (e.g. R$ 100 with a 5% seller-funded coupon → base R$ 95).
+ * Shipping never enters the base; a discount the marketplace pays for does not reduce it.
+ */
+export function commissionBaseInCents(itemsSubtotalInCents: number, sellerFundedDiscountInCents: number): number {
+  return itemsSubtotalInCents - sellerFundedDiscountInCents;
 }
 
 function assertSellerChargeIsPayable(input: {

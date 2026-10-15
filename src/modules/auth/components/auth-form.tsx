@@ -5,14 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { Route } from "next";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
+import { cn } from "@/lib/utils";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
 
-import { getAuthErrorMessage } from "../domain/auth-error-message";
+import { getAuthErrorMessage, isInvalidCredentialsError } from "../domain/auth-error-message";
 import { parseAuthUserName } from "../domain/auth-user-name";
 import { getSafeRedirectPath } from "../domain/safe-redirect";
 
@@ -52,6 +53,7 @@ export function AuthForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string>();
+  const [showCredentialsHelp, setShowCredentialsHelp] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState<string>();
   const [pending, setPending] = useState(false);
@@ -60,6 +62,7 @@ export function AuthForm({
     setModeState(next);
     setPassword("");
     setError(undefined);
+    setShowCredentialsHelp(false);
     setFieldErrors({});
     // A History API nativa é integrada ao roteador do Next.js e não refaz a navegação.
     const params = new URLSearchParams(window.location.search);
@@ -76,6 +79,7 @@ export function AuthForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(undefined);
+    setShowCredentialsHelp(false);
     setNotice(undefined);
 
     const errors = validate(mode, { name, email, password });
@@ -95,12 +99,13 @@ export function AuthForm({
 
       if (result.error) {
         setError(getAuthErrorMessage(result.error.code, result.error.status));
+        setShowCredentialsHelp(mode === "sign-in" && isInvalidCredentialsError(result.error.code, result.error.status));
         return;
       }
 
       if (mode === "sign-up" && verificationRequired) {
         setMode("sign-in");
-        setNotice("Conta criada. Enviamos um link para confirmar seu e-mail antes de entrar.");
+        setNotice("Enviamos um e-mail para você. Siga as instruções da mensagem para entrar.");
         return;
       }
 
@@ -195,14 +200,26 @@ export function AuthForm({
       <Button type="submit" size="lg" className="font-bold tracking-wide uppercase" disabled={pending}>
         {pending ? "Aguarde..." : mode === "sign-in" ? "Entrar" : "Criar conta"}
       </Button>
+      {showCredentialsHelp ? (
+        <CredentialsHelp
+          emailEnabled={emailEnabled}
+          disabled={pending}
+          onCreateAccount={() => {
+            setMode("sign-up");
+            setNotice(undefined);
+          }}
+        />
+      ) : null}
       {emailEnabled && mode === "sign-in" ? (
         <div className="flex flex-wrap justify-between gap-3 text-sm">
-          <Link
-            className="text-brand-text inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline"
-            href="/forgot-password"
-          >
-            Esqueci minha senha
-          </Link>
+          {showCredentialsHelp ? null : (
+            <Link
+              className="text-brand-text inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline"
+              href="/forgot-password"
+            >
+              Esqueci minha senha
+            </Link>
+          )}
           <button
             type="button"
             className="text-brand-text inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline disabled:opacity-50"
@@ -226,20 +243,50 @@ export function AuthForm({
           </button>
         </div>
       ) : null}
-      <div className="border-border text-muted-foreground mt-1 border-t pt-5 text-center text-sm">
-        {mode === "sign-in" ? "Novo por aqui?" : "Já faz parte do Moto Shop?"}{" "}
-        <button
-          type="button"
-          className="text-foreground hover:text-brand-strong inline-flex min-h-11 items-center font-semibold underline underline-offset-4 disabled:opacity-50"
-          disabled={pending}
-          onClick={() => {
-            setMode(mode === "sign-in" ? "sign-up" : "sign-in");
-            setNotice(undefined);
-          }}
-        >
-          {mode === "sign-in" ? "Ainda não tenho conta" : "Já tenho uma conta"}
-        </button>
-      </div>
+      {showCredentialsHelp ? null : (
+        <div className="border-border text-muted-foreground mt-1 border-t pt-5 text-center text-sm">
+          {mode === "sign-in" ? "Novo por aqui?" : "Já faz parte do Moto Shop?"}{" "}
+          <button
+            type="button"
+            className="text-foreground hover:text-brand-strong inline-flex min-h-11 items-center font-semibold underline underline-offset-4 disabled:opacity-50"
+            disabled={pending}
+            onClick={() => {
+              setMode(mode === "sign-in" ? "sign-up" : "sign-in");
+              setNotice(undefined);
+            }}
+          >
+            {mode === "sign-in" ? "Ainda não tenho conta" : "Já tenho uma conta"}
+          </button>
+        </div>
+      )}
     </form>
+  );
+}
+
+/**
+ * Shown next to "E-mail ou senha incorretos.": the two ways forward, without revealing whether
+ * the account exists. Password recovery only appears when e-mail sending is configured.
+ */
+function CredentialsHelp({
+  emailEnabled,
+  disabled,
+  onCreateAccount,
+}: {
+  emailEnabled: boolean;
+  disabled: boolean;
+  onCreateAccount: () => void;
+}) {
+  return (
+    <div className="border-moto-brand/40 bg-moto-brand-surface flex flex-col gap-3 rounded-xl border p-4">
+      <p className="text-foreground text-sm font-semibold">Não consegue entrar?</p>
+      {emailEnabled ? (
+        <Link href="/forgot-password" className={cn(buttonVariants({ variant: "outline" }), "bg-card w-full")}>
+          Esqueci minha senha
+        </Link>
+      ) : null}
+      <Button type="button" variant="outline" className="bg-card w-full" disabled={disabled} onClick={onCreateAccount}>
+        Ainda não tenho conta? <span className="font-semibold">Criar conta</span>
+      </Button>
+    </div>
   );
 }

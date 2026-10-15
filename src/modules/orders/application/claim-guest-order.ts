@@ -4,6 +4,9 @@ import { db } from "@/lib/database";
 import { hashGuestToken } from "@/modules/cart/infrastructure/cart-access";
 import { ApplicationError } from "@/shared/errors/application-error";
 
+import { isGuestOrderAccessExpired } from "../domain/guest-order-access";
+import { guestOrderAccessSelect, toGuestOrderAccessDates } from "./resolve-customer-order-access";
+
 export async function claimGuestOrder(input: {
   orderNumber: string;
   accessToken: string;
@@ -23,9 +26,9 @@ export async function claimGuestOrder(input: {
   const tokenHash = hashGuestToken(input.accessToken);
   const order = await db.order.findFirst({
     where: { orderNumber: input.orderNumber, guestAccessTokenHash: tokenHash, userId: null },
-    select: { id: true, customerEmail: true },
+    select: { id: true, customerEmail: true, ...guestOrderAccessSelect },
   });
-  if (!order) {
+  if (!order || isGuestOrderAccessExpired(toGuestOrderAccessDates(order), new Date())) {
     throw new ApplicationError({ code: "NOT_FOUND", message: "Pedido de convidado não encontrado ou já vinculado." });
   }
   if (order.customerEmail.trim().toLowerCase() !== input.userEmail.trim().toLowerCase()) {

@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { requireAdminAccess, requireSellerAccess } from "@/modules/auth/application/authorization";
 import { adjustInventoryManually } from "@/modules/inventory/application/adjust-inventory-manually";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 import {
   approveSubmittedProduct,
@@ -61,7 +61,7 @@ async function createProductAndRevalidate(
     revalidatePath("/products");
     return { productId };
   } catch (error) {
-    const applicationError = asApplicationError(error);
+    const applicationError = toActionError(error, "createProductAndRevalidate");
     return {
       error:
         applicationError.code === "INTERNAL_ERROR"
@@ -112,7 +112,7 @@ export async function updateProductAction(
     revalidatePath(`/seller/products/${updatedProductId}/edit`);
     return { success: "Produto atualizado." };
   } catch (error) {
-    const applicationError = asApplicationError(error);
+    const applicationError = toActionError(error, "updateProductAction");
     return {
       error:
         applicationError.code === "INTERNAL_ERROR"
@@ -160,7 +160,7 @@ export async function adjustInventoryAction(variantId: string, quantityChange: n
     revalidatePath("/products");
     return { success: "Estoque atualizado." };
   } catch (error) {
-    const applicationError = asApplicationError(error);
+    const applicationError = toActionError(error, "adjustInventoryAction");
     if (applicationError.code === "INVALID_INVENTORY_QUANTITY")
       return { error: "O ajuste deixaria o estoque negativo ou acima do limite permitido." };
     if (applicationError.code === "INTERNAL_ERROR") return { error: "Não foi possível atualizar o estoque." };

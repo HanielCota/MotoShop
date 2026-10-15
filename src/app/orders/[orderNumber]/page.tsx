@@ -1,29 +1,40 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import type { Route } from "next";
+import { notFound, redirect } from "next/navigation";
 
 import { PageHeader, SectionHeader } from "@/components/ui/page-header";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { CustomerAccountNavigation } from "@/modules/customers/components/customer-account-navigation";
 import { resolveCustomerOrderIdentity } from "@/modules/orders/application/resolve-customer-order-access";
+import { guestOrderPath, readGuestOrderCookie } from "@/modules/orders/infrastructure/guest-order-cookie";
 import { ClaimGuestOrderForm } from "@/modules/orders/components/claim-guest-order-form";
 import { OrderSummary } from "@/modules/orders/components/order-detail/order-summary";
 import { PaymentSection } from "@/modules/orders/components/order-detail/payment-section";
 import { SellerOrderSection } from "@/modules/orders/components/order-detail/seller-order-section";
 import { getCustomerOrder } from "@/modules/returns/queries/customer-orders";
+import { optionalTextSearchParam, parseSearchParams, type RawSearchParams } from "@/shared/validation/search-params";
 
 export const metadata: Metadata = {
   title: "Acompanhar pedido",
   robots: { index: false, follow: false },
 };
 
+const orderSearchParams = { accessToken: optionalTextSearchParam(200) };
+
 export default async function CustomerOrderPage({
   params,
   searchParams,
 }: {
   params: Promise<{ orderNumber: string }>;
-  searchParams: Promise<{ accessToken?: string }>;
+  searchParams: Promise<RawSearchParams>;
 }) {
-  const [{ orderNumber }, { accessToken }] = await Promise.all([params, searchParams]);
+  const [{ orderNumber }, rawSearchParams] = await Promise.all([params, searchParams]);
+  const { accessToken: linkToken } = parseSearchParams(orderSearchParams, rawSearchParams);
+  // Older links carry the token in the URL: swap it for the order cookie and drop it from the address.
+  if (linkToken) {
+    redirect(`${guestOrderPath(orderNumber)}/access?token=${encodeURIComponent(linkToken)}` as Route);
+  }
+  const accessToken = await readGuestOrderCookie();
   const session = await getCurrentSession();
   // Mesma regra das actions de pós-venda: token do link seguro primeiro, depois a sessão.
   const identity = await resolveCustomerOrderIdentity({ orderNumber, accessToken, userId: session?.user.id });
@@ -33,7 +44,6 @@ export default async function CustomerOrderPage({
   if (!order) notFound();
 
   const isOwner = Boolean(session && order.userId === session.user.id);
-  const tokenProps = accessToken ? { accessToken } : {};
   const canClaim =
     session && accessToken && !order.userId && session.user.email.toLowerCase() === order.customerEmail.toLowerCase();
 
@@ -49,9 +59,7 @@ export default async function CustomerOrderPage({
             {...(session ? { back: { href: "/orders", label: "Meus pedidos" } } : {})}
           />
 
-          {canClaim && accessToken ? (
-            <ClaimGuestOrderForm orderNumber={order.orderNumber} accessToken={accessToken} />
-          ) : null}
+          {canClaim ? <ClaimGuestOrderForm orderNumber={order.orderNumber} /> : null}
 
           <OrderSummary order={order} />
 
@@ -67,12 +75,11 @@ export default async function CustomerOrderPage({
                 sellerOrder={sellerOrder}
                 canReview={isOwner}
                 sellerAlreadyReviewed={order.sellerReviews.some((review) => review.sellerId === sellerOrder.sellerId)}
-                {...tokenProps}
               />
             ))}
           </section>
 
-          <PaymentSection orderNumber={order.orderNumber} payments={order.payments} {...tokenProps} />
+          <PaymentSection orderNumber={order.orderNumber} payments={order.payments} />
         </div>
       </div>
     </main>

@@ -5,7 +5,8 @@ import { z } from "zod";
 
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { resolveCustomerOrderIdentity } from "@/modules/orders/application/resolve-customer-order-access";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { readGuestOrderCookie } from "@/modules/orders/infrastructure/guest-order-cookie";
+import { toActionError } from "@/shared/errors/action-error";
 
 import { requestDispute } from "../application/request-dispute";
 
@@ -15,7 +16,6 @@ const requestSchema = z.object({
   reason: z.string().trim().min(2).max(100),
   description: z.string().trim().min(10, "Explique o problema com mais detalhes.").max(2000),
   idempotencyKey: z.uuid(),
-  accessToken: z.string().trim().min(1).optional(),
 });
 
 export type DisputeActionState = { error?: string; success?: string };
@@ -26,10 +26,12 @@ export async function requestDisputeAction(input: unknown): Promise<DisputeActio
 
   try {
     const session = await getCurrentSession();
-    if (!session && !parsed.data.accessToken) return { error: "Acesse o pedido pelo link seguro do checkout." };
+    // The guest token comes from the order's HttpOnly cookie, never from the form.
+    const accessToken = await readGuestOrderCookie();
+    if (!session && !accessToken) return { error: "Acesse o pedido pelo link seguro do checkout." };
     const identity = await resolveCustomerOrderIdentity({
       orderNumber: parsed.data.orderNumber,
-      accessToken: parsed.data.accessToken,
+      accessToken,
       userId: session?.user.id,
     });
     if (!identity) return { error: "Pedido não encontrado." };
@@ -46,6 +48,6 @@ export async function requestDisputeAction(input: unknown): Promise<DisputeActio
     revalidatePath("/admin", "layout");
     return { success: "Disputa aberta. O Moto Shop fará a mediação." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "requestDisputeAction").message };
   }
 }

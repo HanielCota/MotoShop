@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isValidBrazilianPhone, isValidTaxId, onlyDigits } from "../domain/tax-id";
+
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 
@@ -33,3 +35,31 @@ export const changePasswordSchema = z
   });
 
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+
+/** Empty input clears the field; otherwise only the digits are kept and validated. */
+const optionalDigits = (validate: (digits: string) => boolean, message: string, maxLength: number) =>
+  z.preprocess(
+    // Empty, absent or null all mean "clear the field". The form sends this schema's own output
+    // (null for an empty field) and the server parses it again, so null must be accepted.
+    (value) => (value === null || value === undefined ? "" : value),
+    z
+      // Any other type gets the field's Portuguese message, never Zod's default English one.
+      .string({ error: message })
+      .trim()
+      .max(maxLength, message)
+      .transform((value) => onlyDigits(value))
+      .refine((digits) => digits === "" || validate(digits), message)
+      .transform((digits) => (digits === "" ? null : digits)),
+  );
+
+/** CPF/CNPJ and phone are optional; the checkout reuses them only as prefill. */
+export const customerContactSchema = z.object(
+  {
+    taxId: optionalDigits(isValidTaxId, "Informe um CPF ou CNPJ válido.", 20),
+    phone: optionalDigits(isValidBrazilianPhone, "Informe um telefone com DDD, ex.: (11) 98765-4321.", 20),
+  },
+  { error: "Confira os dados informados." },
+);
+
+export type CustomerContactFormInput = z.input<typeof customerContactSchema>;
+export type CustomerContactInput = z.output<typeof customerContactSchema>;

@@ -5,7 +5,8 @@ import { z } from "zod";
 
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { claimGuestOrder } from "@/modules/orders/application/claim-guest-order";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { clearGuestOrderCookie, readGuestOrderCookie } from "@/modules/orders/infrastructure/guest-order-cookie";
+import { toActionError } from "@/shared/errors/action-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 const schema = z.object({
@@ -23,7 +24,8 @@ export async function claimGuestOrderAction(
   if (!session) return { error: "Entre na sua conta para vincular este pedido." };
   const parsed = schema.safeParse({
     orderNumber: formData.get("orderNumber"),
-    accessToken: formData.get("accessToken"),
+    // The guest token comes from the order's HttpOnly cookie, never from the form.
+    accessToken: (await readGuestOrderCookie()) ?? "",
   });
   if (!parsed.success) return { error: "O link do pedido é inválido." };
 
@@ -35,10 +37,12 @@ export async function claimGuestOrderAction(
       userEmail: session.user.email,
       userEmailVerified: session.user.emailVerified === true,
     });
+    // The claim revoked the guest token; the cookie that carried it is useless now.
+    await clearGuestOrderCookie(parsed.data.orderNumber);
     revalidatePath("/orders");
     revalidatePath(`/orders/${parsed.data.orderNumber}`);
     return { success: true };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "claimGuestOrderAction").message };
   }
 }

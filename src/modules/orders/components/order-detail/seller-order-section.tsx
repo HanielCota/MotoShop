@@ -20,7 +20,6 @@ import { Disclosure } from "@/components/ui/disclosure";
 type SellerOrderSectionProps = {
   orderNumber: string;
   sellerOrder: CustomerSellerOrder;
-  accessToken?: string;
   /** Avaliações exigem conta: só aparecem para o cliente logado dono do pedido. */
   canReview: boolean;
   sellerAlreadyReviewed: boolean;
@@ -29,11 +28,9 @@ type SellerOrderSectionProps = {
 export function SellerOrderSection({
   orderNumber,
   sellerOrder,
-  accessToken,
   canReview,
   sellerAlreadyReviewed,
 }: SellerOrderSectionProps) {
-  const tokenProps = accessToken ? { accessToken } : {};
   const latestCancellation = sellerOrder.cancellationRequests.at(-1);
   const latestDispute = sellerOrder.disputes.at(-1);
   const returnStatuses = sellerOrder.items.flatMap((item) => item.returnItems.map((r) => r.returnRequest.status));
@@ -93,7 +90,6 @@ export function SellerOrderSection({
                 item={item}
                 orderNumber={orderNumber}
                 sellerOrderStatus={sellerOrder.status}
-                tokenProps={tokenProps}
                 showReview={reviewableItems.includes(item)}
                 // A nota da loja é pedida uma única vez: no primeiro item ainda avaliável.
                 sellerAlreadyReviewed={sellerAlreadyReviewed || reviewableItems[0] !== item}
@@ -112,11 +108,11 @@ export function SellerOrderSection({
               </p>
             ) : null}
             {cancellationAllowed ? (
-              <RequestCancellationForm orderNumber={orderNumber} sellerOrderId={sellerOrder.id} {...tokenProps} />
+              <RequestCancellationForm orderNumber={orderNumber} sellerOrderId={sellerOrder.id} />
             ) : null}
             {disputeAllowed ? (
               <Disclosure summary="Abrir disputa">
-                <RequestDisputeForm orderNumber={orderNumber} sellerOrderId={sellerOrder.id} {...tokenProps} />
+                <RequestDisputeForm orderNumber={orderNumber} sellerOrderId={sellerOrder.id} />
               </Disclosure>
             ) : null}
           </div>
@@ -134,14 +130,12 @@ function OrderItemRow({
   item,
   orderNumber,
   sellerOrderStatus,
-  tokenProps,
   showReview,
   sellerAlreadyReviewed,
 }: {
   item: CustomerOrderItem;
   orderNumber: string;
   sellerOrderStatus: string;
-  tokenProps: { accessToken?: string };
   showReview: boolean;
   sellerAlreadyReviewed: boolean;
 }) {
@@ -182,7 +176,6 @@ function OrderItemRow({
                 orderItemId={item.id}
                 maxQuantity={getReturnableQuantity(item)}
                 idempotencyKey={randomUUID()}
-                {...tokenProps}
               />
             </Disclosure>
           ) : null}

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { DateFilterInput } from "@/components/ui/date-filter-input";
 import { DesignSelect } from "@/components/ui/design-select";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -137,10 +138,10 @@ export function FilterDateRange({
   return (
     <>
       <FilterField label="De">
-        <Input className="h-9" name={fromName} type="date" defaultValue={from ?? ""} />
+        <DateFilterInput className="h-9" name={fromName} value={from ?? null} />
       </FilterField>
       <FilterField label="Até">
-        <Input className="h-9" name={toName} type="date" defaultValue={to ?? ""} />
+        <DateFilterInput className="h-9" name={toName} value={to ?? null} />
       </FilterField>
     </>
   );

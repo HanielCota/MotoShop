@@ -4,7 +4,7 @@ import { Geist } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
-import { BRAND_DESCRIPTION, BRAND_NAME, BRAND_SLOGAN } from "@/config/brand";
+import { BRAND_DESCRIPTION, BRAND_HOME_TITLE, BRAND_SITE_NAME } from "@/config/brand";
 import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { SiteFooter } from "@/components/storefront/site-footer";
 import { StorefrontNavigation } from "@/components/storefront/storefront-navigation";
@@ -17,17 +17,17 @@ const display = Barlow_Condensed({ subsets: ["latin"], weight: ["600", "700"], v
 
 export const metadata: Metadata = {
   metadataBase: new URL(getApplicationBaseUrl()),
-  applicationName: BRAND_NAME,
+  applicationName: BRAND_SITE_NAME,
   title: {
-    default: BRAND_SLOGAN,
-    template: `%s | ${BRAND_NAME}`,
+    default: BRAND_HOME_TITLE,
+    template: `%s - ${BRAND_SITE_NAME}`,
   },
   description: BRAND_DESCRIPTION,
   openGraph: {
     type: "website",
     locale: "pt_BR",
-    siteName: BRAND_NAME,
-    title: BRAND_SLOGAN,
+    siteName: BRAND_SITE_NAME,
+    title: BRAND_HOME_TITLE,
     description: BRAND_DESCRIPTION,
   },
 };
@@ -39,7 +39,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           Limit suppression to this element; child components retain hydration checks. */}
       <body
         suppressHydrationWarning
-        className="bg-background text-foreground selection:bg-primary selection:text-primary-foreground min-h-screen antialiased"
+        className="bg-background text-foreground selection:bg-primary selection:text-primary-foreground flex min-h-screen flex-col antialiased"
       >
         <a
           href="#conteudo"
@@ -48,7 +48,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           Pular para o conteúdo
         </a>
         <StorefrontNavigation />
-        <div id="conteudo" tabIndex={-1} className="outline-none">
+        {/* Grows on short pages so the footer stays at the bottom of the screen. */}
+        <div id="conteudo" tabIndex={-1} className="flex-1 outline-none">
           {children}
         </div>
         <StorefrontOnly>

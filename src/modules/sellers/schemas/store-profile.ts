@@ -16,6 +16,8 @@ export const socialNetworkHosts = {
   instagram: ["instagram.com"],
   youtube: ["youtube.com", "youtu.be"],
   facebook: ["facebook.com"],
+  // M-09: only WhatsApp itself (wa.me, api./chat.whatsapp.com); never an outside store or a fake page.
+  whatsapp: ["wa.me", "whatsapp.com"],
 } as const;
 
 const optionalHttpsUrl = (label: string, hosts?: readonly string[]) =>
@@ -38,8 +40,7 @@ export const storeProfileSchema = z.object({
   description: z.string().trim().max(500, "A descrição deve ter no máximo 500 caracteres."),
   instagramUrl: optionalHttpsUrl("o Instagram", socialNetworkHosts.instagram),
   youtubeUrl: optionalHttpsUrl("o YouTube", socialNetworkHosts.youtube),
-  // WhatsApp host policy is pending a product decision; only https is enforced.
-  whatsappUrl: optionalHttpsUrl("o WhatsApp"),
+  whatsappUrl: optionalHttpsUrl("o WhatsApp", socialNetworkHosts.whatsapp),
   facebookUrl: optionalHttpsUrl("o Facebook", socialNetworkHosts.facebook),
 });
 

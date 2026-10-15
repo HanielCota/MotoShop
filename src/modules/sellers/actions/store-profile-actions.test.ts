@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("server-only", () => ({}));
 
 const mocks = vi.hoisted(() => {
@@ -110,5 +111,19 @@ describe("store profile authorization and audit", () => {
         }),
       }),
     });
+  });
+});
+
+describe("store profile identifier feedback", () => {
+  it("returns the identifier error for the field and keeps what the seller typed", async () => {
+    const form = profileForm();
+    form.set("slug", "!!!");
+
+    const result = await updateStoreProfileAction({}, form);
+
+    expect(result.slugError).toBe("Informe um identificador para a loja.");
+    expect(result.error).toBeUndefined();
+    expect(result.values).toMatchObject({ name: "Loja A Off Road", slug: "!!!" });
+    expect(mocks.transaction).not.toHaveBeenCalled();
   });
 });

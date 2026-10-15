@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   count: vi.fn(),
   create: vi.fn(),
 }));
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/modules/auth/application/authorization", () => ({
   requireAuthenticatedUser: async () => ({ user: { id: "buyer" } }),

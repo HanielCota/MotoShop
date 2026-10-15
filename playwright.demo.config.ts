@@ -1,4 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
+import { config } from "dotenv";
+
+// Only REVIEW_ACCOUNTS_PASSWORD and the DEMO_* variables are read from here; the walkthrough never touches the database.
+config({ path: ".env.local", quiet: true });
 
 /**
  * Read-only walkthrough of the review demo (`pnpm db:seed:review`) against an already running server.

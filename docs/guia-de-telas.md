@@ -12,7 +12,7 @@ Roteiro para revisar todas as telas com dados de demonstração. Tudo o que apar
 
 0. **Banco isolado para a revisão (recomendado).** No console da Neon, crie um branch a partir do principal (por exemplo, `review`) e copie a connection string dele. Use essa URL em `DATABASE_URL` e `DIRECT_URL` só enquanto durar a revisão: nada do que acontecer ali afeta o site. Apague o branch ao final.
 
-1. No `.env.local`, deixe `BETTER_AUTH_URL="http://localhost:3001"` e inclua `review.admin@example.test` em `ADMIN_EMAILS` (separado por vírgula). Sem isso, o login falha na porta 3001 e o Admin fica bloqueado.
+1. No `.env.local`, deixe `BETTER_AUTH_URL="http://localhost:3001"` e inclua `review.admin@example.test` em `ADMIN_EMAILS` (separado por vírgula). Sem isso, o login falha na porta 3001 e o Admin fica bloqueado. Defina também `REVIEW_ACCOUNTS_PASSWORD` com a senha das contas de demonstração (veja a seção 2) e, se o banco não for local, ponha o host dele em `SCRIPT_DATABASE_HOSTS`: sem isso, o seed e a remoção recusam rodar (proteção contra rodar no banco errado). Só o host vai nessa variável, nunca a URL com senha.
 
 2. Na pasta do projeto, crie os dados de demonstração (pode rodar quantas vezes quiser; não duplica nada). Publique as lojas de demonstração com a variável `REVIEW_PUBLISH_STORES`:
 
@@ -55,7 +55,7 @@ Roteiro para revisar todas as telas com dados de demonstração. Tudo o que apar
 
 ## 2. Contas de demonstração
 
-Todas usam a mesma senha: o valor de `REVIEW_ACCOUNTS_PASSWORD`, no início de `scripts/seed-review-data.ts`. Entre em **/login**. Para trocar de conta, use **Sair** no menu do ícone de usuário (loja) ou no topo da Central do Lojista/Admin.
+Todas usam a mesma senha: o valor da variável `REVIEW_ACCOUNTS_PASSWORD` no `.env.local` de quem rodou o seed (peça a quem administra a demonstração; a senha não fica no código nem nesta documentação). O seed falha se a variável faltar e regrava a senha de todas as contas `review.*` a cada execução. Entre em **/login**. Para trocar de conta, use **Sair** no menu do ícone de usuário (loja) ou no topo da Central do Lojista/Admin.
 
 | Perfil                       | E-mail                                              | O que mostra                                                                                                   |
 | ---------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
@@ -175,7 +175,32 @@ Com `review.pendente@example.test`, a Central mostra a loja aguardando aprovaç�
 
 ---
 
-## 7. Como dar feedback
+## 7. O que mudou desde 12/10/2026
+
+Uma linha por mudança: onde ver e com qual conta. "Sem conta" significa navegar sem entrar. As contas `review.*` usam a senha da seção 2. Itens marcados com **(seed novo)** só aparecem depois que o seed de revisão atualizado for rodado. Itens marcados com **(migration)** dependem de uma migration ainda não aplicada no banco da demo.
+
+| Mudança                             | Onde ver                                                                                                                                                                 | Conta                                          |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| Títulos "Moto Shop Brasil" nas abas | Nome da aba do navegador em qualquer página; na home, "Moto Shop Brasil - O Marketplace de quem vive o OFF-ROAD!"                                                        | Sem conta                                      |
+| Selos e abas da home                | `/`: selos curtos logo abaixo da busca "Minha Moto"; a aba de busca de produto vem antes da aba de moto                                                                  | Sem conta                                      |
+| 12 produtos em destaque             | `/`: três fileiras de destaques                                                                                                                                          | Sem conta                                      |
+| Faixa de lojistas nova              | `/`, faixa laranja acima do rodapé: "Sua loja na pista certa." e "Quero vender no Moto Shop"                                                                             | Sem conta                                      |
+| Rodapé novo                         | Rodapé de qualquer página da loja: descrição, Institucional, horário de atendimento, formas de pagamento, atalhos, sem CNPJ                                              | Sem conta                                      |
+| Busca com sugestões                 | Digite "capa" na busca do topo (ou da home): aparecem até 5 produtos com foto, nome e preço                                                                              | Sem conta                                      |
+| Ordenação "Ofertas recentes"        | `/products`, `/loja/review-garagem-mx` e páginas de categoria: menu de ordenação                                                                                         | Sem conta                                      |
+| Filtros com rolagem                 | `/products` no desktop: a coluna de filtros fica fixa e rola por dentro quando é mais alta que a tela                                                                    | Sem conta                                      |
+| Selo "Novidade"                     | Cards e página de produtos aprovados há menos de 30 dias. Os produtos demo são mais antigos: aprove um produto em análise em `/admin/products` e veja o card no catálogo | `review.admin@example.test`                    |
+| Cupons na página do produto         | `/products/<produto da Garagem MX>`: bloco "Cupons desta loja" abaixo do preço, com "Copiar código" **(seed novo)**                                                      | Sem conta                                      |
+| Cupons que aparecem no produto      | `/seller/coupons`: opção de mostrar o cupom na página do produto                                                                                                         | `review.lojista@example.test`                  |
+| Login com links de ajuda            | `/login`: entre com uma senha errada; aparecem "Esqueci minha senha" e "Ainda não tenho conta? Criar conta"                                                              | Sem conta (qualquer e-mail)                    |
+| Garagem com campos separados        | `/account/motorcycles`: fabricante, modelo, versão e ano separados; moto sem peça compatível mostra o aviso                                                              | `review.cliente@example.test`                  |
+| CPF/CNPJ e telefone                 | `/account/profile`: campos opcionais; depois, o `/checkout` vem com telefone e CPF preenchidos **(migration)**                                                           | `review.cliente@example.test`                  |
+| Identificador da loja               | `/seller` com uma conta sem loja: o identificador é sugerido a partir do nome, com exemplo embaixo. Não envie o formulário                                               | Conta sem loja (ex.: `review.cliente2…`)       |
+| Comissão do Admin em %              | `/admin/commission`: comissão padrão e por loja digitadas em percentual                                                                                                  | `review.admin@example.test`                    |
+| Campanhas com adesão                | Regra de cupom do Moto Shop pago pela loja que aderir. Ainda sem tela de adesão; o seed cria uma campanha com uma loja aderente **(seed novo)**                          | `review.admin@example.test` (`/admin/coupons`) |
+| Gênero, cor e tamanho nas variações | `/seller/products/new` ou "Editar" em um rascunho: campos de gênero, cor e tamanho em cada variação                                                                      | `review.lojista@example.test`                  |
+
+## 8. Como dar feedback
 
 Para cada observação, anote:
 

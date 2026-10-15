@@ -31,3 +31,11 @@ it("shows inline field errors and does not call the action when invalid", async 
   expect(screen.getByLabelText(/^SKU/)).toHaveAccessibleDescription("Informe o SKU.");
   expect(createProductAction).not.toHaveBeenCalled();
 });
+
+it("offers optional gender, color and size for each variant", () => {
+  render(<ProductForm {...options} />);
+
+  expect(screen.getByLabelText(/^Gênero/)).toHaveTextContent("Não informado");
+  expect(screen.getByLabelText(/^Cor/)).toHaveAttribute("placeholder", "Preto/laranja");
+  expect(screen.getByLabelText(/^Tamanho/)).toHaveAttribute("placeholder", "M ou 40");
+});

@@ -1,4 +1,5 @@
 import { config } from "dotenv";
+import { requireScriptDatabaseUrl } from "./database-guard";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -8,8 +9,7 @@ import { must } from "./must";
 
 config({ path: ".env.local", quiet: true });
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error("DATABASE_URL is required.");
+const databaseUrl = requireScriptDatabaseUrl(process.env, "seed-demo-catalog");
 
 const database = new PrismaClient({ adapter: new PrismaNeon({ connectionString: databaseUrl }) });
 

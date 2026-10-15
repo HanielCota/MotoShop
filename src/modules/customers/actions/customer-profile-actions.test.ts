@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   assertRateLimit: vi.fn(),
   revalidatePath: vi.fn(),
   logError: vi.fn(),
+  updateContact: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -17,8 +18,9 @@ vi.mock("@/modules/auth/application/authorization", () => ({
 }));
 vi.mock("@/modules/auth/infrastructure/auth", () => ({ auth: { api: { updateUser: mocks.updateUser } } }));
 vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: mocks.assertRateLimit }));
+vi.mock("../application/update-customer-contact", () => ({ updateCustomerContact: mocks.updateContact }));
 
-import { updateCustomerNameAction } from "./customer-profile-actions";
+import { updateCustomerContactAction, updateCustomerNameAction } from "./customer-profile-actions";
 
 beforeEach(() => vi.resetAllMocks());
 
@@ -61,4 +63,55 @@ it("hides Better Auth failures behind a friendly message", async () => {
   expect(result.error).toBe("Não foi possível salvar seu nome agora. Tente novamente em instantes.");
   expect(mocks.logError).toHaveBeenCalledWith(expect.objectContaining({ event: "customer.profile_update_failed" }));
   expect(mocks.revalidatePath).not.toHaveBeenCalled();
+});
+
+it("saves CPF/CNPJ and phone as digits for the signed-in user only", async () => {
+  expect(await updateCustomerContactAction({ taxId: "529.982.247-25", phone: "(11) 98765-4321" })).toEqual({
+    success: "Dados atualizados.",
+  });
+  expect(mocks.updateContact).toHaveBeenCalledWith("buyer", { taxId: "52998224725", phone: "11987654321" });
+  expect(mocks.revalidatePath).toHaveBeenCalledWith("/checkout");
+});
+
+it.each([
+  [
+    { taxId: null, phone: "11987654321" },
+    { taxId: null, phone: "11987654321" },
+  ],
+  [
+    { taxId: "52998224725", phone: null },
+    { taxId: "52998224725", phone: null },
+  ],
+  [
+    { taxId: null, phone: null },
+    { taxId: null, phone: null },
+  ],
+])("saves what the profile form sends after its own validation (%j)", async (input, saved) => {
+  expect(await updateCustomerContactAction(input)).toEqual({ success: "Dados atualizados." });
+  expect(mocks.updateContact).toHaveBeenCalledWith("buyer", saved);
+});
+
+it("clears both optional fields when they are left empty", async () => {
+  await updateCustomerContactAction({ taxId: " ", phone: "" });
+  expect(mocks.updateContact).toHaveBeenCalledWith("buyer", { taxId: null, phone: null });
+});
+
+it.each([
+  [{ taxId: "123.456.789-00", phone: "" }, "Informe um CPF ou CNPJ válido."],
+  [{ taxId: "11.222.333/0001-80", phone: "" }, "Informe um CPF ou CNPJ válido."],
+  [{ taxId: "", phone: "(01) 2345-678" }, "Informe um telefone com DDD, ex.: (11) 98765-4321."],
+])("rejects invalid contact data %j before saving", async (input, message) => {
+  expect(await updateCustomerContactAction(input)).toEqual({ error: message });
+  expect(mocks.updateContact).not.toHaveBeenCalled();
+});
+
+it("logs a failed contact update without the CPF or phone", async () => {
+  mocks.updateContact.mockRejectedValue(new Error("db down"));
+
+  const result = await updateCustomerContactAction({ taxId: "52998224725", phone: "11987654321" });
+
+  expect(result.error).toMatch(/Não foi possível salvar/);
+  const logged = JSON.stringify(mocks.logError.mock.calls);
+  expect(logged).not.toContain("52998224725");
+  expect(logged).not.toContain("11987654321");
 });

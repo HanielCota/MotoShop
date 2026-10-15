@@ -51,6 +51,7 @@ function makeProduct(id: string, name: string, overrides: Partial<ProductCardDat
     availableQuantity: 3,
     isDemo: false,
     sponsored: false,
+    isNew: false,
     ...overrides,
   };
 }
@@ -58,7 +59,7 @@ function makeProduct(id: string, name: string, overrides: Partial<ProductCardDat
 function renderHome(searchParams = "", options: Partial<ComponentProps<typeof MarketingHome>> = {}) {
   return render(
     <NuqsTestingAdapter searchParams={searchParams} hasMemory>
-      <MarketingHome fitments={fitments} categories={categories} featuredProducts={[]} {...options} />
+      <MarketingHome fitments={fitments} categories={categories} featuredProducts={[]} paymentAvailable {...options} />
     </NuqsTestingAdapter>,
   );
 }
@@ -202,5 +203,20 @@ describe("marketing homepage", () => {
 
     expect(screen.getByRole("img", { name: "Primeiro capacete" })).toHaveAttribute("data-loading", "eager");
     expect(screen.getByRole("img", { name: "Segundo capacete" })).toHaveAttribute("data-loading", "lazy");
+  });
+
+  it("promises purchase and checkout only while payment is available", () => {
+    renderHome();
+    const assurances = screen.getByRole("list", { name: "Garantias do Moto Shop" });
+    expect(within(assurances).getByText("Compre sem criar conta")).toBeInTheDocument();
+    expect(within(assurances).getByText("Frete e prazo de cada loja no checkout")).toBeInTheDocument();
+  });
+
+  it("announces upcoming purchases while payment is unavailable", () => {
+    renderHome("", { paymentAvailable: false });
+    const assurances = screen.getByRole("list", { name: "Garantias do Moto Shop" });
+    expect(within(assurances).getByText("Compras em breve")).toBeInTheDocument();
+    expect(within(assurances).getByText("Frete e prazo definidos por cada loja")).toBeInTheDocument();
+    expect(within(assurances).queryByText(/checkout|Compre sem criar conta/)).not.toBeInTheDocument();
   });
 });

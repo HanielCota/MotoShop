@@ -35,7 +35,7 @@ Meta: o endereço de Preview serve exatamente a revisão T06 e seus fluxos princ
 Meta: endereço público com conteúdo aprovado e sem prometer compra indisponível.
 
 - [ ] **T11 — Aprovar marca e conteúdo público.** Estado: Pendente. Aceite: responsável aprovou textos, imagens, contato e mensagens comerciais exibidas na versão de divulgação.
-- [ ] **T12 — Revisar dados de demonstração.** Estado: Pendente. Aceite: itens, imagens, perguntas e lojas de teste foram removidos ou claramente identificados; produtos `isDemo` permanecem impedidos de entrar no carrinho/checkout no servidor, conforme AGENTS.md.
+- [ ] **T12 — Revisar dados de demonstração.** Estado: Pendente. Aceite: itens, imagens, perguntas e lojas de teste foram removidos ou claramente identificados (inclui commitar a remoção das imagens versionadas `public/images/demo/review-*.webp` depois de `pnpm db:remove:review`); produtos `isDemo` permanecem impedidos de entrar no carrinho/checkout no servidor, conforme AGENTS.md.
 - [ ] **T13 — Ajustar a experiência antes das vendas.** Estado: Pendente. Aceite: ações e mensagens públicas descrevem corretamente o que está disponível; nenhum caminho oferece concluir uma compra indisponível.
 - [ ] **T14 — Aprovar a divulgação.** Estado: Pendente. Aceite: navegação, formulários e conteúdo público conferidos em desktop/mobile no endereço final; responsável autoriza divulgação.
 

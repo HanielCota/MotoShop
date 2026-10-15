@@ -6,6 +6,7 @@ import type { Route } from "next";
 
 import { env } from "@/config/env";
 import { db } from "@/lib/database";
+import { isConfiguredAdminEmail } from "@/modules/auth/domain/admin-emails";
 import { hasSellerPermission, type SellerPermission } from "@/modules/auth/domain/seller-permissions";
 import { auth } from "@/modules/auth/infrastructure/auth";
 
@@ -47,14 +48,8 @@ export async function requireSellerAccess(permission?: SellerPermission) {
 
 export async function requireAdminAccess() {
   const session = await requireAuthenticatedUser("/admin");
-  const adminEmails = new Set(
-    (env.ADMIN_EMAILS ?? "")
-      .split(",")
-      .map((email) => email.trim().toLowerCase())
-      .filter(Boolean),
-  );
 
-  if (!session.user.emailVerified || !adminEmails.has(session.user.email.toLowerCase())) {
+  if (!session.user.emailVerified || !isConfiguredAdminEmail(session.user.email, env.ADMIN_EMAILS)) {
     redirect("/forbidden" as Route);
   }
 

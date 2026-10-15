@@ -44,3 +44,21 @@ export async function getPrimarySavedMotorcycle(userId: string) {
     },
   });
 }
+
+/**
+ * Public products compatible with each fitment, with the catalog rules: approved products of
+ * approved or active sellers. Fitments without any match are absent from the map.
+ */
+export async function countCompatibleProductsByFitment(fitmentIds: readonly string[]): Promise<Map<string, number>> {
+  if (fitmentIds.length === 0) return new Map();
+
+  const groups = await db.productCompatibility.groupBy({
+    by: ["motorcycleFitmentId"],
+    where: {
+      motorcycleFitmentId: { in: [...fitmentIds] },
+      product: { status: "APPROVED", seller: { status: { in: ["APPROVED", "ACTIVE"] } } },
+    },
+    _count: { _all: true },
+  });
+  return new Map(groups.map((group) => [group.motorcycleFitmentId, group._count._all]));
+}

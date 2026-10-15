@@ -6,13 +6,16 @@ const mocks = vi.hoisted(() => ({
   requestReturn: vi.fn(),
   requestCancellation: vi.fn(),
   requestDispute: vi.fn(),
+  guestCookie: vi.fn(),
 }));
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/modules/auth/application/authorization", () => ({ getCurrentSession: mocks.session }));
 vi.mock("@/modules/orders/application/resolve-customer-order-access", () => ({
   resolveCustomerOrderIdentity: mocks.resolve,
 }));
+vi.mock("@/modules/orders/infrastructure/guest-order-cookie", () => ({ readGuestOrderCookie: mocks.guestCookie }));
 vi.mock("../application/request-return", () => ({ requestReturn: mocks.requestReturn }));
 vi.mock("../application/request-cancellation", () => ({ requestCancellation: mocks.requestCancellation }));
 vi.mock("@/modules/disputes/application/request-dispute", () => ({ requestDispute: mocks.requestDispute }));
@@ -75,24 +78,27 @@ beforeEach(() => {
 describe.each(cases)("$name action order access", ({ run, service }) => {
   it("lets a logged-in user act on a guest order opened through its secure link", async () => {
     mocks.session.mockResolvedValue({ user: { id: "user-1" } });
+    mocks.guestCookie.mockResolvedValue("secure-token");
     mocks.resolve.mockResolvedValue(guestIdentity);
-    const result = await run({ accessToken: "secure-token" });
+    const result = await run({});
     expect(result).toHaveProperty("success");
     expect(mocks.resolve).toHaveBeenCalledWith({ orderNumber: "MS-1", accessToken: "secure-token", userId: "user-1" });
     expect(service).toHaveBeenCalledWith(expect.objectContaining({ identity: guestIdentity }));
   });
 
-  it("requires a session or a secure link", async () => {
+  it("requires a session or the order cookie, ignoring a token sent in the request", async () => {
     mocks.session.mockResolvedValue(null);
-    expect(await run({})).toHaveProperty("error");
+    mocks.guestCookie.mockResolvedValue(undefined);
+    expect(await run({ accessToken: "secure-token" })).toHaveProperty("error");
     expect(mocks.resolve).not.toHaveBeenCalled();
     expect(service).not.toHaveBeenCalled();
   });
 
   it("does not call the service when no credential owns the order", async () => {
     mocks.session.mockResolvedValue({ user: { id: "intruder" } });
+    mocks.guestCookie.mockResolvedValue("wrong");
     mocks.resolve.mockResolvedValue(null);
-    expect(await run({ accessToken: "wrong" })).toEqual({ error: "Pedido não encontrado." });
+    expect(await run({})).toEqual({ error: "Pedido não encontrado." });
     expect(service).not.toHaveBeenCalled();
   });
 });

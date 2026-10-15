@@ -9,6 +9,8 @@ import { mercadoPagoProvider } from "@/lib/payment/mercado-pago-provider";
 import type { CartIdentity } from "@/modules/cart/infrastructure/cart-access";
 import { hashGuestToken } from "@/modules/cart/infrastructure/cart-access";
 import { findActiveCoupon } from "@/modules/coupons/application/validate-coupon-for-customer";
+import { isSellerFundedCampaign } from "@/modules/coupons/domain/coupon-kind";
+import { listActiveCouponParticipantSellerIds } from "@/modules/coupons/queries/coupon-participation";
 import { sumMoneyInCents } from "@/modules/orders/domain/money";
 import {
   applyPaymentOutcome,
@@ -114,7 +116,7 @@ function createCheckoutResult(
 async function calculateCheckoutCharges(input: CheckoutRequest, now: Date) {
   const selections = parseShippingSelections(input.data.shippingSelections);
   const cart = await loadCheckoutCart(input.identity);
-  const coupon = await findActiveCoupon(input.data.couponCode, input.data.customerEmail, input.session?.user.id, now);
+  const coupon = await loadCheckoutCoupon(input, now);
   const quoteGroups = await quoteShippingForCart(cart, input.data.postalCode);
   const defaultCommissionBps = await loadDefaultCommissionBps();
   const sellerCharges = calculateSellerCharges({
@@ -126,6 +128,14 @@ async function calculateCheckoutCharges(input: CheckoutRequest, now: Date) {
     now,
   });
   return { cart, coupon, sellerCharges };
+}
+
+/** The active coupon, plus the sellers joined to it when it is a seller-funded campaign. */
+async function loadCheckoutCoupon(input: CheckoutRequest, now: Date) {
+  const coupon = await findActiveCoupon(input.data.couponCode, input.data.customerEmail, input.session?.user.id, now);
+  if (!coupon || !isSellerFundedCampaign(coupon)) return coupon;
+
+  return { ...coupon, participatingSellerIds: await listActiveCouponParticipantSellerIds(coupon.id) };
 }
 
 async function loadDefaultCommissionBps(): Promise<number> {

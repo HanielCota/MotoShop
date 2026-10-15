@@ -7,9 +7,17 @@ import { betterAuth } from "better-auth/minimal";
 import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { env } from "@/config/env";
 import { db } from "@/lib/database";
-import { sendAuthEmail } from "@/modules/auth/application/send-auth-email";
+import { sendAuthEmail, sendExistingAccountEmail } from "@/modules/auth/application/send-auth-email";
+import { secureAdminAccountAfterVerification } from "@/modules/auth/application/secure-admin-account";
+import { logger } from "@/lib/logger";
 import { parseAuthUserName } from "@/modules/auth/domain/auth-user-name";
-import { enforceSignInAccountRateLimit } from "@/modules/auth/infrastructure/sign-in-account-rate-limit";
+import {
+  assertSignInAccountNotLocked,
+  recordSignInAccountOutcome,
+} from "@/modules/auth/infrastructure/sign-in-account-rate-limit";
+import { withoutSessionToken } from "@/modules/auth/infrastructure/session-response";
+import { runAuthTaskAfterResponse } from "@/modules/auth/infrastructure/background-tasks";
+import { TRUSTED_CLIENT_IP_HEADER } from "@/shared/request/client-ip";
 import { consumeRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 export const authEmailConfigured = Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
@@ -33,6 +41,15 @@ export const auth = betterAuth({
       ? {
           sendResetPassword: async ({ user, url, token }: { user: { email: string }; url: string; token: string }) =>
             sendAuthEmail({ kind: "reset", to: user.email, url, token }),
+          // Only reached when the duplicate sign-up gets the generic response (verification required).
+          // A send failure must not change that response, or it would reveal that the account exists.
+          onExistingUserSignUp: async ({ user }: { user: { id: string; email: string } }) => {
+            try {
+              await sendExistingAccountEmail({ to: user.email });
+            } catch (error) {
+              logger.error({ event: "auth.existing_account_email.failed", userId: user.id, error });
+            }
+          },
         }
       : {}),
   },
@@ -50,6 +67,9 @@ export const auth = betterAuth({
             url: string;
             token: string;
           }) => sendAuthEmail({ kind: "verify", to: user.email, url, token }),
+          // A verified admin e-mail must set its password through reset (L-19).
+          afterEmailVerification: async (user: { id: string; email: string }) =>
+            secureAdminAccountAfterVerification(user),
         },
       }
     : {}),
@@ -69,8 +89,13 @@ export const auth = betterAuth({
     },
   },
   hooks: {
-    // Per-account limit on top of the per-IP rule above (see sign-in-account-rate-limit.ts).
-    before: createAuthMiddleware(async (context) => enforceSignInAccountRateLimit(context.path, context.body)),
+    // Per-account limit on top of the per-IP rule above: only failures count (see sign-in-account-rate-limit.ts).
+    before: createAuthMiddleware(async (context) => assertSignInAccountNotLocked(context.path, context.body)),
+    after: createAuthMiddleware(async (context) => {
+      await recordSignInAccountOutcome(context.path, context.body, context.context.returned);
+      // A replaced value becomes the response; undefined keeps the original one.
+      return withoutSessionToken(context.path, context.context.returned);
+    }),
   },
   databaseHooks: {
     user: {
@@ -82,5 +107,11 @@ export const auth = betterAuth({
     },
   },
   database: prismaAdapter(db, { provider: "postgresql" }),
-  advanced: { database: { joins: true } },
+  advanced: {
+    database: { joins: true },
+    // Rate limits use the IP set by Vercel, not the client-controlled x-forwarded-for (L-05).
+    ipAddress: { ipAddressHeaders: [TRUSTED_CLIENT_IP_HEADER] },
+    // E-mails (reset, verification) go out after the response: no timing difference per account (L-01).
+    backgroundTasks: { handler: runAuthTaskAfterResponse },
+  },
 });

@@ -3,14 +3,25 @@
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/lib/database";
+import { slugify } from "@/lib/utils";
 import { requireAuthenticatedUser, requireSellerAccess } from "@/modules/auth/application/authorization";
-import { ApplicationError, asApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 
 import { updateShippingOrigin } from "../application/update-shipping-origin";
 import { sellerOnboardingSchema } from "../schemas/seller-onboarding";
 import { shippingOriginSchema } from "../schemas/shipping-origin";
+import { splitStoreSlugIssue } from "../schemas/store-slug";
+import { readSubmittedValues } from "@/shared/forms/submitted-values";
 
-export type SellerActionState = { error?: string; success?: string };
+const onboardingFields = ["storeName", "storeSlug", "originPostalCode", "type"] as const;
+
+export type SellerActionState = {
+  error?: string;
+  success?: string;
+  slugError?: string;
+  values?: Record<(typeof onboardingFields)[number], string>;
+};
 
 export async function createSellerAction(
   _previousState: SellerActionState,
@@ -19,14 +30,14 @@ export async function createSellerAction(
   const session = await requireAuthenticatedUser("/seller");
   const parsed = sellerOnboardingSchema.safeParse({
     storeName: formData.get("storeName"),
-    storeSlug: formData.get("storeSlug"),
+    // Como no perfil da loja: "Luiz Parts" vira "luiz-parts" em vez de ser recusado.
+    storeSlug: slugify(String(formData.get("storeSlug") ?? "")),
     originPostalCode: String(formData.get("originPostalCode") ?? "").replace(/\D/g, ""),
     type: formData.get("type"),
   });
 
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Confira os dados informados." };
-  }
+  const values = readSubmittedValues(formData, onboardingFields);
+  if (!parsed.success) return { ...splitStoreSlugIssue(parsed.error, "storeSlug"), values };
 
   try {
     await db.$transaction(async (tx) => {
@@ -55,11 +66,11 @@ export async function createSellerAction(
     revalidatePath("/seller", "layout");
     return { success: "Solicitação enviada. O Moto Shop precisa aprovar sua loja antes do cadastro de produtos." };
   } catch (error) {
-    const applicationError = asApplicationError(error);
+    const applicationError = toActionError(error, "createSellerAction");
     if (applicationError.code === "INTERNAL_ERROR") {
-      return { error: "Não foi possível criar a loja. Verifique se o identificador já está em uso." };
+      return { error: "Não foi possível criar a loja. Verifique se o identificador já está em uso.", values };
     }
-    return { error: applicationError.message };
+    return { error: applicationError.message, values };
   }
 }
 
@@ -79,7 +90,7 @@ export async function updateShippingOriginAction(
     revalidatePath("/seller/orders");
     return { success: "Dados de envio atualizados." };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "updateShippingOriginAction").message };
   }
 }
 

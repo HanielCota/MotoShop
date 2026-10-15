@@ -1,8 +1,12 @@
 import { beforeEach, expect, it, vi } from "vitest";
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/modules/auth/application/authorization", () => ({ getCurrentSession: vi.fn() }));
-vi.mock("@/modules/cart/infrastructure/cart-access", () => ({ hashGuestToken: vi.fn(() => "hashed-guest-token") }));
+vi.mock("@/modules/orders/application/resolve-customer-order-access", () => ({
+  resolveCustomerOrderIdentity: vi.fn(),
+}));
+vi.mock("@/modules/orders/infrastructure/guest-order-cookie", () => ({ readGuestOrderCookie: vi.fn() }));
 vi.mock("@/modules/returns/queries/customer-orders", () => ({ getCustomerOrder: vi.fn() }));
 vi.mock("../application/recover-payment", () => ({ recoverPayment: vi.fn() }));
 vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
@@ -10,13 +14,16 @@ import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 import { ApplicationError } from "@/shared/errors/application-error";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getCustomerOrder } from "@/modules/returns/queries/customer-orders";
+import { resolveCustomerOrderIdentity } from "@/modules/orders/application/resolve-customer-order-access";
+import { readGuestOrderCookie } from "@/modules/orders/infrastructure/guest-order-cookie";
 import { recoverPayment } from "../application/recover-payment";
 import { refreshPendingPaymentAction } from "./payment-actions";
 
+/** The guest token now arrives in the order cookie, not in the form. */
 function form(token?: string) {
+  vi.mocked(readGuestOrderCookie).mockResolvedValue(token);
   const data = new FormData();
   data.set("orderNumber", "MS-123");
-  if (token) data.set("accessToken", token);
   return data;
 }
 beforeEach(() => {
@@ -24,6 +31,11 @@ beforeEach(() => {
   vi.mocked(getCurrentSession).mockResolvedValue(null);
   vi.mocked(getCustomerOrder).mockResolvedValue(null);
   vi.mocked(recoverPayment).mockResolvedValue({ outcome: "UNRESOLVED" });
+  // Stand-in for the shared access rule: only "valid-token" opens the guest order.
+  vi.mocked(resolveCustomerOrderIdentity).mockImplementation(async (input) => {
+    if (input.accessToken === "valid-token") return { guestAccessTokenHash: "hashed-guest-token" };
+    return input.userId ? { userId: input.userId } : null;
+  });
 });
 it("never queries the provider without an authenticated order identity", async () => {
   expect(await refreshPendingPaymentAction({}, form())).toHaveProperty("error");
@@ -32,7 +44,12 @@ it("never queries the provider without an authenticated order identity", async (
 });
 it("does not recover an order inaccessible to the guest", async () => {
   expect(await refreshPendingPaymentAction({}, form("wrong-token"))).toHaveProperty("error");
-  expect(getCustomerOrder).toHaveBeenCalledWith("MS-123", { guestAccessTokenHash: "hashed-guest-token" });
+  expect(resolveCustomerOrderIdentity).toHaveBeenCalledWith({
+    orderNumber: "MS-123",
+    accessToken: "wrong-token",
+    userId: undefined,
+  });
+  expect(getCustomerOrder).not.toHaveBeenCalled();
   expect(recoverPayment).not.toHaveBeenCalled();
 });
 it("recovers a guest payment without an external id after ownership validation", async () => {
@@ -52,6 +69,7 @@ it("uses the authenticated user scope for payments awaiting capture", async () =
   expect(recoverPayment).toHaveBeenCalledWith("local");
 });
 it("rate limits manual refreshes per order number before querying the gateway", async () => {
+  vi.mocked(getCustomerOrder).mockResolvedValue({ payments: [{ id: "local", status: "PENDING" }] } as never);
   vi.mocked(assertRateLimit).mockRejectedValue(
     new ApplicationError({ code: "CONFLICT", statusCode: 429, message: "Muitas tentativas em pouco tempo." }),
   );
@@ -59,7 +77,17 @@ it("rate limits manual refreshes per order number before querying the gateway", 
     error: "Muitas tentativas em pouco tempo.",
   });
   expect(assertRateLimit).toHaveBeenCalledWith({ key: "payment-refresh:MS-123", windowSeconds: 60, max: 3 });
-  expect(getCustomerOrder).not.toHaveBeenCalled();
+  expect(recoverPayment).not.toHaveBeenCalled();
+});
+
+it("does not spend the order's refresh quota when the caller cannot see the order (L-02)", async () => {
+  // Like the real resolver, any non-empty token becomes a candidate identity; only the order
+  // lookup proves access.
+  vi.mocked(resolveCustomerOrderIdentity).mockResolvedValue({ guestAccessTokenHash: "forged-hash" });
+  vi.mocked(getCustomerOrder).mockResolvedValue(null);
+
+  expect(await refreshPendingPaymentAction({}, form("forged-token"))).toHaveProperty("error");
+  expect(assertRateLimit).not.toHaveBeenCalled();
   expect(recoverPayment).not.toHaveBeenCalled();
 });
 it("tells the customer when a never-sent charge was released", async () => {

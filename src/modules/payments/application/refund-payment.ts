@@ -12,6 +12,8 @@ export type RefundPaymentInput = {
   amountInCents: number;
   idempotencyKey: string;
   reason?: string;
+  /** Quando informado, o reembolso também respeita o total cobrado deste SellerOrder (L-07). */
+  sellerOrderId?: string;
 };
 
 export type RefundPaymentResult = {
@@ -101,7 +103,7 @@ async function requestAndSettleRefund(
   const providerResult = await requestProviderRefund(reservation, input);
   await assertProviderApprovedRefund(providerResult, reservation.transactionId);
   assertRefundedAmountMatches(providerResult, input.amountInCents);
-  const paymentStatus = await settleApprovedRefund(reservation, input.amountInCents, providerResult);
+  const paymentStatus = await settleApprovedRefund(reservation, input, providerResult);
 
   return {
     paymentId: reservation.paymentId,
@@ -161,18 +163,22 @@ function assertRefundedAmountMatches(providerResult: ProviderRefundResult, reque
 
 async function settleApprovedRefund(
   reservation: RefundReservation,
-  amountInCents: number,
+  input: RefundPaymentInput,
   providerResult: ProviderRefundResult,
 ): Promise<RefundedPaymentStatus> {
   return db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "payments" WHERE id = ${reservation.paymentId} FOR UPDATE`;
-    const paymentStatus = await computeRefundedPaymentStatus(tx, reservation, amountInCents);
+    const paymentStatus = await computeRefundedPaymentStatus(tx, reservation, input.amountInCents);
     await tx.paymentTransaction.update({
       where: { id: reservation.transactionId },
       data: {
         status: "SUCCEEDED",
         externalId: providerResult.externalId,
-        providerMetadata: providerResult.providerMetadata as Prisma.InputJsonValue,
+        // Mantém o SellerOrder do reembolso: o teto por SellerOrder soma por esse campo.
+        providerMetadata: {
+          ...providerResult.providerMetadata,
+          ...(input.sellerOrderId ? { sellerOrderId: input.sellerOrderId } : {}),
+        } as Prisma.InputJsonValue,
         processedAt: new Date(),
       },
     });
@@ -238,6 +244,7 @@ async function reserveRefundTransaction(paymentId: string, input: RefundPaymentI
         statusCode: 409,
       });
     }
+    if (input.sellerOrderId) await assertWithinSellerOrderRefundCeiling(tx, input, input.sellerOrderId);
 
     const transaction = await tx.paymentTransaction.create({
       data: {
@@ -246,12 +253,64 @@ async function reserveRefundTransaction(paymentId: string, input: RefundPaymentI
         amountInCents: input.amountInCents,
         idempotencyKey: input.idempotencyKey,
         paymentId: payment.id,
-        ...(input.reason ? { providerMetadata: { reason: input.reason } } : {}),
+        ...refundReservationMetadata(input),
       },
     });
 
     return { payment, transaction, externalId: payment.externalId };
   });
+}
+
+function refundReservationMetadata(input: RefundPaymentInput) {
+  if (!input.reason && !input.sellerOrderId) return {};
+  return {
+    providerMetadata: {
+      ...(input.reason ? { reason: input.reason } : {}),
+      ...(input.sellerOrderId ? { sellerOrderId: input.sellerOrderId } : {}),
+    },
+  };
+}
+
+/**
+ * L-07: a soma dos reembolsos de um SellerOrder não pode passar do que foi cobrado dessa loja,
+ * mesmo que o pagamento do pedido ainda tenha saldo (o saldo pode ser de outra loja).
+ */
+async function assertWithinSellerOrderRefundCeiling(
+  tx: Prisma.TransactionClient,
+  input: RefundPaymentInput,
+  sellerOrderId: string,
+) {
+  const sellerOrder = await tx.sellerOrder.findFirst({
+    where: { id: sellerOrderId, orderId: input.orderId },
+    select: { itemsSubtotalInCents: true, discountAmountInCents: true, customerShippingAmountInCents: true },
+  });
+  if (!sellerOrder) {
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "O reembolso não pertence a este pedido.",
+      statusCode: 409,
+    });
+  }
+
+  const chargedInCents =
+    sellerOrder.itemsSubtotalInCents - sellerOrder.discountAmountInCents + sellerOrder.customerShippingAmountInCents;
+  const previousRefunds = await tx.paymentTransaction.findMany({
+    where: {
+      type: "REFUND",
+      status: { not: "FAILED" },
+      payment: { orderId: input.orderId },
+      providerMetadata: { path: ["sellerOrderId"], equals: sellerOrderId },
+    },
+    select: { amountInCents: true },
+  });
+  const refundedInCents = sumMoneyInCents(previousRefunds.map((refund) => refund.amountInCents));
+  if (refundedInCents + input.amountInCents > chargedInCents) {
+    throw new ApplicationError({
+      code: "CONFLICT",
+      message: "O valor do reembolso excede o total cobrado desta loja no pedido.",
+      statusCode: 409,
+    });
+  }
 }
 
 async function findRefundablePayment(orderId: string) {

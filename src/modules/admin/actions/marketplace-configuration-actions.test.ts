@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   revalidate: vi.fn(),
 }));
 
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("@/modules/auth/application/authorization", () => ({ requireAdminAccess: mocks.authorize }));
 vi.mock("@/lib/database", () => ({
@@ -24,7 +25,7 @@ import { updateMarketplaceCommissionAction } from "./marketplace-configuration-a
 
 function form(value?: string) {
   const data = new FormData();
-  if (value !== undefined) data.set("defaultCommissionBps", value);
+  if (value !== undefined) data.set("commissionPercent", value);
   return data;
 }
 
@@ -35,10 +36,13 @@ beforeEach(() => {
 });
 
 describe("marketplace default commission", () => {
-  it.each([undefined, "", "-1", "10001", "1.5", "abc"])("rejects absent or invalid basis points: %s", async (value) => {
-    expect((await updateMarketplaceCommissionAction({}, form(value))).error).toBeTruthy();
-    expect(mocks.upsert).not.toHaveBeenCalled();
-  });
+  it.each([undefined, "", "-1", "100,01", "1,555", "abc"])(
+    "rejects an absent or invalid percentage: %s",
+    async (value) => {
+      expect((await updateMarketplaceCommissionAction({}, form(value))).error).toBeTruthy();
+      expect(mocks.upsert).not.toHaveBeenCalled();
+    },
+  );
 
   it("allows an explicit zero and audits the prior value in the same transaction", async () => {
     expect((await updateMarketplaceCommissionAction({}, form("0"))).success).toBeTruthy();
@@ -56,16 +60,28 @@ describe("marketplace default commission", () => {
     expect(mocks.revalidate).toHaveBeenCalledWith("/admin", "layout");
   });
 
+  it("returns the typed percentage so the form keeps it after a refusal", async () => {
+    expect(await updateMarketplaceCommissionAction({}, form("150"))).toEqual({
+      error: "Informe uma comissão entre 0% e 100%.",
+      values: { commissionPercent: "150" },
+    });
+  });
+
+  it("stores the percentage typed by the admin as basis points", async () => {
+    expect((await updateMarketplaceCommissionAction({}, form("12,50"))).success).toBeTruthy();
+    expect(mocks.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: { defaultCommissionBps: 1250 } }));
+  });
+
   it("does not report success when persistence fails", async () => {
     mocks.upsert.mockRejectedValueOnce(new Error("database unavailable"));
-    expect((await updateMarketplaceCommissionAction({}, form("1500"))).error).toBeTruthy();
+    expect((await updateMarketplaceCommissionAction({}, form("15"))).error).toBeTruthy();
     expect(mocks.audit).not.toHaveBeenCalled();
     expect(mocks.revalidate).not.toHaveBeenCalled();
   });
 
   it("requires admin permission", async () => {
     mocks.authorize.mockRejectedValueOnce(new Error("FORBIDDEN"));
-    await expect(updateMarketplaceCommissionAction({}, form("1500"))).rejects.toThrow("FORBIDDEN");
+    await expect(updateMarketplaceCommissionAction({}, form("15"))).rejects.toThrow("FORBIDDEN");
     expect(mocks.find).not.toHaveBeenCalled();
   });
 });

@@ -106,6 +106,30 @@ it("does not invite the customer to pay before the seller connects a Mercado Pag
   expect(screen.getByRole("button", { name: "Pagamento indisponível" })).toBeDisabled();
 });
 
+it("prefills the phone and CPF saved in the customer profile", () => {
+  render(
+    <CheckoutForm
+      cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }}
+      customerDefaults={{ taxId: "52998224725", phone: "11987654321" }}
+    />,
+  );
+
+  expect(screen.getByLabelText(/Telefone/)).toHaveValue("(11) 98765-4321");
+  expect(screen.getByLabelText(/CPF/)).toHaveValue("529.982.247-25");
+});
+
+it("does not put a saved CNPJ in the CPF field", () => {
+  render(
+    <CheckoutForm
+      cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }}
+      customerDefaults={{ taxId: "11222333000181", phone: null }}
+    />,
+  );
+
+  expect(screen.getByLabelText(/CPF/)).toHaveValue("");
+  expect(screen.getByLabelText(/Telefone/)).toHaveValue("");
+});
+
 function defined<T>(value: T | null | undefined): T {
   if (value === null || value === undefined) throw new Error("Expected value to be defined");
   return value;

@@ -1,28 +1,13 @@
-import Link from "next/link";
 import type { Route } from "next";
-import {
-  AlertTriangle,
-  ArrowUpRight,
-  Ban,
-  Mail,
-  PackageSearch,
-  Scale,
-  Store,
-  Truck,
-  Undo2,
-  Webhook,
-} from "lucide-react";
+import { AlertTriangle, Ban, Mail, PackageSearch, Scale, Store, Truck, Undo2, Webhook } from "lucide-react";
 
 import { PageHeader, SectionHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
-import { adminSections } from "@/modules/admin/admin-sections";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { getAdminDashboardCounters } from "@/modules/admin/queries/dashboard-counters";
 import { formatCount } from "@/lib/format";
 
 export const metadata = { title: "Visão geral · Admin" };
-
-const groups = ["Marketplace", "Operação", "Sistema"] as const;
 
 export default async function AdminHomePage() {
   await requireAdminAccess();
@@ -90,7 +75,7 @@ export default async function AdminHomePage() {
       <PageHeader
         eyebrow="Painel administrativo"
         title="Visão geral"
-        description="Acompanhe o que precisa de atenção e abra cada área para trabalhar com seus próprios filtros e registros."
+        description="Filas que esperam um administrador e falhas de integração. As demais áreas ficam no menu."
       />
 
       <section aria-labelledby="pending-heading" className="space-y-4">
@@ -136,34 +121,6 @@ export default async function AdminHomePage() {
           ))}
         </div>
       </section>
-
-      {groups.map((group) => (
-        <section key={group} aria-labelledby={`group-${group}`} className="space-y-4">
-          <h2 id={`group-${group}`} className="text-xl sm:text-2xl">
-            {group}
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {adminSections
-              .filter((section) => section.group === group)
-              .map((section) => (
-                <Link
-                  key={section.slug}
-                  href={`/admin/${section.slug}` as Route}
-                  className="group bg-card ring-foreground/10 hover:ring-moto-brand focus-visible:outline-ring flex min-h-28 flex-col justify-between rounded-xl p-5 ring-1 transition-shadow focus-visible:outline-2 focus-visible:outline-offset-2"
-                >
-                  <span className="flex items-start justify-between gap-3 text-base font-semibold">
-                    {section.title}
-                    <ArrowUpRight
-                      aria-hidden="true"
-                      className="text-muted-foreground group-hover:text-brand-strong size-4 shrink-0"
-                    />
-                  </span>
-                  <span className="text-muted-foreground mt-3 text-sm">{section.description}</span>
-                </Link>
-              ))}
-          </div>
-        </section>
-      ))}
     </div>
   );
 }

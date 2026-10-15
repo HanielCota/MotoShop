@@ -1,3 +1,4 @@
+import { createCipheriv, randomBytes } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ findUnique: vi.fn(), updateMany: vi.fn() }));
@@ -68,7 +69,7 @@ describe("Melhor Envio OAuth", () => {
       scopes: "cart-write shipping-checkout",
       accessTokenExpiresAt: new Date(Date.now() + 5 * 60_000),
       refreshTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60_000),
-      accessTokenEncrypted: encryptToken("seller-sandbox-token"),
+      accessTokenEncrypted: encryptToken("seller-sandbox-token", "seller-1"),
     });
 
     await expect(
@@ -82,7 +83,7 @@ describe("Melhor Envio OAuth", () => {
       scopes: "ecommerce-shipping",
       accessTokenExpiresAt: new Date(Date.now() + 5 * 60_000),
       refreshTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60_000),
-      accessTokenEncrypted: encryptToken("seller-sandbox-token"),
+      accessTokenEncrypted: encryptToken("seller-sandbox-token", "seller-1"),
     });
 
     await expect(
@@ -96,13 +97,13 @@ describe("Melhor Envio OAuth", () => {
       scopes: "cart-write shipping-checkout",
       accessTokenExpiresAt: new Date(Date.now() + 30_000),
       refreshTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60_000),
-      accessTokenEncrypted: encryptToken("stale-token"),
-      refreshTokenEncrypted: encryptToken("already-rotated-refresh-token"),
+      accessTokenEncrypted: encryptToken("stale-token", "seller-1"),
+      refreshTokenEncrypted: encryptToken("already-rotated-refresh-token", "seller-1"),
     };
     mocks.findUnique.mockResolvedValueOnce(integration).mockResolvedValueOnce({
       ...integration,
       accessTokenExpiresAt: new Date(Date.now() + 60 * 60_000),
-      accessTokenEncrypted: encryptToken("fresh-token"),
+      accessTokenEncrypted: encryptToken("fresh-token", "seller-1"),
     });
     mocks.updateMany.mockResolvedValue({ count: 1 });
     const fetchMock = vi.fn();
@@ -128,14 +129,31 @@ describe("Melhor Envio OAuth", () => {
   });
 
   it("encrypts tokens with authenticated encryption and rejects tampering", () => {
-    const encrypted = encryptToken("private-seller-token");
+    const encrypted = encryptToken("private-seller-token", "seller-1");
     expect(encrypted).not.toContain("private-seller-token");
-    expect(decryptToken(encrypted)).toBe("private-seller-token");
+    expect(decryptToken(encrypted, "seller-1")).toBe("private-seller-token");
 
-    const [iv, authTag, ciphertext] = encrypted.split(".");
+    const [version, iv, authTag, ciphertext] = encrypted.split(".");
     const changedAuthTag = `${authTag?.startsWith("A") ? "B" : "A"}${authTag?.slice(1)}`;
-    const tampered = `${iv}.${changedAuthTag}.${ciphertext}`;
-    expect(() => decryptToken(tampered)).toThrow();
+    const tampered = `${version}.${iv}.${changedAuthTag}.${ciphertext}`;
+    expect(() => decryptToken(tampered, "seller-1")).toThrow();
+  });
+
+  it("binds a stored token to its seller, so a copied ciphertext does not decrypt elsewhere (L-13)", () => {
+    const encrypted = encryptToken("private-seller-token", "seller-1");
+
+    expect(encrypted.startsWith("v2.")).toBe(true);
+    expect(() => decryptToken(encrypted, "seller-2")).toThrow();
+  });
+
+  it("still reads tokens stored in the previous format until the next refresh (L-13)", () => {
+    // Previous format: iv.tag.ciphertext, no seller-bound AAD, same key as the env mock above.
+    const iv = randomBytes(12);
+    const cipher = createCipheriv("aes-256-gcm", Buffer.alloc(32, 7), iv);
+    const ciphertext = Buffer.concat([cipher.update("legacy-token", "utf8"), cipher.final()]);
+    const legacy = [iv, cipher.getAuthTag(), ciphertext].map((part) => part.toString("base64url")).join(".");
+
+    expect(decryptToken(legacy, "seller-1")).toBe("legacy-token");
   });
 
   it("exchanges an authorization code server-to-server and only returns encrypted tokens", async () => {
@@ -151,7 +169,7 @@ describe("Melhor Envio OAuth", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const tokenData = await exchangeMelhorEnvioAuthorizationCode("one-time-code");
+    const tokenData = await exchangeMelhorEnvioAuthorizationCode("one-time-code", "seller-1");
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     const body = new URLSearchParams(String(init.body));
 
@@ -162,14 +180,14 @@ describe("Melhor Envio OAuth", () => {
     expect(body.get("client_secret")).toBe("sandbox-secret");
     expect(body.get("code")).toBe("one-time-code");
     expect(tokenData).toMatchObject({ accountId: "123", scopes: "shipping-calculate" });
-    expect(decryptToken(tokenData.accessTokenEncrypted)).toBe("seller-access-token");
-    expect(decryptToken(tokenData.refreshTokenEncrypted)).toBe("seller-refresh-token");
+    expect(decryptToken(tokenData.accessTokenEncrypted, "seller-1")).toBe("seller-access-token");
+    expect(decryptToken(tokenData.refreshTokenEncrypted, "seller-1")).toBe("seller-refresh-token");
   });
 
   it("rejects an incomplete token response without persisting a connection", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(Response.json({ access_token: "incomplete" })));
 
-    await expect(exchangeMelhorEnvioAuthorizationCode("one-time-code")).rejects.toMatchObject({
+    await expect(exchangeMelhorEnvioAuthorizationCode("one-time-code", "seller-1")).rejects.toMatchObject({
       code: "CONFLICT",
     });
   });

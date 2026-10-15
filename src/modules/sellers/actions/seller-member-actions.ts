@@ -6,7 +6,9 @@ import { z } from "zod";
 
 import { db } from "@/lib/database";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
-import { asApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
+
+import { canManageSellerMember } from "../domain/member-management";
 
 const addMemberSchema = z.object({
   email: z.email("Informe um e-mail válido.").transform((value) => value.toLowerCase()),
@@ -27,6 +29,9 @@ export async function addSellerMemberAction(
   const context = await requireSellerAccess("SELLER_MANAGE");
   const parsed = addMemberSchema.safeParse({ email: formData.get("email"), role: formData.get("role") });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os dados do membro." };
+  if (!canManageSellerMember({ actorRole: context.membership.role, currentRole: null, nextRole: parsed.data.role })) {
+    return { error: "Só o responsável pela loja pode adicionar administradores." };
+  }
 
   try {
     const result = await db.$transaction(async (tx) => {
@@ -64,7 +69,7 @@ export async function addSellerMemberAction(
     revalidatePath("/seller", "layout");
     return result;
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "addSellerMemberAction").message };
   }
 }
 
@@ -79,7 +84,13 @@ export async function updateSellerMemberRoleAction(memberId: string, formData: F
     const updated = await db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "seller_members" WHERE id = ${memberId} AND "sellerId" = ${context.seller.id} FOR UPDATE`;
       const member = await tx.sellerMember.findFirst({ where: { id: memberId, sellerId: context.seller.id } });
-      if (!member || member.role === "OWNER") return false;
+      if (!member) return false;
+      const allowed = canManageSellerMember({
+        actorRole: context.membership.role,
+        currentRole: member.role,
+        nextRole: parsed.data.role,
+      });
+      if (!allowed) return false;
 
       const result = await tx.sellerMember.updateMany({
         where: { id: member.id, sellerId: context.seller.id, role: member.role },
@@ -104,7 +115,7 @@ export async function updateSellerMemberRoleAction(memberId: string, formData: F
     });
     if (updated) revalidatePath("/seller", "layout");
   } catch (error) {
-    throw asApplicationError(error);
+    throw toActionError(error, "updateSellerMemberRoleAction");
   }
 }
 
@@ -118,7 +129,13 @@ export async function removeSellerMemberAction(memberId: string): Promise<void> 
     const removed = await db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "seller_members" WHERE id = ${memberId} AND "sellerId" = ${context.seller.id} FOR UPDATE`;
       const member = await tx.sellerMember.findFirst({ where: { id: memberId, sellerId: context.seller.id } });
-      if (!member || member.role === "OWNER") return false;
+      if (!member) return false;
+      const allowed = canManageSellerMember({
+        actorRole: context.membership.role,
+        currentRole: member.role,
+        nextRole: null,
+      });
+      if (!allowed) return false;
 
       const result = await tx.sellerMember.deleteMany({
         where: { id: member.id, sellerId: context.seller.id, role: member.role },
@@ -137,6 +154,6 @@ export async function removeSellerMemberAction(memberId: string): Promise<void> 
     });
     if (removed) revalidatePath("/seller", "layout");
   } catch (error) {
-    throw asApplicationError(error);
+    throw toActionError(error, "removeSellerMemberAction");
   }
 }

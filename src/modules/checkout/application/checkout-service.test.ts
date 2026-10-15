@@ -19,6 +19,8 @@ const mocks = vi.hoisted(() => {
     charges: vi.fn(),
     applyOutcome: vi.fn(),
     reactivate: vi.fn(),
+    findCoupon: vi.fn(async (): Promise<unknown> => undefined),
+    participants: vi.fn(),
   };
 });
 vi.mock("server-only", () => ({}));
@@ -27,8 +29,11 @@ vi.mock("@/lib/database", () => ({ db: mocks.db }));
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("@/lib/payment/mercado-pago-provider", () => ({ mercadoPagoProvider: {} }));
 vi.mock("@/modules/cart/infrastructure/cart-access", () => ({ hashGuestToken: (token: string) => `hash:${token}` }));
+vi.mock("@/modules/coupons/queries/coupon-participation", () => ({
+  listActiveCouponParticipantSellerIds: mocks.participants,
+}));
 vi.mock("@/modules/coupons/application/validate-coupon-for-customer", () => ({
-  findActiveCoupon: vi.fn(async () => undefined),
+  findActiveCoupon: mocks.findCoupon,
 }));
 vi.mock("@/modules/payments/application/apply-payment-outcome", () => ({ applyPaymentOutcome: mocks.applyOutcome }));
 vi.mock("./create-pending-order", () => ({
@@ -199,4 +204,29 @@ it("persists the definitive rejection before settling so recovery can release it
     },
   });
   expect(mocks.applyOutcome).not.toHaveBeenCalled();
+});
+
+const approvedPayment = () =>
+  provider(vi.fn(async () => ({ externalId: "mp-1", status: "APPROVED" as const, providerMetadata: {} })));
+
+it("passes the sellers joined to a seller-funded campaign to the charge calculation", async () => {
+  mocks.applyOutcome.mockResolvedValue("PAID");
+  mocks.findCoupon.mockResolvedValue({ id: "coupon-1", ownerType: "MARKETPLACE", fundedBy: "SELLER" });
+  mocks.participants.mockResolvedValue(["seller-a"]);
+
+  await executeCheckout(input, approvedPayment());
+
+  expect(mocks.participants).toHaveBeenCalledWith("coupon-1");
+  expect(mocks.charges).toHaveBeenCalledWith(
+    expect.objectContaining({ coupon: expect.objectContaining({ participatingSellerIds: ["seller-a"] }) }),
+  );
+});
+
+it("does not look up participants for coupons that are not campaigns", async () => {
+  mocks.applyOutcome.mockResolvedValue("PAID");
+  mocks.findCoupon.mockResolvedValue({ id: "coupon-2", ownerType: "MARKETPLACE", fundedBy: "MARKETPLACE" });
+
+  await executeCheckout(input, approvedPayment());
+
+  expect(mocks.participants).not.toHaveBeenCalled();
 });

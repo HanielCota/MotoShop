@@ -11,6 +11,9 @@
  * Idempotente: pode ser executado várias vezes. Nunca apaga nem altera dados que não
  * foram criados por este script. Para remover: `scripts/remove-review-data.ts`.
  *
+ * Variável obrigatória:
+ * - REVIEW_ACCOUNTS_PASSWORD  senha de todas as contas `review.*`; é regravada a cada execução.
+ *
  * Variáveis opcionais:
  * - REVIEW_PUBLISH_STORES=true  publica as lojas aprovadas/ativas (padrão: PENDING, invisíveis);
  * - REVIEW_VIEWER_CUSTOMER_EMAILS  contas EXISTENTES que recebem histórico de cliente fictício
@@ -21,6 +24,7 @@
  * Uso: node node_modules/tsx/dist/cli.mjs scripts/seed-review-data.ts
  */
 import { config } from "dotenv";
+import { requireScriptDatabaseUrl } from "./database-guard";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import { hashPassword } from "better-auth/crypto";
 import { createHash, randomBytes } from "node:crypto";
@@ -29,12 +33,10 @@ import { join } from "node:path";
 
 import { PrismaClient, type Prisma } from "../src/generated/prisma/client";
 import type { ReviewStoreCode } from "./review-seed-content";
+import { ensureReviewCouponsAndCampaign, ensureReviewVariantColumns } from "./review-seed-catalog-extras";
 import { renderStoreBanner, renderStoreLogo, seedExpandedData } from "./review-seed-expanded";
-import { must } from "./must";
+import { must, requireEnv } from "./must";
 import { parseEmailList } from "./review-seed-ids";
-
-/** Senha compartilhada por todas as contas de revisão (somente ambiente de desenvolvimento). */
-export const REVIEW_ACCOUNTS_PASSWORD = "Revisao-Demo-2026!";
 
 export const REVIEW_EMAIL_DOMAIN = "@example.test";
 export const REVIEW_ORDER_PREFIX = "MS-REVIEW-";
@@ -45,8 +47,7 @@ const PUBLISH_STORES = process.env.REVIEW_PUBLISH_STORES === "true";
 
 config({ path: ".env.local", quiet: true });
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) throw new Error("DATABASE_URL is required.");
+const databaseUrl = requireScriptDatabaseUrl(process.env, "db:seed:review");
 
 const db = new PrismaClient({ adapter: new PrismaNeon({ connectionString: databaseUrl }) });
 
@@ -2064,7 +2065,7 @@ async function ensurePostSale(
 }
 
 async function main() {
-  const passwordHash = await hashPassword(REVIEW_ACCOUNTS_PASSWORD);
+  const passwordHash = await hashPassword(requireEnv("REVIEW_ACCOUNTS_PASSWORD"));
   const userIds = await ensureUsers(passwordHash);
   const stores = await ensureStores(userIds);
   const { variants, productIds, findFitment } = await ensureProducts(stores, userIds);
@@ -2104,6 +2105,14 @@ async function main() {
     notice: NOTICE,
   });
 
+  // 13/10/2026: variant gender/color/size, coupons shown on the product page and one campaign.
+  await ensureReviewVariantColumns(db, trackMany);
+  await ensureReviewCouponsAndCampaign(db, {
+    sellers: { garagem: stores.garagem.sellerId, box77: stores.box77.sellerId },
+    now,
+    track: trackMany,
+  });
+
   const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((email) => email.trim().toLowerCase());
   console.log(JSON.stringify(counts, null, 2));
   console.log(
@@ -2111,10 +2120,10 @@ async function main() {
       .map((user) => user.email)
       .join(", ")}`,
   );
-  console.log("Senha: constante REVIEW_ACCOUNTS_PASSWORD em scripts/seed-review-data.ts");
+  console.log("Senha: valor de REVIEW_ACCOUNTS_PASSWORD (.env.local).");
   if (!adminEmails.includes(users.admin.email))
     console.log(
-      `Admin: adicione ${users.admin.email} em ADMIN_EMAILS (.env.local) e reinicie o servidor para acessar /admin.`,
+      `Admin: para revisar /admin num servidor local, adicione ${users.admin.email} em ADMIN_EMAILS do .env.local e reinicie. Nunca coloque contas review.* em ADMIN_EMAILS da produção.`,
     );
   console.log(`\nAcompanhamento do pedido convidado (token renovado a cada execução):\n${guestLink}`);
   console.log(

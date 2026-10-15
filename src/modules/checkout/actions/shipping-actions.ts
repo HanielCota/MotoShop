@@ -4,8 +4,10 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { getCartIdentity } from "@/modules/cart/infrastructure/cart-access";
-import { ApplicationError, asApplicationError } from "@/shared/errors/application-error";
+import { ApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 import { consumeRateLimit } from "@/shared/rate-limit/consume-rate-limit";
+import { getClientIp } from "@/shared/request/client-ip";
 
 import {
   quoteShippingForActiveCart,
@@ -27,9 +29,7 @@ async function assertShippingQuoteRateLimit(createGuest: boolean) {
       ? `user:${identity.userId}`
       : `guest:${identity.guestAccessTokenHash}`
     : null;
-  const headerStore = await headers();
-  const clientAddress =
-    headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || headerStore.get("x-real-ip")?.trim() || "unknown";
+  const clientAddress = getClientIp(await headers());
 
   const checks = [
     ...(requesterKey ? [{ key: `shipping-quote:${requesterKey}`, windowSeconds: 60, max: 20 }] : []),
@@ -56,7 +56,7 @@ export async function quoteShippingAction(postalCode: unknown): Promise<Shipping
     await assertShippingQuoteRateLimit(false);
     return { quotes: await quoteShippingForActiveCart(parsed.data) };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "quoteShippingAction").message };
   }
 }
 
@@ -79,6 +79,6 @@ export async function quoteProductShippingAction(input: {
     await assertShippingQuoteRateLimit(true);
     return { quotes: await quoteShippingForVariant(parsed.data.variantId, parsed.data.postalCode) };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "quoteProductShippingAction").message };
   }
 }

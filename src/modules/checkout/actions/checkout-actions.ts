@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getCartIdentity } from "@/modules/cart/infrastructure/cart-access";
-import { asApplicationError, ApplicationError } from "@/shared/errors/application-error";
+import { setGuestOrderCookie } from "@/modules/orders/infrastructure/guest-order-cookie";
+import { ApplicationError } from "@/shared/errors/application-error";
+import { toActionError } from "@/shared/errors/action-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 import { executeCheckout, type CheckoutResult } from "../application/checkout-service";
@@ -18,7 +20,6 @@ import { checkoutSchema } from "../schemas/checkout";
 export type CheckoutActionState = {
   error?: string;
   orderNumber?: string;
-  guestAccessToken?: string;
   paymentDeclined?: true;
 };
 
@@ -65,8 +66,10 @@ export async function createCheckoutAction(
           "O pagamento foi recusado e o pedido foi cancelado. Seu carrinho foi mantido: revise os dados do cartão ou escolha outra forma de pagamento.",
         paymentDeclined: true,
       };
-    return result;
+    // The guest token goes to an HttpOnly cookie for this order's page; it never reaches the browser URL.
+    if (result.guestAccessToken) await setGuestOrderCookie(result.orderNumber, result.guestAccessToken);
+    return { orderNumber: result.orderNumber };
   } catch (error) {
-    return { error: asApplicationError(error).message };
+    return { error: toActionError(error, "createCheckoutAction").message };
   }
 }

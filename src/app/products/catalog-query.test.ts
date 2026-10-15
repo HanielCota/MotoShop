@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildCatalogHref,
+  catalogFormEntries,
   clearCatalogFiltersHref,
   countActiveCatalogFilters,
   normalizeCatalogPrice,
@@ -21,6 +22,9 @@ const base: CatalogQuery = {
   minPrice: null,
   maxPrice: null,
   promotion: "ALL",
+  gender: null,
+  color: null,
+  size: null,
   page: 1,
 };
 
@@ -42,8 +46,29 @@ describe("catalog query", () => {
     );
   });
 
+  it("keeps variant attributes in the URL and removes them one at a time", () => {
+    const query = { ...base, gender: "FEMALE" as const, color: "Preto", size: "M" };
+    expect(buildCatalogHref(query)).toBe("/products?gender=FEMALE&color=Preto&size=M");
+    expect(removeCatalogFilterHref(query, "color")).toBe("/products?gender=FEMALE&size=M");
+    expect(countActiveCatalogFilters(query)).toBe(3);
+    expect(clearCatalogFiltersHref(query)).toBe("/products?moto=all");
+  });
+
   it("counts price range as one filter", () => {
     expect(countActiveCatalogFilters({ ...base, minPrice: 1, maxPrice: 2, q: "x" })).toBe(2);
+  });
+
+  it("keeps the other filters as hidden fields for the search band, restarting at page 1", () => {
+    const query = { ...base, q: "old", moto: "m1", brand: "b1", sort: "price_asc" as const, page: 4 };
+    expect(catalogFormEntries(query, { q: null })).toEqual([
+      ["moto", "m1"],
+      ["brand", "b1"],
+      ["sort", "price_asc"],
+    ]);
+  });
+
+  it("keeps an explicit 'all motorcycles' choice in the search band", () => {
+    expect(catalogFormEntries({ ...base, motoCleared: true }, { q: null })).toEqual([["moto", "all"]]);
   });
 });
 

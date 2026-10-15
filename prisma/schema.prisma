@@ -37,6 +37,12 @@ enum ProductStatus {
   ARCHIVED
 }
 
+enum VariantGender {
+  MALE
+  FEMALE
+  UNISEX
+}
+
 enum InventoryMovementType {
   SALE
   RESERVATION
@@ -196,6 +202,10 @@ model User {
   email                    String                @unique
   emailVerified            Boolean               @default(false)
   emailOrderUpdatesEnabled Boolean               @default(true)
+  /// CPF (11 digits) or CNPJ (14 digits), digits only; optional, edited in /account/profile.
+  taxId                    String?
+  /// Brazilian phone with area code, digits only (10 or 11); optional.
+  phone                    String?
   image                    String?
   createdAt                DateTime              @default(now())
   updatedAt                DateTime              @updatedAt
@@ -281,12 +291,12 @@ model RateLimitCounter {
 }
 
 model Seller {
-  id                     String                 @id @default(cuid())
+  id                     String                      @id @default(cuid())
   type                   SellerType
-  status                 SellerStatus           @default(PENDING)
+  status                 SellerStatus                @default(PENDING)
   commissionBpsOverride  Int?
-  createdAt              DateTime               @default(now())
-  updatedAt              DateTime               @updatedAt
+  createdAt              DateTime                    @default(now())
+  updatedAt              DateTime                    @updatedAt
   members                SellerMember[]
   store                  Store?
   products               Product[]
@@ -297,6 +307,7 @@ model Seller {
   sellerOrders           SellerOrder[]
   orderItems             OrderItem[]
   coupons                Coupon[]
+  couponParticipations   CouponSellerParticipation[]
   returnRequests         ReturnRequest[]
   productReviews         ProductReview[]
   sellerReviews          SellerReview[]
@@ -312,9 +323,9 @@ model Seller {
 }
 
 model SellerShippingIntegration {
-  id                    String   @id @default(cuid())
-  sellerId              String   @unique
-  provider              String   @default("MELHOR_ENVIO")
+  id                    String    @id @default(cuid())
+  sellerId              String    @unique
+  provider              String    @default("MELHOR_ENVIO")
   accountId             String?
   accessTokenEncrypted  String
   refreshTokenEncrypted String
@@ -322,9 +333,9 @@ model SellerShippingIntegration {
   accessTokenExpiresAt  DateTime
   refreshTokenExpiresAt DateTime
   refreshLeaseUntil     DateTime?
-  connectedAt           DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  seller                Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  connectedAt           DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  seller                Seller    @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
   @@map("seller_shipping_integrations")
 }
@@ -481,6 +492,9 @@ model ProductVariant {
   heightInMillimeters     Int?
   widthInMillimeters      Int?
   lengthInMillimeters     Int?
+  gender                  VariantGender?
+  color                   String?
+  size                    String?
   active                  Boolean             @default(true)
   productId               String
   sellerId                String
@@ -499,6 +513,9 @@ model ProductVariant {
   @@unique([id, sellerId])
   @@index([productId, active])
   @@index([sellerId, active])
+  @@index([gender, active])
+  @@index([color, active])
+  @@index([size, active])
   @@map("product_variants")
 }
 
@@ -878,7 +895,7 @@ model PaymentTransaction {
 }
 
 model Shipment {
-  id                    String         @id @default(cuid())
+  id                    String                   @id @default(cuid())
   provider              String
   externalShipmentId    String?
   serviceCode           String?
@@ -889,7 +906,7 @@ model Shipment {
   providerMetadata      Json?
   trackingCode          String?
   trackingUrl           String?
-  status                ShipmentStatus @default(PENDING)
+  status                ShipmentStatus           @default(PENDING)
   purchaseState         ShipmentPurchaseState?
   purchaseError         String?
   generationState       ShipmentGenerationState?
@@ -897,10 +914,10 @@ model Shipment {
   generatedAt           DateTime?
   shippedAt             DateTime?
   deliveredAt           DateTime?
-  sellerOrderId         String         @unique
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
-  sellerOrder           SellerOrder    @relation(fields: [sellerOrderId], references: [id], onDelete: Restrict)
+  sellerOrderId         String                   @unique
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  sellerOrder           SellerOrder              @relation(fields: [sellerOrderId], references: [id], onDelete: Restrict)
 
   @@unique([provider, externalShipmentId])
   @@index([trackingCode])
@@ -1101,28 +1118,51 @@ model ProductQuestion {
 }
 
 model Coupon {
-  id                     String              @id @default(cuid())
-  code                   String              @unique
+  id                     String                      @id @default(cuid())
+  code                   String                      @unique
   ownerType              CouponOwnerType
   discountType           CouponDiscountType
   percentageBps          Int?
   fixedAmountInCents     Int?
-  minimumPurchaseInCents Int                 @default(0)
+  minimumPurchaseInCents Int                         @default(0)
   startsAt               DateTime?
   endsAt                 DateTime?
   globalUsageLimit       Int?
   perCustomerUsageLimit  Int?
-  active                 Boolean             @default(true)
+  active                 Boolean                     @default(true)
+  showOnProductPage      Boolean                     @default(false)
   fundedBy               CouponFundingSource
   sellerId               String?
-  createdAt              DateTime            @default(now())
-  updatedAt              DateTime            @updatedAt
-  seller                 Seller?             @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  createdAt              DateTime                    @default(now())
+  updatedAt              DateTime                    @updatedAt
+  seller                 Seller?                     @relation(fields: [sellerId], references: [id], onDelete: Restrict)
   redemptions            CouponRedemption[]
+  sellerParticipations   CouponSellerParticipation[]
 
   @@index([sellerId, active])
+  @@index([sellerId, showOnProductPage, active])
   @@index([active, startsAt, endsAt])
   @@map("coupons")
+}
+
+/// Seller opt-in to a Moto Shop campaign (coupon owned by MARKETPLACE and funded by SELLER).
+/// The campaign discount only applies to items of sellers with `leftAt` null, and comes out of
+/// their own value. Leaving keeps the row (history) and only affects later checkouts.
+model CouponSellerParticipation {
+  id        String    @id @default(cuid())
+  couponId  String
+  sellerId  String
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  coupon    Coupon    @relation(fields: [couponId], references: [id], onDelete: Restrict)
+  seller    Seller    @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+
+  @@unique([couponId, sellerId])
+  @@index([sellerId, leftAt])
+  @@index([couponId, leftAt])
+  @@map("coupon_seller_participations")
 }
 
 model CouponRedemption {

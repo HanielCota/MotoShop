@@ -19,6 +19,7 @@ vi.mock("@/modules/notifications/workflows/seller-order-fulfillment-notification
   sendSellerOrderFulfillmentNotification: {},
 }));
 vi.mock("@/modules/outbox/workflows/dispatch-outbox-workflow", () => ({ dispatchPendingOutboxEventsWorkflow: {} }));
+vi.mock("@/shared/rate-limit/purge-rate-limits-workflow", () => ({ purgeExpiredRateLimitsWorkflow: {} }));
 
 import { POST, PUT } from "./route";
 

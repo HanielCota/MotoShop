@@ -14,11 +14,9 @@ import {
 export function RequestCancellationForm({
   orderNumber,
   sellerOrderId,
-  accessToken,
 }: {
   orderNumber: string;
   sellerOrderId: string;
-  accessToken?: string;
 }) {
   const [feedback, setFeedback] = useState<CancellationActionState>({});
   const [open, setOpen] = useState(false);
@@ -34,7 +32,6 @@ export function RequestCancellationForm({
           reason: "CUSTOMER_REQUEST",
           customerMessage: customerMessage.trim() || undefined,
           idempotencyKey: crypto.randomUUID(),
-          ...(accessToken ? { accessToken } : {}),
         });
         setFeedback(result);
         if (!result.error) setOpen(false);
