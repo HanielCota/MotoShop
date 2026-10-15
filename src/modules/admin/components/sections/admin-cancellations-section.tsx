@@ -122,7 +122,15 @@ export async function AdminCancellationsSection({ searchParams }: AdminSectionPr
                 <p className="text-muted-foreground mt-1 text-xs">Solicitado em {formatDateTime(request.createdAt)}</p>
               </div>
               {request.status === "REQUESTED" || request.status === "APPROVED" ? (
-                <CancellationStatusActions cancellationRequestId={request.id} status={request.status} />
+                <CancellationStatusActions
+                  cancellationRequestId={request.id}
+                  status={request.status}
+                  summary={{
+                    orderNumber: request.order.orderNumber,
+                    storeName: request.seller.store?.name ?? "Lojista",
+                    amountInCents: request.amountInCents,
+                  }}
+                />
               ) : null}
             </li>
           ))}

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ActionForm } from "@/components/ui/action-form";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -55,11 +56,27 @@ function CatalogRow({
           </Badge>
         ) : null}
       </span>
-      <ActionForm action={toggle}>
-        <button type="submit" className={cn(buttonVariants({ variant: "link", size: "link-xs" }), "shrink-0")}>
-          {active ? "Desativar" : "Ativar"}
-        </button>
-      </ActionForm>
+      {active ? (
+        // Desativar some com a referência dos filtros e do cadastro: pede confirmação (BUG-004).
+        <ConfirmDialog
+          trigger={
+            <button type="button" className={cn(buttonVariants({ variant: "link", size: "link-xs" }), "shrink-0")}>
+              Desativar
+            </button>
+          }
+          title={`Desativar ${typeof label === "string" ? label : "este item"}?`}
+          description="Ele deixa de aparecer para lojistas e no site até ser reativado. Produtos já cadastrados não são apagados."
+          confirmLabel="Desativar"
+          tone="destructive"
+          onConfirm={toggle}
+        />
+      ) : (
+        <ActionForm action={toggle}>
+          <button type="submit" className={cn(buttonVariants({ variant: "link", size: "link-xs" }), "shrink-0")}>
+            Ativar
+          </button>
+        </ActionForm>
+      )}
     </li>
   );
 }

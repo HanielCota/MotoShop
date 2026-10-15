@@ -31,9 +31,12 @@ const copy: Record<
 export function SellerApplicationStatus({
   storeName,
   status,
+  rejectionReason = null,
 }: {
   storeName: string;
   status: Exclude<SellerStatus, "APPROVED" | "ACTIVE">;
+  /** Motivo informado pelo Moto Shop ao recusar o cadastro (BUG-005). */
+  rejectionReason?: string | null;
 }) {
   const content = copy[status];
 
@@ -45,6 +48,11 @@ export function SellerApplicationStatus({
       </CardHeader>
       <CardContent className="flex flex-col items-start gap-3">
         <Badge variant="secondary">Status: {content.label}</Badge>
+        {status === "REJECTED" && rejectionReason ? (
+          <p className="text-sm">
+            <span className="font-medium">Motivo da recusa:</span> {rejectionReason}
+          </p>
+        ) : null}
         <p className="text-muted-foreground text-sm">{content.guidance}</p>
       </CardContent>
     </Card>

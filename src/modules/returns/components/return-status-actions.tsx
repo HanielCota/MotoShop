@@ -1,7 +1,9 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
+import { AfterSalesSummaryList, type AfterSalesSummary } from "@/shared/presentation/after-sales-summary";
 
 import { useState, useTransition } from "react";
 
@@ -10,7 +12,15 @@ import { callServerAction } from "@/shared/forms/server-action-submit";
 
 type Feedback = { error?: string; success?: string };
 
-export function ReturnStatusActions({ returnRequestId, status }: { returnRequestId: string; status: string }) {
+export function ReturnStatusActions({
+  returnRequestId,
+  status,
+  summary,
+}: {
+  returnRequestId: string;
+  status: string;
+  summary: AfterSalesSummary;
+}) {
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<Feedback>({});
   const canReview = status === "REQUESTED" || status === "UNDER_REVIEW";
@@ -62,20 +72,25 @@ export function ReturnStatusActions({ returnRequestId, status }: { returnRequest
         </Button>
       ) : null}
       {canRefund ? (
-        <Button
-          pending={pending}
-          pendingLabel="Reembolsando…"
-          size="sm"
-          type="button"
-          onClick={() =>
-            startTransition(async () => {
-              const result = await callServerAction(() => refundReturnRequestAction(returnRequestId));
-              setFeedback(result);
-            })
+        // Dinheiro saindo: confirma com pedido, loja e valor antes do reembolso (BUG-002).
+        <ConfirmDialog
+          trigger={
+            <Button size="sm" type="button" disabled={pending}>
+              Processar reembolso
+            </Button>
           }
-        >
-          Processar reembolso
-        </Button>
+          title="Reembolsar esta devolução?"
+          description="O reembolso é pedido ao Mercado Pago e não pode ser desfeito por aqui."
+          summary={<AfterSalesSummaryList summary={summary} />}
+          confirmLabel="Reembolsar"
+          pendingLabel="Reembolsando…"
+          tone="destructive"
+          onConfirm={async () => {
+            const result = await callServerAction(() => refundReturnRequestAction(returnRequestId));
+            if (!result.error) setFeedback(result);
+            return { error: result.error ?? null };
+          }}
+        />
       ) : null}
       <FormMessage error={feedback.error ?? null} success={feedback.success ?? null} className="text-xs" />
     </div>

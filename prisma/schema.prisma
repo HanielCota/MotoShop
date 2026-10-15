@@ -304,6 +304,8 @@ model Seller {
   type                   SellerType
   status                 SellerStatus                @default(PENDING)
   commissionBpsOverride  Int?
+  /// Motivo informado pelo Admin ao recusar o cadastro (BUG-005); exibido ao lojista na Central.
+  rejectionReason        String?
   createdAt              DateTime                    @default(now())
   updatedAt              DateTime                    @updatedAt
   members                SellerMember[]

@@ -4,6 +4,7 @@ import type { Route } from "next";
 
 import { ActionForm } from "@/components/ui/action-form";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { formatDate, formatMoneyInCents, formatCount } from "@/lib/format";
@@ -108,11 +109,26 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
                     Ver lojas ({coupon._count.sellerParticipations})
                   </Link>
                 ) : null}
-                <ActionForm action={setMarketplaceCouponActiveAction.bind(null, coupon.id, !coupon.active)}>
-                  <button type="submit" className={buttonVariants({ variant: "link", size: "link-xs" })}>
-                    {coupon.active ? "Desativar" : "Ativar"}
-                  </button>
-                </ActionForm>
+                {coupon.active ? (
+                  <ConfirmDialog
+                    trigger={
+                      <button type="button" className={buttonVariants({ variant: "link", size: "link-xs" })}>
+                        Desativar
+                      </button>
+                    }
+                    title={`Desativar o cupom ${coupon.code}?`}
+                    description="Clientes deixam de poder usar o cupom até ele ser reativado."
+                    confirmLabel="Desativar"
+                    tone="destructive"
+                    onConfirm={setMarketplaceCouponActiveAction.bind(null, coupon.id, false)}
+                  />
+                ) : (
+                  <ActionForm action={setMarketplaceCouponActiveAction.bind(null, coupon.id, true)}>
+                    <button type="submit" className={buttonVariants({ variant: "link", size: "link-xs" })}>
+                      Ativar
+                    </button>
+                  </ActionForm>
+                )}
               </td>
             </tr>
           ))}

@@ -105,7 +105,11 @@ export async function AdminDisputesSection({ searchParams }: AdminSectionProps) 
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">Aberta em {formatDateTime(dispute.createdAt)}</p>
               </div>
-              <DisputeStatusActions disputeId={dispute.id} status={dispute.status} />
+              <DisputeStatusActions
+                disputeId={dispute.id}
+                status={dispute.status}
+                summary={{ orderNumber: dispute.order.orderNumber, storeName: dispute.seller.store?.name ?? "Lojista" }}
+              />
             </li>
           ))}
         </AdminList>

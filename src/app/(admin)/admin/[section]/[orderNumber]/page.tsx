@@ -62,7 +62,7 @@ export default async function AdminOrderDetailPage({
       <section className="space-y-4">
         <SectionHeader title="Lojas" description="Cada loja tem envio, cancelamento, devolução e disputa próprios." />
         {order.sellerOrders.map((sellerOrder) => (
-          <AdminSellerOrderCard key={sellerOrder.id} sellerOrder={sellerOrder} />
+          <AdminSellerOrderCard key={sellerOrder.id} orderNumber={order.orderNumber} sellerOrder={sellerOrder} />
         ))}
       </section>
 

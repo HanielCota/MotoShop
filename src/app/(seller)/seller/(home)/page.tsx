@@ -57,7 +57,11 @@ export default async function SellerHomePage({ searchParams }: { searchParams: S
     return (
       <>
         <PageHeader eyebrow="Central do Lojista" title={context.seller.store?.name ?? "Sua loja"} />
-        <SellerApplicationStatus storeName={context.seller.store?.name ?? "Sua loja"} status={context.seller.status} />
+        <SellerApplicationStatus
+          storeName={context.seller.store?.name ?? "Sua loja"}
+          status={context.seller.status}
+          rejectionReason={context.seller.rejectionReason}
+        />
       </>
     );
   }
