@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { AlertDialog } from "@base-ui/react/alert-dialog";
-import { Trash2, Upload } from "lucide-react";
+import { ArrowLeft, ArrowRight, Trash2, Upload } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
@@ -205,22 +205,22 @@ export function ProductImageManager({
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  aria-label="Mover imagem para cima"
+                  size="icon"
+                  aria-label={index === 1 ? "Tornar esta imagem a capa" : "Mover imagem para antes"}
                   disabled={uploading || busyImageId !== undefined || index === 0}
                   onClick={() => void moveImage(image.id, -1)}
                 >
-                  ←
+                  <ArrowLeft aria-hidden="true" />
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  size="sm"
-                  aria-label="Mover imagem para baixo"
+                  size="icon"
+                  aria-label="Mover imagem para depois"
                   disabled={uploading || busyImageId !== undefined || index === images.length - 1}
                   onClick={() => void moveImage(image.id, 1)}
                 >
-                  →
+                  <ArrowRight aria-hidden="true" />
                 </Button>
                 <AlertDialog.Root>
                   <AlertDialog.Trigger
