@@ -15,6 +15,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/database", () => ({ db: { $transaction: mocks.transaction } }));
+vi.mock("server-only", () => ({}));
+vi.mock("@/config/get-application-base-url", () => ({ getApplicationBaseUrl: () => "https://moto.example.test" }));
+vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ consumeRateLimit: vi.fn(async () => ({ allowed: true })) }));
+vi.mock("../application/send-seller-invite-email", () => ({ sendSellerInviteEmail: vi.fn() }));
 vi.mock("@/modules/auth/application/authorization", () => ({
   requireSellerAccess: vi.fn(async () => ({
     seller: { id: "seller-a" },
@@ -24,7 +28,7 @@ vi.mock("@/modules/auth/application/authorization", () => ({
 }));
 
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
-import { addSellerMemberAction, removeSellerMemberAction, updateSellerMemberRoleAction } from "./seller-member-actions";
+import { removeSellerMemberAction, updateSellerMemberRoleAction } from "./seller-member-actions";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -48,39 +52,7 @@ beforeEach(() => {
   mocks.memberDelete.mockResolvedValue({ count: 1 });
 });
 
-function memberForm() {
-  const form = new FormData();
-  form.set("email", "member@example.test");
-  form.set("role", "CATALOG");
-  return form;
-}
-
 describe("seller member audit transactions", () => {
-  it("adds a member and its audit record in one transaction", async () => {
-    mocks.memberFind.mockResolvedValue(null);
-    const result = await addSellerMemberAction({}, memberForm());
-
-    expect(result.success).toContain("foi adicionado");
-    expect(mocks.transaction).toHaveBeenCalledOnce();
-    expect(mocks.lock).toHaveBeenCalledOnce();
-    expect(mocks.memberCreate).toHaveBeenCalledWith({
-      data: { sellerId: "seller-a", userId: "member-a", role: "CATALOG" },
-    });
-    expect(mocks.auditCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ action: "SELLER_MEMBER_ADDED" }) }),
-    );
-  });
-
-  it("does not add a user whose e-mail is not verified", async () => {
-    mocks.memberFind.mockResolvedValue(null);
-    mocks.userFind.mockResolvedValue({ id: "member-a", email: "member@example.test", emailVerified: false });
-    const result = await addSellerMemberAction({}, memberForm());
-
-    expect(result.error).toContain("confirmar o e-mail");
-    expect(mocks.memberCreate).not.toHaveBeenCalled();
-    expect(mocks.auditCreate).not.toHaveBeenCalled();
-  });
-
   it("updates a member role and its audit record in one tenant-scoped transaction", async () => {
     const form = new FormData();
     form.set("role", "ADMIN");
@@ -174,18 +146,6 @@ describe("seller admin management is reserved to the owner (L-17)", () => {
     session: { user: { id: "admin-a" } },
     membership: { role: "ADMIN" },
   };
-
-  it("does not let an admin add another admin", async () => {
-    vi.mocked(requireSellerAccess).mockResolvedValueOnce(adminContext as never);
-    const form = new FormData();
-    form.set("email", "member@example.test");
-    form.set("role", "ADMIN");
-
-    const result = await addSellerMemberAction({}, form);
-
-    expect(result.error).toBe("Só o responsável pela loja pode adicionar administradores.");
-    expect(mocks.transaction).not.toHaveBeenCalled();
-  });
 
   it("does not let an admin demote or remove another admin", async () => {
     vi.mocked(requireSellerAccess)

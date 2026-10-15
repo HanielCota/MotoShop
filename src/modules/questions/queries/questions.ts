@@ -31,7 +31,8 @@ export async function listSellerQuestions(
             { question: { contains: query, mode: "insensitive" as const } },
             { product: { name: { contains: query, mode: "insensitive" as const } } },
             { product: { slug: { contains: query, mode: "insensitive" as const } } },
-            { askedBy: { email: { contains: query, mode: "insensitive" as const } } },
+            // Só o e-mail completo (L-18): busca parcial permitiria reconstruir o endereço letra a letra.
+            { askedBy: { email: { equals: query, mode: "insensitive" as const } } },
           ],
         }
       : {}),
@@ -42,7 +43,7 @@ export async function listSellerQuestions(
       where,
       include: {
         product: { select: { name: true, slug: true } },
-        askedBy: { select: { name: true, email: true } },
+        askedBy: { select: { name: true } },
         answeredBy: { select: { name: true } },
       },
       orderBy: input.sort === "oldest" ? [{ createdAt: "asc" }] : [{ createdAt: "desc" }],

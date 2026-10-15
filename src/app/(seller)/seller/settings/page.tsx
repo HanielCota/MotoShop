@@ -5,6 +5,7 @@ import { ChevronRight, TicketPercent, Truck } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireSellerDashboardContext } from "@/modules/sellers/application/get-seller-dashboard-context";
 import { SellerStoreSettingsSection } from "@/modules/sellers/components/dashboard/seller-store-settings-section";
+import { SellerMembershipCard } from "@/modules/sellers/components/dashboard/seller-membership-card";
 import { SellerTeamCard } from "@/modules/sellers/components/dashboard/seller-team-card";
 import { SellerVipCard } from "@/modules/sellers/components/dashboard/seller-vip-card";
 
@@ -42,7 +43,7 @@ function SettingsShortcut({
 }
 
 export default async function SellerSettingsPage() {
-  const { seller, store, permissions } = await requireSellerDashboardContext();
+  const { seller, store, permissions, membership } = await requireSellerDashboardContext();
 
   return (
     <>
@@ -72,7 +73,8 @@ export default async function SellerSettingsPage() {
         </nav>
       ) : null}
       <SellerStoreSettingsSection store={store} canManageStore={permissions.canManageStore} />
-      {permissions.canManageStore ? <SellerTeamCard members={seller.members} /> : null}
+      {permissions.canManageStore ? <SellerTeamCard sellerId={seller.id} members={seller.members} /> : null}
+      {membership.role !== "OWNER" ? <SellerMembershipCard storeName={store.name} role={membership.role} /> : null}
       <SellerVipCard subscription={seller.subscriptions[0]} />
     </>
   );

@@ -29,6 +29,13 @@ enum SellerMemberRole {
   FINANCE
 }
 
+enum SellerMemberInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+}
+
 enum ProductStatus {
   DRAFT
   SUBMITTED
@@ -212,6 +219,8 @@ model User {
   accounts                 Account[]
   sessions                 Session[]
   memberships              SellerMember[]
+  sentSellerInvites        SellerMemberInvite[]  @relation("SellerMemberInviteInviter")
+  acceptedSellerInvites    SellerMemberInvite[]  @relation("SellerMemberInviteAcceptor")
   carts                    Cart[]
   orders                   Order[]
   inventoryMovements       InventoryMovement[]   @relation("InventoryMovementActor")
@@ -298,6 +307,7 @@ model Seller {
   createdAt              DateTime                    @default(now())
   updatedAt              DateTime                    @updatedAt
   members                SellerMember[]
+  memberInvites          SellerMemberInvite[]
   store                  Store?
   products               Product[]
   productVariants        ProductVariant[]
@@ -370,6 +380,31 @@ model SellerMember {
   @@unique([sellerId, userId])
   @@index([userId])
   @@map("seller_members")
+}
+
+/// Convite para a equipe da loja (M-04): a pessoa só vira membro ao aceitar com a conta do mesmo
+/// e-mail verificado. Só o hash do token fica no banco; no máximo um convite PENDING por loja e e-mail
+/// (índice parcial na migração).
+model SellerMemberInvite {
+  id               String                   @id @default(cuid())
+  email            String
+  role             SellerMemberRole
+  tokenHash        String                   @unique
+  status           SellerMemberInviteStatus @default(PENDING)
+  expiresAt        DateTime
+  respondedAt      DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  sellerId         String
+  invitedByUserId  String?
+  acceptedByUserId String?
+  seller           Seller                   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  invitedBy        User?                    @relation("SellerMemberInviteInviter", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  acceptedBy       User?                    @relation("SellerMemberInviteAcceptor", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([sellerId, status, createdAt])
+  @@index([email, status])
+  @@map("seller_member_invites")
 }
 
 model Store {

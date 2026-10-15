@@ -69,7 +69,7 @@ export default async function SellerQuestionsPage({
               label="Buscar pergunta"
               name="questionQ"
               value={params.questionQ}
-              placeholder="Pergunta, produto ou e-mail"
+              placeholder="Pergunta, produto ou e-mail completo"
             />
             <FilterSelect
               label="Exibir"
@@ -125,7 +125,7 @@ export default async function SellerQuestionsPage({
                       )}
                     </div>
                     <span className="text-muted-foreground">
-                      {question.askedBy.name ?? question.askedBy.email} ·{" "}
+                      {question.askedBy.name || "Cliente"} ·{" "}
                       <time dateTime={question.createdAt.toISOString()}>{formatDate(question.createdAt)}</time>
                     </span>
                   </div>
