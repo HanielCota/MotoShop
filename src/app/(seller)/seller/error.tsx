@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import * as Sentry from "@sentry/nextjs";
-import { AlertTriangle } from "lucide-react";
+import { CircleX } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { StatusPage } from "@/components/ui/status-page";
@@ -23,7 +23,7 @@ export default function SellerError({ error, reset, retry }: SellerErrorProps) {
   return (
     <StatusPage
       role="alert"
-      icon={AlertTriangle}
+      icon={CircleX}
       title="Não foi possível carregar esta área da loja"
       description="Seus dados estão seguros. Tente novamente em instantes; se o problema continuar, volte à visão geral."
       actions={
