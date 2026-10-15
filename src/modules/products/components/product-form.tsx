@@ -29,6 +29,7 @@ import {
 } from "@/modules/products/domain/variant-attributes";
 
 import { MeasurementFields } from "./measurement-fields";
+import { PromotionDateTimeField } from "./promotion-date-time-field";
 import {
   productFormSchema,
   toProductFormData,
@@ -293,13 +294,7 @@ function VariantsEditor({
             </FormField>
             <FormField id={fieldId("stock")} label="Estoque" required error={variantErrors?.stock?.message}>
               {(control) => (
-                <Input
-                  {...control}
-                  {...register(`variants.${index}.stock`)}
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                />
+                <Input {...control} {...register(`variants.${index}.stock`)} inputMode="numeric" autoComplete="off" />
               )}
             </FormField>
             <VariantAttributeFields control={control} register={register} errors={variantErrors} index={index} />
@@ -333,26 +328,25 @@ function VariantsEditor({
                     />
                   )}
                 </FormField>
-                <FormField
+                <PromotionDateTimeField
                   id={fieldId("promotionStartsAt")}
                   label="Início da promoção"
+                  bound="start"
+                  name={`variants.${index}.promotionStartsAt`}
+                  control={control}
                   error={variantErrors?.promotionStartsAt?.message}
-                >
-                  {(control) => (
-                    <Input {...control} {...register(`variants.${index}.promotionStartsAt`)} type="datetime-local" />
-                  )}
-                </FormField>
-                <FormField
+                />
+                <PromotionDateTimeField
                   id={fieldId("promotionEndsAt")}
                   label="Término da promoção"
+                  bound="end"
+                  name={`variants.${index}.promotionEndsAt`}
+                  control={control}
                   error={variantErrors?.promotionEndsAt?.message}
-                >
-                  {(control) => (
-                    <Input {...control} {...register(`variants.${index}.promotionEndsAt`)} type="datetime-local" />
-                  )}
-                </FormField>
+                />
                 <p className="text-muted-foreground text-xs sm:col-span-3">
-                  Horários em UTC−03:00 (Brasília). Sem início: imediata. Sem término: sem prazo. Para remover, limpe o
+                  Data em dia/mês/ano e hora de 0 a 23 (horário de Brasília, UTC−03:00). Hora vazia: o início vale desde
+                  00:00 e o término até 23:59. Sem início: começa já. Sem término: sem prazo. Para remover, limpe o
                   preço promocional e as datas.
                 </p>
               </fieldset>

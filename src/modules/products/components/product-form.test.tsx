@@ -39,3 +39,26 @@ it("offers optional gender, color and size for each variant", () => {
   expect(screen.getByLabelText(/^Cor/)).toHaveAttribute("placeholder", "Preto/laranja");
   expect(screen.getByLabelText(/^Tamanho/)).toHaveAttribute("placeholder", "M ou 40");
 });
+
+it("uses text date and time fields for the promotion instead of the native picker (DN-01)", async () => {
+  render(<ProductForm {...options} />);
+
+  const start = screen.getByLabelText("Início da promoção");
+  expect(start).toHaveAttribute("placeholder", "dd/mm/aaaa");
+  expect(start).not.toHaveAttribute("type", "datetime-local");
+  expect(screen.getByLabelText("Hora: término da promoção")).toHaveAttribute("placeholder", "23:59");
+
+  fireEvent.change(screen.getByLabelText("Término da promoção"), { target: { value: "31/11/2026" } });
+  fireEvent.click(screen.getByRole("button", { name: "Criar rascunho" }));
+
+  await waitFor(() =>
+    expect(screen.getByLabelText("Término da promoção")).toHaveAccessibleDescription(/Data final inválida/),
+  );
+});
+
+it("does not use native number fields that change with the mouse wheel (DN-07)", () => {
+  const { container } = render(<ProductForm {...options} />);
+
+  expect(container.querySelector('input[type="number"]')).toBeNull();
+  expect(screen.getByLabelText(/^Estoque/)).toHaveAttribute("inputmode", "numeric");
+});

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { firstIssueMessage } from "@/shared/forms/first-issue-message";
+
 export const shippingOriginSchema = z.object({
   originName: z.string().trim().min(2, "Informe o nome do remetente.").max(120),
   originEmail: z.email("Informe um e-mail válido."),
@@ -22,3 +24,30 @@ export const shippingOriginSchema = z.object({
 });
 
 export type ShippingOriginInput = z.infer<typeof shippingOriginSchema>;
+
+function readDigits(formData: FormData, name: string): string {
+  return String(formData.get(name) ?? "").replace(/\D/g, "");
+}
+
+/** Lê o formulário de dados de envio como a action recebe: documento e CEP só com números. */
+export function readShippingOriginFormInput(formData: FormData) {
+  return {
+    originName: formData.get("originName"),
+    originEmail: formData.get("originEmail"),
+    originPhone: formData.get("originPhone"),
+    originDocument: readDigits(formData, "originDocument"),
+    originPostalCode: readDigits(formData, "originPostalCode"),
+    originStreet: formData.get("originStreet"),
+    originNumber: formData.get("originNumber"),
+    originComplement: formData.get("originComplement") || undefined,
+    originNeighborhood: formData.get("originNeighborhood"),
+    originCity: formData.get("originCity"),
+    originState: formData.get("originState"),
+    originStateRegister: formData.get("originStateRegister") || undefined,
+  };
+}
+
+/** Mesma regra no navegador e no servidor, sem o balão nativo de campo obrigatório (DN-03). */
+export function validateShippingOriginForm(formData: FormData): string | null {
+  return firstIssueMessage(shippingOriginSchema, readShippingOriginFormInput(formData), "Confira os dados de envio.");
+}

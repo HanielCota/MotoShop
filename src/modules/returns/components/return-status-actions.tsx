@@ -8,7 +8,11 @@ import { AfterSalesSummaryList, type AfterSalesSummary } from "@/shared/presenta
 import { useState, useTransition } from "react";
 
 import { refundReturnRequestAction, reviewReturnRequestAction } from "../actions/admin-return-actions";
+import { useClientValidation } from "@/shared/forms/client-validation";
+import { requiredTextValidator } from "@/shared/forms/required-text";
 import { callServerAction } from "@/shared/forms/server-action-submit";
+
+const validateRejection = requiredTextValidator("note", "Informe o motivo para recusar a devolução.");
 
 type Feedback = { error?: string; success?: string };
 
@@ -23,6 +27,7 @@ export function ReturnStatusActions({
 }) {
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<Feedback>({});
+  const { clientError, onSubmit } = useClientValidation(validateRejection);
   const canReview = status === "REQUESTED" || status === "UNDER_REVIEW";
   const canReceive = status === "APPROVED";
   const canRefund = status === "RETURNED";
@@ -49,12 +54,19 @@ export function ReturnStatusActions({
               const result = await callServerAction(() => reviewReturnRequestAction(returnRequestId, formData));
               setFeedback(result);
             }}
+            onSubmit={onSubmit}
+            noValidate
             className="flex min-w-0 flex-1 items-end gap-2"
           >
             <input type="hidden" name="decision" value="REJECT" />
             <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs font-medium">
               Motivo da recusa
-              <Input name="note" placeholder="Explique ao cliente por que recusou" required className="min-w-0" />
+              <Input
+                name="note"
+                placeholder="Explique ao cliente por que recusou"
+                aria-invalid={clientError ? true : undefined}
+                className="min-w-0"
+              />
             </label>
             <Button type="submit" variant="outline" size="sm" disabled={pending}>
               Recusar
@@ -95,7 +107,11 @@ export function ReturnStatusActions({
           }}
         />
       ) : null}
-      <FormMessage error={feedback.error ?? null} success={feedback.success ?? null} className="text-xs" />
+      <FormMessage
+        error={clientError ?? feedback.error ?? null}
+        success={clientError ? null : (feedback.success ?? null)}
+        className="text-xs"
+      />
     </div>
   );
 }

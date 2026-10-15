@@ -11,11 +11,16 @@ import {
   rejectProductAction,
   type ProductActionState,
 } from "@/modules/products/actions/product-actions";
+import { useClientValidation } from "@/shared/forms/client-validation";
+import { requiredTextValidator } from "@/shared/forms/required-text";
 import { callServerAction } from "@/shared/forms/server-action-submit";
+
+const validateRejection = requiredTextValidator("reason", "Informe o motivo da recusa com pelo menos 5 caracteres.", 5);
 
 export function ProductStatusActions({ productId, hasImages = true }: { productId: string; hasImages?: boolean }) {
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<ProductActionState>({});
+  const { clientError, onSubmit } = useClientValidation(validateRejection);
 
   function approve() {
     startTransition(async () => {
@@ -55,6 +60,8 @@ export function ProductStatusActions({ productId, hasImages = true }: { productI
               setResult(await callServerAction(() => rejectProductAction(productId, formData)));
             })
           }
+          onSubmit={onSubmit}
+          noValidate
           className="flex flex-1 gap-2"
         >
           <label className="sr-only" htmlFor={`reject-reason-${productId}`}>
@@ -64,9 +71,8 @@ export function ProductStatusActions({ productId, hasImages = true }: { productI
             id={`reject-reason-${productId}`}
             name="reason"
             placeholder="Motivo da recusa"
-            required
-            minLength={5}
             maxLength={1000}
+            aria-invalid={clientError ? true : undefined}
             className="min-w-0 flex-1"
           />
           <Button type="submit" variant="outline" size="sm" disabled={pending}>
@@ -74,7 +80,10 @@ export function ProductStatusActions({ productId, hasImages = true }: { productI
           </Button>
         </form>
       </div>
-      <FormMessage error={result.error ?? null} success={result.success ?? null} />
+      <FormMessage
+        error={clientError ?? result.error ?? null}
+        success={clientError ? null : (result.success ?? null)}
+      />
     </div>
   );
 }

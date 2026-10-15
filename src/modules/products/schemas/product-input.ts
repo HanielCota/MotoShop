@@ -68,8 +68,14 @@ export const productInputSchema = z.object({
             .max(2_147_483_647, "O preço promocional é maior que o permitido.")
             .nullable()
             .optional(),
-          promotionStartsAt: z.date({ error: "Informe uma data inicial válida." }).nullable().optional(),
-          promotionEndsAt: z.date({ error: "Informe uma data final válida." }).nullable().optional(),
+          promotionStartsAt: z
+            .date({ error: "Data inicial inválida. Use dia/mês/ano e hora de 0 a 23, como 20/11/2026 e 08:00." })
+            .nullable()
+            .optional(),
+          promotionEndsAt: z
+            .date({ error: "Data final inválida. Use dia/mês/ano e hora de 0 a 23, como 30/11/2026 e 23:59." })
+            .nullable()
+            .optional(),
           stock: z.coerce
             .number({ error: "Informe o estoque em unidades inteiras." })
             .int("Informe o estoque em unidades inteiras.")

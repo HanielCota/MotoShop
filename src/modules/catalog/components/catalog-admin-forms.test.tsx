@@ -27,7 +27,7 @@ it("keeps the category fields when the server refuses them", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("Informe a ordem");
   expect(screen.getByLabelText("Nome da categoria")).toHaveValue("Capacetes");
   expect(screen.getByLabelText("Categoria pai")).toHaveValue("parent-a");
-  expect(screen.getByLabelText("Ordem de exibição")).toHaveValue(-1);
+  expect(screen.getByLabelText("Ordem de exibição")).toHaveValue("-1");
 });
 
 it("keeps the fitment fields when the server refuses them", async () => {
@@ -43,8 +43,8 @@ it("keeps the fitment fields when the server refuses them", async () => {
   // do navegador recusa antes do servidor, e o que foi digitado continua nos campos.
   expect(await screen.findByRole("alert")).toBeInTheDocument();
   expect(screen.getByLabelText("Modelo da moto")).toHaveValue("model-a");
-  expect(screen.getByLabelText("Cilindrada (cc)")).toHaveValue(250);
-  expect(screen.getByLabelText("Ano")).toHaveValue(20);
+  expect(screen.getByLabelText("Cilindrada (cc)")).toHaveValue("250");
+  expect(screen.getByLabelText("Ano")).toHaveValue("20");
 });
 
 it("checks the category in the browser before calling the server (BUG-011)", async () => {
