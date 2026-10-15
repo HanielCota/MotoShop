@@ -18,9 +18,7 @@ export async function SellerLowStockCard({ sellerId }: { sellerId: string }) {
   return (
     <Card id="seller-stock" className="scroll-mt-24">
       <CardHeader>
-        <CardTitle>
-          <h2 className="text-lg">Estoque baixo</h2>
-        </CardTitle>
+        <CardTitle>Estoque baixo</CardTitle>
         <CardDescription>Variações com até 5 unidades disponíveis.</CardDescription>
       </CardHeader>
       <CardContent>

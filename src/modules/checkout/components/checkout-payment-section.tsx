@@ -24,7 +24,7 @@ export function CheckoutPaymentSection({
 }) {
   return (
     <section aria-labelledby="checkout-payment-title" className="bg-card rounded-xl border p-4 sm:p-6">
-      <h2 id="checkout-payment-title" className="text-lg font-semibold">
+      <h2 id="checkout-payment-title" className="section-title">
         Pagamento
       </h2>
       {paymentAvailable ? (

@@ -55,7 +55,7 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
       <label className="flex flex-col gap-2 text-sm font-medium">
         Descrição pública
         <Textarea
-          className="border-input bg-background focus:ring-ring/40 min-h-24 w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-3"
+          className="min-h-24"
           name="description"
           defaultValue={values.description}
           maxLength={500}
@@ -105,8 +105,8 @@ export function StoreProfileForm({ store }: StoreProfileFormProps) {
         </p>
       </fieldset>
       <FormMessage error={formError} success={clientError ? null : (state.success ?? null)} />
-      <Button type="submit" className="rounded-md px-4" disabled={pending}>
-        {pending ? "Salvando..." : "Salvar perfil público"}
+      <Button pending={pending} pendingLabel="Salvando…" type="submit">
+        Salvar perfil público
       </Button>
     </form>
   );

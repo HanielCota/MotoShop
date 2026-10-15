@@ -25,7 +25,7 @@ function ProductCardBadgeLabel({ badge }: { badge: ProductCardBadge }) {
     );
   if (badge === "SALE") return <Badge>Oferta</Badge>;
 
-  return <Badge className="bg-foreground text-background">Novidade</Badge>;
+  return <Badge variant="inverse">Novidade</Badge>;
 }
 
 /** Dados de apresentação do card; derivados no servidor a partir de produtos aprovados. */

@@ -1,4 +1,5 @@
 "use client";
+import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 
 import { moderateContentAction, type ModerateContentState } from "../actions/moderate-content-action";
@@ -14,19 +15,10 @@ export function ModerateContentButton({ kind, id, hidden }: { kind: ModerationKi
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="hide" value={String(!hidden)} />
-      <Button type="submit" variant="outline" disabled={pending} className="rounded-md">
+      <Button type="submit" variant="outline" disabled={pending}>
         {pending ? "Aguarde..." : hidden ? "Restaurar" : "Ocultar"}
       </Button>
-      {state.error ? (
-        <span role="alert" className="text-destructive text-sm">
-          {state.error}
-        </span>
-      ) : null}
-      {state.success ? (
-        <span role="status" className="text-success-foreground text-sm">
-          {state.success}
-        </span>
-      ) : null}
+      <FormMessage variant="inline" error={state.error ?? null} success={state.success ?? null} />
     </form>
   );
 }

@@ -219,17 +219,14 @@ export function AuthForm({
       {emailEnabled && mode === "sign-in" ? (
         <div className="flex flex-wrap justify-between gap-3 text-sm">
           {showCredentialsHelp ? null : (
-            <Link
-              className="text-brand-text inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline"
-              href="/forgot-password"
-            >
+            <Link className={buttonVariants({ variant: "link", size: "link" })} href="/forgot-password">
               Esqueci minha senha
             </Link>
           )}
           {unverifiedEmail ? (
             <button
               type="button"
-              className="text-brand-text inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline disabled:opacity-50"
+              className={buttonVariants({ variant: "link", size: "link" })}
               disabled={pending}
               onClick={async () => {
                 setPending(true);

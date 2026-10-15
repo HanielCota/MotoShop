@@ -3,6 +3,7 @@
 import { Trash2 } from "lucide-react";
 import { useOptimistic, useState, useTransition } from "react";
 
+import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 import { QuantityStepper } from "@/components/ui/quantity-stepper";
 import { formatMoneyInCents } from "@/lib/format";
@@ -86,11 +87,7 @@ export function CartItemControls({
       ) : optimisticQuantity >= max && max < 99 ? (
         <p className="text-muted-foreground text-xs">Máximo disponível: {max}</p>
       ) : null}
-      {error ? (
-        <p role="alert" className="text-destructive text-xs">
-          {error}
-        </p>
-      ) : null}
+      <FormMessage variant="inline" error={error ?? null} className="text-xs" />
     </div>
   );
 }

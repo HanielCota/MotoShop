@@ -256,11 +256,11 @@ function VariantsEditor({
   return (
     <div className="space-y-3 sm:col-span-2">
       <p className="text-muted-foreground text-sm">Cada variação possui SKU, preço e estoque próprios.</p>
-      {(errors.variants?.root?.message ?? errors.variants?.message) ? (
-        <p role="alert" className="text-destructive text-xs font-medium">
-          {errors.variants?.root?.message ?? errors.variants?.message}
-        </p>
-      ) : null}
+      <FormMessage
+        variant="inline"
+        error={errors.variants?.root?.message ?? errors.variants?.message ?? null}
+        className="text-xs font-medium"
+      />
       {fields.map((field, index) => {
         const variantErrors = errors.variants?.[index];
         const fieldId = (name: keyof VariantFormValues) => `product-variant-${index}-${name}`;

@@ -4,6 +4,7 @@ import type { Route } from "next";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 import type { SellerCatalogProgress as Progress } from "../queries/seller-catalog-progress";
+import { buttonVariants } from "@/components/ui/button";
 
 export function SellerCatalogProgress({ progress }: { progress: Progress }) {
   // Com um produto publicado, os quatro passos estão concluídos: o checklist sai da visão geral.
@@ -62,10 +63,7 @@ export function SellerCatalogProgress({ progress }: { progress: Progress }) {
             e envie um produto para aprovação.
           </p>
         ) : (
-          <Link
-            href="/seller/products/new"
-            className="text-brand-text text-sm font-medium underline underline-offset-4"
-          >
+          <Link href="/seller/products/new" className={buttonVariants({ variant: "link", size: "link" })}>
             Cadastrar meu primeiro produto
           </Link>
         )}

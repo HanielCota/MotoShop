@@ -20,9 +20,7 @@ export default async function CustomerPasswordPage() {
       />
       <Card>
         <CardHeader>
-          <CardTitle>
-            <h2 className="text-xl">Nova senha</h2>
-          </CardTitle>
+          <CardTitle>Nova senha</CardTitle>
           <CardDescription className="text-base">
             Informe a senha atual e escolha uma nova. Depois da troca, os outros aparelhos conectados à sua conta
             precisarão entrar de novo.

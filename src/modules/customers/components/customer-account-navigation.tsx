@@ -12,7 +12,7 @@ function isActive(href: string, pathname: string) {
 }
 
 const itemClassName =
-  "flex min-h-11 shrink-0 items-center gap-3 rounded-lg px-3 text-base font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none lg:min-h-14 lg:rounded-none lg:border-l-4 lg:border-transparent lg:px-5";
+  "flex min-h-11 shrink-0 items-center gap-3 rounded-md px-3 text-base font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/40 focus-visible:outline-none lg:min-h-14 lg:rounded-none lg:border-l-4 lg:border-transparent lg:px-5";
 
 /**
  * Menu "Serviços" da conta do cliente. No desktop é uma coluna com separadores;
@@ -34,10 +34,7 @@ export async function CustomerAccountNavigation({
       className="border-border bg-card h-fit min-w-0 rounded-xl border lg:sticky lg:top-24 lg:overflow-hidden"
     >
       <div className="border-border flex flex-row-reverse items-baseline justify-between gap-3 px-4 pt-3 pb-1 lg:block lg:border-b lg:px-5 lg:py-4">
-        <p
-          id="customer-account-services"
-          className="text-muted-foreground text-xs font-semibold tracking-[0.14em] uppercase lg:text-sm"
-        >
+        <p id="customer-account-services" className="eyebrow text-muted-foreground lg:text-sm">
           Serviços
         </p>
         <p className="text-lg font-semibold lg:mt-1 lg:text-xl">{customerGreeting(name)}</p>

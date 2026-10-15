@@ -1,5 +1,6 @@
 import Image from "next/image";
 
+import { pageContainerClassName } from "@/components/ui/page-container";
 import type { ProductCardData } from "@/components/storefront/product-card";
 import type { FitmentOption } from "@/modules/motorcycles/domain/fitment-options";
 
@@ -50,8 +51,8 @@ export function MarketingHome({
           sizes="(min-width: 1024px) 56vw, 100vw"
         />
         <div className={styles.heroShade} aria-hidden="true" />
-        <div className="mx-auto w-full max-w-6xl px-4 pt-12 pb-12 sm:px-6 sm:pt-20 sm:pb-16 lg:pt-24">
-          <p className="text-moto-brand-surface flex items-center gap-2.5 text-xs font-bold tracking-[0.16em] uppercase">
+        <div className={pageContainerClassName("default", "pt-12 pb-12 sm:pt-20 sm:pb-16 lg:pt-24")}>
+          <p className="eyebrow text-moto-brand-surface flex items-center gap-2.5">
             <span className={styles.kickerRule} aria-hidden="true" />
             Motopeças · Acessórios · Equipamentos
           </p>

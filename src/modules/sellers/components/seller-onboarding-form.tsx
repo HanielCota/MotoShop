@@ -82,8 +82,8 @@ export function SellerOnboardingForm() {
         </DesignSelect>
       </label>
       <FormMessage error={formError} success={clientError ? null : (state.success ?? null)} className="sm:col-span-2" />
-      <Button type="submit" className="rounded-md px-4 sm:col-span-2" disabled={pending}>
-        {pending ? "Enviando..." : "Solicitar cadastro da loja"}
+      <Button pending={pending} pendingLabel="Enviando…" type="submit" className="sm:col-span-2">
+        Solicitar cadastro da loja
       </Button>
     </form>
   );

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
@@ -108,14 +109,14 @@ function PreviewItem({ item }: { item: PreviewItemData }) {
 
 export function VisualCartPreview() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6">
+    <main className={pageContainerClassName("default", "flex flex-col gap-6 py-10")}>
       <PageHeader eyebrow="Sua compra" title="Carrinho" />
       <PreviewNotice />
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="space-y-4">
           {previewGroups.map((group) => (
             <section key={group.store} className="bg-card rounded-xl border p-4 sm:p-6">
-              <h2 className="text-lg font-semibold">{group.store}</h2>
+              <h2 className="section-title">{group.store}</h2>
               <p className="text-muted-foreground mb-5 text-sm">Envio calculado separadamente para esta loja.</p>
               {group.items.map((item) => (
                 <PreviewItem key={item.name} item={item} />
@@ -124,7 +125,7 @@ export function VisualCartPreview() {
           ))}
         </div>
         <aside className="bg-card rounded-xl border p-4 sm:p-6">
-          <h2 className="text-lg font-semibold">Resumo</h2>
+          <h2 className="section-title">Resumo</h2>
           <div className="mt-5 flex justify-between gap-3 text-sm">
             <span>Itens ({itemCount})</span>
             <span>{formatMoneyInCents(subtotalInCents)}</span>
@@ -144,13 +145,13 @@ export function VisualCartPreview() {
 
 export function VisualCheckoutPreview() {
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6">
+    <main className={pageContainerClassName("default", "flex flex-col gap-6 py-10")}>
       <PageHeader eyebrow="Compra segura" title="Finalizar compra" />
       <PreviewNotice />
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
         <div className="min-w-0 space-y-6">
           <section className="bg-card rounded-xl border p-4 sm:p-6">
-            <h2 className="text-lg font-semibold">Seus dados</h2>
+            <h2 className="section-title">Seus dados</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <PreviewField label="Nome completo" value="Comprador de demonstração" />
               <PreviewField label="E-mail" value="cliente@exemplo.com" />
@@ -159,7 +160,7 @@ export function VisualCheckoutPreview() {
             </div>
           </section>
           <section className="bg-card rounded-xl border p-4 sm:p-6">
-            <h2 className="text-lg font-semibold">Endereço de entrega</h2>
+            <h2 className="section-title">Endereço de entrega</h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <PreviewField label="CEP" value="00000-000" />
               <PreviewField label="Rua" value="Endereço ilustrativo" />
@@ -170,7 +171,7 @@ export function VisualCheckoutPreview() {
             </div>
           </section>
           <section className="bg-card rounded-xl border p-4 sm:p-6">
-            <h2 className="text-lg font-semibold">Frete por loja</h2>
+            <h2 className="section-title">Frete por loja</h2>
             <p className="text-muted-foreground mt-1 text-sm">Opções e preços ilustrativos.</p>
             <div className="mt-4 space-y-3">
               {previewGroups.map((group) => (
@@ -188,7 +189,7 @@ export function VisualCheckoutPreview() {
           </section>
         </div>
         <aside className="bg-card min-w-0 rounded-xl border p-4 sm:p-6">
-          <h2 className="text-lg font-semibold">Resumo do pedido</h2>
+          <h2 className="section-title">Resumo do pedido</h2>
           <p className="text-muted-foreground mt-1 text-xs">{itemCount} itens de 2 lojas</p>
           <div className="mt-5 space-y-3 border-b pb-5">
             {previewGroups

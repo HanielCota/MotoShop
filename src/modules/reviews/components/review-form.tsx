@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Textarea } from "@/components/ui/textarea";
 import { DesignSelect } from "@/components/ui/design-select";
@@ -140,13 +140,7 @@ export function ReviewForm({
         {!sellerAlreadyReviewed ? (
           <label className="text-foreground text-sm font-medium">
             Nota do lojista
-            <DesignSelect
-              aria-label="Nota do lojista"
-              name="sellerRating"
-              required
-              defaultValue="5"
-              className="border-input bg-background mt-2 min-h-10 w-full rounded-lg border px-3 py-2"
-            >
+            <DesignSelect aria-label="Nota do lojista" name="sellerRating" required defaultValue="5" className="mt-2">
               {[5, 4, 3, 2, 1].map((rating) => (
                 <option key={rating} value={rating}>
                   {rating} estrela{rating === 1 ? "" : "s"}
@@ -183,7 +177,7 @@ export function ReviewForm({
         />
         <label
           htmlFor={`review-files-${orderItemId}`}
-          className="peer-focus-visible:ring-ring/50 border-input bg-background hover:bg-muted inline-flex min-h-11 cursor-pointer items-center rounded-lg border px-4 text-sm font-semibold transition-colors peer-focus-visible:ring-3 peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+          className="peer-focus-visible:ring-ring/50 border-input bg-background hover:bg-muted inline-flex min-h-11 cursor-pointer items-center rounded-md border px-4 text-sm font-semibold transition-colors peer-focus-visible:ring-3 peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
         >
           Selecionar fotos ou vídeos
         </label>
@@ -202,7 +196,7 @@ export function ReviewForm({
                   type="button"
                   onClick={() => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}
                   aria-label={`Remover ${file.name}`}
-                  className="text-muted-foreground hover:text-foreground inline-flex min-h-10 items-center rounded-md px-2 underline underline-offset-2"
+                  className={buttonVariants({ variant: "link-muted", size: "link" })}
                 >
                   Remover
                 </button>
@@ -218,12 +212,7 @@ export function ReviewForm({
         <FormMessage error={uploadError ?? null} />
       </section>
       <FormMessage error={state.error ?? null} success={state.success ?? null} />
-      <Button
-        type="submit"
-        size="lg"
-        disabled={pending || uploading || Boolean(state.success)}
-        className="px-4 font-semibold"
-      >
+      <Button type="submit" size="lg" disabled={pending || uploading || Boolean(state.success)} className="px-4">
         {pending ? "Publicando..." : uploading ? "Enviando arquivos..." : "Publicar avaliação"}
       </Button>
     </form>

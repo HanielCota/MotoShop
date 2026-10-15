@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { useState, useTransition } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { DesignSelect } from "@/components/ui/design-select";
 import { FormMessage } from "@/components/ui/form-message";
 
@@ -166,7 +166,7 @@ export function ProductMotorcyclePicker({
         </DesignSelect>
       </label>
       <div className="flex flex-col gap-2 sm:col-span-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <Button type="submit" size="lg" disabled={pending || !fitmentId || alreadySaved} className="px-5">
+        <Button type="submit" size="lg" disabled={pending || !fitmentId || alreadySaved}>
           <Bike aria-hidden="true" />
           {pending
             ? "Salvando..."
@@ -178,10 +178,7 @@ export function ProductMotorcyclePicker({
         </Button>
         {!signedIn ? (
           <p className="text-muted-foreground text-sm">
-            <Link
-              href={loginHref as Route}
-              className="text-brand-strong inline-flex min-h-10 items-center font-semibold underline underline-offset-4"
-            >
+            <Link href={loginHref as Route} className={buttonVariants({ variant: "link", size: "link" })}>
               Entre para salvar sua moto
             </Link>{" "}
             e ver a compatibilidade em todas as peças.

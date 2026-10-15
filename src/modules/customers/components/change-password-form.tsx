@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { FormMessage } from "@/components/ui/form-message";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -120,13 +120,10 @@ export function ChangePasswordForm() {
       </FormField>
       <FormMessage error={message.error ?? null} success={message.success ?? null} />
       <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-        <Button type="submit" size="lg" disabled={isSubmitting} className="h-12 px-5 text-base">
-          {isSubmitting ? "Salvando..." : "Salvar nova senha"}
+        <Button pending={isSubmitting} pendingLabel="Salvando…" type="submit" size="lg">
+          Salvar nova senha
         </Button>
-        <Link
-          href="/forgot-password"
-          className="text-brand-strong inline-flex min-h-11 items-center text-base font-medium underline underline-offset-4"
-        >
+        <Link href="/forgot-password" className={buttonVariants({ variant: "link", size: "link" })}>
           Esqueci minha senha atual
         </Link>
       </div>

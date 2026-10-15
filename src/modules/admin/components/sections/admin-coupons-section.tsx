@@ -19,6 +19,7 @@ import { adminHref } from "../../admin-href";
 import { clampAdminPage } from "../../search-params";
 import { AdminCard, AdminFilterForm, AdminTable, cellClassName, FilterSelect, FilterText } from "../admin-ui";
 import type { AdminSectionProps } from "./types";
+import { buttonVariants } from "@/components/ui/button";
 
 const activeOptions = [
   { value: "ALL", label: "Todos" },
@@ -102,13 +103,13 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
                 {isSellerFundedCampaign(coupon) ? (
                   <Link
                     href={participantsHref(coupon.id)}
-                    className="text-brand-text block text-xs font-medium whitespace-nowrap underline underline-offset-4"
+                    className={buttonVariants({ variant: "link", size: "link-xs" })}
                   >
                     Ver lojas ({coupon._count.sellerParticipations})
                   </Link>
                 ) : null}
                 <ActionForm action={setMarketplaceCouponActiveAction.bind(null, coupon.id, !coupon.active)}>
-                  <button type="submit" className="text-brand-text text-xs font-medium underline underline-offset-4">
+                  <button type="submit" className={buttonVariants({ variant: "link", size: "link-xs" })}>
                     {coupon.active ? "Desativar" : "Ativar"}
                   </button>
                 </ActionForm>

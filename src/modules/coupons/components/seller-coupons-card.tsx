@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { EmptyState } from "@/components/ui/empty-state";
 import { FilterForm, FilterSelect, FilterText } from "@/components/ui/filter-form";
 import { Pagination } from "@/components/ui/pagination";
-import { formatDate, formatMoneyInCents } from "@/lib/format";
+import { formatDate, formatMoneyInCents, formatPercentFromBps } from "@/lib/format";
 import {
   setSellerCouponActiveAction,
   setSellerCouponProductPageAction,
@@ -53,9 +53,7 @@ export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: 
   return (
     <Card id="seller-coupons" className="scroll-mt-24">
       <CardHeader>
-        <CardTitle>
-          <h2 className="text-lg">Cupons da loja</h2>
-        </CardTitle>
+        <CardTitle>Cupons da loja</CardTitle>
         <CardDescription>
           {result.total} {result.total === 1 ? "cupom" : "cupons"} · descontos financiados pela sua loja.
         </CardDescription>
@@ -190,7 +188,7 @@ type CouponSummary = {
 
 function couponDiscountLabel(coupon: CouponSummary): string {
   return coupon.discountType === "PERCENTAGE"
-    ? `${((coupon.percentageBps ?? 0) / 100).toLocaleString("pt-BR")}%`
+    ? formatPercentFromBps(coupon.percentageBps ?? 0)
     : formatMoneyInCents(coupon.fixedAmountInCents ?? 0);
 }
 

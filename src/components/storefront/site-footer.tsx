@@ -1,6 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
 import { BRAND_ABOUT_PARAGRAPHS } from "@/config/brand";
 
@@ -38,7 +39,12 @@ function FooterHeading({ id, children }: { id: string; children: string }) {
 export function SiteFooter() {
   return (
     <footer className="bg-moto-brand-foreground text-white">
-      <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 pt-12 pb-6 sm:px-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,1fr)_auto]">
+      <div
+        className={pageContainerClassName(
+          "default",
+          "grid gap-10 pt-12 pb-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,1fr)_auto]",
+        )}
+      >
         <div className="space-y-4">
           <MotoShopBrand variant="footer" />
           {BRAND_ABOUT_PARAGRAPHS.map((paragraph) => (

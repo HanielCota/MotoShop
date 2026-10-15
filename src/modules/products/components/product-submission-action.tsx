@@ -31,8 +31,8 @@ export function ProductSubmissionAction({
 
   return (
     <div className="flex flex-col items-start gap-1">
-      <Button type="button" size="sm" disabled={pending} onClick={submit}>
-        {pending ? "Enviando..." : "Enviar para aprovação"}
+      <Button pending={pending} pendingLabel="Enviando…" type="button" size="sm" onClick={submit}>
+        Enviar para aprovação
       </Button>
       <FormMessage error={result.error ?? null} success={result.success ?? null} className="max-w-64 p-2 text-xs" />
     </div>

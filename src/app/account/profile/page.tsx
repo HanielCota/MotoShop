@@ -33,9 +33,7 @@ export default async function CustomerProfilePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            <h2 className="text-xl">Seus dados</h2>
-          </CardTitle>
+          <CardTitle>Seus dados</CardTitle>
           <CardDescription className="text-base">
             O nome aparece nos seus pedidos e na saudação da conta.
           </CardDescription>
@@ -70,9 +68,7 @@ export default async function CustomerProfilePage() {
 
       <Card id="notificacoes" className="scroll-mt-28">
         <CardHeader>
-          <CardTitle>
-            <h2 className="text-xl">Notificações por e-mail</h2>
-          </CardTitle>
+          <CardTitle>Notificações por e-mail</CardTitle>
           <CardDescription className="text-base">
             As alterações valem para os próximos eventos do pedido.
           </CardDescription>

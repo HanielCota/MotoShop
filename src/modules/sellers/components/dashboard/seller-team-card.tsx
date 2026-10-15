@@ -7,9 +7,7 @@ export function SellerTeamCard({ members }: { members: Member[] }) {
   return (
     <Card id="seller-team" className="scroll-mt-24">
       <CardHeader>
-        <CardTitle>
-          <h2 className="text-lg">Equipe da loja</h2>
-        </CardTitle>
+        <CardTitle>Equipe da loja</CardTitle>
         <CardDescription>
           Adicione contas existentes e limite o acesso por função. Convites por e-mail ficam para uma etapa posterior.
         </CardDescription>

@@ -1,5 +1,6 @@
 import { PackageSearch } from "lucide-react";
 
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { EAGER_PRODUCT_CARDS, ProductCard, type ProductCardData } from "@/components/storefront/product-card";
 import { EmptyState } from "@/components/ui/empty-state";
 
@@ -7,7 +8,7 @@ import { SectionHeading } from "./section-heading";
 
 export function FeaturedProducts({ products }: { products: ProductCardData[] }) {
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 pb-14 sm:px-6 sm:pb-20" aria-labelledby="featured-products-title">
+    <section className={pageContainerClassName("default", "pb-14 sm:pb-20")} aria-labelledby="featured-products-title">
       <SectionHeading
         kicker="Destaques"
         title="Produtos em destaque"

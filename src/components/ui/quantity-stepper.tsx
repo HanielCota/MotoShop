@@ -90,7 +90,7 @@ export function QuantityStepper({
       </label>
       <div
         data-slot="quantity-stepper"
-        className="border-input bg-background inline-flex w-fit items-center overflow-hidden rounded-lg border"
+        className="border-input bg-background inline-flex w-fit items-center overflow-hidden rounded-md border"
       >
         <button
           type="button"

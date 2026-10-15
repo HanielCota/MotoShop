@@ -57,8 +57,8 @@ export function CustomerNameForm({ defaultName }: { defaultName: string }) {
         )}
       </FormField>
       <FormMessage error={state.error ?? null} success={state.success ?? null} />
-      <Button type="submit" size="lg" disabled={pending} className="h-12 self-start px-5 text-base">
-        {pending ? "Salvando..." : "Salvar nome"}
+      <Button pending={pending} pendingLabel="Salvando…" type="submit" size="lg" className="self-start">
+        Salvar nome
       </Button>
     </form>
   );

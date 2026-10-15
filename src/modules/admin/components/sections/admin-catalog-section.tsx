@@ -21,6 +21,8 @@ import { getAdminCatalogData } from "@/modules/catalog/queries/admin-catalog";
 
 import { AdminCard } from "../admin-ui";
 import { formatCount } from "@/lib/format";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 function CatalogColumn({ title, form, children }: { title: string; form: ReactNode; children: ReactNode }) {
   return (
@@ -54,7 +56,7 @@ function CatalogRow({
         ) : null}
       </span>
       <ActionForm action={toggle}>
-        <button type="submit" className="text-brand-text shrink-0 text-xs font-medium underline underline-offset-4">
+        <button type="submit" className={cn(buttonVariants({ variant: "link", size: "link-xs" }), "shrink-0")}>
           {active ? "Desativar" : "Ativar"}
         </button>
       </ActionForm>

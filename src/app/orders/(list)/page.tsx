@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { DesignSelect } from "@/components/ui/design-select";
 import { DateFilterInput } from "@/components/ui/date-filter-input";
@@ -181,9 +181,7 @@ export default async function CustomerOrdersPage({
               <option value="total_low">Menor valor</option>
             </DesignSelect>
           </label>
-          <Button type="submit" className="rounded-md px-4">
-            Filtrar
-          </Button>
+          <Button type="submit">Filtrar</Button>
         </form>
       </details>
       {result.orders.length === 0 ? (
@@ -240,7 +238,7 @@ export default async function CustomerOrdersPage({
                     />
                   ) : null}
                   <Link
-                    className="text-brand-strong text-sm font-medium underline underline-offset-4"
+                    className={buttonVariants({ variant: "link", size: "link" })}
                     href={`/orders/${order.orderNumber}` as Route}
                   >
                     Ver detalhes

@@ -28,7 +28,7 @@ export function MelhorEnvioConnectionCard({
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-start gap-3">
-            <span className="bg-moto-brand/10 text-moto-brand-strong grid size-11 shrink-0 place-items-center rounded-xl">
+            <span className="bg-moto-brand/10 text-brand-strong grid size-11 shrink-0 place-items-center rounded-xl">
               <Truck className="size-5" aria-hidden="true" />
             </span>
             <div>

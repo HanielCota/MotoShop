@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import type { Metadata, Route } from "next";
 import { Bike, X } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { DesignSelect } from "@/components/ui/design-select";
 import { InlineNotice } from "@/components/ui/inline-notice";
 import { PageHeader } from "@/components/ui/page-header";
@@ -44,6 +45,7 @@ import {
   type CatalogFilterKey,
   type CatalogQuery,
 } from "../catalog-query";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Catálogo",
@@ -156,7 +158,7 @@ export default async function ProductsPage({
   const options = { fitments, categories, brands, sellers, attributes };
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 sm:py-10">
+    <main className={pageContainerClassName("default", "flex flex-col gap-6 py-8 sm:py-10")}>
       <PageHeader
         eyebrow="Catálogo"
         title="Peças, acessórios e equipamentos"
@@ -221,10 +223,7 @@ export default async function ProductsPage({
                   </li>
                 ))}
               </ul>
-              <Link
-                href={clearHref}
-                className="text-muted-foreground hover:text-foreground inline-flex min-h-9 items-center px-1 text-sm underline underline-offset-4"
-              >
+              <Link href={clearHref} className={buttonVariants({ variant: "link-muted", size: "link" })}>
                 Limpar filtros
               </Link>
             </div>
@@ -279,7 +278,7 @@ function PrimaryMotorcycleBanner({
         href={
           (signedIn ? "/account/motorcycles" : `/login?next=${encodeURIComponent("/account/motorcycles")}`) as Route
         }
-        className="text-brand-strong inline-flex min-h-10 w-fit items-center gap-2 text-sm font-medium underline underline-offset-4"
+        className={cn(buttonVariants({ variant: "link", size: "link" }), "w-fit gap-2")}
       >
         <Bike aria-hidden="true" className="size-4" />
         Salvar minha moto para encontrar peças compatíveis
@@ -301,14 +300,11 @@ function PrimaryMotorcycleBanner({
           href={
             applied ? removeCatalogFilterHref(query, "moto") : buildCatalogHref(query, { moto: primary.id, page: 1 })
           }
-          className="text-brand-strong inline-flex min-h-10 items-center font-semibold underline underline-offset-4"
+          className={buttonVariants({ variant: "link", size: "link" })}
         >
           {applied ? "Ver todas as motos" : "Ver peças para minha moto"}
         </Link>
-        <Link
-          href="/account/motorcycles"
-          className="text-muted-foreground inline-flex min-h-10 items-center underline underline-offset-4"
-        >
+        <Link href="/account/motorcycles" className={buttonVariants({ variant: "link-muted", size: "link" })}>
           Gerenciar motos
         </Link>
       </div>
@@ -410,10 +406,7 @@ function CatalogFilterForm({
         <Button type="submit" size="lg" className="flex-1 px-4">
           Aplicar filtros
         </Button>
-        <Link
-          href={clearHref}
-          className="text-muted-foreground hover:text-foreground inline-flex min-h-10 items-center text-sm underline underline-offset-4"
-        >
+        <Link href={clearHref} className={buttonVariants({ variant: "link-muted", size: "link" })}>
           Limpar
         </Link>
       </div>

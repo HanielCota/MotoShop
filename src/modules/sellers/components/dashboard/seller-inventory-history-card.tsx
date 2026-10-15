@@ -50,9 +50,7 @@ export async function SellerInventoryHistoryCard({
   return (
     <Card id="seller-history" className="scroll-mt-24">
       <CardHeader>
-        <CardTitle>
-          <h2 className="text-lg">Histórico de estoque</h2>
-        </CardTitle>
+        <CardTitle>Histórico de estoque</CardTitle>
         <CardDescription>
           {summary
             ? `${SUMMARY_LIMIT} movimentações mais recentes das variações da loja.`

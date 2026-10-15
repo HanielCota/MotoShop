@@ -231,8 +231,8 @@ export function ProductImageManager({
                     Remover
                   </AlertDialog.Trigger>
                   <AlertDialog.Portal>
-                    <AlertDialog.Backdrop className="fixed inset-0 z-50 bg-black/55" />
-                    <AlertDialog.Popup className="bg-background text-foreground fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[min(92vw,28rem)] -translate-x-1/2 -translate-y-1/2 space-y-4 overflow-y-auto rounded-xl border p-5 shadow-xl">
+                    <AlertDialog.Backdrop className="z-dialog fixed inset-0 bg-black/55" />
+                    <AlertDialog.Popup className="bg-background text-foreground z-dialog fixed top-1/2 left-1/2 max-h-[calc(100dvh-2rem)] w-[min(92vw,28rem)] -translate-x-1/2 -translate-y-1/2 space-y-4 overflow-y-auto rounded-xl border p-5 shadow-xl">
                       <AlertDialog.Title className="text-lg font-semibold">Remover imagem?</AlertDialog.Title>
                       <AlertDialog.Description className="text-muted-foreground text-sm">
                         Esta imagem será retirada do produto. Essa ação não pode ser desfeita.

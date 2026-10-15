@@ -48,9 +48,7 @@ export function ProductQuestionsSection({
   return (
     <Card id={SECTION_ID} className="scroll-mt-24">
       <CardHeader>
-        <CardTitle>
-          <h2 className="text-xl">Dúvidas sobre o produto</h2>
-        </CardTitle>
+        <CardTitle>Dúvidas sobre o produto</CardTitle>
         <CardDescription>Perguntas de clientes e respostas da loja.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -80,7 +78,7 @@ export function ProductQuestionsSection({
                 <option value="oldest">Mais antigas</option>
               </DesignSelect>
             </label>
-            <Button type="submit" variant="outline" className="h-10 px-4">
+            <Button type="submit" variant="outline">
               Aplicar
             </Button>
           </form>

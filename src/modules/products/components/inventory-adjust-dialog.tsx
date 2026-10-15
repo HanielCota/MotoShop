@@ -99,10 +99,10 @@ export function InventoryAdjustDialog({
       <Dialog.Root open={open} onOpenChange={changeOpen}>
         <Dialog.Trigger render={<Button type="button" variant="outline" size="sm" />}>Ajustar estoque</Dialog.Trigger>
         <Dialog.Portal>
-          <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/55" />
+          <Dialog.Backdrop className="z-dialog fixed inset-0 bg-black/55" />
           <Dialog.Popup
             aria-busy={pending}
-            className="bg-background text-foreground fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[min(92vw,30rem)] -translate-x-1/2 -translate-y-1/2 space-y-4 overflow-y-auto rounded-xl border p-5 shadow-xl"
+            className="bg-background text-foreground z-dialog fixed top-1/2 left-1/2 max-h-[calc(100dvh-2rem)] w-[min(92vw,30rem)] -translate-x-1/2 -translate-y-1/2 space-y-4 overflow-y-auto rounded-xl border p-5 shadow-xl"
           >
             <div className="space-y-1">
               <Dialog.Title className="text-lg font-semibold">Ajustar estoque</Dialog.Title>
@@ -201,8 +201,8 @@ export function InventoryAdjustDialog({
               <Dialog.Close disabled={pending} render={<Button type="button" variant="outline" />}>
                 Cancelar
               </Dialog.Close>
-              <Button type="button" onClick={save} disabled={pending}>
-                {pending ? "Salvando..." : "Salvar ajuste"}
+              <Button pending={pending} pendingLabel="Salvando…" type="button" onClick={save}>
+                Salvar ajuste
               </Button>
             </div>
           </Dialog.Popup>

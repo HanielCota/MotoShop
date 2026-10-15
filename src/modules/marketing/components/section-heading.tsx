@@ -21,7 +21,7 @@ export function SectionHeading({
 }) {
   return (
     <div className={cn("mb-6 space-y-2 sm:mb-8", className)}>
-      <p className="text-brand-strong text-xs font-bold tracking-[0.16em] uppercase">{kicker}</p>
+      <p className="eyebrow text-brand-strong">{kicker}</p>
       <SectionHeader
         className="[&_h2]:text-4xl [&_h2]:leading-[0.92] [&_h2]:uppercase sm:[&_h2]:text-5xl lg:[&_h2]:text-6xl"
         title={<span id={titleId}>{title}</span>}

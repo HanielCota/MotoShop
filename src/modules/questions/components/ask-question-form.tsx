@@ -31,8 +31,8 @@ export function AskQuestionForm({ productId }: { productId: string }) {
         className="w-full"
       />
       <FormMessage error={state.error ?? null} success={state.success ?? null} />
-      <Button type="submit" disabled={pending} className="px-4">
-        {pending ? "Enviando..." : "Enviar pergunta"}
+      <Button pending={pending} pendingLabel="Enviando…" type="submit">
+        Enviar pergunta
       </Button>
     </form>
   );

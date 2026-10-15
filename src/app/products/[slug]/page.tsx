@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata, Route } from "next";
 
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -162,7 +163,7 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
 
   // pb extra no mobile: espaço para a barra fixa de "Adicionar" (ProductBuyBox).
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 pt-8 pb-28 sm:px-6 sm:pt-12 md:pb-12">
+    <main className={pageContainerClassName("default", "flex flex-col gap-8 pt-8 pb-28 sm:pt-12 md:pb-12")}>
       {!product.isDemo ? (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
       ) : null}
@@ -184,13 +185,9 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline">{categoryLabel}</Badge>
             <Badge variant="neutral">{product.brand.name}</Badge>
-            {offer.hasPromotion ? (
-              <Badge className="bg-moto-brand text-moto-brand-foreground border-0">Oferta</Badge>
-            ) : null}
+            {offer.hasPromotion ? <Badge>Oferta</Badge> : null}
             {product.seller.subscriptions.length > 0 ? <Badge variant="brand">Patrocinado · Loja VIP</Badge> : null}
-            {isNewProduct(product, new Date()) ? (
-              <Badge className="bg-foreground text-background">Novidade</Badge>
-            ) : null}
+            {isNewProduct(product, new Date()) ? <Badge variant="inverse">Novidade</Badge> : null}
           </div>
           <h1 id="product-title" className="text-foreground mt-5 text-3xl leading-tight sm:text-4xl">
             {product.name}
@@ -259,9 +256,7 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
 
         <Card className="min-w-0 md:col-start-1 md:row-start-2">
           <CardHeader>
-            <CardTitle>
-              <h2 className="text-xl">Sobre este produto</h2>
-            </CardTitle>
+            <CardTitle>Sobre este produto</CardTitle>
             <CardDescription>Detalhes fornecidos pela loja.</CardDescription>
           </CardHeader>
           <CardContent>
