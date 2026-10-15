@@ -18,6 +18,14 @@ export function parseDateFilter(value: string | null | undefined, endOfDay = fal
   return date;
 }
 
+/** True when both dates are valid and the start comes after the end (same day is fine). */
+export function isInvertedDateRange(fromValue: string | null | undefined, toValue: string | null | undefined) {
+  const from = parseDateFilter(fromValue);
+  const to = parseDateFilter(toValue);
+  if (!from || !to) return false;
+  return from > to;
+}
+
 export function formatDateFilter(value: string | null | undefined) {
   if (!value) return "";
   const brazilian = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);

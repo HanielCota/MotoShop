@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { isInvertedDateRange } from "@/lib/date-filter";
 import { formatDate, formatMoneyInCents } from "@/lib/format";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
 import { listCustomerOrders } from "@/modules/orders/queries/customer-orders";
@@ -65,6 +66,7 @@ export default async function CustomerOrdersPage({
     params.orderMinTotal ||
     params.orderMaxTotal,
   );
+  const hasInvertedPeriod = isInvertedDateRange(params.orderFrom, params.orderTo);
   const allOrders = hasFilters ? await listCustomerOrders(session.user.id, { pageSize: 1 }) : result;
 
   function pageHref(page: number): Route {
@@ -185,7 +187,14 @@ export default async function CustomerOrdersPage({
         </form>
       </details>
       {result.orders.length === 0 ? (
-        hasFilters && allOrders.total > 0 ? (
+        hasInvertedPeriod ? (
+          <EmptyState
+            icon={PackageSearch}
+            title="Período invertido"
+            description="A data inicial está depois da data final. Ajuste o período e filtre de novo."
+            action={{ label: "Limpar filtros", href: "/orders" }}
+          />
+        ) : hasFilters && allOrders.total > 0 ? (
           <EmptyState
             icon={PackageSearch}
             title="Nenhum pedido encontrado"
