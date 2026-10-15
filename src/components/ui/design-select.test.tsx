@@ -67,6 +67,21 @@ describe("DesignSelect", () => {
     fireEvent.click(screen.getByRole("combobox", { name: "Modelo" }));
     expect(screen.queryByRole("option", { name: "YZ" })).not.toBeInTheDocument();
   });
+
+  it("opens the list beside the trigger instead of over it, so small screens keep room for options", () => {
+    render(
+      <DesignSelect aria-label="Categoria" defaultValue="">
+        <option value="">Todas</option>
+        <option value="capacetes">Capacetes</option>
+      </DesignSelect>,
+    );
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Categoria" }));
+
+    const positioner = screen.getByRole("listbox").closest("[data-side]");
+    expect(positioner).not.toBeNull();
+    expect(positioner).not.toHaveAttribute("data-side", "none");
+  });
 });
 
 function defined<T>(value: T | null | undefined): T {
