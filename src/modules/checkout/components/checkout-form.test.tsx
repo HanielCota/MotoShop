@@ -98,10 +98,11 @@ it("links field errors and focuses the summary alert when validation fails", asy
   expect(checkout).not.toHaveBeenCalled();
 });
 
-it("does not invite the customer to pay before the seller connects a Mercado Pago account", () => {
+it("does not invite the customer to pay while payments are closed, nor blame the store", () => {
   render(<CheckoutForm paymentAvailable={false} cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
 
-  expect(screen.getByRole("status")).toHaveTextContent("O lojista precisa conectar a conta do Mercado Pago");
+  expect(screen.getByText("Pix e cartão aparecem aqui quando os pagamentos forem liberados.")).toBeInTheDocument();
+  expect(screen.queryByText(/lojista precisa conectar/)).not.toBeInTheDocument();
   expect(screen.queryByRole("radiogroup", { name: "Forma de pagamento" })).toBeNull();
   expect(screen.getByRole("button", { name: "Pagamento indisponível" })).toBeDisabled();
 });

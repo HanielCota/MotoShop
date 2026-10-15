@@ -14,6 +14,7 @@ import { CartItemControls } from "@/modules/cart/components/cart-item-controls";
 import { VisualCartPreview } from "@/modules/cart/components/visual-preview";
 import { getActiveCart } from "@/modules/cart/queries/cart";
 import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
+import { PAYMENTS_CLOSED_MESSAGE } from "@/modules/payments/domain/payment-availability-copy";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 
 import { getCartThumbnails } from "./cart-thumbnails";
@@ -182,8 +183,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
             </dl>
             {payment.available ? null : (
               <InlineNotice tone="warning" className="mt-4">
-                As compras ainda não estão liberadas. Você pode conferir frete e entrega, mas o pagamento ainda não abre
-                e nenhum pedido é criado.
+                {PAYMENTS_CLOSED_MESSAGE}
               </InlineNotice>
             )}
             <Link className={buttonVariants({ size: "lg", className: "mt-5 w-full" })} href={"/checkout" as Route}>
