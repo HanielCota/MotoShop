@@ -10,7 +10,9 @@ vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
 vi.mock("@/modules/auth/application/authorization", () => ({ requireAdminAccess: vi.fn(async () => ({})) }));
 vi.mock("@/modules/admin/queries/order-detail", () => ({ getAdminOrderDetail: mocks.getOrder }));
-vi.mock("@/modules/admin/components/order-detail/admin-seller-order-card", () => ({ AdminSellerOrderCard: () => null }));
+vi.mock("@/modules/admin/components/order-detail/admin-seller-order-card", () => ({
+  AdminSellerOrderCard: () => null,
+}));
 vi.mock("@/modules/orders/components/order-detail/payment-section", () => ({ PaymentSection: () => null }));
 
 import AdminOrderDetailPage from "./page";
