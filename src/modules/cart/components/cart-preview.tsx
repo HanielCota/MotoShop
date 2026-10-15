@@ -6,7 +6,11 @@ import { ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { Button, buttonVariants } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { QuantityStepper } from "@/components/ui/quantity-stepper";
 import { formatMoneyInCents } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 import { clearCartAction, getCartPreviewAction, updateCartItemAction } from "../actions/cart-actions";
 import { CART_UPDATED_EVENT } from "./cart-events";
@@ -19,7 +23,6 @@ export function CartPreview() {
   const [message, setMessage] = useState<string>();
   const [pending, setPending] = useState(false);
   const [isError, setIsError] = useState(false);
-  const [confirmingClear, setConfirmingClear] = useState(false);
 
   async function refresh() {
     setPending(true);
@@ -46,7 +49,6 @@ export function CartPreview() {
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen);
-    setConfirmingClear(false);
     if (nextOpen) refresh();
   }
 
@@ -72,32 +74,25 @@ export function CartPreview() {
     }
   }
 
-  async function clearCart() {
+  /** Runs from the confirmation dialog: returning an error keeps the dialog open with the message. */
+  async function clearCart(): Promise<{ error?: string }> {
     setMessage(undefined);
     setIsError(false);
-    setPending(true);
     try {
       const result = await clearCartAction();
-      if (result.error) {
-        setMessage(result.error);
-        setIsError(true);
-        return;
-      }
+      if (result.error) return { error: result.error };
+
       setData((current) => ({
         items: [],
         itemCount: 0,
         subtotalInCents: 0,
         paymentAvailable: current?.paymentAvailable ?? false,
       }));
-      setConfirmingClear(false);
       setMessage(result.success);
-      setIsError(false);
+      return {};
     } catch (error) {
       Sentry.captureException(error);
-      setMessage("Não foi possível limpar o carrinho. Tente novamente.");
-      setIsError(true);
-    } finally {
-      setPending(false);
+      return { error: "Não foi possível limpar o carrinho. Tente novamente." };
     }
   }
 
@@ -118,7 +113,7 @@ export function CartPreview() {
         ) : null}
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Positioner side="bottom" align="end" sideOffset={8} className="z-[60]">
+        <Popover.Positioner side="bottom" align="end" sideOffset={8} className="z-50">
           <Popover.Popup className="border-border bg-background text-foreground w-[min(92vw,24rem)] rounded-xl border p-4 shadow-xl outline-none">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
@@ -128,51 +123,21 @@ export function CartPreview() {
                 </Popover.Description>
               </div>
               {data && data.items.length > 0 ? (
-                // Mantido montado durante a confirmação: desmontar o alvo do clique fecharia o popover.
-                <button
-                  type="button"
-                  aria-expanded={confirmingClear}
-                  aria-controls="cart-clear-confirm"
-                  onClick={() => setConfirmingClear(true)}
-                  disabled={pending || confirmingClear}
-                  className="text-muted-foreground hover:text-foreground min-h-9 rounded-md px-2 text-xs font-medium underline underline-offset-4 disabled:opacity-50"
-                >
-                  Limpar carrinho
-                </button>
+                <ConfirmDialog
+                  trigger={
+                    <Button type="button" variant="link" size="sm" disabled={pending}>
+                      Limpar carrinho
+                    </Button>
+                  }
+                  title="Limpar carrinho?"
+                  description={`${data.itemCount === 1 ? "O item sai" : `Os ${data.itemCount} itens saem`} do carrinho. Você pode adicionar os produtos de novo depois.`}
+                  confirmLabel="Limpar carrinho"
+                  pendingLabel="Limpando..."
+                  tone="destructive"
+                  onConfirm={clearCart}
+                />
               ) : null}
             </div>
-
-            {data && data.items.length > 0 ? (
-              // Oculto (não desmontado) ao cancelar: desmontar o alvo do clique fecharia o popover.
-              <div
-                hidden={!confirmingClear}
-                id="cart-clear-confirm"
-                role="alertdialog"
-                aria-labelledby="cart-clear-title"
-                className="border-destructive/30 bg-destructive/5 mb-3 rounded-lg border p-3"
-              >
-                <p id="cart-clear-title" className="text-sm font-medium">
-                  Remover todos os {data.itemCount} {data.itemCount === 1 ? "item" : "itens"} do carrinho?
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={clearCart}
-                    disabled={pending}
-                    className="bg-destructive hover:bg-destructive/90 inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold text-white disabled:opacity-50"
-                  >
-                    Sim, limpar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingClear(false)}
-                    className="border-border hover:bg-muted inline-flex min-h-11 items-center justify-center rounded-md border px-4 text-sm font-semibold"
-                  >
-                    Manter itens
-                  </button>
-                </div>
-              </div>
-            ) : null}
 
             {!data || pending ? (
               <p className="text-muted-foreground py-6 text-center text-sm">Carregando carrinho…</p>
@@ -197,40 +162,27 @@ export function CartPreview() {
                       <div className="min-w-0">
                         <p className="line-clamp-2 text-sm font-medium">{item.name}</p>
                         <p className="text-muted-foreground mt-0.5 text-xs">{item.variant}</p>
-                        <div className="mt-1 flex items-center gap-2" aria-label={`Quantidade de ${item.name}`}>
-                          <button
-                            type="button"
-                            aria-label={`Diminuir quantidade de ${item.name}`}
-                            disabled={pending || item.quantity <= 1}
-                            onClick={() => updateItem(item.id, item.quantity - 1)}
-                            className="border-border hover:bg-muted inline-flex size-9 items-center justify-center rounded-md border text-base disabled:opacity-40"
-                          >
-                            −
-                          </button>
-                          <span className="min-w-5 text-center text-xs tabular-nums" aria-live="polite">
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            aria-label={`Aumentar quantidade de ${item.name}`}
-                            disabled={pending || item.quantity >= Math.min(99, item.availableQuantity)}
-                            onClick={() => updateItem(item.id, item.quantity + 1)}
-                            className="border-border hover:bg-muted inline-flex size-9 items-center justify-center rounded-md border text-base disabled:opacity-40"
-                          >
-                            +
-                          </button>
-                        </div>
+                        <QuantityStepper
+                          label={`Quantidade de ${item.name}`}
+                          value={item.quantity}
+                          min={1}
+                          max={Math.max(item.quantity, Math.min(99, item.availableQuantity))}
+                          disabled={pending}
+                          onChange={(quantity) => updateItem(item.id, quantity)}
+                          className="mt-1"
+                        />
                         <p className="mt-1 text-xs">{formatMoneyInCents(item.unitPriceInCents * item.quantity)}</p>
                       </div>
-                      <button
+                      <Button
                         type="button"
+                        variant="link"
+                        size="sm"
                         disabled={pending}
                         aria-label={`Remover ${item.name} do carrinho`}
                         onClick={() => updateItem(item.id, 0)}
-                        className="text-muted-foreground hover:text-foreground min-h-9 shrink-0 rounded-md px-2 text-xs font-medium underline underline-offset-4 disabled:opacity-50"
                       >
                         Remover
-                      </button>
+                      </Button>
                     </li>
                   ))}
                 </ul>
@@ -247,14 +199,11 @@ export function CartPreview() {
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   <Link
                     href="/cart"
-                    className="border-border hover:bg-muted flex min-h-11 items-center justify-center rounded-md border px-4 text-sm font-semibold transition-colors"
+                    className={cn(buttonVariants({ variant: "outline", className: "w-full font-semibold" }))}
                   >
                     Ver carrinho
                   </Link>
-                  <Link
-                    href="/checkout"
-                    className="bg-moto-brand hover:bg-moto-brand/90 text-moto-brand-foreground flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-semibold transition-colors"
-                  >
+                  <Link href="/checkout" className={cn(buttonVariants({ className: "w-full font-semibold" }))}>
                     {data.paymentAvailable ? "Finalizar compra" : "Conferir frete"}
                   </Link>
                 </div>
