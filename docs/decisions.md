@@ -42,6 +42,7 @@ Decisões pontuais tomadas ao longo do MVP, agrupadas por domínio. Complementam
 - Formulários de cupom (lojista e Admin) recebem desconto em % e valores em R$; a conversão para basis points e centavos acontece no servidor (`coupons/domain/coupon-form-input.ts`, sem `float`). Unidades internas nunca aparecem na interface.
 - Ativação ou desativação de cupons valida owner e tenant no servidor e registra auditoria com o usuário autenticado.
 - Uso de cupom é consultado por agregação/count do banco, sem serializar resgates completos para as páginas operacionais.
+- Cupom da loja com validade (BUG-025, decisão do responsável em 16/10/2026): o formulário da Central do Lojista ganha "Início" e "Fim" opcionais, gravados em `startsAt`/`endsAt`, que já existem e já são validados no checkout.
 - Vigência: datas de validade podem ser exibidas na operação, mas aplicação e checkout continuam validando vigência no servidor. Filtros de vigência aceitam datas nulas como limites abertos; cupons futuros são identificados por `startsAt > now`; nenhum filtro substitui a validação do checkout.
 
 ### Pagamento (Mercado Pago)
@@ -98,11 +99,16 @@ Decisões pontuais tomadas ao longo do MVP, agrupadas por domínio. Complementam
 
 - O perfil público da loja (`name`, `slug` e `description`) pode ser alterado apenas com `SELLER_MANAGE`, sempre validando `sellerId` no servidor e registrando `AuditLog`; dados de origem e frete continuam privados.
 - Logo e banner da loja usam chaves explícitas no `Store`, upload direto para ImageKit e associação server-side com prefixo do seller e conferência do asset; a vitrine só deriva URLs públicas dos assets associados.
-- A gestão inicial da equipe adiciona apenas usuários já cadastrados; convites externos e transferência de ownership ficam fora do MVP.
+- Equipe por convite com aceite (M-04, 15/10/2026): o lojista convida por e-mail; a pessoa só entra ao aceitar com a conta daquele e-mail verificado (`SellerMemberInvite`, só o hash do token no banco, no máximo um convite pendente por loja e e-mail). Transferência de ownership fica fora do MVP. (Substitui a regra anterior, que adicionava qualquer conta já cadastrada sem consentimento.)
 
 ### Financeiro
 
 - Resumos financeiros do seller usam valores persistidos no `SellerOrder`, sempre em centavos, e excluem pedidos não confirmados ou cancelados.
+
+### Pós-venda
+
+- Lojista vê devolução, cancelamento e disputa (UX-13, decisão do responsável em 16/10/2026): o card do pedido na Central mostra motivo, itens e status das três solicitações, sem ações para o lojista. A mediação e as decisões continuam no Admin. Toda consulta filtra `sellerId`.
+- Fotos na devolução (decisão do responsável em 16/10/2026): o cliente anexa até 3 fotos opcionais ao solicitar devolução, com upload direto ao ImageKit e conferência do asset no servidor, como nas fotos de produto. As fotos aparecem para o Admin e para o lojista.
 
 ---
 
@@ -114,6 +120,7 @@ Decisões pontuais tomadas ao longo do MVP, agrupadas por domínio. Complementam
 - Aprovação ou rejeição de seller/produto é uma mudança administrativa crítica e persiste o estado e o `AuditLog` na mesma transação.
 - Suspensão e reativação de seller são transições administrativas explícitas, com `AuditLog` transacional e bloqueio de acesso enquanto o seller estiver suspenso.
 - Perguntas e avaliações públicas podem ser ocultadas/restauradas pelo Admin sem exclusão física. Consultas públicas ignoram itens ocultos, e cada alteração gera AuditLog. O histórico pessoal do pedido permanece acessível ao próprio cliente.
+- A nota de resolução de disputa do Admin é interna (15/10/2026): fica no Admin e na auditoria; o cliente e o lojista veem o resultado (resolvida ou recusada), não o texto da nota.
 
 ### Comissão e VIP
 
@@ -188,7 +195,9 @@ Filtros e ordenações já existentes, todos sob a regra acima:
 ### Minha Moto
 
 - A garagem pessoal `SavedMotorcycle` pertence ao `User` e referencia exclusivamente `MotorcycleFitment` da base administrada. Cada usuário pode salvar a mesma configuração uma vez; um índice parcial permite no máximo uma moto principal. A primeira vira principal, e remover a principal promove a próxima configuração ativa disponível. Consultas e mutações sempre filtram `userId` no servidor.
-- A moto principal aparece como seleção inicial na landing e como atalho explícito no catálogo; o filtro efetivo continua representado por `?moto=<fitmentId>` na URL. No detalhe do produto, ausência de relacionamento de compatibilidade significa "não confirmada", nunca incompatibilidade comprovada.
+- A moto principal aparece como seleção inicial na landing e como atalho explícito no catálogo (UX-01, 15/10/2026): nunca é aplicada sozinha; busca, categoria e o link "Catálogo" mostram tudo, e a faixa oferece "Ver peças para minha moto". O filtro efetivo continua representado por `?moto=<fitmentId>` na URL. No detalhe do produto, ausência de relacionamento de compatibilidade significa "não confirmada", nunca incompatibilidade comprovada.
+- Categoria universal (decisão do responsável em 16/10/2026): marcação na categoria, ligada só pelo Admin, para itens que servem em qualquer moto (capacetes, vestuário, ferramentas). Com `?moto=` ativo, o catálogo retorna os produtos compatíveis mais os de categorias universais; a página de produto universal mostra "Serve em qualquer moto" em vez do aviso de compatibilidade não informada. Motivo: hoje "Capacetes" com uma moto escolhida devolve zero produtos.
+- Na página do produto, o bloco "Sua moto" fica logo abaixo do preço (15/10/2026). No seletor da home, escolher um fabricante preenche o modelo quando ele é o único cadastrado; o ano fica em branco (mantido em 15/10/2026).
 
 ### Página de produto, avaliações e perguntas
 
@@ -217,6 +226,7 @@ Filtros e ordenações já existentes, todos sob a regra acima:
 
 - Favoritos são persistidos em `Favorite`, com unicidade por usuário e produto; somente produtos aprovados podem ser salvos e a lista exige autenticação. A lista consulta com `userId`, pagina no servidor e se limita a produtos aprovados de sellers ativos/aprovados.
 - O histórico autenticado em `/orders` consulta pedidos exclusivamente pelo `userId`; o detalhe mantém suporte separado para `orderNumber` com token seguro de guest.
+- Acompanhamento do pedido pelo visitante (decisão do responsável em 15/10/2026, a implementar): o link seguro vai por e-mail; ao abrir, o token entra num cookie com validade e a página do pedido passa a funcionar sem o token na URL. O token nunca fica em log nem em URL compartilhável por mais tempo que o necessário.
 - Páginas públicas que podem não existir (ex.: `/products/[slug]`) checam a existência antes de qualquer `Suspense`/`loading.tsx` e chamam `notFound()` cedo: depois que o streaming começa, o status fica 200. O esqueleto de carregamento fica num `<Suspense>` dentro da página; o `loading.tsx` do catálogo vive no grupo `products/(catalog)` para não envolver o detalhe do produto.
 
 ---
@@ -239,6 +249,7 @@ Filtros e ordenações já existentes, todos sob a regra acima:
 - Exceção explícita aprovada para apresentação antes do catálogo oficial: produtos marcados `isDemo` podem existir no banco com fotos locais geradas e valores/estoque ilustrativos. Devem ser identificados como demonstração no storefront, nunca entrar no carrinho/checkout (checagem server-side), não emitir Product JSON-LD nem entrar no sitemap. O seed é isolado por slugs `demo-*` e deve permanecer idempotente; nenhuma loja ou produto real pode ser sobrescrito. As lojas demo ficam `PENDING` até o código de bloqueio estar publicado.
 - As imagens geradas pelo seed de revisão (`public/images/demo/review-*.webp`) são versionadas no git apenas enquanto o site público for demonstração, para não darem 404 no deploy. Saem antes do lançamento junto com os dados demo, via `pnpm db:remove:review`; como o script só apaga os arquivos localmente, a remoção precisa ser commitada.
 - IDs determinísticos do seed de revisão usam o prefixo `czrvw` para passar na validação `z.cuid()` das Server Actions.
+- A palavra "Demonstração" aparece uma vez por card, no selo, e no nome do produto ou da loja como "(demonstração)"/"· demonstração"; nenhum outro texto repete o aviso (15/10/2026).
 
 ---
 
@@ -251,5 +262,7 @@ Filtros e ordenações já existentes, todos sob a regra acima:
 - Em produção, `/api/inngest` responde 503 (sem detalhes) se `INNGEST_DEV` estiver ativo ou `INNGEST_SIGNING_KEY` ausente.
 - Erros inesperados exibidos ao usuário usam mensagem genérica em português; `ZodError` vira `VALIDATION_ERROR` com a mensagem do schema, ou "Confira os dados informados." quando a mensagem é a padrão (inglês) do Zod.
 - UI: um único sistema de estilos (Tailwind + tokens de `globals.css`). Header (`StorefrontNavigation`), rodapé (`SiteFooter`) e card de produto (`ProductCard`) são compartilhados por todo o storefront; Central do Lojista e Admin usam `AppAreaHeader` com "Sair". Controles têm 44px (`h-11`) por padrão no mobile, `sm` (36px) apenas em tabelas operacionais densas; campos usam `text-base` no mobile para evitar zoom no iOS; formulários usam React Hook Form + Zod com `FormField` (erro por campo com `aria-describedby`). Não criar CSS modules paralelos para componentes que já existem em `components/ui`.
-- Dependências da stack sem uso no código (auditoria de design system, DS-23, 15/10/2026): `@tanstack/react-table` e `react-hook-form` ficam instalados porque o AGENTS.md os define como padrão. As tabelas atuais são HTML server-rendered com paginação no banco; adotar TanStack quando houver ordenação ou seleção no cliente. Login e checkout ainda validam à mão; migrar para React Hook Form é decisão pendente do responsável. `tw-animate-css` foi removido por não ter nenhuma classe em uso.
+- Dependências da stack (auditoria de design system, DS-23; decisão do responsável em 16/10/2026): a regra do `AGENTS.md` foi ajustada, não o código. `@tanstack/react-table` entra quando uma tabela precisar de ordenação, seleção ou filtro no navegador; até lá, tabelas HTML server-rendered com paginação no banco. `react-hook-form` é obrigatório em formulário novo ou reescrito; login e checkout continuam validando à mão até serem reescritos. `tw-animate-css` foi removido por não ter nenhuma classe em uso.
+- Card com borda (DS-10, decisão do responsável em 16/10/2026): o `Card` de `components/ui` usa `border` (token `border`), não `ring`; as caixas feitas à mão com `bg-card rounded-* border` (checkout, carrinho, prévia visual) passam a usar o `Card`, e `CardTitle` vira heading por `render`/`as`. Painéis de navegação e o hero não são cards.
+- DS-15 (caixa de sugestões da busca) adiado para depois do lançamento (margot#325).
 - Ícones (auditoria de ícones, 15/10/2026): o ícone representa o significado, não a cor. Status usam `meaning` em `status-labels.ts` (aguardando = `Clock`, concluído = `Check`, em trânsito = `Truck`, atenção = `TriangleAlert`, recusado/falhou = `CircleX`); `X` fica para fechar, limpar e remover filtro. Conceitos recorrentes vêm de `shared/presentation/domain-icons.ts` (pedido = `Package`, carrinho = `ShoppingBag`, nada encontrado = `SearchX`, estoque = `Boxes`). Moto é `Motorbike`. Lixeira só em exclusão definitiva. Setas: `ChevronRight` em linha de lista ou atalho de configuração; `ArrowRight` em link ou CTA com texto ("Ver pedido", "Ver produtos"); `ArrowUpRight`/`ExternalLink` só quando abre fora do site. KPIs mostram o objeto contado, não o estado. Onde a Lucide não tem símbolo honesto (filtros, pneus, capacetes), usar só o texto.
