@@ -49,7 +49,6 @@ function makeProduct(id: string, name: string, overrides: Partial<ProductCardDat
     priceInCents: 89990,
     hasPriceRange: false,
     availableQuantity: 3,
-    isDemo: false,
     sponsored: false,
     isNew: false,
     ...overrides,
@@ -59,7 +58,7 @@ function makeProduct(id: string, name: string, overrides: Partial<ProductCardDat
 function renderHome(searchParams = "", options: Partial<ComponentProps<typeof MarketingHome>> = {}) {
   return render(
     <NuqsTestingAdapter searchParams={searchParams} hasMemory>
-      <MarketingHome fitments={fitments} categories={categories} featuredProducts={[]} paymentAvailable {...options} />
+      <MarketingHome fitments={fitments} categories={categories} featuredProducts={[]} {...options} />
     </NuqsTestingAdapter>,
   );
 }
@@ -231,18 +230,11 @@ describe("marketing homepage", () => {
     expect(screen.getByRole("img", { name: "Capacete e" })).toHaveAttribute("data-loading", "lazy");
   });
 
-  it("promises purchase and checkout only while payment is available", () => {
+  it("shows the production assurances and never announces that purchases are coming soon", () => {
     renderHome();
     const assurances = screen.getByRole("list", { name: "Garantias do Moto Shop" });
     expect(within(assurances).getByText("Compre sem criar conta")).toBeInTheDocument();
     expect(within(assurances).getByText("Frete e prazo de cada loja no checkout")).toBeInTheDocument();
-  });
-
-  it("announces upcoming purchases while payment is unavailable", () => {
-    renderHome("", { paymentAvailable: false });
-    const assurances = screen.getByRole("list", { name: "Garantias do Moto Shop" });
-    expect(within(assurances).getByText("Compras em breve")).toBeInTheDocument();
-    expect(within(assurances).getByText("Frete e prazo definidos por cada loja")).toBeInTheDocument();
-    expect(within(assurances).queryByText(/checkout|Compre sem criar conta/)).not.toBeInTheDocument();
+    expect(within(assurances).queryByText("Compras em breve")).not.toBeInTheDocument();
   });
 });

@@ -30,10 +30,6 @@ vi.mock("../infrastructure/cart-access", () => ({
   cartOwnerWhere: () => ({ userId: "buyer" }),
   findOrCreateActiveCart: async () => ({ id: "cart" }),
 }));
-// The real module reads payment environment variables; these tests do not exercise the cart preview.
-vi.mock("@/modules/payments/application/assert-payment-ready", () => ({
-  getCheckoutPaymentAvailability: () => ({ available: false, cardPublicKey: undefined }),
-}));
 import { addToCartAction, clearCartAction, updateCartItemAction } from "./cart-actions";
 const id = "cmf8w8m4p0000s6o5zj2q8v3k";
 beforeEach(() => {

@@ -7,7 +7,6 @@ import { pageContainerClassName } from "@/components/ui/page-container";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { InlineNotice } from "@/components/ui/inline-notice";
 import { BRAND_SITE_NAME } from "@/config/brand";
 import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
@@ -19,7 +18,6 @@ import { ProductMotorcyclePicker } from "@/modules/motorcycles/components/produc
 import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/motorcycles";
 import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
 import { buildProductJsonLd, serializeJsonLd } from "@/modules/products/application/build-product-json-ld";
-import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
 import { ProductBreadcrumb } from "@/modules/products/components/detail/product-breadcrumb";
 import { ProductBuyBox } from "@/modules/products/components/detail/product-buy-box";
 import {
@@ -193,7 +191,7 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
       */}
       <div className="grid min-w-0 gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:grid-rows-[auto_1fr] md:items-start lg:gap-x-8">
         <div className="min-w-0 md:col-start-1 md:row-start-1">
-          <ProductGallery images={galleryImages} productName={product.name} isDemo={product.isDemo} />
+          <ProductGallery images={galleryImages} productName={product.name} />
         </div>
 
         <section
@@ -240,16 +238,12 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
               variants={buyBoxVariants}
               isDemo={product.isDemo}
               hasPriceRange={offer.hasPriceRange}
-              paymentAvailable={getCheckoutPaymentAvailability(1).available}
               fitment={<ProductFitmentBanner status={fitmentStatus} picker={motorcyclePicker} />}
             />
           </div>
           <ProductPageCoupons coupons={coupons.map(toProductPageCouponView)} />
-          {product.isDemo ? (
-            <InlineNotice tone="warning" className="mt-5">
-              Produto de apresentação. Imagens, valores e estoque são ilustrativos; a compra está desativada.
-            </InlineNotice>
-          ) : (
+          {/* Test products get the shipping quote with the simulated purchase (margot#351). */}
+          {product.isDemo ? null : (
             <ProductShippingQuote
               options={buyBoxVariants.map((variant) => ({
                 id: variant.id,

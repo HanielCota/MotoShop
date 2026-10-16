@@ -9,7 +9,6 @@ import { listMarketingCategories } from "@/modules/marketing/queries/marketing-c
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
 import { listFeaturedProducts } from "@/modules/marketing/queries/featured-products";
-import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
 
 // Home: "Moto Shop Brasil - <slogan>" sem o sufixo do template.
 export const metadata: Metadata = {
@@ -27,8 +26,6 @@ export default async function HomePage() {
     listFeaturedProducts(),
   ]);
   const primaryMotorcycle = session ? await getPrimarySavedMotorcycle(session.user.id) : null;
-  // A single-store cart is the simplest purchase: if even that cannot be paid, no purchase can.
-  const payment = getCheckoutPaymentAvailability(1);
 
   return (
     <div>
@@ -37,7 +34,6 @@ export default async function HomePage() {
           categories={categories}
           featuredProducts={featuredProducts}
           primaryFitmentId={primaryMotorcycle?.motorcycleFitmentId ?? null}
-          paymentAvailable={payment.available}
           fitments={fitments.map((fitment) => ({
             id: fitment.id,
             manufacturer: fitment.motorcycleModel.manufacturer.name,

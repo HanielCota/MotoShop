@@ -5,7 +5,6 @@ import { ImageOff, ShoppingBag, Store } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { InlineNotice } from "@/components/ui/inline-notice";
 import { pageContainerClassName } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatMoneyInCents } from "@/lib/format";
@@ -13,8 +12,6 @@ import { cn } from "@/lib/utils";
 import { CartItemControls } from "@/modules/cart/components/cart-item-controls";
 import { VisualCartPreview } from "@/modules/cart/components/visual-preview";
 import { getActiveCart } from "@/modules/cart/queries/cart";
-import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
-import { PAYMENTS_CLOSED_MESSAGE } from "@/modules/payments/domain/payment-availability-copy";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 
 import { getCartThumbnails } from "./cart-thumbnails";
@@ -32,7 +29,6 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
   const items = cart?.items ?? [];
   const thumbnails = await getCartThumbnails(items);
   const groups = Map.groupBy(items, (item) => item.variant.product.sellerId);
-  const payment = getCheckoutPaymentAvailability(groups.size);
   const itemCount = items.reduce((total, item) => total + item.quantity, 0);
   const subtotalInCents = items.reduce(
     (total, item) => total + getCurrentPriceInCents(item.variant) * item.quantity,
@@ -178,16 +174,11 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
               </div>
               <div className="text-muted-foreground flex items-center justify-between gap-3">
                 <dt>Frete</dt>
-                <dd>{payment.available ? "Calculado na finalização" : "Calculado por loja"}</dd>
+                <dd>Calculado na finalização</dd>
               </div>
             </dl>
-            {payment.available ? null : (
-              <InlineNotice tone="warning" className="mt-4">
-                {PAYMENTS_CLOSED_MESSAGE}
-              </InlineNotice>
-            )}
             <Link className={buttonVariants({ size: "lg", className: "mt-5 w-full" })} href={"/checkout" as Route}>
-              {payment.available ? "Finalizar compra" : "Conferir frete e entrega"}
+              Finalizar compra
             </Link>
             <Link
               href="/products"
@@ -207,15 +198,11 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
           >
             <div className="mx-auto flex max-w-6xl items-center gap-3">
               <div className="min-w-0 flex-1">
-                {payment.available ? (
-                  <p className="text-muted-foreground text-xs">Subtotal · frete na finalização</p>
-                ) : (
-                  <p className="text-warning-foreground text-xs font-semibold">Pagamento ainda não liberado</p>
-                )}
+                <p className="text-muted-foreground text-xs">Subtotal · frete na finalização</p>
                 <p className="text-base font-bold tabular-nums">{formatMoneyInCents(subtotalInCents)}</p>
               </div>
               <Link className={buttonVariants({ className: "shrink-0" })} href={"/checkout" as Route}>
-                {payment.available ? "Finalizar compra" : "Conferir frete"}
+                Finalizar compra
               </Link>
             </div>
           </div>

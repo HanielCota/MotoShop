@@ -11,12 +11,6 @@ import { getPublicStockStatus, publicStockStatusLabel } from "@/modules/products
 import { getProductCardBadges, type ProductCardBadge } from "./product-card-badges";
 
 function ProductCardBadgeLabel({ badge }: { badge: ProductCardBadge }) {
-  if (badge === "DEMO")
-    return (
-      <Badge variant="neutral" className="bg-card/95">
-        Demonstração
-      </Badge>
-    );
   if (badge === "SPONSORED")
     return (
       <Badge variant="brand" className="bg-card/95">
@@ -43,7 +37,6 @@ export type ProductCardData = {
   compareAtPriceInCents?: number | null | undefined;
   hasPriceRange: boolean;
   availableQuantity: number;
-  isDemo: boolean;
   sponsored: boolean;
   /** Approved in the last 30 days (computed on the server, see `isNewProduct`). */
   isNew: boolean;
@@ -82,7 +75,6 @@ export function ProductCard({
     product.priceInCents !== null &&
     product.compareAtPriceInCents > product.priceInCents;
   const badges = getProductCardBadges({
-    isDemo: product.isDemo,
     sponsored: product.sponsored,
     onSale,
     isNew: product.isNew,
@@ -167,9 +159,7 @@ export function ProductCard({
         ) : null}
 
         <div className="mt-auto pt-2">
-          {product.hasPriceRange && !product.isDemo ? (
-            <span className="text-muted-foreground block text-xs">A partir de</span>
-          ) : null}
+          {product.hasPriceRange ? <span className="text-muted-foreground block text-xs">A partir de</span> : null}
           {onSale && product.compareAtPriceInCents != null ? (
             <span className="text-muted-foreground block text-xs line-through">
               <span className="sr-only">Preço normal: </span>
@@ -190,7 +180,6 @@ export function ProductCard({
                   : "text-foreground font-medium",
             )}
           >
-            {/* The "Demonstração" badge and the name already identify demo products; no third mention here. */}
             {publicStockStatusLabel[stockStatus]}
           </p>
         </div>

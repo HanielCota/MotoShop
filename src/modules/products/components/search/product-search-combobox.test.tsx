@@ -18,9 +18,8 @@ const suggestions = [
     href: "/products/capacete-apex",
     imageUrl: "/a.webp",
     priceInCents: 89990,
-    isDemo: false,
   },
-  { id: "p2", name: "Capacete Kid", href: "/products/capacete-kid", imageUrl: null, priceInCents: 49990, isDemo: true },
+  { id: "p2", name: "Capacete Kid", href: "/products/capacete-kid", imageUrl: null, priceInCents: 49990 },
 ];
 const fetchMock = vi.fn();
 
@@ -74,7 +73,7 @@ describe("ProductSearchCombobox", () => {
     expect(input).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("lists suggestions with name, price and the demo mark", async () => {
+  it("lists suggestions with name and price, without any demo mark (margot#350)", async () => {
     const { input } = renderSearch();
 
     await typeAndWaitForSuggestions(input, "capa");
@@ -82,7 +81,8 @@ describe("ProductSearchCombobox", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/search/suggestions?q=capa", expect.anything());
     expect(input).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("option", { name: /Capacete Apex.*899,90/ })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /Capacete Kid.*demonstração/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Capacete Kid.*499,90/ })).toBeInTheDocument();
+    expect(screen.queryByText(/demonstração/)).not.toBeInTheDocument();
   });
 
   it("moves through suggestions with the arrows and opens the highlighted one on Enter", async () => {

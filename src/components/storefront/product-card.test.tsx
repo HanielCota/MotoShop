@@ -19,7 +19,6 @@ function card(imageUrl: string): ProductCardData {
     priceInCents: 149990,
     hasPriceRange: false,
     availableQuantity: 3,
-    isDemo: false,
     sponsored: false,
     isNew: false,
   };
@@ -44,9 +43,12 @@ it("serves ImageKit images as already-resized URLs, without the Next optimizer",
   expect(image).toHaveAttribute("loading", "eager");
 });
 
-it("marks demo products with the badge only, not again in the stock line", () => {
-  render(<ProductCard product={{ ...card("/images/demo/capacete-apex.webp"), isDemo: true }} />);
+it("shows the price range and the sponsored badge without any demo notice (margot#350)", () => {
+  render(
+    <ProductCard product={{ ...card("/images/demo/capacete-apex.webp"), hasPriceRange: true, sponsored: true }} />,
+  );
 
-  expect(screen.getByText("Demonstração")).toBeInTheDocument();
-  expect(screen.queryByText(/· demonstração/)).not.toBeInTheDocument();
+  expect(screen.getByText("A partir de")).toBeInTheDocument();
+  expect(screen.getByText("Patrocinado · Loja VIP")).toBeInTheDocument();
+  expect(screen.queryByText(/demonstração/i)).not.toBeInTheDocument();
 });

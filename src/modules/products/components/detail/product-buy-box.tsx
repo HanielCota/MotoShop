@@ -3,7 +3,6 @@
 import { useState, type ReactNode } from "react";
 
 import { DesignRadio, DesignRadioGroup } from "@/components/ui/design-radio";
-import { InlineNotice } from "@/components/ui/inline-notice";
 import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { AddToCartButton } from "@/modules/cart/components/add-to-cart-button";
@@ -23,14 +22,12 @@ export function ProductBuyBox({
   variants,
   isDemo,
   hasPriceRange,
-  paymentAvailable,
   fitment,
 }: {
   variants: BuyBoxVariant[];
+  /** Test product: no cart button until the simulated purchase exists (margot#351). */
   isDemo: boolean;
   hasPriceRange: boolean;
-  /** Falso enquanto o pagamento pelo marketplace não está liberado; o carrinho continua disponível. */
-  paymentAvailable: boolean;
   /** Faixa "Minha Moto", renderizada no servidor e posicionada antes da escolha de opção. */
   fitment?: ReactNode;
 }) {
@@ -67,7 +64,6 @@ export function ProductBuyBox({
             </span>
           </p>
         ) : null}
-        {isDemo ? <p className="text-brand-strong mt-1 text-xs font-medium">Valor ilustrativo</p> : null}
       </div>
 
       {fitment}
@@ -86,7 +82,7 @@ export function ProductBuyBox({
             className="grid gap-2 sm:grid-cols-2"
           >
             {variants.map((variant) => {
-              const unavailable = !isDemo && variant.stock < 1;
+              const unavailable = variant.stock < 1;
               const checked = variant.id === selected.id;
               return (
                 <label
@@ -132,9 +128,7 @@ export function ProductBuyBox({
           </p>
         ) : null}
         <p className="text-muted-foreground">
-          {isDemo
-            ? `SKU ${selected.sku} · exemplo ilustrativo`
-            : `SKU ${selected.sku}${stockStatus === "in-stock" ? ` · ${selected.stock} em estoque` : ""}`}
+          {`SKU ${selected.sku}${stockStatus === "in-stock" ? ` · ${selected.stock} em estoque` : ""}`}
         </p>
       </div>
 
@@ -148,11 +142,6 @@ export function ProductBuyBox({
             option: variants.length > 1 ? selected.title : undefined,
           }}
         />
-      ) : null}
-      {!isDemo && !paymentAvailable ? (
-        <InlineNotice tone="warning">
-          As compras ainda não estão liberadas. Você pode guardar o produto no carrinho, mas ainda não dá para pagar.
-        </InlineNotice>
       ) : null}
     </div>
   );
