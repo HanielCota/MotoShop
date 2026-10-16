@@ -41,12 +41,7 @@ export async function listSellerOrders(sellerId: string, input: SellerOrderListI
         order: { include: { shippingAddress: true } },
         shipment: true,
         items: true,
-        cancellationRequests: {
-          where: { status: { in: ["REQUESTED", "APPROVED"] } },
-          select: { id: true, customerMessage: true, createdAt: true },
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
+        ...buildSellerOrderAfterSalesInclude(sellerId),
       },
       orderBy: { createdAt: input.sort === "oldest" ? "asc" : "desc" },
       skip: (page - 1) * pageSize,
@@ -55,6 +50,47 @@ export async function listSellerOrders(sellerId: string, input: SellerOrderListI
   ]);
   const pageCount = Math.max(Math.ceil(total / pageSize), 1);
   return { orders, total, page: Math.min(page, pageCount), pageCount };
+}
+
+/**
+ * Cancelamentos, devoluções e disputas do card (UX-13), só para leitura. Cada relação repete o
+ * `sellerId` da sessão e seleciona apenas o que o lojista pode ver: as notas internas do Admin
+ * (`adminNote`, `resolutionNote`) ficam de fora.
+ */
+export function buildSellerOrderAfterSalesInclude(sellerId: string) {
+  const newestFirst = { createdAt: "desc" as const };
+  return {
+    cancellationRequests: {
+      where: { sellerId },
+      select: { id: true, status: true, reason: true, customerMessage: true, createdAt: true },
+      orderBy: newestFirst,
+    },
+    returnRequests: {
+      where: { sellerId },
+      select: {
+        id: true,
+        status: true,
+        reason: true,
+        customerMessage: true,
+        amountInCents: true,
+        createdAt: true,
+        items: {
+          where: { sellerId },
+          select: {
+            id: true,
+            quantity: true,
+            orderItem: { select: { productNameSnapshot: true, skuSnapshot: true } },
+          },
+        },
+      },
+      orderBy: newestFirst,
+    },
+    disputes: {
+      where: { sellerId },
+      select: { id: true, status: true, reason: true, description: true, createdAt: true },
+      orderBy: newestFirst,
+    },
+  } satisfies Prisma.SellerOrderInclude;
 }
 
 /** O `sellerId` é sempre o primeiro filtro: os demais apenas restringem pedidos da própria loja. */
