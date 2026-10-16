@@ -91,16 +91,8 @@ export function MotorcycleFinder({
       className="bg-card text-card-foreground w-full max-w-3xl scroll-mt-24 rounded-xl border border-white/20 shadow-2xl"
       id="minha-moto"
     >
+      {/* "Peças por moto" comes first and opens selected. */}
       <div className="border-border flex border-b" role="group" aria-label="Forma de busca">
-        <button
-          className={tabClassName}
-          type="button"
-          aria-pressed={finderMode === "search"}
-          aria-controls="marketing-search-panel"
-          onClick={() => setFinderMode("search")}
-        >
-          Buscar produto
-        </button>
         <button
           className={tabClassName}
           type="button"
@@ -109,6 +101,15 @@ export function MotorcycleFinder({
           onClick={() => setFinderMode("motorcycle")}
         >
           Peças por moto
+        </button>
+        <button
+          className={tabClassName}
+          type="button"
+          aria-pressed={finderMode === "search"}
+          aria-controls="marketing-search-panel"
+          onClick={() => setFinderMode("search")}
+        >
+          Buscar produto
         </button>
       </div>
 
