@@ -83,6 +83,11 @@ export function buildSellerOrderAfterSalesInclude(sellerId: string) {
             orderItem: { select: { productNameSnapshot: true, skuSnapshot: true } },
           },
         },
+        photos: {
+          where: { sellerId },
+          select: { id: true, storageKey: true },
+          orderBy: { sortOrder: "asc" as const },
+        },
       },
       orderBy: newestFirst,
     },

@@ -15,6 +15,7 @@ vi.mock("@/lib/database", () => ({
     $transaction: mocks.transaction,
   },
 }));
+vi.mock("./return-photo-uploads", () => ({ verifyReturnPhotos: vi.fn(async () => []) }));
 import { requestReturn } from "./request-return";
 const input = {
   orderNumber: "MS-1",

@@ -7,6 +7,8 @@ import type { CustomerOrderIdentity } from "@/modules/orders/application/resolve
 import { ApplicationError } from "@/shared/errors/application-error";
 
 import { isActiveReturnStatus, isSellerOrderEligibleForReturn } from "../domain/return-eligibility";
+import type { UploadedReturnPhoto } from "../domain/return-photos";
+import { verifyReturnPhotos, type VerifiedReturnPhoto } from "./return-photo-uploads";
 
 export type { CustomerOrderIdentity };
 
@@ -18,6 +20,8 @@ export type RequestReturnInput = {
   customerMessage?: string;
   idempotencyKey: string;
   identity: CustomerOrderIdentity;
+  /** Fotos já enviadas ao ImageKit; o servidor confere cada uma antes de gravar. */
+  photos?: readonly UploadedReturnPhoto[];
 };
 
 export type ReturnRequestResult = {
@@ -55,8 +59,11 @@ export async function requestReturn(input: RequestReturnInput): Promise<ReturnRe
   const existingRequest = await findReturnRequestByIdempotencyKey(db, input.idempotencyKey);
   if (existingRequest) return replayReturnRequest(existingRequest, orderItem, input);
 
+  // Conferência no ImageKit é chamada de rede: acontece antes da transação (AGENTS §36).
+  const photos = await verifyReturnPhotos(orderItem.id, input.photos ?? []);
+
   try {
-    return await db.$transaction(async (tx) => createReturnRequestWithLocks(tx, input, orderItem));
+    return await db.$transaction(async (tx) => createReturnRequestWithLocks(tx, input, orderItem, photos));
   } catch (error) {
     return recoverConcurrentReturnRequest(error, orderItem, input);
   }
@@ -104,6 +111,7 @@ async function createReturnRequestWithLocks(
   tx: Prisma.TransactionClient,
   input: RequestReturnInput,
   orderItem: AuthorizedOrderItem,
+  photos: readonly VerifiedReturnPhoto[],
 ): Promise<ReturnRequestResult> {
   await lockReturnTargets(tx, orderItem);
   const replay = await findReturnRequestByIdempotencyKey(tx, input.idempotencyKey);
@@ -115,7 +123,7 @@ async function createReturnRequestWithLocks(
   assertQuantityAvailable(input.quantity, activeReturns.availableQuantity);
 
   const created = await tx.returnRequest.create({
-    data: buildReturnRequestData(input, lockedItem, activeReturns),
+    data: buildReturnRequestData(input, lockedItem, activeReturns, photos),
     include: returnRequestInclude,
   });
   return toResult(created, lockedItem.id);
@@ -193,6 +201,7 @@ function buildReturnRequestData(
   input: RequestReturnInput,
   lockedItem: LockedOrderItem,
   activeReturns: ActiveReturnSummary,
+  photos: readonly VerifiedReturnPhoto[],
 ): Prisma.ReturnRequestUncheckedCreateInput {
   return {
     status: "REQUESTED",
@@ -212,6 +221,9 @@ function buildReturnRequestData(
         sellerId: lockedItem.sellerId,
       },
     },
+    ...(photos.length > 0
+      ? { photos: { create: photos.map((photo) => ({ ...photo, sellerId: lockedItem.sellerId })) } }
+      : {}),
   };
 }
 

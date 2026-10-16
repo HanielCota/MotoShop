@@ -27,7 +27,13 @@ export async function getCustomerOrder(orderNumber: string, identity: CustomerOr
           items: {
             include: {
               productReview: true,
-              returnItems: { include: { returnRequest: true } },
+              returnItems: {
+                include: {
+                  returnRequest: {
+                    include: { photos: { select: { id: true, storageKey: true }, orderBy: { sortOrder: "asc" } } },
+                  },
+                },
+              },
             },
           },
         },
