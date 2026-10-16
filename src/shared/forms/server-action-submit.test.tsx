@@ -8,11 +8,13 @@ afterEach(cleanup);
 const offline = () => Promise.reject(new TypeError("Failed to fetch"));
 
 describe("withNetworkErrorState", () => {
-  it("keeps the previous state and adds the connection error when the request fails", async () => {
+  it("keeps the current submission's values and clears stale success when the request fails", async () => {
     const action = withNetworkErrorState<{ values?: { code: string }; error?: string }, FormData>(offline);
+    const formData = new FormData();
+    formData.set("code", "MOTO20");
 
-    await expect(action({ values: { code: "MOTO10" } }, new FormData())).resolves.toEqual({
-      values: { code: "MOTO10" },
+    await expect(action({ values: { code: "MOTO10" } }, formData)).resolves.toEqual({
+      values: { code: "MOTO20" },
       error: expect.stringContaining("Não foi possível conectar"),
     });
   });

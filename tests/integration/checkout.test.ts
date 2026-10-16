@@ -6,6 +6,7 @@ const integrationMocks = vi.hoisted(() => ({
 }));
 import { testDb, cleanupFixtures } from "../support/database";
 import { must } from "../support/must";
+import { createTestCustomerTaxId } from "../support/customer-tax-id";
 vi.mock("@/lib/database", async () => ({ db: (await import("../support/database")).testDb }));
 vi.mock("@/lib/inngest/client", () => ({ inngest: { send: vi.fn(async () => ({ ids: [] })) } }));
 vi.mock("@/lib/payment/mercado-pago-provider", () => ({ mercadoPagoProvider: { refund: integrationMocks.refund } }));
@@ -71,7 +72,7 @@ async function cartInput(quantity = 1, withCoupon = false) {
     customerName: "Teste integração",
     customerEmail: email,
     customerPhone: "11999999999",
-    customerTaxId: "19119119100",
+    customerTaxId: createTestCustomerTaxId(),
     postalCode: "01001000",
     street: "Rua Teste",
     number: "1",
@@ -193,6 +194,41 @@ afterAll(async () => {
 });
 
 describe("checkout with real development database and simulated payments", () => {
+  it("applies stock, price and promotion filters to the selected variant attributes", async () => {
+    const original = await testDb.productVariant.findUniqueOrThrow({ where: { id: must(variants[0], "variant") } });
+    await testDb.productVariant.update({ where: { id: original.id }, data: { size: "P" } });
+    const large = await testDb.productVariant.create({
+      data: {
+        productId: original.productId,
+        sellerId: original.sellerId,
+        title: "G",
+        size: "G",
+        sku: `test-${run}-large`,
+        priceInCents: 20_000,
+        inventory: { create: { availableQuantity: 0 } },
+      },
+    });
+    const filter = { query: run, sellerId: original.sellerId, size: "g" };
+
+    try {
+      expect((await listApprovedProducts({ ...filter, availability: "IN_STOCK" })).total).toBe(0);
+      expect((await listApprovedProducts({ ...filter, availability: "OUT_OF_STOCK" })).total).toBe(1);
+      expect((await listApprovedProducts({ ...filter, maxPriceInCents: 15_000 })).total).toBe(0);
+      await testDb.productVariant.update({
+        where: { id: original.id },
+        data: { promotionalPriceInCents: 8_000 },
+      });
+      expect((await listApprovedProducts({ ...filter, promotion: "ON_SALE" })).total).toBe(0);
+    } finally {
+      await testDb.inventory.deleteMany({ where: { variantId: large.id } });
+      await testDb.productVariant.delete({ where: { id: large.id } });
+      await testDb.productVariant.update({
+        where: { id: original.id },
+        data: { size: original.size, promotionalPriceInCents: original.promotionalPriceInCents },
+      });
+    }
+  });
+
   it("blocks demo catalog items before invoking the payment provider", async () => {
     const variant = await testDb.productVariant.findUniqueOrThrow({
       where: { id: must(variants[0], "first variant") },

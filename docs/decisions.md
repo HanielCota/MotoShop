@@ -25,6 +25,7 @@ Decisões pontuais tomadas ao longo do MVP, agrupadas por domínio. Complementam
 
 - Ao entrar (ou criar conta) com carrinho de visitante ativo, o carrinho guest é mesclado no carrinho ativo do usuário na primeira leitura do carrinho (`getCartIdentity`): soma quantidades por variante limitadas ao estoque disponível e a 99 por item, ignora variantes não compráveis (demo/inativas/arquivadas/sem estoque), nunca reduz quantidades já existentes, trava os dois carrinhos na mesma transação, marca o guest como `ABANDONED` (idempotente) e remove o cookie do visitante.
 - Totais exibidos no checkout são informativos até a submissão; o serviço de checkout recalcula preços, estoque, cupom e frete no servidor.
+- Repetições da mesma chave de idempotência recuperam o pedido existente antes do limite de pendências. O teto por CPF é conferido sob lock na transação que cria o pedido, impedindo que checkouts simultâneos ultrapassem o limite.
 - A disponibilidade do pagamento exibida no carrinho e no checkout vem de `getCheckoutPaymentAvailability`, que reaproveita as mesmas verificações do serviço de checkout; nunca fixar o valor na página.
 - Endereços salvos pertencem exclusivamente ao usuário autenticado em `CustomerAddress`; o checkout pode usá-los como preenchimento, mas sempre grava um snapshot independente em `OrderAddress`.
 
