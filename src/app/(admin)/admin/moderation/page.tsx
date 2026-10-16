@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
+import { ScrollableTabs } from "@/components/ui/scrollable-tabs";
 import { formatDate } from "@/lib/format";
 import { AdminCard } from "@/modules/admin/components/admin-ui";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
@@ -40,18 +41,24 @@ export default async function AdminModerationPage({ searchParams }: { searchPara
         title="Moderação pública"
         description="Ocultar não apaga o registro da compra nem o histórico de auditoria."
       />
-      <nav aria-label="Tipo de conteúdo" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+      {/* Abas do projeto: no celular a aba ativa fica centralizada e a borda esmaece quando há mais (DS-25). */}
+      <ScrollableTabs
+        aria-label="Tipo de conteúdo"
+        activeKey={kind}
+        wrapperClassName="-mx-1"
+        className="gap-2 px-1 pb-1"
+      >
         {kinds.map((item) => (
           <Link
             key={item.value}
             href={`/admin/moderation?kind=${item.value}`}
             aria-current={kind === item.value ? "page" : undefined}
-            className="hover:bg-muted aria-[current=page]:bg-foreground aria-[current=page]:text-background shrink-0 rounded-md border px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors"
+            className="hover:bg-muted aria-[current=page]:bg-foreground aria-[current=page]:text-background inline-flex min-h-11 shrink-0 items-center rounded-md border px-3 text-sm font-medium whitespace-nowrap transition-colors sm:min-h-9"
           >
             {item.label}
           </Link>
         ))}
-      </nav>
+      </ScrollableTabs>
       <AdminCard id="admin-moderation" title={`${kindLabel} (${result.total})`}>
         {result.items.length === 0 ? (
           <EmptyState
