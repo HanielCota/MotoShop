@@ -3,6 +3,8 @@ export type CreateUploadUrlInput = {
   contentType: string;
   maxSizeInBytes: number;
   expiresInSeconds?: number;
+  /** Arquivo privado: só abre por link assinado (fotos de devolução). */
+  isPrivate?: boolean;
 };
 
 export type CreateUploadUrlResult = {

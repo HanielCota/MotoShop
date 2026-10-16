@@ -18,6 +18,7 @@ const assetSchema = z.object({
   fileType: z.string(),
   mime: z.string(),
   size: z.number().int().positive(),
+  isPrivateFile: z.boolean().optional(),
 });
 
 const uploadEndpoint = "https://upload.imagekit.io/api/v2/files/upload";
@@ -48,6 +49,7 @@ type UploadRequest = {
   contentType: UploadContentType;
   expiresInSeconds: number;
   separator: number;
+  isPrivate: boolean;
 };
 
 /** Validates size, type, expiry and key in that order, so error precedence is stable. */
@@ -66,7 +68,7 @@ function parseUploadRequest(input: CreateUploadUrlInput): UploadRequest {
     .max(3599)
     .parse(input.expiresInSeconds ?? 300);
   const separator = assertUploadKey(input.key, contentType);
-  return { maxSizeInBytes, contentType, expiresInSeconds, separator };
+  return { maxSizeInBytes, contentType, expiresInSeconds, separator, isPrivate: input.isPrivate === true };
 }
 
 /** Returns the position of the last "/" that splits folder and file name. */
@@ -89,6 +91,8 @@ function buildUploadPayload(key: string, request: UploadRequest) {
     useUniqueFileName: false,
     overwriteFile: false,
     checks: `"file.mime" IN ["${request.contentType}"] AND "file.size" <= ${request.maxSizeInBytes}`,
+    // Assinado no token V2: o navegador não consegue trocar um upload privado por público.
+    ...(request.isPrivate ? { isPrivateFile: true } : {}),
   };
 }
 
@@ -104,6 +108,38 @@ function signUploadToken(config: { publicKey: string; privateKey: string }, clai
   const signingInput = `${encodedHeader}.${encodedClaims}`;
   const signature = createHmac("sha256", config.privateKey).update(signingInput).digest("base64url");
   return `${signingInput}.${signature}`;
+}
+
+const signedPathSchema = z.string().regex(/^[a-zA-Z0-9_/-]+\/[a-zA-Z0-9_-]+\.(jpg|png|webp)$/);
+
+/**
+ * Assinatura de URL do ImageKit: HMAC-SHA1, em hexadecimal, do caminho depois do endpoint seguido
+ * do instante de expiração (segundos UTC); vai na URL como ik-t e ik-s.
+ * https://imagekit.io/docs/media-delivery-basic-security
+ */
+export function signImageKitUrl(input: {
+  endpoint: string;
+  privateKey: string;
+  key: string;
+  expiresInSeconds: number;
+  width?: number | undefined;
+  now: Date;
+}): string {
+  const key = signedPathSchema.parse(input.key);
+  const expiresInSeconds = z.number().int().positive().max(3600).parse(input.expiresInSeconds);
+  const path = input.width ? `tr:w-${z.number().int().positive().max(2000).parse(input.width)}/${key}` : key;
+  const expiresAt = Math.floor(input.now.getTime() / 1000) + expiresInSeconds;
+  const signature = createHmac("sha1", input.privateKey).update(`${path}${expiresAt}`).digest("hex");
+  return `${input.endpoint.replace(/\/$/, "")}/${path}?ik-t=${expiresAt}&ik-s=${signature}`;
+}
+
+function getUrlEndpoint() {
+  if (!env.IMAGEKIT_URL_ENDPOINT)
+    throw new ApplicationError({
+      code: "CONFIGURATION_ERROR",
+      message: "O armazenamento de imagens ainda não está configurado.",
+    });
+  return env.IMAGEKIT_URL_ENDPOINT;
 }
 
 export class ImageKitStorageProvider implements StorageProvider {
@@ -126,6 +162,7 @@ export class ImageKitStorageProvider implements StorageProvider {
         useUniqueFileName: "false",
         overwriteFile: "false",
         checks: payload.checks,
+        ...(payload.isPrivateFile ? { isPrivateFile: "true" } : {}),
       },
     };
   }
@@ -159,6 +196,8 @@ export class ImageKitStorageProvider implements StorageProvider {
     fileId: string;
     maxSizeInBytes: number;
     contentTypes: readonly string[];
+    /** Recusa o arquivo se o ImageKit não o marcou como privado. */
+    requirePrivate?: boolean;
   }): Promise<{ mediaType: "image" | "video"; contentType: string; sizeInBytes: number }> {
     const response = await this.managementRequest(`${managementEndpoint}/${encodeURIComponent(input.fileId)}/details`);
     if (!response.ok)
@@ -174,7 +213,8 @@ export class ImageKitStorageProvider implements StorageProvider {
       parsed.data.size > input.maxSizeInBytes ||
       (parsed.data.mime.startsWith("image/") && parsed.data.fileType !== "image") ||
       (parsed.data.mime.startsWith("video/") && parsed.data.fileType === "image") ||
-      (!parsed.data.mime.startsWith("image/") && !parsed.data.mime.startsWith("video/"))
+      (!parsed.data.mime.startsWith("image/") && !parsed.data.mime.startsWith("video/")) ||
+      (input.requirePrivate === true && parsed.data.isPrivateFile !== true)
     ) {
       throw new ApplicationError({
         code: "VALIDATION_ERROR",
@@ -186,6 +226,16 @@ export class ImageKitStorageProvider implements StorageProvider {
       contentType: parsed.data.mime,
       sizeInBytes: parsed.data.size,
     };
+  }
+
+  /**
+   * Link assinado de um arquivo privado, válido por `expiresInSeconds`. Com `width`, a imagem vem
+   * redimensionada pela transformação no caminho (tr:w-N), que também entra na assinatura.
+   */
+  createSignedUrl(input: { key: string; expiresInSeconds: number; width?: number }): string {
+    const { privateKey } = this.getConfig();
+    const endpoint = getUrlEndpoint();
+    return signImageKitUrl({ ...input, endpoint, privateKey, now: new Date() });
   }
 
   async deleteObject(input: DeleteObjectInput): Promise<void> {
