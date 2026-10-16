@@ -1,8 +1,15 @@
+import type { ReactNode } from "react";
+
 import { DesignSelect } from "@/components/ui/design-select";
-import { variantGenderLabels, type VariantGenderValue } from "@/modules/products/domain/variant-attributes";
+import {
+  variantGenderLabels,
+  variantGenderValues,
+  type VariantGenderValue,
+} from "@/modules/products/domain/variant-attributes";
+
+import { colorSwatchBackground } from "../domain/color-swatch";
 
 export type VariantAttributeOptions = {
-  genders: VariantGenderValue[];
   colors: string[];
   sizes: string[];
 };
@@ -14,8 +21,9 @@ export type VariantAttributeValues = {
 };
 
 /**
- * Gender, color and size selects for the public filter forms. A field without any public value is
- * left out, so customers never see an empty choice.
+ * Gender, color and size selects for the public filter forms. Gender always offers Masculino,
+ * Feminino and Unissex; color and size are left out when no public product has a value,
+ * so customers never see an empty choice.
  */
 export function VariantAttributeFilterFields({
   options,
@@ -28,19 +36,17 @@ export function VariantAttributeFilterFields({
 }) {
   return (
     <>
-      {options.genders.length > 0 ? (
-        <label className={fieldClassName}>
-          Gênero
-          <DesignSelect aria-label="Gênero" name="gender" defaultValue={values.gender ?? ""}>
-            <option value="">Todos os gêneros</option>
-            {options.genders.map((gender) => (
-              <option key={gender} value={gender}>
-                {variantGenderLabels[gender]}
-              </option>
-            ))}
-          </DesignSelect>
-        </label>
-      ) : null}
+      <label className={fieldClassName}>
+        Gênero
+        <DesignSelect aria-label="Gênero" name="gender" defaultValue={values.gender ?? ""}>
+          <option value="">Todos os gêneros</option>
+          {variantGenderValues.map((gender) => (
+            <option key={gender} value={gender}>
+              {variantGenderLabels[gender]}
+            </option>
+          ))}
+        </DesignSelect>
+      </label>
       <AttributeSelect
         label="Cor"
         name="color"
@@ -48,6 +54,7 @@ export function VariantAttributeFilterFields({
         choices={options.colors}
         value={values.color}
         fieldClassName={fieldClassName}
+        renderChoice={(color) => <ColorChoice name={color} />}
       />
       <AttributeSelect
         label="Tamanho"
@@ -61,6 +68,24 @@ export function VariantAttributeFilterFields({
   );
 }
 
+/** Color name with a small swatch; the swatch is decorative, the name is what is read and sent. */
+function ColorChoice({ name }: { name: string }) {
+  const background = colorSwatchBackground(name);
+  if (!background) return name;
+
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span
+        aria-hidden="true"
+        data-testid="color-swatch"
+        className="border-foreground/25 inline-block size-3.5 shrink-0 rounded-[3px] border"
+        style={{ background }}
+      />
+      {name}
+    </span>
+  );
+}
+
 function AttributeSelect({
   label,
   name,
@@ -68,6 +93,7 @@ function AttributeSelect({
   choices,
   value,
   fieldClassName,
+  renderChoice,
 }: {
   label: string;
   name: string;
@@ -75,6 +101,7 @@ function AttributeSelect({
   choices: string[];
   value: string | null;
   fieldClassName: string;
+  renderChoice?: (choice: string) => ReactNode;
 }) {
   if (choices.length === 0) return null;
 
@@ -85,7 +112,7 @@ function AttributeSelect({
         <option value="">{allLabel}</option>
         {choices.map((choice) => (
           <option key={choice} value={choice}>
-            {choice}
+            {renderChoice ? renderChoice(choice) : choice}
           </option>
         ))}
       </DesignSelect>
