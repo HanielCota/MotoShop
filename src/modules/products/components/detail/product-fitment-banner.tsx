@@ -4,11 +4,9 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-export type FitmentStatus =
-  | { kind: "fits"; motorcycleLabel: string }
-  | { kind: "does-not-fit"; motorcycleLabel: string }
-  | { kind: "unknown"; motorcycleLabel: string }
-  | { kind: "no-motorcycle" };
+import type { FitmentStatus } from "../../domain/fitment-status";
+
+export type { FitmentStatus };
 
 // Without any compatibility informed there is no list to check, so the customer is sent to the store.
 const fitmentHint = {
@@ -47,7 +45,32 @@ function PickerToggle({ label, className, picker }: { label: string; className: 
   );
 }
 
+/** Universal category: fits any motorcycle, so there is nothing to choose or check. */
+function UniversalFitmentBanner({ motorcycleLabel }: { motorcycleLabel: string | null }) {
+  return (
+    <div
+      id={FITMENT_ANCHOR}
+      className={cn("scroll-mt-24 rounded-xl border p-3 text-sm", fitmentTones.fits.box)}
+      role="status"
+    >
+      <div className="flex items-start gap-3">
+        <CircleCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+        <div className="min-w-0">
+          <p className="font-semibold">Serve em qualquer moto</p>
+          <p className="mt-0.5">
+            {motorcycleLabel
+              ? `Sua moto: ${motorcycleLabel} · este produto não depende do modelo da moto.`
+              : "Este produto não depende do modelo da moto."}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ProductFitmentBanner({ status, picker }: { status: FitmentStatus; picker: ReactNode }) {
+  if (status.kind === "universal") return <UniversalFitmentBanner motorcycleLabel={status.motorcycleLabel} />;
+
   if (status.kind === "no-motorcycle") {
     return (
       <div id={FITMENT_ANCHOR} className="border-border bg-surface-sunken scroll-mt-24 rounded-xl border p-3 text-sm">

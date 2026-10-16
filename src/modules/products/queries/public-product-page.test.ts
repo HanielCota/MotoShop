@@ -49,6 +49,34 @@ describe("findPublicProductPage", () => {
     expect(statement.sql).not.toMatch(/v\.(gender|color|size)/);
   });
 
+  it("with a motorcycle chosen, returns compatible products plus those of universal categories and their subcategories", async () => {
+    await findPublicProductPage({ motorcycleFitmentId: "fitment-crf" }, new Date());
+
+    const statement = defined(mocks.queryRaw.mock.calls[0])[0] as { sql: string; values: unknown[] };
+    expect(statement.sql).toMatch(/^WITH RECURSIVE universal_categories AS \(/);
+    expect(statement.sql).toContain("SELECT id FROM categories WHERE universal = true");
+    expect(statement.sql).toContain('JOIN universal_categories parent ON child."parentId" = parent.id');
+    expect(statement.sql).toMatch(
+      /AND \(EXISTS \(SELECT 1 FROM product_compatibilities pc WHERE pc\."productId" = p\.id AND pc\."motorcycleFitmentId" IN \(\?\)\)\s+OR p\."categoryId" IN \(SELECT id FROM universal_categories\)\)/,
+    );
+    expect(statement.values).toContain("fitment-crf");
+  });
+
+  it("applies the same motorcycle rule to the page of ids, so count and pagination agree", async () => {
+    await findPublicProductPage({ motorcycleFitmentIds: ["fitment-a", "fitment-b"] }, new Date());
+
+    const page = defined(mocks.queryRaw.mock.calls[1])[0] as { sql: string };
+    expect(page.sql).toContain('OR p."categoryId" IN (SELECT id FROM universal_categories)');
+  });
+
+  it("leaves universal categories out when no motorcycle is chosen", async () => {
+    await findPublicProductPage({}, new Date());
+
+    const statement = defined(mocks.queryRaw.mock.calls[0])[0] as { sql: string };
+    expect(statement.sql).toMatch(/^WITH\s+offers AS \(/);
+    expect(statement.sql).not.toContain("universal");
+  });
+
   it("keeps relevance as the default order", async () => {
     await findPublicProductPage({}, new Date());
 

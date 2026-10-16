@@ -11,6 +11,7 @@ import { BRAND_SITE_NAME } from "@/config/brand";
 import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
+import { isUniversalCategory } from "@/modules/catalog/queries/universal-category";
 import { ProductShippingQuote } from "@/modules/checkout/components/product-shipping-quote";
 import { FavoriteButton } from "@/modules/favorites/components/favorite-button";
 import { isProductFavorited } from "@/modules/favorites/queries/favorites";
@@ -24,7 +25,8 @@ import {
   formatFitmentLabel,
   ProductCompatibilityCard,
 } from "@/modules/products/components/detail/product-compatibility-card";
-import { ProductFitmentBanner, type FitmentStatus } from "@/modules/products/components/detail/product-fitment-banner";
+import { ProductFitmentBanner } from "@/modules/products/components/detail/product-fitment-banner";
+import { resolveFitmentStatus } from "@/modules/products/domain/fitment-status";
 import { ProductDetailSkeleton } from "@/modules/products/components/detail/product-detail-skeleton";
 import { ProductGallery } from "@/modules/products/components/detail/product-gallery";
 import { isNewProduct } from "@/modules/products/domain/product-novelty";
@@ -101,8 +103,9 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
   ]);
   if (!product) notFound();
 
-  const [coupons, [isFavorite, primaryMotorcycle]] = await Promise.all([
+  const [coupons, universal, [isFavorite, primaryMotorcycle]] = await Promise.all([
     listProductPageCoupons(product.id),
+    isUniversalCategory(product.categoryId),
     session
       ? Promise.all([isProductFavorited(session.user.id, product.id), getPrimarySavedMotorcycle(session.user.id)])
       : Promise.resolve([false, null] as const),
@@ -138,17 +141,11 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
     offer,
     getApplicationBaseUrl(),
   );
-  const fitmentStatus: FitmentStatus = selectedFitment
-    ? {
-        kind:
-          product.compatibilities.length === 0
-            ? "unknown"
-            : product.compatibilities.some((compatibility) => compatibility.motorcycleFitmentId === selectedFitment.id)
-              ? "fits"
-              : "does-not-fit",
-        motorcycleLabel: formatFitmentLabel(selectedFitment),
-      }
-    : { kind: "no-motorcycle" };
+  const fitmentStatus = resolveFitmentStatus({
+    universal,
+    compatibleFitmentIds: product.compatibilities.map((compatibility) => compatibility.motorcycleFitmentId),
+    selectedFitment: selectedFitment ? { id: selectedFitment.id, label: formatFitmentLabel(selectedFitment) } : null,
+  });
   const buyBoxVariants = product.variants.map((variant) => ({
     id: variant.id,
     title: variant.title,
@@ -276,6 +273,7 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
       <ProductCompatibilityCard
         compatibilities={product.compatibilities}
         selectedFitmentId={selectedFitment?.id ?? null}
+        universal={universal}
       />
 
       <ProductReviewsSection

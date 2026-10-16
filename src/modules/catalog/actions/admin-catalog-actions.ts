@@ -248,6 +248,38 @@ export async function toggleCategoryAction(categoryId: string, nextActive: boole
 }
 
 /**
+ * Marks a category as fitting any motorcycle. Its products, and those of its subcategories,
+ * pass the catalog motorcycle filter. Like the status toggles, repeating the request is a no-op.
+ */
+export async function setCategoryUniversalAction(categoryId: string, nextUniversal: boolean): Promise<void> {
+  const session = await requireAdminAccess();
+  assertToggleInput(categoryId, nextUniversal);
+  await db.$transaction(async (tx) => {
+    const category = await tx.category.findUnique({ where: { id: categoryId } });
+    if (!category) throw missingCatalogEntry();
+    if (category.universal === nextUniversal) return;
+
+    const updated = await tx.category.updateMany({
+      where: { id: category.id, universal: !nextUniversal },
+      data: { universal: nextUniversal },
+    });
+    if (updated.count !== 1) throw staleCatalogDecision();
+
+    await tx.auditLog.create({
+      data: {
+        action: nextUniversal ? "CATEGORY_UNIVERSAL_ENABLED" : "CATEGORY_UNIVERSAL_DISABLED",
+        entityType: "CATEGORY",
+        entityId: category.id,
+        actorUserId: session.user.id,
+        metadata: { universal: nextUniversal } as Prisma.InputJsonValue,
+      },
+    });
+  });
+  revalidatePath("/admin", "layout");
+  revalidatePath("/products", "layout");
+}
+
+/**
  * Sets the entry to `nextActive` (the state the admin clicked for). Repeating the same request — a
  * double click or two admins at once — is a no-op instead of flipping the entry back.
  */

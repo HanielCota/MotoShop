@@ -54,6 +54,28 @@ function variantAttributeCondition(input: PublicProductFilter) {
       ${size ? Prisma.sql`AND lower(v.size) = lower(${size})` : Prisma.empty}`;
 }
 
+/**
+ * Categories that fit any motorcycle: the ones the Admin marked universal and every descendant of them.
+ * Only needed when a motorcycle filter is active, so the recursive part is left out otherwise.
+ */
+function universalCategoriesCte(fitments: string[]) {
+  if (!fitments.length) return Prisma.sql`WITH`;
+
+  return Prisma.sql`WITH RECURSIVE universal_categories AS (
+    SELECT id FROM categories WHERE universal = true
+    UNION
+    SELECT child.id FROM categories child JOIN universal_categories parent ON child."parentId" = parent.id
+  ),`;
+}
+
+/** With a motorcycle chosen: products confirmed for it, plus products of universal categories (AGENTS.md). */
+function motorcycleCondition(fitments: string[]) {
+  if (!fitments.length) return Prisma.empty;
+
+  return Prisma.sql`AND (EXISTS (SELECT 1 FROM product_compatibilities pc WHERE pc."productId" = p.id AND pc."motorcycleFitmentId" IN (${Prisma.join(fitments)}))
+        OR p."categoryId" IN (SELECT id FROM universal_categories))`;
+}
+
 function nonNegativeSafeInteger(value: number | null | undefined) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
@@ -72,7 +94,7 @@ export async function findPublicProductPage(input: PublicProductFilter, now: Dat
       : [];
   const min = nonNegativeSafeInteger(input.minPriceInCents);
   const max = nonNegativeSafeInteger(input.maxPriceInCents);
-  const cte = Prisma.sql`WITH offers AS (
+  const cte = Prisma.sql`${universalCategoriesCte(fitments)} offers AS (
     SELECT v."productId", v.sku,
       CASE WHEN v."promotionalPriceInCents" IS NOT NULL AND (v."promotionStartsAt" IS NULL OR v."promotionStartsAt" <= ${now}) AND (v."promotionEndsAt" IS NULL OR v."promotionEndsAt" >= ${now}) THEN v."promotionalPriceInCents" ELSE v."priceInCents" END AS price,
       (v."promotionalPriceInCents" IS NOT NULL AND (v."promotionStartsAt" IS NULL OR v."promotionStartsAt" <= ${now}) AND (v."promotionEndsAt" IS NULL OR v."promotionEndsAt" >= ${now})) AS sale,
@@ -93,7 +115,7 @@ export async function findPublicProductPage(input: PublicProductFilter, now: Dat
       ${input.categoryId ? Prisma.sql`AND p."categoryId" = ${input.categoryId}` : Prisma.empty}
       ${input.brandId ? Prisma.sql`AND p."brandId" = ${input.brandId}` : Prisma.empty}
       ${input.sellerId ? Prisma.sql`AND p."sellerId" = ${input.sellerId}` : Prisma.empty}
-      ${fitments.length ? Prisma.sql`AND EXISTS (SELECT 1 FROM product_compatibilities pc WHERE pc."productId" = p.id AND pc."motorcycleFitmentId" IN (${Prisma.join(fitments)}))` : Prisma.empty}
+      ${motorcycleCondition(fitments)}
       ${query ? Prisma.sql`AND (p.name ILIKE ${pattern} OR p.description ILIKE ${pattern} OR b.name ILIKE ${pattern} OR c.name ILIKE ${pattern} OR st.name ILIKE ${pattern} OR EXISTS (SELECT 1 FROM offers sk WHERE sk."productId" = p.id AND sk.sku ILIKE ${pattern}))` : Prisma.empty}
     GROUP BY p.id
     HAVING true

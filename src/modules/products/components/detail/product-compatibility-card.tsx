@@ -28,9 +28,12 @@ export function formatFitmentLabel(fitment: FitmentSummary, options: { includeDi
 export function ProductCompatibilityCard({
   compatibilities,
   selectedFitmentId,
+  universal = false,
 }: {
   compatibilities: { id: string; motorcycleFitmentId: string; motorcycleFitment: FitmentSummary }[];
   selectedFitmentId: string | null;
+  /** Category marked universal by the Admin: the product fits any motorcycle. */
+  universal?: boolean;
 }) {
   return (
     <Card id="compatibilidade" className="scroll-mt-24">
@@ -45,7 +48,9 @@ export function ProductCompatibilityCard({
           </h3>
           {compatibilities.length === 0 ? (
             <p className="text-muted-foreground mt-2 text-sm">
-              A loja ainda não informou compatibilidade deste produto com motos específicas.
+              {universal
+                ? "Serve em qualquer moto: este produto não depende do modelo da moto."
+                : "A loja ainda não informou compatibilidade deste produto com motos específicas."}
             </p>
           ) : (
             <ul className="mt-3 flex flex-wrap gap-2 text-sm">

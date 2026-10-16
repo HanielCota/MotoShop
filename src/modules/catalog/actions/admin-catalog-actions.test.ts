@@ -41,6 +41,7 @@ import {
   createMotorcycleFitmentAction,
   createMotorcycleManufacturerAction,
   createMotorcycleModelAction,
+  setCategoryUniversalAction,
   toggleBrandAction,
   toggleCategoryAction,
   toggleMotorcycleManufacturerAction,
@@ -213,6 +214,71 @@ describe("admin catalog status transitions", () => {
     mocks.adminAccess.mockRejectedValue(new Error("FORBIDDEN"));
 
     await expect(toggleCategoryAction("creference01", false)).rejects.toThrow("FORBIDDEN");
+    expect(mocks.transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("universal category flag", () => {
+  beforeEach(() => {
+    mocks.findCategory.mockResolvedValue({ id: "creference01", active: true, universal: false });
+  });
+
+  it("marks a category universal only from its observed state and audits it in the transaction", async () => {
+    await setCategoryUniversalAction("creference01", true);
+
+    expect(mocks.updateCategory).toHaveBeenCalledWith({
+      where: { id: "creference01", universal: false },
+      data: { universal: true },
+    });
+    expect(mocks.auditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: "CATEGORY_UNIVERSAL_ENABLED",
+        entityType: "CATEGORY",
+        entityId: "creference01",
+        actorUserId: "admin-a",
+      }),
+    });
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/products", "layout");
+  });
+
+  it("removes the flag with its own audit action", async () => {
+    mocks.findCategory.mockResolvedValue({ id: "creference01", active: true, universal: true });
+
+    await setCategoryUniversalAction("creference01", false);
+
+    expect(mocks.auditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ action: "CATEGORY_UNIVERSAL_DISABLED" }),
+    });
+  });
+
+  it("treats a repeated request (double click) as a no-op", async () => {
+    mocks.findCategory.mockResolvedValue({ id: "creference01", active: true, universal: true });
+
+    await setCategoryUniversalAction("creference01", true);
+
+    expect(mocks.updateCategory).not.toHaveBeenCalled();
+    expect(mocks.auditCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects a stale decision without an audit record", async () => {
+    mocks.updateCategory.mockResolvedValue({ count: 0 });
+
+    await expect(setCategoryUniversalAction("creference01", true)).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(mocks.auditCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects a missing category and a malformed id", async () => {
+    mocks.findCategory.mockResolvedValue(null);
+
+    await expect(setCategoryUniversalAction("creference01", true)).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(setCategoryUniversalAction("../x", true)).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(mocks.updateCategory).not.toHaveBeenCalled();
+  });
+
+  it("denies the change before reading the catalog when admin authorization fails", async () => {
+    mocks.adminAccess.mockRejectedValue(new Error("FORBIDDEN"));
+
+    await expect(setCategoryUniversalAction("creference01", true)).rejects.toThrow("FORBIDDEN");
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
 });
