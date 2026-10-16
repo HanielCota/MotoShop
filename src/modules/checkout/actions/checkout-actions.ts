@@ -11,7 +11,8 @@ import { toActionError } from "@/shared/errors/action-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 import { getClientIp } from "@/shared/request/client-ip";
 
-import { executeCheckout, type CheckoutResult } from "../application/checkout-service";
+import { submitCheckout } from "../application/submit-checkout";
+import type { SimulatedPurchase } from "../domain/simulated-purchase";
 import { checkoutSchema } from "../schemas/checkout";
 
 /**
@@ -23,6 +24,8 @@ export type CheckoutActionState = {
   error?: string;
   orderNumber?: string;
   paymentDeclined?: true;
+  /** Test products only (margot#351): nothing was recorded, the page shows this summary. */
+  simulatedPurchase?: SimulatedPurchase;
 };
 
 export async function createCheckoutAction(
@@ -62,9 +65,13 @@ export async function createCheckoutAction(
     await assertRateLimit({ key: `checkout:ip:${getClientIp(await headers())}`, windowSeconds: 60, max: 10 });
     await assertRateLimit({ key: `checkout:tax-id:${parsed.data.customerTaxId}`, windowSeconds: 600, max: 5 });
     const session = await getCurrentSession();
-    const result: CheckoutResult = await executeCheckout({ data: parsed.data, identity, session });
+    const submission = await submitCheckout({ data: parsed.data, identity, session });
+    // No revalidation here: re-rendering /checkout with the now empty cart would replace the
+    // "Compra concluída" screen. The cart pages are dynamic and read the cart on the next visit.
+    if (submission.kind === "simulated") return { simulatedPurchase: submission.purchase };
     revalidatePath("/cart");
     revalidatePath("/checkout");
+    const { result } = submission;
     if (result.paymentDeclined)
       return {
         error:

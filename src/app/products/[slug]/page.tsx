@@ -236,22 +236,18 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
           <div className="border-border mt-6 border-t">
             <ProductBuyBox
               variants={buyBoxVariants}
-              isDemo={product.isDemo}
               hasPriceRange={offer.hasPriceRange}
               fitment={<ProductFitmentBanner status={fitmentStatus} picker={motorcyclePicker} />}
             />
           </div>
           <ProductPageCoupons coupons={coupons.map(toProductPageCouponView)} />
-          {/* Test products get the shipping quote with the simulated purchase (margot#351). */}
-          {product.isDemo ? null : (
-            <ProductShippingQuote
-              options={buyBoxVariants.map((variant) => ({
-                id: variant.id,
-                title: variant.title,
-                available: variant.stock > 0,
-              }))}
-            />
-          )}
+          <ProductShippingQuote
+            options={buyBoxVariants.map((variant) => ({
+              id: variant.id,
+              title: variant.title,
+              available: variant.stock > 0,
+            }))}
+          />
           <div className="border-border mt-5 border-t pt-5">
             {session ? (
               <FavoriteButton productId={product.id} initialIsFavorite={isFavorite} />

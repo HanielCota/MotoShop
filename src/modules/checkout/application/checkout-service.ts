@@ -36,6 +36,7 @@ import { shippingSelectionsSchema, type CheckoutInput } from "../schemas/checkou
 import {
   loadCheckoutCart,
   reserveCartAndCreateOrder,
+  type CheckoutCart,
   type CheckoutSession,
   type PendingOrder,
 } from "./create-pending-order";
@@ -50,7 +51,7 @@ import { quoteShippingForCart } from "./shipping-quotes";
  */
 export type CheckoutResult = { orderNumber: string; guestAccessToken?: string; paymentDeclined?: true };
 
-type CheckoutRequest = { data: CheckoutInput; identity: CartIdentity; session: CheckoutSession };
+export type CheckoutRequest = { data: CheckoutInput; identity: CartIdentity; session: CheckoutSession };
 
 export async function executeCheckout(
   input: CheckoutRequest,
@@ -113,10 +114,23 @@ function createCheckoutResult(
   };
 }
 
-/** Loads the cart, coupon, shipping quotes and commission, then computes the per-seller charges at `now`. */
+/** Loads the cart for a real order, then prices it. */
 async function calculateCheckoutCharges(input: CheckoutRequest, now: Date) {
   const selections = parseShippingSelections(input.data.shippingSelections);
   const cart = await loadCheckoutCart(input.identity);
+  return priceCheckoutCart(input, cart, now, selections);
+}
+
+/**
+ * Coupon, shipping quotes and commission for `cart`, then the per-seller charges at `now`.
+ * Only reads: shared by the real order and the simulated purchase of test products.
+ */
+export async function priceCheckoutCart(
+  input: CheckoutRequest,
+  cart: CheckoutCart,
+  now: Date,
+  selections: Record<string, string> = parseShippingSelections(input.data.shippingSelections),
+) {
   const coupon = await loadCheckoutCoupon(input, now);
   const quoteGroups = await quoteShippingForCart(cart, input.data.postalCode);
   const defaultCommissionBps = await loadDefaultCommissionBps();

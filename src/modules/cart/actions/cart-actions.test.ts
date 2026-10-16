@@ -66,7 +66,7 @@ it("uses the shared purchasable-variant rule when adding", async () => {
       where: expect.objectContaining({
         id,
         active: true,
-        product: expect.objectContaining({ status: "APPROVED", isDemo: false }),
+        product: expect.objectContaining({ status: "APPROVED" }),
       }),
     }),
   );

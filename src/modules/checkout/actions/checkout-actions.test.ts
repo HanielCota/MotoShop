@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ execute: vi.fn(), setCookie: vi.fn(), identity: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  execute: vi.fn(),
+  simulated: vi.fn((): unknown => undefined),
+  setCookie: vi.fn(),
+  identity: vi.fn(),
+}));
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -9,7 +14,14 @@ vi.mock("@/modules/auth/application/authorization", () => ({ getCurrentSession: 
 vi.mock("@/modules/cart/infrastructure/cart-access", () => ({ getCartIdentity: mocks.identity }));
 vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
 vi.mock("@/modules/orders/infrastructure/guest-order-cookie", () => ({ setGuestOrderCookie: mocks.setCookie }));
-vi.mock("../application/checkout-service", () => ({ executeCheckout: mocks.execute }));
+// The real order path; a test-only cart answers with the simulated purchase instead (margot#351).
+vi.mock("../application/submit-checkout", () => ({
+  submitCheckout: async (...args: unknown[]) => {
+    const simulated = mocks.simulated();
+    if (simulated) return { kind: "simulated", purchase: simulated };
+    return { kind: "order", result: await mocks.execute(...args) };
+  },
+}));
 vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-vercel-forwarded-for": "203.0.113.7" }) }));
 vi.mock("../schemas/checkout", () => ({
   checkoutSchema: {
@@ -25,6 +37,17 @@ describe("createCheckoutAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.identity.mockResolvedValue({ guestAccessTokenHash: "cart-hash" });
+  });
+
+  it("returns the simulated purchase summary without an order, a cookie or a payment", async () => {
+    const purchase = { paymentMethod: "pix", stores: [], totals: { totalInCents: 1000 } };
+    mocks.simulated.mockReturnValueOnce(purchase);
+
+    const result = await createCheckoutAction({}, new FormData());
+
+    expect(result).toEqual({ simulatedPurchase: purchase });
+    expect(mocks.execute).not.toHaveBeenCalled();
+    expect(mocks.setCookie).not.toHaveBeenCalled();
   });
 
   it("keeps the guest order token in the order cookie and out of the response", async () => {

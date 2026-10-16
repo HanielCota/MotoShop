@@ -9,6 +9,7 @@ import type { CheckoutPaymentType } from "./use-checkout-submit";
 
 export function CheckoutPaymentSection({
   paymentAvailable,
+  pixOnly = false,
   cardPublicKey,
   paymentType,
   onPaymentTypeChange,
@@ -16,6 +17,8 @@ export function CheckoutPaymentSection({
   cardRef,
 }: {
   paymentAvailable: boolean;
+  /** Test products (margot#351): only Pix, no card option or card fields. */
+  pixOnly?: boolean | undefined;
   cardPublicKey?: string | undefined;
   paymentType: CheckoutPaymentType;
   onPaymentTypeChange: (paymentType: CheckoutPaymentType) => void;
@@ -43,12 +46,14 @@ export function CheckoutPaymentSection({
                 <DesignRadio value="pix" />
                 Pix
               </label>
-              <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm">
-                <DesignRadio value="card" disabled={!cardPublicKey} />
-                Cartão de crédito · 1 parcela
-              </label>
+              {pixOnly ? null : (
+                <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm">
+                  <DesignRadio value="card" disabled={!cardPublicKey} />
+                  Cartão de crédito · 1 parcela
+                </label>
+              )}
             </DesignRadioGroup>
-            {!cardPublicKey ? (
+            {!cardPublicKey && !pixOnly ? (
               <p className="text-muted-foreground text-xs">Cartão ainda indisponível. Você pode continuar com Pix.</p>
             ) : null}
           </div>

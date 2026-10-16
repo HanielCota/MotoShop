@@ -28,8 +28,9 @@ import { assertPendingOrderCap } from "./pending-order-cap";
 
 export type CheckoutSession = Awaited<ReturnType<typeof getCurrentSession>>;
 
-export async function loadCheckoutCart(identity: CartIdentity) {
-  const cart = await db.cart.findFirst({
+/** The customer's active cart with everything the checkout prices, or null. Read-only. */
+export async function findCheckoutCart(identity: CartIdentity) {
+  return db.cart.findFirst({
     where: { ...cartOwnerWhere(identity), status: "ACTIVE" },
     include: {
       items: {
@@ -44,6 +45,11 @@ export async function loadCheckoutCart(identity: CartIdentity) {
       },
     },
   });
+}
+
+/** Cart for a real order: never empty and never with a test product (those only get the simulated purchase). */
+export async function loadCheckoutCart(identity: CartIdentity) {
+  const cart = await findCheckoutCart(identity);
   if (!cart || cart.items.length === 0)
     throw new ApplicationError({ code: "NOT_FOUND", message: "Seu carrinho está vazio." });
   if (cart.items.some((item) => item.variant.product.isDemo))

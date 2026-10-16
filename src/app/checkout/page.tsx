@@ -62,6 +62,8 @@ export default async function CheckoutPage({
     lineTotalInCents: getCurrentPriceInCents(item.variant, now) * item.quantity,
   }));
   const payment = getCheckoutPaymentAvailability(new Set(cart.items.map((item) => item.variant.product.sellerId)).size);
+  // Test products end in the simulated purchase (margot#351): Pix only, nothing recorded.
+  const testOnlyCart = cart.items.every((item) => item.variant.product.isDemo);
   const cartSummary = {
     itemCount: items.reduce((total, item) => total + item.quantity, 0),
     itemsSubtotalInCents: items.reduce((total, item) => total + item.lineTotalInCents, 0),
@@ -69,17 +71,20 @@ export default async function CheckoutPage({
 
   return (
     <main className={pageContainerClassName("default", "flex flex-col gap-6 py-10")}>
-      <PageHeader
-        eyebrow="Compra segura"
-        title="Finalizar compra"
-        back={{ href: "/cart", label: "Voltar ao carrinho" }}
-      />
       <CheckoutForm
+        header={
+          <PageHeader
+            eyebrow="Compra segura"
+            title="Finalizar compra"
+            back={{ href: "/cart", label: "Voltar ao carrinho" }}
+          />
+        }
         savedAddresses={savedAddresses}
         customerDefaults={customerDefaults}
         cartSummary={cartSummary}
         items={items}
-        paymentAvailable={payment.available}
+        paymentAvailable={payment.available || testOnlyCart}
+        pixOnly={testOnlyCart}
         cardPublicKey={payment.cardPublicKey}
       />
     </main>

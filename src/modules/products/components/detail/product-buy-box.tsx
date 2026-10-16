@@ -20,13 +20,10 @@ export type BuyBoxVariant = {
 
 export function ProductBuyBox({
   variants,
-  isDemo,
   hasPriceRange,
   fitment,
 }: {
   variants: BuyBoxVariant[];
-  /** Test product: no cart button until the simulated purchase exists (margot#351). */
-  isDemo: boolean;
   hasPriceRange: boolean;
   /** Faixa "Minha Moto", renderizada no servidor e posicionada antes da escolha de opção. */
   fitment?: ReactNode;
@@ -132,17 +129,15 @@ export function ProductBuyBox({
         </p>
       </div>
 
-      {!isDemo ? (
-        <AddToCartButton
-          key={selected.id}
-          variantId={selected.id}
-          disabled={selected.stock < 1}
-          stickyBar={{
-            price: formatMoneyInCents(selected.currentPriceInCents),
-            option: variants.length > 1 ? selected.title : undefined,
-          }}
-        />
-      ) : null}
+      <AddToCartButton
+        key={selected.id}
+        variantId={selected.id}
+        disabled={selected.stock < 1}
+        stickyBar={{
+          price: formatMoneyInCents(selected.currentPriceInCents),
+          option: variants.length > 1 ? selected.title : undefined,
+        }}
+      />
     </div>
   );
 }

@@ -24,29 +24,29 @@ afterEach(cleanup);
 
 describe("ProductBuyBox", () => {
   it("keeps the cart button without any payment or demo notice", () => {
-    render(<ProductBuyBox variants={[variant]} isDemo={false} hasPriceRange={false} />);
+    render(<ProductBuyBox variants={[variant]} hasPriceRange={false} />);
 
     expect(screen.getByRole("button", { name: "Adicionar ao carrinho" })).toBeInTheDocument();
     expect(screen.queryByText(removedNotices)).not.toBeInTheDocument();
   });
 
-  it("shows a test product like any other product: real SKU line and no illustrative labels", () => {
-    render(<ProductBuyBox variants={[{ ...variant, stock: 10 }]} isDemo hasPriceRange={false} />);
+  it("shows the SKU with the stock and no illustrative labels", () => {
+    render(<ProductBuyBox variants={[{ ...variant, stock: 10 }]} hasPriceRange={false} />);
 
     expect(screen.getByText("SKU SKU-1 · 10 em estoque")).toBeInTheDocument();
     expect(screen.queryByText(removedNotices)).not.toBeInTheDocument();
   });
 
-  it("marks a test product option without stock as sold out, like any other product", () => {
+  it("marks an option without stock as sold out", () => {
     const soldOut = { ...variant, id: "variant-2", title: "Branco · G", stock: 0 };
-    render(<ProductBuyBox variants={[variant, soldOut]} isDemo hasPriceRange={false} />);
+    render(<ProductBuyBox variants={[variant, soldOut]} hasPriceRange={false} />);
 
     expect(screen.getByText(/R\$ 199,90 · Esgotado/)).toBeInTheDocument();
   });
 
   it("reads the old price and the offer as separate phrases", () => {
     const onSale = { ...variant, priceInCents: 89990, currentPriceInCents: 79990, onSale: true };
-    render(<ProductBuyBox variants={[onSale]} isDemo={false} hasPriceRange={false} />);
+    render(<ProductBuyBox variants={[onSale]} hasPriceRange={false} />);
 
     const oldPrice = screen.getByText(/Preço anterior/).parentElement;
     expect(oldPrice?.textContent?.replace(/\s/g, " ")).toMatch(/R\$ 899,90\. Oferta · 11% de desconto/);

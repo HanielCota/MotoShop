@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { FormMessage } from "@/components/ui/form-message";
 import { formatCep, formatCpf, isCompleteCep } from "@/modules/customers/domain/brazilian-address";
 import { useCepAutofill } from "@/modules/customers/components/use-cep-autofill";
 import type { CustomerAddress } from "@/modules/customers/queries/customer-addresses";
+import { notifyCartUpdated } from "@/modules/cart/components/cart-events";
 import type { SecureCardHandle } from "@/modules/payments/components/secure-card-fields";
 
 import { CheckoutAddressFields } from "./checkout-address-fields";
@@ -27,7 +28,9 @@ import {
 } from "./checkout-form-model";
 import { CheckoutOrderSummary } from "./checkout-order-summary";
 import { CheckoutPaymentSection } from "./checkout-payment-section";
+import type { SimulatedPurchase } from "../domain/simulated-purchase";
 import { CheckoutShippingOptions } from "./checkout-shipping-options";
+import { SimulatedPurchaseConfirmation } from "./simulated-purchase-confirmation";
 import { useCheckoutShippingQuotes } from "./use-checkout-shipping-quotes";
 import { useCheckoutSubmit, type CheckoutPaymentType } from "./use-checkout-submit";
 
@@ -44,6 +47,8 @@ export function CheckoutForm({
   items,
   cardPublicKey,
   paymentAvailable = true,
+  pixOnly = false,
+  header,
   customerDefaults,
 }: {
   savedAddresses?: CustomerAddress[] | undefined;
@@ -53,6 +58,10 @@ export function CheckoutForm({
   items?: CheckoutSummaryItem[] | undefined;
   cardPublicKey?: string | undefined;
   paymentAvailable?: boolean | undefined;
+  /** Test products (margot#351): Pix only, no card fields (they would already call Mercado Pago). */
+  pixOnly?: boolean | undefined;
+  /** Page heading, replaced by the confirmation after a simulated purchase. */
+  header?: ReactNode | undefined;
 }) {
   const [form, setForm] = useState(() => {
     const defaultAddress = savedAddresses.find((address) => address.isDefault);
@@ -83,7 +92,18 @@ export function CheckoutForm({
     });
     errorRef.current?.focus();
   }, []);
-  const { submit, isSubmitting } = useCheckoutSubmit({ cardRef: card, onFailure: handleFailure });
+  const [simulatedPurchase, setSimulatedPurchase] = useState<SimulatedPurchase>();
+  const handleSimulatedPurchase = useCallback((purchase: SimulatedPurchase) => {
+    setSimulatedPurchase(purchase);
+    // The cart was emptied on the server: the header badge reloads it.
+    notifyCartUpdated();
+    window.scrollTo({ top: 0 });
+  }, []);
+  const { submit, isSubmitting } = useCheckoutSubmit({
+    cardRef: card,
+    onFailure: handleFailure,
+    onSimulatedPurchase: handleSimulatedPurchase,
+  });
 
   // Endereço padrão já preenchido: calcula o frete sem exigir clique.
   const { requestQuote } = shipping;
@@ -140,79 +160,85 @@ export function CheckoutForm({
 
   const invalidFields = checkoutFieldOrder.filter((field) => fieldErrors[field]);
 
-  return (
-    <form
-      noValidate
-      className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start"
-      onSubmit={handleSubmit}
-    >
-      <div className="min-w-0 space-y-6">
-        <CheckoutCustomerFields form={form} errors={fieldErrors} onChange={updateField} />
-        <CheckoutAddressFields
-          form={form}
-          errors={fieldErrors}
-          onChange={updateField}
-          savedAddresses={savedAddresses}
-          selectedAddressId={selectedAddressId}
-          onSelectSavedAddress={selectSavedAddress}
-          cepHint={cep.hint}
-          isQuoting={shipping.isQuoting}
-          onQuote={() => shipping.requestQuote(form.postalCode)}
-        />
-        <CheckoutShippingOptions
-          quotes={shipping.quotes}
-          selections={shipping.selections}
-          onSelect={shipping.select}
-          isQuoting={shipping.isQuoting}
-          error={shipping.error}
-        />
-        <CheckoutPaymentSection
-          paymentAvailable={paymentAvailable}
-          cardPublicKey={cardPublicKey}
-          paymentType={paymentType}
-          onPaymentTypeChange={setPaymentType}
-          disabled={isSubmitting}
-          cardRef={card}
-        />
-      </div>
+  if (simulatedPurchase) return <SimulatedPurchaseConfirmation purchase={simulatedPurchase} />;
 
-      <CheckoutOrderSummary
-        cartSummary={cartSummary}
-        items={items}
-        shippingTotalInCents={shipping.shippingTotalInCents}
-        hasQuotes={shipping.hasQuotes}
-        isQuoting={shipping.isQuoting}
-        couponCode={form.couponCode}
-        onCouponChange={(value) => updateField("couponCode", value)}
+  return (
+    <>
+      {header}
+      <form
+        noValidate
+        className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start"
+        onSubmit={handleSubmit}
       >
-        {formError ? (
-          <div ref={errorRef} tabIndex={-1} className="mt-4 outline-none">
-            <FormMessage error={formError} />
-            {invalidFields.length > 0 ? (
-              <ul className="mt-2 space-y-1 text-sm">
-                {invalidFields.map((field) => (
-                  <li key={field}>
-                    <a className="text-destructive underline underline-offset-4" href={`#${checkoutFieldId(field)}`}>
-                      {fieldErrors[field]}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-        ) : null}
-        <Button
-          className="mt-4 w-full"
-          size="lg"
-          type="submit"
-          disabled={isSubmitting || !shipping.hasQuotes || !paymentAvailable}
+        <div className="min-w-0 space-y-6">
+          <CheckoutCustomerFields form={form} errors={fieldErrors} onChange={updateField} />
+          <CheckoutAddressFields
+            form={form}
+            errors={fieldErrors}
+            onChange={updateField}
+            savedAddresses={savedAddresses}
+            selectedAddressId={selectedAddressId}
+            onSelectSavedAddress={selectSavedAddress}
+            cepHint={cep.hint}
+            isQuoting={shipping.isQuoting}
+            onQuote={() => shipping.requestQuote(form.postalCode)}
+          />
+          <CheckoutShippingOptions
+            quotes={shipping.quotes}
+            selections={shipping.selections}
+            onSelect={shipping.select}
+            isQuoting={shipping.isQuoting}
+            error={shipping.error}
+          />
+          <CheckoutPaymentSection
+            paymentAvailable={paymentAvailable}
+            pixOnly={pixOnly}
+            cardPublicKey={pixOnly ? undefined : cardPublicKey}
+            paymentType={paymentType}
+            onPaymentTypeChange={setPaymentType}
+            disabled={isSubmitting}
+            cardRef={card}
+          />
+        </div>
+
+        <CheckoutOrderSummary
+          cartSummary={cartSummary}
+          items={items}
+          shippingTotalInCents={shipping.shippingTotalInCents}
+          hasQuotes={shipping.hasQuotes}
+          isQuoting={shipping.isQuoting}
+          couponCode={form.couponCode}
+          onCouponChange={(value) => updateField("couponCode", value)}
         >
-          {isSubmitting ? "Criando pedido…" : paymentAvailable ? "Finalizar pedido" : "Pagamento indisponível"}
-        </Button>
-        {paymentAvailable && !shipping.hasQuotes ? (
-          <p className="text-muted-foreground mt-2 text-center text-xs">Calcule o frete para finalizar.</p>
-        ) : null}
-      </CheckoutOrderSummary>
-    </form>
+          {formError ? (
+            <div ref={errorRef} tabIndex={-1} className="mt-4 outline-none">
+              <FormMessage error={formError} />
+              {invalidFields.length > 0 ? (
+                <ul className="mt-2 space-y-1 text-sm">
+                  {invalidFields.map((field) => (
+                    <li key={field}>
+                      <a className="text-destructive underline underline-offset-4" href={`#${checkoutFieldId(field)}`}>
+                        {fieldErrors[field]}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+          <Button
+            className="mt-4 w-full"
+            size="lg"
+            type="submit"
+            disabled={isSubmitting || !shipping.hasQuotes || !paymentAvailable}
+          >
+            {isSubmitting ? "Criando pedido…" : paymentAvailable ? "Finalizar pedido" : "Pagamento indisponível"}
+          </Button>
+          {paymentAvailable && !shipping.hasQuotes ? (
+            <p className="text-muted-foreground mt-2 text-center text-xs">Calcule o frete para finalizar.</p>
+          ) : null}
+        </CheckoutOrderSummary>
+      </form>
+    </>
   );
 }
