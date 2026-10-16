@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { DataTable, tableCellClassName } from "@/components/ui/table";
 import { FilterForm, FilterSelect, FilterText } from "@/components/ui/filter-form";
 import { Pagination } from "@/components/ui/pagination";
 import { formatDate, formatMoneyInCents, formatPercentFromBps } from "@/lib/format";
@@ -112,59 +113,38 @@ export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: 
                 </li>
               ))}
             </ul>
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[640px] text-left text-sm">
-                <caption className="sr-only">Cupons da loja</caption>
-                <thead className="text-muted-foreground border-b text-xs">
-                  <tr>
-                    <th scope="col" className="py-2 pr-3 font-medium">
-                      Código
-                    </th>
-                    <th scope="col" className="py-2 pr-3 font-medium">
-                      Desconto
-                    </th>
-                    <th scope="col" className="py-2 pr-3 font-medium">
-                      Status
-                    </th>
-                    <th scope="col" className="py-2 pr-3 font-medium">
-                      Uso
-                    </th>
-                    <th scope="col" className="py-2 pr-3 font-medium">
-                      Validade
-                    </th>
-                    <th scope="col" className="py-2 font-medium">
-                      <span className="sr-only">Ações</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-border divide-y">
-                  {result.coupons.map((coupon) => (
-                    <tr key={coupon.id}>
-                      <td className="py-3 pr-3 font-semibold">{coupon.code}</td>
-                      <td className="py-3 pr-3 tabular-nums">{couponDiscountLabel(coupon)}</td>
-                      <td className="py-3 pr-3">
-                        <div className="flex flex-wrap gap-1">
-                          <Badge variant={coupon.active ? "success" : "neutral"}>
-                            {coupon.active ? "Ativo" : "Inativo"}
-                          </Badge>
-                          {coupon.showOnProductPage ? <Badge variant="success">No produto</Badge> : null}
-                        </div>
-                      </td>
-                      <td className="py-3 pr-3 tabular-nums">{couponUsageLabel(coupon)}</td>
-                      <td className="text-muted-foreground py-3 pr-3">
-                        {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "Sem prazo"}
-                      </td>
-                      <td className="py-3 text-right">
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <CouponProductPageToggle couponId={coupon.id} shown={coupon.showOnProductPage} />
-                          <CouponActiveToggle couponId={coupon.id} code={coupon.code} active={coupon.active} />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {/* Mesmo cabeçalho das tabelas do Admin (DS-16). */}
+            <DataTable
+              caption="Cupons da loja"
+              columns={["Código", "Desconto", "Status", "Uso", "Validade", "Ações"]}
+              minWidth="min-w-[640px]"
+              className="hidden md:block"
+            >
+              {result.coupons.map((coupon) => (
+                <tr key={coupon.id}>
+                  <td className={`${tableCellClassName} font-semibold`}>{coupon.code}</td>
+                  <td className={`${tableCellClassName} tabular-nums`}>{couponDiscountLabel(coupon)}</td>
+                  <td className={tableCellClassName}>
+                    <div className="flex flex-wrap gap-1">
+                      <Badge variant={coupon.active ? "success" : "neutral"}>
+                        {coupon.active ? "Ativo" : "Inativo"}
+                      </Badge>
+                      {coupon.showOnProductPage ? <Badge variant="success">No produto</Badge> : null}
+                    </div>
+                  </td>
+                  <td className={`${tableCellClassName} tabular-nums`}>{couponUsageLabel(coupon)}</td>
+                  <td className={`${tableCellClassName} text-muted-foreground`}>
+                    {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "Sem prazo"}
+                  </td>
+                  <td className={tableCellClassName}>
+                    <div className="flex flex-wrap gap-2">
+                      <CouponProductPageToggle couponId={coupon.id} shown={coupon.showOnProductPage} />
+                      <CouponActiveToggle couponId={coupon.id} code={coupon.code} active={coupon.active} />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
           </>
         )}
         <Pagination

@@ -22,8 +22,9 @@ export function MeasurementFields({
   const fieldErrors = isVariant ? errors.variants?.[variantIndex] : errors;
 
   return (
-    <fieldset className="grid min-w-0 gap-3 rounded-lg border p-3 sm:col-span-2 sm:grid-cols-2">
-      <legend className="px-1 text-sm font-medium">
+    <fieldset className="grid min-w-0 gap-3 sm:col-span-2 sm:grid-cols-2">
+      {/* O bloco recolhível já mostra o título; a legenda fica para leitores de tela (DS-09). */}
+      <legend className="sr-only">
         {isVariant ? `Embalagem da variação ${variantIndex + 1}` : "Embalagem padrão para envio"}
       </legend>
       <p className="text-muted-foreground text-xs sm:col-span-2">
