@@ -23,6 +23,9 @@ export type CreateCouponInput = {
   perCustomerUsageLimit?: number | undefined;
   /** Só vale para cupom de loja; cupom do Moto Shop nunca é divulgado na página do produto. */
   showOnProductPage?: boolean | undefined;
+  /** Início e fim da validade em UTC; vazio deixa o limite aberto (BUG-025). */
+  startsAt?: Date | undefined;
+  endsAt?: Date | undefined;
 };
 
 /** Creates a coupon for its owner and records the audit entry in the same transaction. */
@@ -50,6 +53,8 @@ function toCouponData(owner: CouponOwner, input: CreateCouponInput, discountAmou
     minimumPurchaseInCents: input.minimumPurchaseInCents,
     ...(input.globalUsageLimit !== undefined ? { globalUsageLimit: input.globalUsageLimit } : {}),
     ...(input.perCustomerUsageLimit !== undefined ? { perCustomerUsageLimit: input.perCustomerUsageLimit } : {}),
+    ...(input.startsAt ? { startsAt: input.startsAt } : {}),
+    ...(input.endsAt ? { endsAt: input.endsAt } : {}),
     fundedBy: owner.fundedBy,
     showOnProductPage: owner.ownerType === "SELLER" && input.showOnProductPage === true,
   };
@@ -78,6 +83,8 @@ async function recordCouponCreatedAudit(
         globalUsageLimit: input.globalUsageLimit ?? null,
         perCustomerUsageLimit: input.perCustomerUsageLimit ?? null,
         showOnProductPage: owner.ownerType === "SELLER" && input.showOnProductPage === true,
+        startsAt: input.startsAt?.toISOString() ?? null,
+        endsAt: input.endsAt?.toISOString() ?? null,
       },
     },
   });

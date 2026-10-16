@@ -362,3 +362,71 @@ describe("coupon code oracle (L-10)", () => {
     expect(mocks.transaction).not.toHaveBeenCalled();
   });
 });
+
+describe("coupon validity dates (BUG-025)", () => {
+  function couponForm(dates: { startsAt?: string; endsAt?: string }) {
+    const form = new FormData();
+    form.set("code", "natal10");
+    form.set("discountType", "PERCENTAGE");
+    form.set("discountPercent", "10");
+    for (const [name, value] of Object.entries(dates)) form.set(name, value);
+    return form;
+  }
+
+  it("saves the start and end typed by the seller, in Brasília time", async () => {
+    mocks.couponCreate.mockResolvedValue({ id: "coupon-new" });
+
+    const result = await createSellerCouponAction({}, couponForm({ startsAt: "01/12/2099", endsAt: "31/12/2099" }));
+
+    expect(result.success).toMatch(/NATAL10/);
+    expect(mocks.couponCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        sellerId: "seller-a",
+        startsAt: new Date("2099-12-01T03:00:00.000Z"),
+        endsAt: new Date("2100-01-01T02:59:59.999Z"),
+      }),
+    });
+    expect(mocks.auditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        metadata: expect.objectContaining({
+          startsAt: "2099-12-01T03:00:00.000Z",
+          endsAt: "2100-01-01T02:59:59.999Z",
+        }),
+      }),
+    });
+  });
+
+  it("saves the dates of an Admin campaign too", async () => {
+    mocks.couponCreate.mockResolvedValue({ id: "coupon-new" });
+
+    await createMarketplaceCouponAction({}, couponForm({ endsAt: "31/12/2099" }));
+
+    const data = mocks.couponCreate.mock.calls[0]?.[0]?.data;
+    expect(data).toMatchObject({ ownerType: "MARKETPLACE", endsAt: new Date("2100-01-01T02:59:59.999Z") });
+    expect(data).not.toHaveProperty("startsAt");
+  });
+
+  it("keeps a coupon without dates open on both ends", async () => {
+    mocks.couponCreate.mockResolvedValue({ id: "coupon-new" });
+
+    await createSellerCouponAction({}, couponForm({ startsAt: "", endsAt: "" }));
+
+    const data = mocks.couponCreate.mock.calls[0]?.[0]?.data;
+    expect(data).not.toHaveProperty("startsAt");
+    expect(data).not.toHaveProperty("endsAt");
+  });
+
+  it("refuses an end before the start without touching the database", async () => {
+    const result = await createSellerCouponAction({}, couponForm({ startsAt: "10/12/2099", endsAt: "01/12/2099" }));
+
+    expect(result.error).toMatch(/não pode ser antes do início/);
+    expect(mocks.transaction).not.toHaveBeenCalled();
+  });
+
+  it("refuses a date that does not exist", async () => {
+    const result = await createSellerCouponAction({}, couponForm({ endsAt: "31/02/2099" }));
+
+    expect(result.error).toMatch(/Informe o fim como dia\/mês\/ano/);
+    expect(mocks.transaction).not.toHaveBeenCalled();
+  });
+});
