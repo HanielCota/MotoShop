@@ -49,12 +49,23 @@ it("renders the shared footer on storefront routes with the client's sections", 
   expect(footer.getByText(/O Moto Shop Brasil é uma plataforma e-commerce/)).toBeInTheDocument();
 });
 
-it("lists only the payment methods the checkout accepts", () => {
+it("lists only the payment methods the checkout accepts, with the official brand marks", () => {
   navigation.pathname = "/";
   renderFooter();
   const methods = within(screen.getByRole("list", { name: "Formas de pagamento aceitas" }));
+  const icons = methods.getAllByRole("img");
 
-  expect(methods.getAllByRole("img").map((icon) => icon.getAttribute("aria-label"))).toEqual([
+  expect(icons.map((icon) => icon.getAttribute("src"))).toEqual([
+    "/images/payment-methods/pix.svg",
+    "/images/payment-methods/visa.svg",
+    "/images/payment-methods/mastercard.svg",
+    "/images/payment-methods/elo.svg",
+    "/images/payment-methods/american-express.svg",
+    "/images/payment-methods/hipercard.svg",
+    "/images/payment-methods/diners-club.svg",
+    "/images/payment-methods/cabal.svg",
+  ]);
+  expect(icons.map((icon) => icon.getAttribute("alt"))).toEqual([
     "Pix",
     "Visa",
     "Mastercard",
