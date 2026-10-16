@@ -51,7 +51,7 @@ export async function getSellerFinancialSummary(sellerId: string) {
   };
 }
 
-export async function listSellerLowStockVariants(sellerId: string, threshold = 5) {
+export async function listSellerLowStockVariants(sellerId: string, threshold = 5, limit = 5) {
   return db.inventory.findMany({
     where: {
       sellerId,
@@ -71,6 +71,6 @@ export async function listSellerLowStockVariants(sellerId: string, threshold = 5
       },
     },
     orderBy: [{ availableQuantity: "asc" }, { updatedAt: "desc" }],
-    take: 12,
+    take: limit,
   });
 }

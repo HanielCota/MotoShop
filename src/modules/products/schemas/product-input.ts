@@ -37,9 +37,9 @@ export const productInputSchema = z.object({
   slug: z
     .string()
     .trim()
-    .min(3, "Use pelo menos 3 letras ou números no slug.")
-    .max(160, "Use no máximo 160 caracteres no slug.")
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use um slug válido."),
+    .min(3, "Use pelo menos 3 letras ou números no endereço da página.")
+    .max(160, "Use no máximo 160 caracteres no endereço da página.")
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use apenas letras minúsculas, números e hífens no endereço da página."),
   description: z
     .string()
     .trim()
@@ -68,8 +68,14 @@ export const productInputSchema = z.object({
             .max(2_147_483_647, "O preço promocional é maior que o permitido.")
             .nullable()
             .optional(),
-          promotionStartsAt: z.date({ error: "Informe uma data inicial válida." }).nullable().optional(),
-          promotionEndsAt: z.date({ error: "Informe uma data final válida." }).nullable().optional(),
+          promotionStartsAt: z
+            .date({ error: "Data inicial inválida. Use dia/mês/ano e hora de 0 a 23, como 20/11/2026 e 08:00." })
+            .nullable()
+            .optional(),
+          promotionEndsAt: z
+            .date({ error: "Data final inválida. Use dia/mês/ano e hora de 0 a 23, como 30/11/2026 e 23:59." })
+            .nullable()
+            .optional(),
           stock: z.coerce
             .number({ error: "Informe o estoque em unidades inteiras." })
             .int("Informe o estoque em unidades inteiras.")

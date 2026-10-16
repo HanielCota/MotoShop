@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Undo2 } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
@@ -9,7 +10,7 @@ import { listReturnRequestsForAdmin } from "@/modules/returns/queries/admin-retu
 import { listSellerOptionsForAdmin } from "@/modules/sellers/queries/sellers";
 import { getStatusLabel, returnReasonLabels } from "@/shared/presentation/status-labels";
 
-import { adminHref } from "../../admin-href";
+import { adminHref, adminOrderHref } from "../../admin-href";
 import { adminReturnStatusValues, loadAdminReturnSearchParams } from "../../search-params";
 import {
   AdminCard,
@@ -86,7 +87,14 @@ export async function AdminReturnsSection({ searchParams }: AdminSectionProps) {
               <li key={request.id} className="flex flex-col gap-4 py-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold">Pedido {request.order.orderNumber}</h3>
+                    <h3 className="font-semibold">
+                      <Link
+                        href={adminOrderHref(request.order.orderNumber)}
+                        className="underline-offset-4 hover:underline"
+                      >
+                        Pedido {request.order.orderNumber}
+                      </Link>
+                    </h3>
                     <StatusBadge domain="return" status={request.status} />
                   </div>
                   <p className="text-muted-foreground text-sm break-words">
@@ -108,7 +116,15 @@ export async function AdminReturnsSection({ searchParams }: AdminSectionProps) {
                     Solicitada em {formatDateTime(request.createdAt)}
                   </p>
                 </div>
-                <ReturnStatusActions returnRequestId={request.id} status={request.status} />
+                <ReturnStatusActions
+                  returnRequestId={request.id}
+                  status={request.status}
+                  summary={{
+                    orderNumber: request.order.orderNumber,
+                    storeName: request.seller.store?.name ?? "Lojista",
+                    amountInCents: request.amountInCents,
+                  }}
+                />
               </li>
             );
           })}

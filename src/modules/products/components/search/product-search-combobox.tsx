@@ -6,6 +6,8 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useId, useState, type KeyboardEvent } from "react";
 
+import type { FieldSize } from "@/components/ui/field-size";
+import { popoverSurfaceClassName } from "@/components/ui/popover-surface";
 import { Input } from "@/components/ui/input";
 import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -20,6 +22,8 @@ type ProductSearchComboboxProps = {
   /** Classes for the text field; "plain" renders a bare input styled only by these classes. */
   inputClassName?: string;
   variant?: "field" | "plain";
+  /** Height of the "field" variant, matching the `Button` size next to it. */
+  size?: FieldSize;
   className?: string;
   defaultValue?: string;
   /** Controlled value, for fields whose text is also used elsewhere (e.g. a clear button). */
@@ -41,6 +45,7 @@ export function ProductSearchCombobox({
   placeholder,
   inputClassName,
   variant = "field",
+  size = "default",
   className,
   defaultValue = "",
   value,
@@ -99,6 +104,7 @@ export function ProductSearchCombobox({
     id,
     name,
     type: "search",
+    enterKeyHint: "search",
     role: "combobox",
     autoComplete: "off",
     placeholder,
@@ -118,7 +124,7 @@ export function ProductSearchCombobox({
       {variant === "plain" ? (
         <input {...inputProps} className={inputClassName} />
       ) : (
-        <Input {...inputProps} className={inputClassName} />
+        <Input {...inputProps} size={size} className={inputClassName} />
       )}
       <SuggestionList
         id={listId}
@@ -166,7 +172,8 @@ function SuggestionList({
       hidden={hidden}
       onMouseDown={(event) => event.preventDefault()}
       className={cn(
-        "bg-card text-foreground border-border absolute top-full right-0 z-50 mt-2 w-full min-w-full overflow-hidden rounded-xl border shadow-2xl",
+        popoverSurfaceClassName,
+        "z-popover absolute top-full right-0 mt-2 w-full min-w-full overflow-hidden",
         className,
       )}
     >

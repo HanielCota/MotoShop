@@ -1,15 +1,16 @@
-import { CircleDollarSign, MessageCircleQuestion, PackageOpen, PackageSearch } from "lucide-react";
+import { CircleDollarSign, MessageCircleQuestion } from "lucide-react";
 
 import { StatCard } from "@/components/ui/stat-card";
-import { formatMoneyInCents } from "@/lib/format";
+import { formatCount, formatMoneyInCents } from "@/lib/format";
 import type { SellerDashboardPermissions } from "@/modules/sellers/application/get-seller-dashboard-context";
 import {
-  countSellerLowStockVariants,
   countSellerOrdersToPrepare,
+  countSellerStockAlerts,
   countSellerUnansweredQuestions,
   getSellerMonthNetSales,
   LOW_STOCK_THRESHOLD,
 } from "@/modules/sellers/queries/seller-overview-metrics";
+import { domainIcons } from "@/shared/presentation/domain-icons";
 
 /** Indicadores da visão geral; cada cartão só aparece para quem pode abrir a página de destino. */
 export async function SellerOverviewStats({
@@ -22,7 +23,7 @@ export async function SellerOverviewStats({
   const [ordersToPrepare, unansweredQuestions, lowStock, monthSales] = await Promise.all([
     permissions.canReadOrders ? countSellerOrdersToPrepare(sellerId) : null,
     permissions.canManageCatalog ? countSellerUnansweredQuestions(sellerId) : null,
-    permissions.canManageCatalog ? countSellerLowStockVariants(sellerId) : null,
+    permissions.canManageCatalog ? countSellerStockAlerts(sellerId) : null,
     permissions.canReadFinances ? getSellerMonthNetSales(sellerId) : null,
   ]);
 
@@ -34,7 +35,7 @@ export async function SellerOverviewStats({
         value={ordersToPrepare}
         hint="Pagos ou em processamento"
         href="/seller/orders"
-        icon={PackageOpen}
+        icon={domainIcons.order}
         tone={ordersToPrepare > 0 ? "attention" : "default"}
       />
     ) : null,
@@ -53,11 +54,11 @@ export async function SellerOverviewStats({
       <StatCard
         key="stock"
         label="Estoque baixo"
-        value={lowStock}
-        hint={`Variações com até ${LOW_STOCK_THRESHOLD} unidades`}
-        href="/seller#seller-stock"
-        icon={PackageSearch}
-        tone={lowStock > 0 ? "attention" : "default"}
+        value={lowStock.low + lowStock.out}
+        hint={`${lowStock.low} com até ${LOW_STOCK_THRESHOLD} un. · ${formatCount(lowStock.out, "esgotada", "esgotadas")}`}
+        href="/seller/products?productStock=LOW"
+        icon={domainIcons.stock}
+        tone={lowStock.low + lowStock.out > 0 ? "attention" : "default"}
       />
     ) : null,
     monthSales !== null ? (

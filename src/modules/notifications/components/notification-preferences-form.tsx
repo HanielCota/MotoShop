@@ -1,36 +1,46 @@
 "use client";
-import { Button } from "@/components/ui/button";
+
+import { startTransition, useState } from "react";
 
 import { DesignCheckbox } from "@/components/ui/design-checkbox";
-
-import { useState } from "react";
+import { FormMessage } from "@/components/ui/form-message";
+import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 import {
   updateNotificationPreferencesAction,
   type NotificationPreferenceActionState,
 } from "../actions/notification-preference-actions";
-import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: NotificationPreferenceActionState = {};
 
+/** A single on/off preference: it saves as soon as it is checked or unchecked, with no extra button. */
 export function NotificationPreferencesForm({ emailOrderUpdatesEnabled }: { emailOrderUpdatesEnabled: boolean }) {
   const [enabled, setEnabled] = useState(emailOrderUpdatesEnabled);
   const [state, action, pending] = useServerActionState(
-    async (previousState: NotificationPreferenceActionState, formData: FormData) => {
+    async (previousState: NotificationPreferenceActionState, nextEnabled: boolean) => {
+      const formData = new FormData();
+      if (nextEnabled) formData.set("emailOrderUpdatesEnabled", "on");
       const result = await updateNotificationPreferencesAction(previousState, formData);
-      if (result.success) setEnabled(formData.get("emailOrderUpdatesEnabled") === "on");
+      // Failed: the checkbox goes back to what is actually saved.
+      if (result.error) setEnabled(!nextEnabled);
       return result;
     },
     initialState,
   );
 
+  function change(nextEnabled: boolean) {
+    setEnabled(nextEnabled);
+    startTransition(() => action(nextEnabled));
+  }
+
   return (
-    <form action={action} className="space-y-4">
+    <div className="space-y-3">
       <label className="flex items-start gap-3 text-sm">
         <DesignCheckbox
           name="emailOrderUpdatesEnabled"
           checked={enabled}
-          onCheckedChange={setEnabled}
+          onCheckedChange={change}
+          disabled={pending}
           className="mt-1"
         />
         <span>
@@ -40,19 +50,8 @@ export function NotificationPreferencesForm({ emailOrderUpdatesEnabled }: { emai
           </span>
         </span>
       </label>
-      {state.error ? (
-        <p className="text-destructive text-sm" role="alert">
-          {state.error}
-        </p>
-      ) : null}
-      {state.success ? (
-        <p className="text-success-foreground text-sm" role="status">
-          {state.success}
-        </p>
-      ) : null}
-      <Button type="submit" className="rounded-md px-4" disabled={pending}>
-        {pending ? "Salvando..." : "Salvar preferências"}
-      </Button>
-    </form>
+      <p className="text-muted-foreground text-xs">Salvo automaticamente ao marcar ou desmarcar.</p>
+      <FormMessage variant="inline" error={state.error ?? null} success={pending ? null : (state.success ?? null)} />
+    </div>
   );
 }

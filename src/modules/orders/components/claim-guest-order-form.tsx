@@ -1,8 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { claimGuestOrderAction, type ClaimGuestOrderState } from "@/modules/orders/actions/claim-guest-order-action";
@@ -11,12 +8,7 @@ import { useServerActionState } from "@/shared/forms/server-action-submit";
 const initialState: ClaimGuestOrderState = {};
 
 export function ClaimGuestOrderForm({ orderNumber }: { orderNumber: string }) {
-  const router = useRouter();
   const [state, action, pending] = useServerActionState(claimGuestOrderAction, initialState);
-
-  useEffect(() => {
-    if (state.success) router.replace(`/orders/${encodeURIComponent(orderNumber)}`);
-  }, [state.success, router, orderNumber]);
 
   return (
     <form
@@ -31,8 +23,8 @@ export function ClaimGuestOrderForm({ orderNumber }: { orderNumber: string }) {
         </p>
         <FormMessage error={state.error ?? null} className="mt-2" />
       </div>
-      <Button type="submit" disabled={pending}>
-        {pending ? "Vinculando..." : "Vincular pedido"}
+      <Button pending={pending} pendingLabel="Vinculando…" type="submit">
+        Vincular pedido
       </Button>
     </form>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { startTransition, useState } from "react";
 import {
   Controller,
@@ -29,6 +29,7 @@ import {
 } from "@/modules/products/domain/variant-attributes";
 
 import { MeasurementFields } from "./measurement-fields";
+import { PromotionDateTimeField } from "./promotion-date-time-field";
 import {
   productFormSchema,
   toProductFormData,
@@ -123,8 +124,7 @@ export function ProductFormFields({
       ))}
       {intro ? (
         <p className="text-muted-foreground bg-muted/50 rounded-lg p-3 text-sm leading-6 sm:col-span-2">
-          Campos marcados com * são obrigatórios para salvar o rascunho. Comece pelas informações básicas e complete
-          preço e estoque na seção Variações.
+          Campos com * são obrigatórios. Salve o rascunho para adicionar fotos e enviar para aprovação do Moto Shop.
         </p>
       ) : null}
       <h2 className="border-b pb-2 text-base font-semibold sm:col-span-2">Informações básicas</h2>
@@ -133,13 +133,13 @@ export function ProductFormFields({
       </FormField>
       <FormField
         id="product-slug"
-        label="Slug"
+        label="Endereço da página"
         required
         error={errors.slug?.message}
         hint={
           slugLocked
-            ? "Alterar o slug muda o endereço público do produto."
-            : "Gerado a partir do nome; você pode editar."
+            ? "Mudar o endereço muda o link público do produto."
+            : "Aparece no link do produto, como /products/capacete-fox-v1. Preenchido a partir do nome; você pode editar."
         }
       >
         {(field) => <Input {...field} {...slugField} placeholder="capacete-fox-v1" autoComplete="off" />}
@@ -193,7 +193,7 @@ export function ProductFormFields({
       <FormField
         id="product-fitments"
         label="Compatibilidade com motos"
-        hint="Selecione uma ou mais motos; não é preciso usar Ctrl/Cmd."
+        hint="Selecione uma ou mais motos."
         error={errors.motorcycleFitmentIds?.message}
         className="sm:col-span-2"
       >
@@ -256,18 +256,12 @@ function VariantsEditor({
 
   return (
     <div className="space-y-3 sm:col-span-2">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-muted-foreground text-sm">Cada variação possui SKU, preço e estoque próprios.</p>
-        <Button type="button" variant="outline" size="sm" onClick={() => append(toVariantFormValues())}>
-          <Plus aria-hidden="true" data-icon="inline-start" />
-          Adicionar variação
-        </Button>
-      </div>
-      {(errors.variants?.root?.message ?? errors.variants?.message) ? (
-        <p role="alert" className="text-destructive text-xs font-medium">
-          {errors.variants?.root?.message ?? errors.variants?.message}
-        </p>
-      ) : null}
+      <p className="text-muted-foreground text-sm">Cada variação possui SKU, preço e estoque próprios.</p>
+      <FormMessage
+        variant="inline"
+        error={errors.variants?.root?.message ?? errors.variants?.message ?? null}
+        className="text-xs font-medium"
+      />
       {fields.map((field, index) => {
         const variantErrors = errors.variants?.[index];
         const fieldId = (name: keyof VariantFormValues) => `product-variant-${index}-${name}`;
@@ -300,13 +294,7 @@ function VariantsEditor({
             </FormField>
             <FormField id={fieldId("stock")} label="Estoque" required error={variantErrors?.stock?.message}>
               {(control) => (
-                <Input
-                  {...control}
-                  {...register(`variants.${index}.stock`)}
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                />
+                <Input {...control} {...register(`variants.${index}.stock`)} inputMode="numeric" autoComplete="off" />
               )}
             </FormField>
             <VariantAttributeFields control={control} register={register} errors={variantErrors} index={index} />
@@ -340,26 +328,25 @@ function VariantsEditor({
                     />
                   )}
                 </FormField>
-                <FormField
+                <PromotionDateTimeField
                   id={fieldId("promotionStartsAt")}
                   label="Início da promoção"
+                  bound="start"
+                  name={`variants.${index}.promotionStartsAt`}
+                  control={control}
                   error={variantErrors?.promotionStartsAt?.message}
-                >
-                  {(control) => (
-                    <Input {...control} {...register(`variants.${index}.promotionStartsAt`)} type="datetime-local" />
-                  )}
-                </FormField>
-                <FormField
+                />
+                <PromotionDateTimeField
                   id={fieldId("promotionEndsAt")}
                   label="Término da promoção"
+                  bound="end"
+                  name={`variants.${index}.promotionEndsAt`}
+                  control={control}
                   error={variantErrors?.promotionEndsAt?.message}
-                >
-                  {(control) => (
-                    <Input {...control} {...register(`variants.${index}.promotionEndsAt`)} type="datetime-local" />
-                  )}
-                </FormField>
+                />
                 <p className="text-muted-foreground text-xs sm:col-span-3">
-                  Horários em UTC−03:00 (Brasília). Sem início: imediata. Sem término: sem prazo. Para remover, limpe o
+                  Data em dia/mês/ano e hora de 0 a 23 (horário de Brasília, UTC−03:00). Hora vazia: o início vale desde
+                  00:00 e o término até 23:59. Sem início: começa já. Sem término: sem prazo. Para remover, limpe o
                   preço promocional e as datas.
                 </p>
               </fieldset>
@@ -370,20 +357,29 @@ function VariantsEditor({
               </summary>
               <MeasurementFields register={register} errors={errors} variantIndex={index} />
             </details>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => remove(index)}
-              disabled={fields.length === 1}
-              className="text-destructive hover:text-destructive justify-self-start sm:col-span-4"
-            >
-              <Trash2 aria-hidden="true" data-icon="inline-start" />
-              Remover variação
-            </Button>
+            {fields.length > 1 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => remove(index)}
+                className="text-destructive hover:text-destructive justify-self-start sm:col-span-4"
+              >
+                Remover variação
+              </Button>
+            ) : (
+              <p className="text-muted-foreground text-xs sm:col-span-4">
+                O produto precisa de pelo menos uma variação.
+              </p>
+            )}
           </fieldset>
         );
       })}
+      {/* Abaixo da lista, onde a variação nova aparece (UX-17). */}
+      <Button type="button" variant="outline" className="w-full" onClick={() => append(toVariantFormValues())}>
+        <Plus aria-hidden="true" data-icon="inline-start" />
+        Adicionar variação
+      </Button>
     </div>
   );
 }

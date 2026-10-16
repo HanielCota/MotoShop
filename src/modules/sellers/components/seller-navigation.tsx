@@ -4,7 +4,6 @@ import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
 import {
-  ClipboardList,
   LayoutDashboard,
   MessageCircleQuestion,
   Package,
@@ -16,6 +15,7 @@ import {
 
 import { ScrollableTabs } from "@/components/ui/scrollable-tabs";
 import { cn } from "@/lib/utils";
+import { domainIcons } from "@/shared/presentation/domain-icons";
 
 export type SellerNavigationPermissions = {
   canReadOrders: boolean;
@@ -33,7 +33,7 @@ type NavigationItem = {
 
 const items: NavigationItem[] = [
   { href: "/seller", label: "Visão geral", icon: LayoutDashboard, visible: () => true },
-  { href: "/seller/orders", label: "Pedidos", icon: ClipboardList, visible: (p) => p.canReadOrders },
+  { href: "/seller/orders", label: "Pedidos", icon: domainIcons.order, visible: (p) => p.canReadOrders },
   { href: "/seller/products" as Route, label: "Produtos", icon: Package, visible: (p) => p.canManageCatalog },
   { href: "/seller/questions", label: "Perguntas", icon: MessageCircleQuestion, visible: (p) => p.canManageCatalog },
   { href: "/seller/shipping" as Route, label: "Frete", icon: Truck, visible: (p) => p.canManageStore },

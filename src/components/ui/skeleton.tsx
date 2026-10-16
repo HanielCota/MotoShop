@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
 
+import { pageContainerClassName, type PageWidth } from "@/components/ui/page-container";
 import { cn } from "@/lib/utils";
 
 export function Skeleton({ className, ...props }: ComponentProps<"div">) {
@@ -13,9 +14,18 @@ export function Skeleton({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
-export function PageSkeleton({ rows = 4, label = "Carregando" }: { rows?: number; label?: string }) {
+export function PageSkeleton({
+  rows = 4,
+  label = "Carregando",
+  size = "default",
+}: {
+  rows?: number;
+  label?: string;
+  /** Same width as the page being loaded, so the layout does not jump when content arrives. */
+  size?: PageWidth;
+}) {
   return (
-    <div role="status" aria-label={label} className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+    <div role="status" aria-label={label} className={pageContainerClassName(size, "space-y-6 py-8")}>
       <div className="space-y-3">
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-9 w-72 max-w-full" />

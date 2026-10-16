@@ -28,4 +28,10 @@ describe("SellerApplicationStatus", () => {
     expect(screen.getByText("Status: Suspensa")).toBeInTheDocument();
     expect(screen.queryByText(/aguardando análise/i)).not.toBeInTheDocument();
   });
+
+  it("shows the reason the Moto Shop gave for the rejection (BUG-005)", () => {
+    render(<SellerApplicationStatus storeName="Loja Teste" status="REJECTED" rejectionReason="CNPJ não confere." />);
+
+    expect(screen.getByText("CNPJ não confere.")).toBeInTheDocument();
+  });
 });

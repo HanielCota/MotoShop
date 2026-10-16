@@ -2,6 +2,7 @@ import "server-only";
 
 import { db } from "@/lib/database";
 
+import { resolveAuditEntityTypes } from "../presentation/audit-log-presentation";
 import { parseDateBoundary } from "./date-boundary";
 
 export async function listAuditLogsForAdmin(
@@ -26,7 +27,7 @@ export async function listAuditLogsForAdmin(
   const to = parseDateBoundary(input.to, true);
   const where = {
     ...(action ? { action } : {}),
-    ...(entityType ? { entityType } : {}),
+    ...(entityType ? { entityType: { in: [...resolveAuditEntityTypes(entityType)] } } : {}),
     ...(query ? { entityId: { contains: query, mode: "insensitive" as const } } : {}),
     ...(actorQuery
       ? {

@@ -77,7 +77,8 @@ export const adminSellerSearchParams = {
 };
 
 export const adminProductReviewSearchParams = {
-  productReviewStatus: parseAsStringLiteral(adminProductReviewStatusValues).withDefault("ALL"),
+  // A fila abre no que precisa de ação (UX-14); recusados e todos continuam no filtro.
+  productReviewStatus: parseAsStringLiteral(adminProductReviewStatusValues).withDefault("SUBMITTED"),
   productReviewQ: parseAsAdminText,
   productReviewCategoryId: parseAsAdminText,
   productReviewBrandId: parseAsAdminText,

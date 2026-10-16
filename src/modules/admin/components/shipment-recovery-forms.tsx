@@ -8,7 +8,18 @@ import {
   reconcileShipmentPurchaseAction,
   type ShipmentRecoveryActionState,
 } from "@/modules/admin/actions/shipment-recovery-actions";
+import { useClientValidation, type ClientFormValidator } from "@/shared/forms/client-validation";
+import { requiredTextValidator } from "@/shared/forms/required-text";
 import { useServerActionState } from "@/shared/forms/server-action-submit";
+
+const ORDER_NUMBER_MESSAGE = "Digite o número do pedido para confirmar.";
+const validateOrderNumber = requiredTextValidator("confirmedOrderNumber", ORDER_NUMBER_MESSAGE);
+const validateShipmentId = requiredTextValidator("externalShipmentId", "Informe o ID da etiqueta no Melhor Envio.");
+
+/** Etiqueta comprada pede o ID e o número do pedido; os demais formulários, só o número (DN-03). */
+function validatePurchaseForm(purchase: boolean): ClientFormValidator {
+  return (formData) => (purchase ? validateShipmentId(formData) : null) ?? validateOrderNumber(formData);
+}
 
 const initialState: ShipmentRecoveryActionState = {};
 
@@ -37,6 +48,9 @@ export function ShipmentRecoveryForms({
     initialState,
   );
   const purchase = operation === "PURCHASE";
+  const purchaseValidation = useClientValidation(validatePurchaseForm(purchase));
+  const notPurchasedValidation = useClientValidation(validateOrderNumber);
+  const labelValidation = useClientValidation(validateOrderNumber);
 
   if (labelCancellationRequired) {
     return (
@@ -46,15 +60,18 @@ export function ShipmentRecoveryForms({
           O pedido {orderNumber} foi cancelado com uma etiqueta já comprada. Cancele a etiqueta no painel do Melhor
           Envio da loja para que o valor seja estornado antes de qualquer postagem.
         </p>
-        <form action={confirmLabelCancelled} className="space-y-3 pt-1">
+        <form action={confirmLabelCancelled} onSubmit={labelValidation.onSubmit} noValidate className="space-y-3 pt-1">
           <input type="hidden" name="shipmentId" value={shipmentId} />
           <label className="block space-y-1 text-sm">
             <span>Digite {orderNumber} para confirmar que a etiqueta foi cancelada</span>
-            <Input name="confirmedOrderNumber" required maxLength={40} autoComplete="off" />
+            <Input name="confirmedOrderNumber" maxLength={40} autoComplete="off" />
           </label>
-          <FormMessage error={labelState.error ?? null} success={labelState.success ?? null} />
-          <Button type="submit" size="sm" disabled={labelPending}>
-            {labelPending ? "Registrando…" : "Confirmar cancelamento da etiqueta"}
+          <FormMessage
+            error={labelValidation.clientError ?? labelState.error ?? null}
+            success={labelValidation.clientError ? null : (labelState.success ?? null)}
+          />
+          <Button pending={labelPending} pendingLabel="Registrando…" type="submit" size="sm">
+            Confirmar cancelamento da etiqueta
           </Button>
         </form>
       </div>
@@ -63,7 +80,12 @@ export function ShipmentRecoveryForms({
 
   return (
     <div className="grid gap-4 border-t pt-4 lg:grid-cols-2">
-      <form action={confirmPurchase} className="space-y-3 rounded-lg border p-4">
+      <form
+        action={confirmPurchase}
+        onSubmit={purchaseValidation.onSubmit}
+        noValidate
+        className="space-y-3 rounded-lg border p-4"
+      >
         <input type="hidden" name="shipmentId" value={shipmentId} />
         <input type="hidden" name="operation" value={operation} />
         <input type="hidden" name="decision" value={purchase ? "CONFIRMED_PURCHASE" : "CONFIRMED_GENERATED"} />
@@ -77,20 +99,28 @@ export function ShipmentRecoveryForms({
         {purchase ? (
           <label className="block space-y-1 text-sm">
             <span>ID da etiqueta no Melhor Envio</span>
-            <Input name="externalShipmentId" required maxLength={100} autoComplete="off" />
+            <Input name="externalShipmentId" maxLength={100} autoComplete="off" />
           </label>
         ) : null}
         <label className="block space-y-1 text-sm">
           <span>Digite {orderNumber} para confirmar a conferência</span>
-          <Input name="confirmedOrderNumber" required maxLength={40} autoComplete="off" />
+          <Input name="confirmedOrderNumber" maxLength={40} autoComplete="off" />
         </label>
-        <FormMessage error={purchaseState.error ?? null} success={purchaseState.success ?? null} />
+        <FormMessage
+          error={purchaseValidation.clientError ?? purchaseState.error ?? null}
+          success={purchaseValidation.clientError ? null : (purchaseState.success ?? null)}
+        />
         <Button type="submit" size="sm" disabled={purchasePending}>
           {purchasePending ? "Conferindo…" : purchase ? "Associar etiqueta comprada" : "Registrar etiqueta gerada"}
         </Button>
       </form>
 
-      <form action={confirmNotPurchased} className="space-y-3 rounded-lg border p-4">
+      <form
+        action={confirmNotPurchased}
+        onSubmit={notPurchasedValidation.onSubmit}
+        noValidate
+        className="space-y-3 rounded-lg border p-4"
+      >
         <input type="hidden" name="shipmentId" value={shipmentId} />
         <input type="hidden" name="operation" value={operation} />
         <input type="hidden" name="decision" value={purchase ? "CONFIRMED_NOT_PURCHASED" : "CONFIRMED_NOT_GENERATED"} />
@@ -102,9 +132,12 @@ export function ShipmentRecoveryForms({
         </p>
         <label className="block space-y-1 text-sm">
           <span>Digite {orderNumber} para liberar nova tentativa</span>
-          <Input name="confirmedOrderNumber" required maxLength={40} autoComplete="off" />
+          <Input name="confirmedOrderNumber" maxLength={40} autoComplete="off" />
         </label>
-        <FormMessage error={notPurchasedState.error ?? null} success={notPurchasedState.success ?? null} />
+        <FormMessage
+          error={notPurchasedValidation.clientError ?? notPurchasedState.error ?? null}
+          success={notPurchasedValidation.clientError ? null : (notPurchasedState.success ?? null)}
+        />
         <Button type="submit" variant="outline" size="sm" disabled={notPurchasedPending}>
           {notPurchasedPending ? "Registrando…" : purchase ? "Registrar que não houve compra" : "Liberar nova geração"}
         </Button>

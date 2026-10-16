@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { Route } from "next";
 import { notFound, redirect } from "next/navigation";
 
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { PageHeader, SectionHeader } from "@/components/ui/page-header";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { CustomerAccountNavigation } from "@/modules/customers/components/customer-account-navigation";
@@ -45,12 +46,13 @@ export default async function CustomerOrderPage({
   const order = await getCustomerOrder(orderNumber, identity);
   if (!order) notFound();
 
+  const pendingPayment = order.status === "PENDING_PAYMENT";
   const isOwner = Boolean(session && order.userId === session.user.id);
   const canClaim =
     session && accessToken && !order.userId && session.user.email.toLowerCase() === order.customerEmail.toLowerCase();
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6">
+    <main className={pageContainerClassName("default", "py-10")}>
       <div className={session ? "grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]" : "grid grid-cols-1 gap-6"}>
         {session ? <CustomerAccountNavigation pathname={`/orders/${order.orderNumber}`} /> : null}
         <div className="flex min-w-0 flex-col gap-8">
@@ -64,6 +66,9 @@ export default async function CustomerOrderPage({
           {canClaim ? <ClaimGuestOrderForm orderNumber={order.orderNumber} /> : null}
 
           <OrderSummary order={order} />
+
+          {/* Paying is the next step of a pending order, so it comes before the deliveries. */}
+          {pendingPayment ? <PaymentSection orderNumber={order.orderNumber} payments={order.payments} /> : null}
 
           <section className="space-y-4">
             <SectionHeader
@@ -81,7 +86,7 @@ export default async function CustomerOrderPage({
             ))}
           </section>
 
-          <PaymentSection orderNumber={order.orderNumber} payments={order.payments} />
+          {pendingPayment ? null : <PaymentSection orderNumber={order.orderNumber} payments={order.payments} />}
         </div>
       </div>
     </main>

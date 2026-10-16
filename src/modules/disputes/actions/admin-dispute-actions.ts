@@ -9,10 +9,16 @@ import { isRecordId } from "@/shared/validation/record-id";
 
 import { reviewDispute } from "../application/review-dispute";
 
-const reviewSchema = z.object({
-  decision: z.enum(["START_REVIEW", "RESOLVE", "REJECT"]),
-  note: z.string().trim().max(2000).optional(),
-});
+const reviewSchema = z
+  .object({
+    decision: z.enum(["START_REVIEW", "RESOLVE", "REJECT"]),
+    note: z.string().trim().max(2000).optional(),
+  })
+  // Resolver ou recusar encerra a mediação: a decisão precisa de justificativa (BUG-002).
+  .refine((input) => input.decision === "START_REVIEW" || Boolean(input.note), {
+    message: "Informe a resolução ou o motivo da decisão.",
+    path: ["note"],
+  });
 
 export type DisputeAdminActionState = { error?: string; success?: string };
 
@@ -20,7 +26,7 @@ const successMessages = {
   OPEN: "Disputa atualizada.",
   UNDER_REVIEW: "Disputa assumida para análise.",
   RESOLVED: "Disputa resolvida.",
-  REJECTED: "Disputa rejeitada.",
+  REJECTED: "Disputa recusada.",
 } as const;
 
 export async function reviewDisputeAction(disputeId: string, formData: FormData): Promise<DisputeAdminActionState> {

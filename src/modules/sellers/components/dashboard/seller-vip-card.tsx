@@ -8,9 +8,7 @@ export function SellerVipCard({ subscription }: { subscription?: ActiveSubscript
   return (
     <Card id="seller-vip" className="scroll-mt-24">
       <CardHeader>
-        <CardTitle>
-          <h2 className="text-lg">Plano VIP</h2>
-        </CardTitle>
+        <CardTitle>Plano VIP</CardTitle>
         <CardDescription>
           Mais exposição para produtos aprovados, com identificação de conteúdo patrocinado.
         </CardDescription>

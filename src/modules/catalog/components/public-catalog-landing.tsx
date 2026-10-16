@@ -1,5 +1,6 @@
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { Pagination } from "@/components/ui/pagination";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { DesignSelect } from "@/components/ui/design-select";
 import Link from "next/link";
 import type { Route } from "next";
@@ -91,7 +92,7 @@ export function PublicCatalogLanding({
   });
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6">
+    <main className={pageContainerClassName("default", "flex flex-col gap-8 py-10")}>
       <PageHeader
         eyebrow="Catálogo"
         title={title}
@@ -103,7 +104,7 @@ export function PublicCatalogLanding({
           <form
             method="get"
             action={baseHref}
-            className="grid min-w-0 content-start gap-4 [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:w-full"
+            className="grid min-w-0 content-start gap-4 [&_[data-slot=select-trigger]]:w-full"
           >
             {sort !== "relevance" ? <input type="hidden" name="sort" value={sort} /> : null}
             <label className="flex min-w-0 flex-col gap-2 text-sm font-medium">
@@ -131,10 +132,7 @@ export function PublicCatalogLanding({
                 Aplicar filtros
               </Button>
               {activeFilterCount > 0 ? (
-                <Link
-                  href={clearHref}
-                  className="text-muted-foreground hover:text-foreground inline-flex min-h-10 items-center text-sm underline underline-offset-4"
-                >
+                <Link href={clearHref} className={buttonVariants({ variant: "link-muted", size: "link" })}>
                   Limpar
                 </Link>
               ) : null}

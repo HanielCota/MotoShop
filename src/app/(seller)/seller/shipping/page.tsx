@@ -39,9 +39,7 @@ export default async function SellerShippingPage() {
       />
       <Card>
         <CardHeader>
-          <CardTitle>
-            <h2 className="text-lg">Nova modalidade</h2>
-          </CardTitle>
+          <CardTitle>Nova modalidade</CardTitle>
           <CardDescription>
             O preço é fixo para todos os itens da sua loja no pedido, não por produto. O prazo é contado em dias úteis
             após a confirmação do pagamento. Novas modalidades começam desativadas. Para substituir uma regra, crie

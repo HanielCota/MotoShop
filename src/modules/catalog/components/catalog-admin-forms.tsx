@@ -1,4 +1,5 @@
 "use client";
+import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type ClientFormValidator, useClientValidation } from "@/shared/forms/client-validation";
@@ -42,16 +43,7 @@ function Feedback({ state, clientError }: { state: CatalogActionState; clientErr
   const error = clientError ?? state.error;
   return (
     <>
-      {error ? (
-        <p role="alert" className="text-destructive text-sm">
-          {error}
-        </p>
-      ) : null}
-      {!clientError && state.success ? (
-        <p role="status" className="text-success-foreground text-sm">
-          {state.success}
-        </p>
-      ) : null}
+      <FormMessage variant="inline" error={error ?? null} success={clientError ? null : (state.success ?? null)} />
     </>
   );
 }
@@ -82,8 +74,8 @@ function FormShell({
   return (
     <form action={action} onSubmit={onSubmit} noValidate className="space-y-3 rounded-lg border p-4">
       {children}
-      <Button type="submit" disabled={pending} className="rounded-md font-semibold">
-        {pending ? "Salvando..." : "Adicionar"}
+      <Button pending={pending} pendingLabel="Salvando…" type="submit" className="font-semibold">
+        Adicionar
       </Button>
       <Feedback state={state} clientError={clientError} />
     </form>
@@ -108,7 +100,7 @@ export function CategoryForm({ categories }: { categories: Option[] }) {
         </DesignSelect>
       </Field>
       <Field label="Ordem de exibição">
-        <Input name="sortOrder" type="number" min="0" defaultValue={state.values?.sortOrder ?? "0"} />
+        <Input name="sortOrder" inputMode="numeric" autoComplete="off" defaultValue={state.values?.sortOrder ?? "0"} />
       </Field>
     </FormShell>
   );
@@ -178,8 +170,8 @@ export function MotorcycleFitmentForm({ models }: { models: Option[] }) {
         <Field label="Cilindrada (cc)">
           <Input
             name="displacementCc"
-            type="number"
-            min="1"
+            inputMode="numeric"
+            autoComplete="off"
             placeholder="Ex.: 250"
             defaultValue={state.values?.displacementCc ?? ""}
             required
@@ -188,9 +180,9 @@ export function MotorcycleFitmentForm({ models }: { models: Option[] }) {
         <Field label="Ano">
           <Input
             name="year"
-            type="number"
-            min="1900"
-            max="2200"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={4}
             placeholder="Ex.: 2025"
             defaultValue={state.values?.year ?? ""}
             required

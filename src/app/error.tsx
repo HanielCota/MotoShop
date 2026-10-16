@@ -1,27 +1,36 @@
 "use client";
-import { Button } from "@/components/ui/button";
 
 import { useEffect } from "react";
 import Link from "next/link";
 import * as Sentry from "@sentry/nextjs";
+import { CircleX } from "lucide-react";
+
+import { Button, buttonVariants } from "@/components/ui/button";
+import { StatusPage } from "@/components/ui/status-page";
 
 export default function PageError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   useEffect(() => {
     Sentry.captureException(error);
   }, [error]);
+
   return (
-    <main className="mx-auto flex max-w-lg flex-col gap-4 px-6 py-16" role="alert">
-      <h1 className="text-2xl font-semibold">Não foi possível carregar esta página</h1>
-      <p>
-        Tente novamente em instantes. Se você estava finalizando uma compra, confira seus pedidos antes de repetir o
-        pagamento.
-      </p>
-      <Button type="button" className="rounded-md px-4 py-3" onClick={retry}>
-        Tentar novamente
-      </Button>
-      <Link href="/orders" className="underline">
-        Consultar meus pedidos
-      </Link>
+    <main className="mx-auto w-full max-w-2xl px-4 sm:px-6">
+      <StatusPage
+        role="alert"
+        icon={CircleX}
+        title="Não foi possível carregar esta página"
+        description="Tente novamente em instantes. Se você estava finalizando uma compra, confira seus pedidos antes de repetir o pagamento."
+        actions={
+          <>
+            <Button type="button" onClick={retry}>
+              Tentar novamente
+            </Button>
+            <Link href="/orders" className={buttonVariants({ variant: "outline" })}>
+              Consultar meus pedidos
+            </Link>
+          </>
+        }
+      />
     </main>
   );
 }

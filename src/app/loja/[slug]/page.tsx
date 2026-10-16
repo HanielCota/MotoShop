@@ -1,4 +1,5 @@
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { Pagination } from "@/components/ui/pagination";
 import { DesignSelect } from "@/components/ui/design-select";
 import Link from "next/link";
@@ -134,7 +135,7 @@ export default async function PublicStorePage({
   })();
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
+    <main className={pageContainerClassName("default", "flex flex-col gap-8 py-8 sm:py-12")}>
       <section
         className="bg-moto-brand-foreground relative isolate overflow-hidden rounded-[1.75rem] text-white shadow-[0_24px_70px_-50px_rgba(0,0,0,0.8)]"
         aria-labelledby="store-name"
@@ -160,9 +161,7 @@ export default async function PublicStorePage({
         />
         <div className="relative flex min-h-[340px] flex-col justify-between gap-10 p-6 sm:min-h-[390px] sm:p-10">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <span className="text-moto-brand text-xs font-bold tracking-[0.2em] uppercase">
-              Vitrine de loja · O Moto Shop
-            </span>
+            <span className="eyebrow text-moto-brand">Vitrine de loja · O Moto Shop</span>
             {store.seller.subscriptions.length > 0 ? (
               <Badge className="border-moto-brand/60 bg-moto-brand text-moto-brand-foreground border">Loja VIP</Badge>
             ) : null}
@@ -234,7 +233,7 @@ export default async function PublicStorePage({
             <CatalogFiltersPanel activeCount={activeProductFilterCount}>
               <form
                 key={JSON.stringify(storeParams)}
-                className="grid min-w-0 content-start gap-4 [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:min-w-0"
+                className="grid min-w-0 content-start gap-4 [&_[data-slot=select-trigger]]:w-full [&_[data-slot=select-trigger]]:min-w-0"
                 method="get"
                 action="#produtos"
               >
@@ -280,7 +279,7 @@ export default async function PublicStorePage({
                   </Button>
                   <Link
                     href={clearProductFiltersHref as Route}
-                    className="text-muted-foreground hover:text-foreground inline-flex min-h-10 items-center text-sm underline underline-offset-4"
+                    className={buttonVariants({ variant: "link-muted", size: "link" })}
                   >
                     Limpar
                   </Link>
@@ -322,9 +321,7 @@ export default async function PublicStorePage({
       {store.reviewSummary.count > 0 ? (
         <Card id="avaliacoes-loja" className="scroll-mt-24">
           <CardHeader>
-            <CardTitle>
-              <h2 className="text-xl">Avaliações da loja</h2>
-            </CardTitle>
+            <CardTitle>Avaliações da loja</CardTitle>
             <CardDescription>
               Comentários de clientes que compraram no Moto Shop
               {rating ? ` · nota média ${formatRating(rating)}/5` : ""}
@@ -362,7 +359,7 @@ export default async function PublicStorePage({
                   <option value="oldest">Mais antigas</option>
                 </DesignSelect>
               </label>
-              <Button type="submit" variant="outline" className="h-10 px-4">
+              <Button type="submit" variant="outline">
                 Aplicar
               </Button>
             </form>

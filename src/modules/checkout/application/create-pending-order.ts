@@ -13,12 +13,18 @@ import { multiplyMoneyInCents, sumMoneyInCents } from "@/modules/orders/domain/m
 import { preparedPaymentRequestMetadata } from "@/modules/payments/domain/payment-request-state";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 import { buildVariantAttributesSnapshot, type VariantGenderValue } from "@/modules/products/domain/variant-attributes";
+import { guestOrderConfirmationEventKey } from "@/modules/notifications/domain/guest-order-confirmation";
+import { recordOutboxEvent } from "@/modules/outbox/application/record-outbox-event";
+import { guestOrderCreatedEventName } from "@/modules/outbox/domain/outbox-events";
+import { canonicalCouponCustomerEmail } from "@/modules/coupons/domain/coupon-customer-key";
 import { ApplicationError } from "@/shared/errors/application-error";
 
+import { couponCustomerOf } from "../domain/coupon-customer";
 import { applyOrderItemDiscounts } from "../domain/order-item-discounts";
 import type { SellerCharge } from "../domain/seller-charges";
 import type { CheckoutInput } from "../schemas/checkout";
 import type { CheckoutShippingQuote } from "./shipping-quotes";
+import { assertPendingOrderCap } from "./pending-order-cap";
 
 export type CheckoutSession = Awaited<ReturnType<typeof getCurrentSession>>;
 
@@ -78,6 +84,8 @@ export async function reserveCartAndCreateOrder(input: ReserveCartInput): Promis
   if (totals.totalAmountInCents <= 0)
     throw new ApplicationError({ code: "CONFLICT", message: "O total da compra deve ser maior que zero." });
   return db.$transaction(async (tx) => {
+    // Existing idempotency keys return from executeCheckout before reaching this creation path.
+    await assertPendingOrderCap(tx, data.customerTaxId, input.now);
     await convertCart(tx, input.cart.id);
     await assertCartItemsUnchanged(tx, input.cart);
     await lockAndRecheckChargedPrices(tx, input.sellerCharges, input.now);
@@ -92,8 +100,18 @@ export async function reserveCartAndCreateOrder(input: ReserveCartInput): Promis
       totalAmountInCents: totals.totalAmountInCents,
     });
     if (input.coupon) {
-      await assertCouponStillAvailableLocked(tx, input.coupon, data.customerEmail, session?.user.id, input.now);
+      await assertCouponStillAvailableLocked(tx, input.coupon, couponCustomerOf(data, session?.user.id), input.now);
       await redeemCoupon(tx, { coupon: input.coupon, orderId: order.id, data, session, totals });
+    }
+    if (input.guestAccessToken) {
+      // Guests get the order link by e-mail (AGENTS.md §12); sent later by a workflow, never blocking checkout.
+      await recordOutboxEvent(tx, {
+        eventKey: guestOrderConfirmationEventKey(order.id),
+        eventName: guestOrderCreatedEventName,
+        aggregateType: "Order",
+        aggregateId: order.id,
+        payload: { orderId: order.id, orderNumber: input.orderNumber },
+      });
     }
     const transaction = payment.transactions[0];
     if (!transaction)
@@ -305,6 +323,7 @@ async function redeemCoupon(
   await tx.couponRedemption.create({
     data: {
       customerEmailSnapshot: input.data.customerEmail,
+      customerEmailKey: canonicalCouponCustomerEmail(input.data.customerEmail),
       discountAmountInCents: input.totals.totalDiscountInCents,
       couponId: input.coupon.id,
       orderId: input.orderId,

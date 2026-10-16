@@ -1,4 +1,5 @@
 "use client";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import { DesignCheckbox } from "@/components/ui/design-checkbox";
@@ -6,7 +7,7 @@ import { DesignCheckbox } from "@/components/ui/design-checkbox";
 import { DesignSelect } from "@/components/ui/design-select";
 
 import Link from "next/link";
-import { Bike, CheckCircle2, Plus, Star } from "lucide-react";
+import { Motorbike } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -65,18 +66,14 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
     <article className="border-border bg-card rounded-2xl border p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start gap-4">
         <div className="bg-moto-brand-surface text-brand-strong flex size-12 shrink-0 items-center justify-center rounded-xl">
-          <Bike aria-hidden="true" className="size-6" />
+          <Motorbike aria-hidden="true" className="size-6" />
         </div>
         <div className="@container min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="font-sans text-lg font-semibold tracking-normal">
               {saved.manufacturer} {saved.model}
             </h2>
-            {saved.isPrimary ? (
-              <span className="bg-moto-brand-surface text-brand-strong inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold">
-                <Star aria-hidden="true" className="size-3.5" /> Principal
-              </span>
-            ) : null}
+            {saved.isPrimary ? <Badge variant="brand">Principal</Badge> : null}
           </div>
           <MotorcycleDetails saved={saved} />
           <MotorcycleAvailability saved={saved} />
@@ -94,8 +91,8 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
         ) : null}
         {!saved.isPrimary && saved.available ? (
           <form action={primaryAction}>
-            <Button type="submit" variant="outline" disabled={primaryPending} className="px-4">
-              {primaryPending ? "Atualizando..." : "Definir como principal"}
+            <Button pending={primaryPending} pendingLabel="Atualizando…" type="submit" variant="outline">
+              Definir como principal
             </Button>
           </form>
         ) : null}
@@ -104,7 +101,6 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
           variant="outline"
           onClick={() => setEditing((current) => !current)}
           aria-expanded={editing}
-          className="px-4"
         >
           {editing ? "Cancelar edição" : "Editar"}
         </Button>
@@ -114,7 +110,7 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
               type="button"
               variant="outline"
               aria-label={`Remover ${saved.label}`}
-              className="text-destructive hover:bg-destructive/10 px-4"
+              className="text-destructive hover:bg-destructive/10"
             >
               Remover
             </Button>
@@ -148,8 +144,8 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
               ))}
             </DesignSelect>
           </label>
-          <Button size="lg" type="submit" disabled={editPending} className="min-h-11 rounded-md px-5 font-semibold">
-            {editPending ? "Salvando..." : "Salvar alteração"}
+          <Button pending={editPending} pendingLabel="Salvando…" size="lg" type="submit" className="min-h-11">
+            Salvar alteração
           </Button>
           <ActionMessage state={editState} />
         </form>
@@ -176,7 +172,7 @@ function MotorcycleDetails({ saved }: { saved: SavedMotorcycle }) {
     <dl className="mt-3 grid grid-cols-1 gap-y-3 @[16rem]:grid-cols-2 @[16rem]:gap-x-6">
       {details.map((detail) => (
         <div key={detail.label} className="min-w-0">
-          <dt className="text-muted-foreground text-xs font-semibold tracking-[0.08em] uppercase">{detail.label}</dt>
+          <dt className="eyebrow text-muted-foreground">{detail.label}</dt>
           <dd className="text-foreground mt-0.5 text-sm font-medium break-words">{detail.value}</dd>
         </div>
       ))}
@@ -209,7 +205,7 @@ export function MotorcycleGarage({
           savedMotorcycles.map((saved) => <SavedMotorcycleCard key={saved.id} saved={saved} fitments={fitments} />)
         ) : (
           <EmptyState
-            icon={Bike}
+            icon={Motorbike}
             title="Sua garagem está vazia"
             description="Salve sua moto para voltar às peças com compatibilidade cadastrada sempre que quiser."
           />
@@ -221,8 +217,7 @@ export function MotorcycleGarage({
         aria-labelledby="add-motorcycle-title"
       >
         <div className="flex items-center gap-2">
-          <Plus aria-hidden="true" className="text-brand-strong size-5" />
-          <h2 id="add-motorcycle-title" className="text-foreground text-lg font-semibold">
+          <h2 id="add-motorcycle-title" className="section-title text-foreground">
             Adicionar moto
           </h2>
         </div>
@@ -255,9 +250,8 @@ export function MotorcycleGarage({
             size="lg"
             type="submit"
             disabled={pending || fitments.length === 0}
-            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-md px-4 font-semibold"
+            className="flex min-h-11 w-full items-center justify-center gap-2 px-4"
           >
-            <CheckCircle2 aria-hidden="true" className="size-4" />
             {pending ? "Salvando..." : "Salvar moto"}
           </Button>
           {fitments.length === 0 ? (

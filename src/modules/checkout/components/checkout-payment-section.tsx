@@ -24,7 +24,7 @@ export function CheckoutPaymentSection({
 }) {
   return (
     <section aria-labelledby="checkout-payment-title" className="bg-card rounded-xl border p-4 sm:p-6">
-      <h2 id="checkout-payment-title" className="text-lg font-semibold">
+      <h2 id="checkout-payment-title" className="section-title">
         Pagamento
       </h2>
       {paymentAvailable ? (
@@ -57,9 +57,9 @@ export function CheckoutPaymentSection({
           ) : null}
         </>
       ) : (
-        <p role="status" className="bg-warning-surface text-warning-foreground mt-3 rounded-lg p-3 text-sm leading-6">
-          O pagamento pelo marketplace está temporariamente indisponível. O lojista precisa conectar a conta do Mercado
-          Pago antes de aceitar pedidos. Nenhuma cobrança será criada.
+        // The page already explains why at the top; repeating it here only adds noise.
+        <p className="text-muted-foreground mt-2 text-sm">
+          Pix e cartão aparecem aqui quando os pagamentos forem liberados.
         </p>
       )}
     </section>

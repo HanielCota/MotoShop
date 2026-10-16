@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 vi.mock("@/modules/reviews/actions/review-actions", () => ({
@@ -13,19 +13,29 @@ import { uploadFileToImageKit } from "@/shared/storage/upload-image";
 
 afterEach(cleanup);
 
-it("accepts product review scores in tenths and stages media until the review is submitted", async () => {
+it("rates product and store with whole stars and stages photos until the review is submitted", async () => {
   render(<ReviewForm orderItemId="cm123456789012345678901234" sellerAlreadyReviewed={false} />);
 
-  fireEvent.change(screen.getByRole("slider", { name: /Nota do produto/ }), { target: { value: "43" } });
+  expect(screen.queryByRole("slider")).not.toBeInTheDocument();
+  const product = screen.getByRole("radiogroup", { name: "Nota do produto" });
+  fireEvent.click(within(product).getByRole("radio", { name: "4 estrelas" }));
+  expect(document.querySelector(`input[name="productRatingTenths"]`)).toHaveValue("40");
+  const store = screen.getByRole("radiogroup", { name: "Nota da loja" });
+  fireEvent.click(within(store).getByRole("radio", { name: "3 estrelas" }));
+  expect(document.querySelector(`input[name="sellerRating"]`)).toHaveValue("3");
 
-  expect(
-    screen.getByText((_, element) => element?.tagName === "OUTPUT" && element.textContent?.includes("4,3/5") === true),
-  ).toBeInTheDocument();
-  expect(document.querySelector('input[name="productRatingTenths"]')).toHaveValue("43");
-  expect(screen.getByRole("combobox", { name: "Nota do lojista" })).toBeInTheDocument();
-  const fileInput = screen.getByLabelText("Fotos e vídeos (opcional, até 3 arquivos)");
-  expect(fileInput).toHaveAttribute("type", "file");
+  const fileInput = screen.getByLabelText("Fotos (opcional, até 3 imagens)");
+  expect(fileInput).toHaveAttribute("accept", "image/jpeg,image/png,image/webp");
   fireEvent.change(fileInput, { target: { files: [new File(["image"], "foto.jpg", { type: "image/jpeg" })] } });
   expect(await screen.findByText("foto.jpg")).toBeInTheDocument();
   expect(uploadFileToImageKit).not.toHaveBeenCalled();
+});
+
+it("refuses videos, which are out of scope for reviews", async () => {
+  render(<ReviewForm orderItemId="cm123456789012345678901234" sellerAlreadyReviewed />);
+
+  expect(screen.queryByRole("radiogroup", { name: "Nota da loja" })).not.toBeInTheDocument();
+  const fileInput = screen.getByLabelText("Fotos (opcional, até 3 imagens)");
+  fireEvent.change(fileInput, { target: { files: [new File(["video"], "video.mp4", { type: "video/mp4" })] } });
+  expect(await screen.findByText("Use imagens JPG, PNG ou WebP.")).toBeInTheDocument();
 });

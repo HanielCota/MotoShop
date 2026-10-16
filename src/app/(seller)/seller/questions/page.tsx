@@ -3,12 +3,9 @@ import type { Metadata, Route } from "next";
 import { MessageCircleQuestion } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { DateFilterInput } from "@/components/ui/date-filter-input";
-import { DesignSelect } from "@/components/ui/design-select";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
+import { FilterDateRange, FilterForm, FilterSelect, FilterText } from "@/components/ui/filter-form";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/format";
@@ -23,6 +20,15 @@ export const metadata: Metadata = {
 };
 
 const basePath = "/seller/questions";
+const questionFilterOptions = [
+  { value: "ALL", label: "Todas as perguntas" },
+  { value: "UNANSWERED", label: "Sem resposta" },
+  { value: "ANSWERED", label: "Respondidas" },
+];
+const questionSortOptions = [
+  { value: "newest", label: "Mais recentes" },
+  { value: "oldest", label: "Mais antigas" },
+];
 
 export default async function SellerQuestionsPage({
   searchParams,
@@ -57,38 +63,34 @@ export default async function SellerQuestionsPage({
         <summary className="flex min-h-11 cursor-pointer list-none items-center font-semibold [&::-webkit-details-marker]:hidden">
           Filtros das perguntas
         </summary>
-        <form className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:items-end" method="get" action={basePath}>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Buscar pergunta
-            <Input name="questionQ" defaultValue={params.questionQ ?? ""} placeholder="Pergunta, produto ou e-mail" />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Exibir
-            <DesignSelect aria-label="Exibir" name="questionFilter" defaultValue={params.questionFilter}>
-              <option value="ALL">Todas as perguntas</option>
-              <option value="UNANSWERED">Sem resposta</option>
-              <option value="ANSWERED">Respondidas</option>
-            </DesignSelect>
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            De
-            <DateFilterInput name="questionFrom" value={params.questionFrom} />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Até
-            <DateFilterInput name="questionTo" value={params.questionTo} />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Ordenação
-            <DesignSelect aria-label="Ordenação" name="questionSort" defaultValue={params.questionSort}>
-              <option value="newest">Mais recentes</option>
-              <option value="oldest">Mais antigas</option>
-            </DesignSelect>
-          </label>
-          <Button type="submit" className="lg:col-span-5 lg:justify-self-start">
-            Filtrar
-          </Button>
-        </form>
+        <div className="mt-3">
+          <FilterForm resetHref={basePath} action={basePath} label="Filtrar perguntas">
+            <FilterText
+              label="Buscar pergunta"
+              name="questionQ"
+              value={params.questionQ}
+              placeholder="Pergunta, produto ou e-mail completo"
+            />
+            <FilterSelect
+              label="Exibir"
+              name="questionFilter"
+              value={params.questionFilter}
+              options={questionFilterOptions}
+            />
+            <FilterDateRange
+              fromName="questionFrom"
+              toName="questionTo"
+              from={params.questionFrom}
+              to={params.questionTo}
+            />
+            <FilterSelect
+              label="Ordenação"
+              name="questionSort"
+              value={params.questionSort}
+              options={questionSortOptions}
+            />
+          </FilterForm>
+        </div>
       </details>
 
       {result.questions.length === 0 ? (
@@ -123,7 +125,7 @@ export default async function SellerQuestionsPage({
                       )}
                     </div>
                     <span className="text-muted-foreground">
-                      {question.askedBy.name ?? question.askedBy.email} ·{" "}
+                      {question.askedBy.name || "Cliente"} ·{" "}
                       <time dateTime={question.createdAt.toISOString()}>{formatDate(question.createdAt)}</time>
                     </span>
                   </div>

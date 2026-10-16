@@ -191,7 +191,7 @@ export function AuthForm({
               clearFieldError("password");
             }}
             autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
-            placeholder="Pelo menos 8 caracteres"
+            placeholder={mode === "sign-up" ? "Pelo menos 8 caracteres" : undefined}
             className="bg-card h-12 px-4 pr-12"
             required
           />
@@ -219,17 +219,14 @@ export function AuthForm({
       {emailEnabled && mode === "sign-in" ? (
         <div className="flex flex-wrap justify-between gap-3 text-sm">
           {showCredentialsHelp ? null : (
-            <Link
-              className="text-brand-text inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline"
-              href="/forgot-password"
-            >
+            <Link className={buttonVariants({ variant: "link", size: "link" })} href="/forgot-password">
               Esqueci minha senha
             </Link>
           )}
           {unverifiedEmail ? (
             <button
               type="button"
-              className="text-brand-text inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline disabled:opacity-50"
+              className={buttonVariants({ variant: "link", size: "link" })}
               disabled={pending}
               onClick={async () => {
                 setPending(true);
@@ -258,7 +255,7 @@ export function AuthForm({
       ) : null}
       {showCredentialsHelp ? null : (
         <div className="border-border text-muted-foreground mt-1 border-t pt-5 text-center text-sm">
-          {mode === "sign-in" ? "Novo por aqui?" : "Já faz parte do Moto Shop?"}{" "}
+          {mode === "sign-in" ? "Primeira vez aqui?" : "Já faz parte do Moto Shop?"}{" "}
           <button
             type="button"
             className="text-foreground hover:text-brand-strong inline-flex min-h-11 items-center font-semibold underline underline-offset-4 disabled:opacity-50"

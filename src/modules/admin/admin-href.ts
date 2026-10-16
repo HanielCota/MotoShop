@@ -25,3 +25,8 @@ export function adminHref(
   const serialized = query.toString();
   return (serialized ? `/admin/${section}?${serialized}` : `/admin/${section}`) as Route;
 }
+
+/** Detalhe do pedido no Admin (UX-04). */
+export function adminOrderHref(orderNumber: string): Route {
+  return `/admin/orders/${encodeURIComponent(orderNumber)}` as Route;
+}

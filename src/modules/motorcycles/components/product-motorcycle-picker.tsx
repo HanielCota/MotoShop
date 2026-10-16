@@ -1,12 +1,11 @@
 "use client";
 
-import { Bike } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { useState, useTransition } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { DesignSelect } from "@/components/ui/design-select";
 import { FormMessage } from "@/components/ui/form-message";
 
@@ -75,7 +74,7 @@ export function ProductMotorcyclePicker({
     }
     setMessage({});
     if (!signedIn) {
-      router.replace(`${withMotoParam(productHref, fitmentId)}#compatibilidade` as Route, { scroll: false });
+      router.replace(`${withMotoParam(productHref, fitmentId)}#sua-moto` as Route, { scroll: false });
       return;
     }
     startTransition(async () => {
@@ -84,7 +83,7 @@ export function ProductMotorcyclePicker({
       setMessage(result);
       if (!result.error) {
         // A moto salva passa a ser a referência; remove a escolha temporária da URL.
-        router.replace(`${withMotoParam(productHref, null)}#compatibilidade` as Route, { scroll: false });
+        router.replace(`${withMotoParam(productHref, null)}#sua-moto` as Route, { scroll: false });
         router.refresh();
       }
     });
@@ -166,8 +165,7 @@ export function ProductMotorcyclePicker({
         </DesignSelect>
       </label>
       <div className="flex flex-col gap-2 sm:col-span-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <Button type="submit" size="lg" disabled={pending || !fitmentId || alreadySaved} className="px-5">
-          <Bike aria-hidden="true" />
+        <Button type="submit" size="lg" disabled={pending || !fitmentId || alreadySaved}>
           {pending
             ? "Salvando..."
             : alreadySaved
@@ -178,10 +176,7 @@ export function ProductMotorcyclePicker({
         </Button>
         {!signedIn ? (
           <p className="text-muted-foreground text-sm">
-            <Link
-              href={loginHref as Route}
-              className="text-brand-strong inline-flex min-h-10 items-center font-semibold underline underline-offset-4"
-            >
+            <Link href={loginHref as Route} className={buttonVariants({ variant: "link", size: "link" })}>
               Entre para salvar sua moto
             </Link>{" "}
             e ver a compatibilidade em todas as peças.

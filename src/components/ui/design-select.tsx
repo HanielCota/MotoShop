@@ -4,6 +4,8 @@ import { Select } from "@base-ui/react/select";
 import { Check, ChevronDown } from "lucide-react";
 import { Children, isValidElement, type ReactNode } from "react";
 
+import { popoverSurfaceClassName } from "@/components/ui/popover-surface";
+import { fieldSizeClasses, type FieldSize } from "@/components/ui/field-size";
 import { cn } from "@/lib/utils";
 
 type OptionProps = {
@@ -14,6 +16,8 @@ type OptionProps = {
 type DesignSelectProps = {
   children: ReactNode;
   className?: string;
+  /** Same height scale as `Input` and `Button` (see `field-size.ts`). */
+  size?: FieldSize | undefined;
   name?: string;
   required?: boolean;
   disabled?: boolean;
@@ -32,6 +36,7 @@ type DesignSelectProps = {
 export function DesignSelect({
   children,
   className,
+  size = "default",
   name,
   required,
   disabled,
@@ -70,9 +75,12 @@ export function DesignSelect({
         id={id}
         aria-label={ariaLabel ?? (id ? undefined : name)}
         aria-invalid={ariaInvalid || undefined}
+        // DN-08: "required" is announced, not enforced by the browser bubble; forms validate inline.
+        aria-required={required || undefined}
         aria-describedby={ariaDescribedBy}
         className={cn(
-          "border-input bg-background text-foreground flex h-11 w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-left text-base transition-colors sm:h-10 sm:text-sm",
+          "border-input bg-background text-foreground flex w-full min-w-0 items-center justify-between gap-2 rounded-md border px-3 text-left text-base transition-colors sm:text-sm",
+          fieldSizeClasses[size],
           "hover:not-data-disabled:border-primary/60 focus-visible:ring-ring/40 focus-visible:ring-3 focus-visible:outline-none",
           "aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-invalid:ring-3",
           "data-placeholder:text-muted-foreground data-disabled:cursor-not-allowed data-disabled:opacity-50",
@@ -86,10 +94,11 @@ export function DesignSelect({
         </Select.Icon>
       </Select.Trigger>
       <Select.Portal>
-        <Select.Positioner className="z-50 outline-none" sideOffset={4} alignItemWithTrigger={false}>
+        <Select.Positioner className="z-popover outline-none" sideOffset={4} alignItemWithTrigger={false}>
           <Select.Popup
             className={cn(
-              "border-border bg-popover text-popover-foreground max-w-[min(90vw,40rem)] min-w-[var(--anchor-width)] overflow-hidden rounded-md border shadow-lg outline-none",
+              popoverSurfaceClassName,
+              "max-w-[min(90vw,40rem)] min-w-[var(--anchor-width)] overflow-hidden outline-none",
               "origin-[var(--transform-origin)] transition-[opacity,transform] duration-100 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
             )}
           >
@@ -122,7 +131,6 @@ export function DesignSelect({
         multiple
         items={items.filter((item): item is { value: string; label: ReactNode } => item.value !== null)}
         name={name}
-        required={required}
         disabled={disabled}
         defaultValue={Array.isArray(initialValue) ? initialValue : []}
         value={Array.isArray(selectedValue) ? selectedValue : undefined}
@@ -137,7 +145,6 @@ export function DesignSelect({
     <Select.Root
       items={items}
       name={name}
-      required={required}
       disabled={disabled}
       defaultValue={typeof initialValue === "string" ? initialValue : initialValue === null ? null : undefined}
       value={typeof selectedValue === "string" ? selectedValue : selectedValue === null ? null : undefined}

@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Search } from "lucide-react";
 import type { Metadata } from "next";
 
-import { Button, buttonVariants } from "@/components/ui/button";
-import { ProductSearchCombobox } from "@/modules/products/components/search/product-search-combobox";
+import { buttonVariants } from "@/components/ui/button";
+import { StatusPage } from "@/components/ui/status-page";
+import { SearchForm } from "@/modules/products/components/search/search-form";
 
 export const metadata: Metadata = {
   title: "Página não encontrada",
@@ -12,39 +12,31 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col items-start gap-6 px-4 py-16 sm:py-24">
-      <div className="space-y-3">
-        <p className="text-brand-strong text-xs font-semibold tracking-[0.14em] uppercase">Erro 404</p>
-        <h1 className="text-4xl text-balance sm:text-5xl">Página não encontrada</h1>
-        <p className="text-muted-foreground max-w-xl">
-          A página que você procura não existe ou foi removida. Busque um produto ou volte ao catálogo.
-        </p>
-      </div>
-
-      <form action="/products" method="get" role="search" className="flex w-full flex-col gap-3 sm:flex-row">
-        <label htmlFor="not-found-search" className="sr-only">
-          Buscar produtos
-        </label>
-        <ProductSearchCombobox
-          id="not-found-search"
-          className="flex-1"
+    <main className="mx-auto w-full max-w-2xl px-4 sm:px-6">
+      <StatusPage
+        eyebrow="Erro 404"
+        title="Página não encontrada"
+        description="A página que você procura não existe ou foi removida. Busque um produto ou volte ao catálogo."
+        actions={
+          <>
+            <Link href="/products" className={buttonVariants({ variant: "outline", size: "lg" })}>
+              Ver catálogo
+            </Link>
+            <Link href="/" className={buttonVariants({ variant: "ghost", size: "lg" })}>
+              Página inicial
+            </Link>
+          </>
+        }
+      >
+        <SearchForm
+          action="/products"
+          label="Buscar produtos"
+          inputId="not-found-search"
           placeholder="Ex.: filtro de ar, pastilha de freio"
-          inputClassName="bg-card h-11"
+          inputClassName="bg-card"
+          className="w-full flex-col gap-3 sm:flex-row"
         />
-        <Button type="submit" size="lg" className="px-5">
-          <Search aria-hidden="true" />
-          Buscar
-        </Button>
-      </form>
-
-      <div className="flex flex-wrap gap-3">
-        <Link href="/products" className={buttonVariants({ variant: "outline", size: "lg" })}>
-          Ver catálogo
-        </Link>
-        <Link href="/" className={buttonVariants({ variant: "ghost", size: "lg" })}>
-          Página inicial
-        </Link>
-      </div>
+      </StatusPage>
     </main>
   );
 }

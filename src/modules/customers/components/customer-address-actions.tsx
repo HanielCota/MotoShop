@@ -1,4 +1,5 @@
 "use client";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { FormMessage } from "@/components/ui/form-message";
@@ -30,14 +31,21 @@ export function CustomerAddressActions({
     <div className="flex flex-wrap items-center gap-2">
       {!isDefault ? (
         <form action={defaultAction}>
-          <Button type="submit" variant="outline" disabled={defaultPending} className="text-xs">
-            {defaultPending ? "Atualizando..." : "Usar como padrão"}
+          <Button
+            pending={defaultPending}
+            pendingLabel="Atualizando…"
+            type="submit"
+            variant="outline"
+            className="text-xs"
+          >
+            Usar como padrão
           </Button>
         </form>
       ) : null}
       <ConfirmDialog
         trigger={
           <Button type="button" variant="destructive" className="border-destructive/30 border text-xs">
+            <Trash2 aria-hidden="true" data-icon="inline-start" />
             Remover
           </Button>
         }

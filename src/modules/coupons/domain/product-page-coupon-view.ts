@@ -1,4 +1,4 @@
-import { formatDate, formatMoneyInCents } from "@/lib/format";
+import { formatDate, formatMoneyInCents, formatPercentFromBps } from "@/lib/format";
 
 export type ProductPageCouponSource = {
   code: string;
@@ -18,8 +18,7 @@ export type ProductPageCouponView = {
 };
 
 function discountLabel(coupon: ProductPageCouponSource): string {
-  if (coupon.discountType === "PERCENTAGE")
-    return `${((coupon.percentageBps ?? 0) / 100).toLocaleString("pt-BR")}% de desconto`;
+  if (coupon.discountType === "PERCENTAGE") return `${formatPercentFromBps(coupon.percentageBps ?? 0)} de desconto`;
 
   return `${formatMoneyInCents(coupon.fixedAmountInCents ?? 0)} de desconto`;
 }

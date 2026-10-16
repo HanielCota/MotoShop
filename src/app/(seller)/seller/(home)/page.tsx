@@ -12,6 +12,7 @@ import { getSellerCatalogProgress } from "@/modules/sellers/queries/seller-catal
 import { getSellerDashboardContext } from "@/modules/sellers/application/get-seller-dashboard-context";
 import { SellerApplicationStatus } from "@/modules/sellers/components/seller-application-status";
 import { SellerCatalogProgress } from "@/modules/sellers/components/seller-catalog-progress";
+import { SellerPendingInvites } from "@/modules/sellers/components/seller-pending-invites";
 import { SellerOnboardingForm } from "@/modules/sellers/components/seller-onboarding-form";
 import { SellerCardSkeleton, SellerStatsSkeleton } from "@/modules/sellers/components/dashboard/seller-card-skeleton";
 import { SellerFinanceCard } from "@/modules/sellers/components/dashboard/seller-finance-card";
@@ -42,6 +43,7 @@ export default async function SellerHomePage({ searchParams }: { searchParams: S
           title="Cadastre sua loja"
           description="Crie o perfil da sua loja para começar o processo de aprovação pelo Moto Shop."
         />
+        <SellerPendingInvites />
         <Card>
           <CardContent>
             <SellerOnboardingForm />
@@ -55,7 +57,11 @@ export default async function SellerHomePage({ searchParams }: { searchParams: S
     return (
       <>
         <PageHeader eyebrow="Central do Lojista" title={context.seller.store?.name ?? "Sua loja"} />
-        <SellerApplicationStatus storeName={context.seller.store?.name ?? "Sua loja"} status={context.seller.status} />
+        <SellerApplicationStatus
+          storeName={context.seller.store?.name ?? "Sua loja"}
+          status={context.seller.status}
+          rejectionReason={context.seller.rejectionReason}
+        />
       </>
     );
   }
@@ -109,7 +115,7 @@ export default async function SellerHomePage({ searchParams }: { searchParams: S
       ) : null}
       {permissions.canManageCatalog ? (
         <Suspense fallback={<SellerCardSkeleton rows={4} label="Carregando histórico de estoque" />}>
-          <SellerInventoryHistoryCard sellerId={seller.id} searchParams={searchParams} />
+          <SellerInventoryHistoryCard sellerId={seller.id} searchParams={searchParams} summary />
         </Suspense>
       ) : null}
     </>

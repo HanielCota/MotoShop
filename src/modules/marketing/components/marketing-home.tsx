@@ -1,5 +1,6 @@
 import Image from "next/image";
 
+import { pageContainerClassName } from "@/components/ui/page-container";
 import type { ProductCardData } from "@/components/storefront/product-card";
 import type { FitmentOption } from "@/modules/motorcycles/domain/fitment-options";
 
@@ -39,7 +40,7 @@ export function MarketingHome({
   paymentAvailable,
 }: MarketingHomeProps) {
   return (
-    <main className="bg-surface-sunken overflow-x-clip">
+    <main className="bg-surface-sunken flex flex-col overflow-x-clip">
       <section className="bg-moto-brand-foreground relative isolate text-white" aria-labelledby="home-title">
         <Image
           className={styles.heroImage}
@@ -50,8 +51,8 @@ export function MarketingHome({
           sizes="(min-width: 1024px) 56vw, 100vw"
         />
         <div className={styles.heroShade} aria-hidden="true" />
-        <div className="mx-auto w-full max-w-6xl px-4 pt-12 pb-12 sm:px-6 sm:pt-20 sm:pb-16 lg:pt-24">
-          <p className="text-moto-brand-surface flex items-center gap-2.5 text-xs font-bold tracking-[0.16em] uppercase">
+        <div className={pageContainerClassName("default", "pt-12 pb-12 sm:pt-20 sm:pb-16 lg:pt-24")}>
+          <p className="eyebrow text-moto-brand-surface flex items-center gap-2.5">
             <span className={styles.kickerRule} aria-hidden="true" />
             Motopeças · Acessórios · Equipamentos
           </p>
@@ -71,10 +72,21 @@ export function MarketingHome({
         </div>
       </section>
 
-      <CategoryShowcase categories={categories} />
-      <FeaturedProducts products={featuredProducts} />
-      <EssentialsSection categories={categories} />
-      <SellerCta />
+      {/* On phones the featured products come right after the finder (the categories took two screens
+          before the first product); from md up the approved order stays. Sections are independent, so
+          the visual swap does not change their meaning. */}
+      <div className="order-2 md:order-1">
+        <CategoryShowcase categories={categories} />
+      </div>
+      <div className="order-1 md:order-2">
+        <FeaturedProducts products={featuredProducts} />
+      </div>
+      <div className="order-3">
+        <EssentialsSection categories={categories} />
+      </div>
+      <div className="order-4">
+        <SellerCta />
+      </div>
     </main>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineNotice } from "@/components/ui/inline-notice";
 import { PageHeader } from "@/components/ui/page-header";
@@ -12,6 +13,7 @@ import { CheckoutForm } from "@/modules/checkout/components/checkout-form";
 import { getCustomerContact } from "@/modules/customers/queries/customer-contact";
 import { listCustomerAddresses } from "@/modules/customers/queries/customer-addresses";
 import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
+import { PAYMENTS_CLOSED_MESSAGE } from "@/modules/payments/domain/payment-availability-copy";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 
 export const metadata: Metadata = {
@@ -68,18 +70,13 @@ export default async function CheckoutPage({
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6">
+    <main className={pageContainerClassName("default", "flex flex-col gap-6 py-10")}>
       <PageHeader
         eyebrow="Compra segura"
         title="Finalizar compra"
         back={{ href: "/cart", label: "Voltar ao carrinho" }}
       />
-      {payment.available ? null : (
-        <InlineNotice tone="warning">
-          O pagamento pelo marketplace ainda não está disponível para este carrinho. Você pode conferir frete e entrega,
-          mas nenhum pedido ou cobrança será criado agora.
-        </InlineNotice>
-      )}
+      {payment.available ? null : <InlineNotice tone="warning">{PAYMENTS_CLOSED_MESSAGE}</InlineNotice>}
       <CheckoutForm
         savedAddresses={savedAddresses}
         customerDefaults={customerDefaults}

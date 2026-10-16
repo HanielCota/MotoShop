@@ -1,17 +1,20 @@
 import type { Metadata, Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { ImageOff, ShieldCheck, ShoppingBag, Store } from "lucide-react";
+import { ImageOff, ShoppingBag, Store } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineNotice } from "@/components/ui/inline-notice";
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatMoneyInCents } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { CartItemControls } from "@/modules/cart/components/cart-item-controls";
 import { VisualCartPreview } from "@/modules/cart/components/visual-preview";
 import { getActiveCart } from "@/modules/cart/queries/cart";
 import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
+import { PAYMENTS_CLOSED_MESSAGE } from "@/modules/payments/domain/payment-availability-copy";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 
 import { getCartThumbnails } from "./cart-thumbnails";
@@ -38,7 +41,10 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
 
   return (
     <main
-      className={`mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-10 sm:px-6 ${items.length > 0 ? "pb-32 lg:pb-10" : "pb-10"}`}
+      className={pageContainerClassName(
+        "default",
+        cn("flex flex-col gap-6 pt-10", items.length > 0 ? "pb-32 lg:pb-10" : "pb-10"),
+      )}
     >
       <PageHeader
         eyebrow="Sua compra"
@@ -85,7 +91,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
                   <div className="flex items-start gap-3">
                     <Store aria-hidden="true" className="text-brand-strong mt-1 size-5 shrink-0" />
                     <div>
-                      <h2 id={`cart-store-${sellerId}`} className="text-lg font-semibold">
+                      <h2 id={`cart-store-${sellerId}`} className="section-title">
                         {storeName}
                       </h2>
                       <p className="text-muted-foreground text-sm">
@@ -115,7 +121,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
                                 className="object-cover"
                               />
                             ) : (
-                              <ImageOff className="text-muted-foreground size-6" />
+                              <ImageOff aria-hidden="true" className="text-muted-foreground size-6" />
                             )}
                           </Link>
                           <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:justify-between">
@@ -160,7 +166,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
             aria-labelledby="cart-summary-title"
             className="bg-card h-fit rounded-xl border p-4 sm:p-6 lg:sticky lg:top-24"
           >
-            <h2 id="cart-summary-title" className="text-lg font-semibold">
+            <h2 id="cart-summary-title" className="section-title">
               Resumo
             </h2>
             <dl className="mt-4 space-y-2 text-sm">
@@ -177,8 +183,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
             </dl>
             {payment.available ? null : (
               <InlineNotice tone="warning" className="mt-4">
-                As compras ainda não estão liberadas. Você pode conferir frete e entrega, mas o pagamento ainda não abre
-                e nenhum pedido é criado.
+                {PAYMENTS_CLOSED_MESSAGE}
               </InlineNotice>
             )}
             <Link className={buttonVariants({ size: "lg", className: "mt-5 w-full" })} href={"/checkout" as Route}>
@@ -186,12 +191,11 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
             </Link>
             <Link
               href="/products"
-              className="text-muted-foreground hover:text-foreground mt-3 flex min-h-11 items-center justify-center text-sm underline underline-offset-4"
+              className={cn(buttonVariants({ variant: "link-muted", size: "link" }), "mt-3 flex w-full")}
             >
               Continuar comprando
             </Link>
-            <p className="text-muted-foreground mt-3 flex items-start gap-2 text-xs">
-              <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            <p className="text-muted-foreground mt-3 text-xs">
               Preços e estoque são confirmados novamente ao finalizar a compra.
             </p>
           </aside>
@@ -199,7 +203,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
           {/* Mobile/tablet: CTA sempre ao alcance do polegar; o resumo completo segue acima. */}
           <div
             data-slot="cart-sticky-checkout"
-            className="bg-background/95 fixed inset-x-0 bottom-0 z-40 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-4px_16px_rgb(0_0_0/0.08)] backdrop-blur lg:hidden"
+            className="bg-background/95 z-sticky-bar shadow-sticky-bar fixed inset-x-0 bottom-0 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur lg:hidden"
           >
             <div className="mx-auto flex max-w-6xl items-center gap-3">
               <div className="min-w-0 flex-1">

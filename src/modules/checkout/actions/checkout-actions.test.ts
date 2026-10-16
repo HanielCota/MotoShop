@@ -10,9 +10,14 @@ vi.mock("@/modules/cart/infrastructure/cart-access", () => ({ getCartIdentity: m
 vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
 vi.mock("@/modules/orders/infrastructure/guest-order-cookie", () => ({ setGuestOrderCookie: mocks.setCookie }));
 vi.mock("../application/checkout-service", () => ({ executeCheckout: mocks.execute }));
+vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-vercel-forwarded-for": "203.0.113.7" }) }));
 vi.mock("../schemas/checkout", () => ({
-  checkoutSchema: { safeParse: () => ({ success: true, data: { checkoutIdempotencyKey: "key" } }) },
+  checkoutSchema: {
+    safeParse: () => ({ success: true, data: { checkoutIdempotencyKey: "key", customerTaxId: "52998224725" } }),
+  },
 }));
+
+import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 import { createCheckoutAction } from "./checkout-actions";
 
@@ -36,6 +41,27 @@ describe("createCheckoutAction", () => {
     mocks.execute.mockResolvedValue({ orderNumber: "MS-2" });
 
     expect(await createCheckoutAction({}, new FormData())).toEqual({ orderNumber: "MS-2" });
+    expect(mocks.setCookie).not.toHaveBeenCalled();
+  });
+
+  it("also limits by client IP and CPF, since a new cookie resets the cart limit (M-06)", async () => {
+    mocks.execute.mockResolvedValue({ orderNumber: "MS-3" });
+
+    await createCheckoutAction({}, new FormData());
+
+    expect(assertRateLimit).toHaveBeenCalledWith({ key: "checkout:ip:203.0.113.7", windowSeconds: 60, max: 10 });
+    expect(assertRateLimit).toHaveBeenCalledWith({ key: "checkout:tax-id:52998224725", windowSeconds: 600, max: 5 });
+  });
+
+  it("does not create the order when the CPF already has too many pending orders", async () => {
+    const { ApplicationError } = await import("@/shared/errors/application-error");
+    mocks.execute.mockRejectedValue(
+      new ApplicationError({ code: "CONFLICT", statusCode: 409, message: "Você já tem pedidos aguardando pagamento." }),
+    );
+
+    expect(await createCheckoutAction({}, new FormData())).toEqual({
+      error: "Você já tem pedidos aguardando pagamento.",
+    });
     expect(mocks.setCookie).not.toHaveBeenCalled();
   });
 });

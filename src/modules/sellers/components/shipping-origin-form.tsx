@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { updateShippingOriginAction, type SellerActionState } from "../actions/seller-actions";
+import { useClientValidation } from "@/shared/forms/client-validation";
 import { useServerActionState } from "@/shared/forms/server-action-submit";
+import { validateShippingOriginForm } from "../schemas/shipping-origin";
 
 type ShippingOriginFormProps = {
   store: {
@@ -27,9 +29,10 @@ const initialState: SellerActionState = {};
 
 export function ShippingOriginForm({ store }: ShippingOriginFormProps) {
   const [state, action, pending] = useServerActionState(updateShippingOriginAction, initialState);
+  const { clientError, onSubmit } = useClientValidation(validateShippingOriginForm);
 
   return (
-    <form action={action} className="grid gap-4 sm:grid-cols-2">
+    <form action={action} onSubmit={onSubmit} noValidate className="grid gap-4 sm:grid-cols-2">
       <Field label="Nome do remetente" name="originName" defaultValue={store.originName ?? ""} />
       <Field label="E-mail operacional" name="originEmail" type="email" defaultValue={store.originEmail ?? ""} />
       <Field label="Telefone" name="originPhone" inputMode="tel" defaultValue={store.originPhone ?? ""} />
@@ -56,9 +59,13 @@ export function ShippingOriginForm({ store }: ShippingOriginFormProps) {
         Esses dados são enviados ao Melhor Envio como remetente. Para envios sem nota fiscal, use “ISENTO” quando
         aplicável.
       </p>
-      <FormMessage error={state.error ?? null} success={state.success ?? null} className="sm:col-span-2" />
-      <Button type="submit" className="rounded-md px-4 sm:col-span-2" disabled={pending}>
-        {pending ? "Salvando..." : "Salvar dados de envio"}
+      <FormMessage
+        error={clientError ?? state.error ?? null}
+        success={clientError ? null : (state.success ?? null)}
+        className="sm:col-span-2"
+      />
+      <Button pending={pending} pendingLabel="Salvando…" type="submit" className="sm:col-span-2">
+        Salvar dados de envio
       </Button>
     </form>
   );

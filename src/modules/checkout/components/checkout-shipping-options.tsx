@@ -29,7 +29,7 @@ export function CheckoutShippingOptions({
       aria-busy={isQuoting || undefined}
       className="bg-card rounded-xl border p-4 sm:p-6"
     >
-      <h2 id="checkout-shipping-title" className="text-lg font-semibold">
+      <h2 id="checkout-shipping-title" className="section-title">
         Frete por loja
       </h2>
       <p aria-live="polite" className="sr-only">

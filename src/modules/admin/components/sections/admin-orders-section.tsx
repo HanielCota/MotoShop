@@ -1,4 +1,4 @@
-import { ShoppingBag } from "lucide-react";
+import Link from "next/link";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
@@ -7,12 +7,13 @@ import { formatDate, formatCount } from "@/lib/format";
 import { listSellerOptionsForAdmin } from "@/modules/sellers/queries/sellers";
 import { getStatusLabel, getStatusOptions } from "@/shared/presentation/status-labels";
 
-import { adminHref } from "../../admin-href";
+import { adminHref, adminOrderHref } from "../../admin-href";
 import { listSellerOrdersForAdmin } from "../../queries/orders";
 import { adminOrderStatusValues, loadAdminOrderSearchParams } from "../../search-params";
 import {
   AdminCard,
   AdminFilterForm,
+  AdminList,
   AdminTable,
   cellClassName,
   FilterDateRange,
@@ -22,6 +23,7 @@ import {
   sellerFilterOptions,
 } from "../admin-ui";
 import type { AdminSectionProps } from "./types";
+import { domainIcons } from "@/shared/presentation/domain-icons";
 
 const orderStatusOptions = [
   { value: "ALL", label: "Todos" },
@@ -96,51 +98,83 @@ export async function AdminOrdersSection({ searchParams }: AdminSectionProps) {
       </AdminFilterForm>
       {result.orders.length === 0 ? (
         <EmptyState
-          icon={ShoppingBag}
+          icon={domainIcons.notFound}
           title="Nenhum pedido encontrado"
           description="Ajuste os filtros para ver outros pedidos."
         />
       ) : (
-        <AdminTable
-          caption="Pedidos em operação"
-          columns={["Pedido", "Loja e cliente", "Status", "Envio", "Criado em"]}
-          minWidth="min-w-[820px]"
-        >
-          {result.orders.map((order) => (
-            <tr key={order.id}>
-              <td className={`${cellClassName} font-medium whitespace-nowrap`}>
-                {order.order.orderNumber}
-                <p className="text-muted-foreground text-xs font-normal">
-                  {formatCount(order._count.items, "item", "itens")}
-                </p>
-              </td>
-              <td className={cellClassName}>
-                <p>{order.storeNameSnapshot}</p>
-                <p className="text-muted-foreground text-xs break-all">
-                  {order.order.customerName} · {order.order.customerEmail}
-                </p>
-              </td>
-              <td className={cellClassName}>
-                <StatusBadge domain="sellerOrder" status={order.status} />
-              </td>
-              <td className={cellClassName}>
-                {order.shipment ? (
-                  <div className="flex flex-col items-start gap-1">
-                    <StatusBadge domain="shipment" status={order.shipment.status} />
-                    <span className="text-muted-foreground text-xs">
-                      {order.shipment.trackingCode ?? "Sem rastreio"}
-                    </span>
+        <>
+          {/* No celular, cartões em vez da tabela que cortava loja e cliente (BUG-024). */}
+          <div className="md:hidden">
+            <AdminList label="Pedidos em operação">
+              {result.orders.map((order) => (
+                <li key={order.id} className="flex flex-col gap-1 py-3 text-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link
+                      href={adminOrderHref(order.order.orderNumber)}
+                      className="font-semibold underline-offset-4 hover:underline"
+                    >
+                      {order.order.orderNumber}
+                    </Link>
+                    <StatusBadge domain="sellerOrder" status={order.status} />
                   </div>
-                ) : (
-                  <span className="text-muted-foreground text-xs">Sem envio</span>
-                )}
-              </td>
-              <td className={`${cellClassName} text-muted-foreground whitespace-nowrap`}>
-                {formatDate(order.createdAt)}
-              </td>
-            </tr>
-          ))}
-        </AdminTable>
+                  <p>{order.storeNameSnapshot}</p>
+                  <p className="text-muted-foreground break-all">
+                    {order.order.customerName} · {order.order.customerEmail}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {formatCount(order._count.items, "item", "itens")} · {formatDate(order.createdAt)}
+                    {order.shipment ? ` · ${order.shipment.trackingCode ?? "sem rastreio"}` : " · sem envio"}
+                  </p>
+                  {order.shipment ? <StatusBadge domain="shipment" status={order.shipment.status} /> : null}
+                </li>
+              ))}
+            </AdminList>
+          </div>
+          <AdminTable
+            caption="Pedidos em operação"
+            columns={["Pedido", "Loja e cliente", "Status", "Envio", "Criado em"]}
+            minWidth="min-w-[820px]"
+            className="hidden md:block"
+          >
+            {result.orders.map((order) => (
+              <tr key={order.id}>
+                <td className={`${cellClassName} font-medium whitespace-nowrap`}>
+                  <Link href={adminOrderHref(order.order.orderNumber)} className="underline-offset-4 hover:underline">
+                    {order.order.orderNumber}
+                  </Link>
+                  <p className="text-muted-foreground text-xs font-normal">
+                    {formatCount(order._count.items, "item", "itens")}
+                  </p>
+                </td>
+                <td className={cellClassName}>
+                  <p>{order.storeNameSnapshot}</p>
+                  <p className="text-muted-foreground text-xs break-all">
+                    {order.order.customerName} · {order.order.customerEmail}
+                  </p>
+                </td>
+                <td className={cellClassName}>
+                  <StatusBadge domain="sellerOrder" status={order.status} />
+                </td>
+                <td className={cellClassName}>
+                  {order.shipment ? (
+                    <div className="flex flex-col items-start gap-1">
+                      <StatusBadge domain="shipment" status={order.shipment.status} />
+                      <span className="text-muted-foreground text-xs">
+                        {order.shipment.trackingCode ?? "Sem rastreio"}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">Sem envio</span>
+                  )}
+                </td>
+                <td className={`${cellClassName} text-muted-foreground whitespace-nowrap`}>
+                  {formatDate(order.createdAt)}
+                </td>
+              </tr>
+            ))}
+          </AdminTable>
+        </>
       )}
       {result.pageCount > 1 ? (
         <Pagination

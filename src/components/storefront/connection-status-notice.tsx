@@ -27,7 +27,7 @@ export function ConnectionStatusNotice() {
   return (
     <div
       role="status"
-      className="border-warning/40 bg-warning-surface text-warning-foreground fixed inset-x-3 bottom-3 z-50 flex items-start gap-2 rounded-xl border p-3 text-sm shadow-lg sm:inset-x-auto sm:right-4 sm:bottom-4 sm:max-w-sm"
+      className="border-warning/40 bg-warning-surface text-warning-foreground z-popover fixed inset-x-3 bottom-3 flex items-start gap-2 rounded-xl border p-3 text-sm shadow-lg sm:inset-x-auto sm:right-4 sm:bottom-4 sm:max-w-sm"
     >
       <WifiOff aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
       <p>

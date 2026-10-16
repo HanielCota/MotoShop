@@ -1,17 +1,5 @@
 import type { Route } from "next";
-import {
-  BadgeCheck,
-  Bike,
-  CircleCheck,
-  Clock,
-  Disc3,
-  MapPin,
-  Shield,
-  UserRoundCheck,
-  ShieldCheck,
-  Wrench,
-  type LucideIcon,
-} from "lucide-react";
+import { BadgeCheck, Clock, Shield, Truck, UserRoundCheck, Wrench, type LucideIcon } from "lucide-react";
 
 export const categoryCards: { title: string; description: string; eyebrow: string; href: Route; icon: LucideIcon }[] = [
   {
@@ -36,26 +24,24 @@ export const equipmentCategoryLabels: Record<string, string> = {
   "equipment-goggles": "Óculos de proteção",
 };
 
-export const essentials: { title: string; description: string; href: Route; icon: LucideIcon }[] = [
+// No icons here (IC-02): Lucide has no honest symbol for filters or tires, and the title names the category.
+export const essentials: { title: string; description: string; href: Route }[] = [
   {
     title: "Óleos e Lubrificantes",
     description: "Manutenção para cada intervalo",
-    icon: Disc3,
     href: "/products?q=%C3%B3leo",
   },
   {
     title: "Filtros",
     description: "Ar e óleo para manter o motor protegido",
-    icon: CircleCheck,
     href: "/products?q=filtro",
   },
   {
     title: "Freios",
     description: "Pastilhas, discos e componentes",
-    icon: ShieldCheck,
     href: "/categoria/parts-brakes" as Route,
   },
-  { title: "Pneus e Câmaras", description: "Aderência para pista e trilha", icon: Bike, href: "/products?q=pneu" },
+  { title: "Pneus e Câmaras", description: "Aderência para pista e trilha", href: "/products?q=pneu" },
 ];
 
 type HeroAssurance = { text: string; icon: LucideIcon };
@@ -71,14 +57,14 @@ export function getHeroAssurances(paymentAvailable: boolean): HeroAssurance[] {
     return [
       approvedStoresAssurance,
       { icon: Clock, text: "Compras em breve" },
-      { icon: MapPin, text: "Frete e prazo definidos por cada loja" },
+      { icon: Truck, text: "Frete e prazo definidos por cada loja" },
     ];
   }
 
   return [
     approvedStoresAssurance,
     { icon: UserRoundCheck, text: "Compre sem criar conta" },
-    { icon: MapPin, text: "Frete e prazo de cada loja no checkout" },
+    { icon: Truck, text: "Frete e prazo de cada loja no checkout" },
   ];
 }
 

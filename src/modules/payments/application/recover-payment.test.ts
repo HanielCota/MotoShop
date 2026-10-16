@@ -4,6 +4,8 @@ vi.mock("@/lib/database", () => ({ db: { payment: { findUnique: vi.fn() } } }));
 vi.mock("@/lib/payment/mercado-pago-provider", () => ({ mercadoPagoProvider: {} }));
 vi.mock("./reconcile-payment", () => ({ reconcileMercadoPagoPayment: vi.fn() }));
 vi.mock("./release-unsent-payment", () => ({ releaseUnsentPayment: vi.fn() }));
+const logs = vi.hoisted(() => ({ warn: vi.fn() }));
+vi.mock("@/lib/logger", () => ({ logger: { warn: logs.warn } }));
 import { releaseUnsentPayment } from "./release-unsent-payment";
 import { db } from "@/lib/database";
 import { reconcileMercadoPagoPayment } from "./reconcile-payment";
@@ -16,6 +18,7 @@ const payment = {
   amountInCents: 12345,
   currency: "BRL",
   method: "pix",
+  createdAt: new Date(),
   order: { orderNumber: "MS-123" },
 };
 const result = {
@@ -106,4 +109,27 @@ it("keeps asking the provider when the request was sent and its outcome is unkno
   provider.findPaymentByOrderNumber.mockResolvedValue(null);
   expect(await recoverPayment("local", provider)).toEqual({ outcome: "UNRESOLVED" });
   expect(provider.findPaymentByOrderNumber).toHaveBeenCalledWith("MS-123");
+});
+
+it("warns when the provider still cannot find an old charge (L-09)", async () => {
+  vi.mocked(db.payment.findUnique).mockResolvedValue({
+    ...payment,
+    status: "PROCESSING",
+    createdAt: new Date(Date.now() - 7 * 60 * 60 * 1000),
+  } as never);
+  provider.findPaymentByOrderNumber.mockResolvedValue(null);
+
+  expect(await recoverPayment("local", provider)).toEqual({ outcome: "UNRESOLVED" });
+  expect(logs.warn).toHaveBeenCalledWith(
+    expect.objectContaining({ event: "payment.unresolved_at_provider", paymentId: "local" }),
+  );
+});
+
+it("stays quiet while a recent charge is still unresolved", async () => {
+  vi.mocked(db.payment.findUnique).mockResolvedValue({ ...payment, status: "PROCESSING" } as never);
+  provider.findPaymentByOrderNumber.mockResolvedValue(null);
+
+  await recoverPayment("local", provider);
+
+  expect(logs.warn).not.toHaveBeenCalled();
 });

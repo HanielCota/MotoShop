@@ -154,9 +154,8 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
           <Input
             {...field}
             name="globalUsageLimit"
-            type="number"
             inputMode="numeric"
-            min="1"
+            autoComplete="off"
             value={values.globalUsageLimit}
             onChange={(event) => updateValue("globalUsageLimit", event.target.value)}
           />
@@ -167,9 +166,8 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
           <Input
             {...field}
             name="perCustomerUsageLimit"
-            type="number"
             inputMode="numeric"
-            min="1"
+            autoComplete="off"
             value={values.perCustomerUsageLimit}
             onChange={(event) => updateValue("perCustomerUsageLimit", event.target.value)}
           />
@@ -192,8 +190,8 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
         </label>
       ) : null}
       <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-        <Button type="submit" disabled={pending} className="font-semibold">
-          {pending ? "Criando..." : "Criar cupom"}
+        <Button pending={pending} pendingLabel="Criando…" type="submit" className="font-semibold">
+          Criar cupom
         </Button>
         <FormMessage
           error={clientError ?? state.error ?? null}

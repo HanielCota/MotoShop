@@ -11,18 +11,15 @@ export type FitmentOption = {
 /**
  * Uma única moto é a fonte de verdade de todos os campos do seletor. A seleção
  * explícita da URL tem prioridade sobre a moto principal salva; ids desconhecidos
- * caem para a moto principal e depois para a primeira opção disponível.
+ * caem para a moto principal. Sem nenhuma das duas, nada é escolhido: o visitante
+ * não deve ver uma moto que não é a dele.
  */
 export function resolveSelectedFitment(
   fitments: FitmentOption[],
   selectedId: string | null | undefined,
   primaryId?: string | null,
 ): FitmentOption | undefined {
-  return (
-    fitments.find((fitment) => fitment.id === selectedId) ??
-    fitments.find((fitment) => fitment.id === primaryId) ??
-    fitments[0]
-  );
+  return fitments.find((fitment) => fitment.id === selectedId) ?? fitments.find((fitment) => fitment.id === primaryId);
 }
 
 function unique(values: string[]) {

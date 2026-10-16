@@ -17,6 +17,14 @@ const reasons = [
   ["OTHER", "Outro motivo"],
 ] as const;
 
+const DESCRIPTION_MIN_LENGTH = 10;
+
+/** Same rule as the server (DN-03): the description explains the case in at least 10 characters. */
+export function disputeDescriptionError(description: string): string | null {
+  if (description.trim().length >= DESCRIPTION_MIN_LENGTH) return null;
+  return `Descreva o problema com pelo menos ${DESCRIPTION_MIN_LENGTH} caracteres.`;
+}
+
 export function RequestDisputeForm({ orderNumber, sellerOrderId }: { orderNumber: string; sellerOrderId: string }) {
   const [reason, setReason] = useState<(typeof reasons)[number][0]>(reasons[0][0]);
   const [description, setDescription] = useState("");
@@ -25,6 +33,12 @@ export function RequestDisputeForm({ orderNumber, sellerOrderId }: { orderNumber
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const descriptionError = disputeDescriptionError(description);
+    if (descriptionError) {
+      setFeedback({ error: descriptionError });
+      return;
+    }
+
     startTransition(async () => {
       const result = await callServerAction(() =>
         requestDisputeAction({
@@ -41,7 +55,7 @@ export function RequestDisputeForm({ orderNumber, sellerOrderId }: { orderNumber
   }
 
   return (
-    <form onSubmit={submit} className="border-warning/40 bg-warning-surface space-y-3 rounded-lg border p-4">
+    <form onSubmit={submit} noValidate className="border-warning/40 bg-warning-surface space-y-3 rounded-lg border p-4">
       <div className="space-y-1">
         <p className="text-foreground text-sm font-semibold">Abrir uma disputa</p>
         <p className="text-muted-foreground text-xs">
@@ -63,17 +77,16 @@ export function RequestDisputeForm({ orderNumber, sellerOrderId }: { orderNumber
       <Textarea
         value={description}
         onChange={(event) => setDescription(event.target.value)}
-        required
-        minLength={10}
         maxLength={2000}
+        aria-invalid={feedback.error && !feedback.success ? true : undefined}
         rows={4}
         placeholder="Descreva o que aconteceu para o Moto Shop mediar o caso."
         aria-label="Descrição do problema"
         className="bg-background w-full"
       />
       <FormMessage error={feedback.error ?? null} success={feedback.success ?? null} />
-      <Button type="submit" disabled={pending || Boolean(feedback.success)}>
-        {pending ? "Abrindo disputa..." : "Enviar para mediação"}
+      <Button pending={pending} pendingLabel="Abrindo disputa…" type="submit" disabled={Boolean(feedback.success)}>
+        Enviar para mediação
       </Button>
     </form>
   );

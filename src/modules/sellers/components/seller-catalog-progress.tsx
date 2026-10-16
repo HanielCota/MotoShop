@@ -1,18 +1,23 @@
+import { Check } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 import type { SellerCatalogProgress as Progress } from "../queries/seller-catalog-progress";
+import { buttonVariants } from "@/components/ui/button";
 
 export function SellerCatalogProgress({ progress }: { progress: Progress }) {
-  const hasProduct = progress.editable + progress.submitted + progress.approved > 0;
-  const hasSubmitted = progress.submitted + progress.approved > 0;
+  // Com um produto publicado, os quatro passos estão concluídos: o checklist sai da visão geral.
+  if (progress.approved > 0) return null;
+
+  const hasProduct = progress.editable + progress.submitted > 0;
+  const hasSubmitted = progress.submitted > 0;
   const steps = [
     { label: "Loja aprovada", complete: true },
     { label: "Primeiro produto cadastrado", complete: hasProduct },
     { label: "Produto enviado para revisão", complete: hasSubmitted },
-    { label: "Primeiro produto publicado", complete: progress.approved > 0 },
+    { label: "Primeiro produto publicado", complete: false },
   ];
 
   return (
@@ -29,17 +34,16 @@ export function SellerCatalogProgress({ progress }: { progress: Progress }) {
                 className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${step.complete ? "bg-success-surface text-success-foreground" : "bg-muted text-muted-foreground"}`}
                 aria-hidden="true"
               >
-                {step.complete ? "✓" : index + 1}
+                {step.complete ? <Check className="size-3.5" /> : index + 1}
               </span>
-              <span>{step.label}</span>
+              <span>
+                {step.label}
+                <span className="sr-only">{step.complete ? " (concluído)" : " (pendente)"}</span>
+              </span>
             </li>
           ))}
         </ol>
-        {progress.approved > 0 ? (
-          <p className="text-muted-foreground text-sm">
-            Sua loja já tem {progress.approved} {progress.approved === 1 ? "produto publicado" : "produtos publicados"}.
-          </p>
-        ) : progress.submitted > 0 ? (
+        {progress.submitted > 0 ? (
           <p className="text-muted-foreground text-sm">
             {progress.submitted} {progress.submitted === 1 ? "produto" : "produtos"} aguardando análise pelo Moto Shop.
             Acompanhe o status em{" "}
@@ -63,10 +67,7 @@ export function SellerCatalogProgress({ progress }: { progress: Progress }) {
             e envie um produto para aprovação.
           </p>
         ) : (
-          <Link
-            href="/seller/products/new"
-            className="text-brand-text text-sm font-medium underline underline-offset-4"
-          >
+          <Link href="/seller/products/new" className={buttonVariants({ variant: "link", size: "link" })}>
             Cadastrar meu primeiro produto
           </Link>
         )}

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 import { categoryCards, equipmentCategoryLabels, isCategoryHrefActive } from "../content/home-content";
 import { SectionHeading } from "./section-heading";
+import { pageContainerClassName } from "@/components/ui/page-container";
 
 export type MarketingCategory = { id: string; name: string; slug: string; parentId: string | null };
 
@@ -36,7 +37,7 @@ export function CategoryShowcase({ categories }: { categories: MarketingCategory
 
   return (
     <section
-      className="mx-auto w-full max-w-6xl scroll-mt-20 px-4 py-14 sm:px-6 sm:py-20"
+      className={pageContainerClassName("default", "scroll-mt-20 py-14 sm:py-20")}
       id="categorias"
       aria-labelledby="home-categories-title"
     >

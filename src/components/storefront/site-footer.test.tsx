@@ -37,12 +37,13 @@ it("renders the shared footer on storefront routes with the client's sections", 
 
   for (const [name, href] of [
     ["Comprar", "/products"],
-    ["Vender", "/seller"],
+    ["Venda no Moto Shop", "/seller"],
     ["Pedidos", "/orders"],
     ["Entrar", "/login"],
-    ["Seja um Lojista", "/seller"],
   ] as const)
-    expect(footer.getByRole("link", { name })).toHaveAttribute("href", href);
+    expect(footer.getAllByRole("link", { name })[0]).toHaveAttribute("href", href);
+  // One label for selling everywhere: the shortcut and the institutional link share it.
+  expect(footer.getAllByRole("link", { name: "Venda no Moto Shop" })).toHaveLength(2);
   expect(footer.getByRole("heading", { name: "Horário de atendimento" })).toBeInTheDocument();
   expect(footer.getByText("Segunda a Sexta")).toBeInTheDocument();
   expect(footer.getByText(/O Moto Shop Brasil é uma plataforma e-commerce/)).toBeInTheDocument();

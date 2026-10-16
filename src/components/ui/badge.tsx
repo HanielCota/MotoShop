@@ -13,12 +13,14 @@ const badgeVariants = cva(
         destructive: "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 [a]:hover:bg-destructive/20",
         outline: "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
         ghost: "hover:bg-muted hover:text-muted-foreground",
-        link: "text-brand-text underline-offset-4 hover:underline",
+        link: "text-brand-strong underline-offset-4 hover:underline",
         success: "border-success/25 bg-success-surface text-success-foreground",
         warning: "border-warning/35 bg-warning-surface text-warning-foreground",
         info: "border-info/20 bg-info-surface text-info",
         brand: "border-moto-brand/30 bg-moto-brand-surface text-brand-strong",
         neutral: "border-border bg-muted text-muted-foreground",
+        /** Dark pill on light surfaces ("Novidade", "Demonstração"). */
+        inverse: "bg-foreground text-background",
       },
     },
     defaultVariants: {

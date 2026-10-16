@@ -1,5 +1,5 @@
 "use client";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { useState, type FormEvent } from "react";
@@ -55,15 +55,12 @@ export function PasswordRecoveryForm() {
             />
           </label>
           <FormMessage error={error ?? null} />
-          <Button type="submit" disabled={pending} className="h-12 rounded-lg px-4 font-semibold">
-            {pending ? "Aguarde..." : "Enviar link de recuperação"}
+          <Button size="lg" pending={pending} pendingLabel="Aguarde…" type="submit" className="rounded-lg px-4">
+            Enviar link de recuperação
           </Button>
         </>
       )}
-      <Link
-        href="/login"
-        className="text-brand-strong inline-flex min-h-10 items-center text-sm font-medium underline-offset-4 hover:underline"
-      >
+      <Link href="/login" className={buttonVariants({ variant: "link", size: "link" })}>
         Voltar para entrar
       </Link>
     </form>

@@ -1,6 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 
+import { pageContainerClassName } from "@/components/ui/page-container";
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
 import { BRAND_ABOUT_PARAGRAPHS } from "@/config/brand";
 
@@ -9,12 +10,12 @@ import { PaymentMethodIcons } from "./payment-method-icons";
 
 const quickLinks: { label: string; href: Route }[] = [
   { label: "Comprar", href: "/products" },
-  { label: "Vender", href: "/seller" },
+  { label: "Venda no Moto Shop", href: "/seller" },
   { label: "Pedidos", href: "/orders" },
 ];
 
 // Only pages that exist; "Sobre", "Trocas e Devoluções", "Políticas" etc. join when the client sends the text.
-const institutionalLinks: { label: string; href: Route }[] = [{ label: "Seja um Lojista", href: "/seller" }];
+const institutionalLinks: { label: string; href: Route }[] = [{ label: "Venda no Moto Shop", href: "/seller" }];
 
 const serviceHours = [
   { days: "Segunda a Sexta", hours: "08h30 às 18h30" },
@@ -38,7 +39,12 @@ function FooterHeading({ id, children }: { id: string; children: string }) {
 export function SiteFooter() {
   return (
     <footer className="bg-moto-brand-foreground text-white">
-      <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 pt-12 pb-6 sm:px-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,1fr)_auto]">
+      <div
+        className={pageContainerClassName(
+          "default",
+          "grid gap-10 pt-12 pb-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.7fr)_minmax(0,1fr)_auto]",
+        )}
+      >
         <div className="space-y-4">
           <MotoShopBrand variant="footer" />
           {BRAND_ABOUT_PARAGRAPHS.map((paragraph) => (
@@ -83,7 +89,7 @@ export function SiteFooter() {
             <dl className="space-y-1.5 text-sm leading-6">
               {serviceHours.map((entry) => (
                 <div key={entry.days}>
-                  <dt className="text-moto-brand inline">{entry.days}</dt>
+                  <dt className="inline font-semibold text-white/90">{entry.days}</dt>
                   <dd className="inline text-white/70"> - {entry.hours}</dd>
                 </div>
               ))}

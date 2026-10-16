@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Scale } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
@@ -9,7 +10,7 @@ import { listDisputesForAdmin } from "@/modules/disputes/queries/admin-disputes"
 import { listSellerOptionsForAdmin } from "@/modules/sellers/queries/sellers";
 import { getStatusLabel } from "@/shared/presentation/status-labels";
 
-import { adminHref } from "../../admin-href";
+import { adminHref, adminOrderHref } from "../../admin-href";
 import { adminDisputeStatusValues, loadAdminDisputeSearchParams } from "../../search-params";
 import {
   AdminCard,
@@ -84,7 +85,14 @@ export async function AdminDisputesSection({ searchParams }: AdminSectionProps) 
             <li key={dispute.id} className="flex flex-col gap-4 py-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-semibold">Pedido {dispute.order.orderNumber}</h3>
+                  <h3 className="font-semibold">
+                    <Link
+                      href={adminOrderHref(dispute.order.orderNumber)}
+                      className="underline-offset-4 hover:underline"
+                    >
+                      Pedido {dispute.order.orderNumber}
+                    </Link>
+                  </h3>
                   <StatusBadge domain="dispute" status={dispute.status} />
                 </div>
                 <p className="text-muted-foreground text-sm break-words">
@@ -97,7 +105,11 @@ export async function AdminDisputesSection({ searchParams }: AdminSectionProps) 
                 </p>
                 <p className="text-muted-foreground mt-1 text-xs">Aberta em {formatDateTime(dispute.createdAt)}</p>
               </div>
-              <DisputeStatusActions disputeId={dispute.id} status={dispute.status} />
+              <DisputeStatusActions
+                disputeId={dispute.id}
+                status={dispute.status}
+                summary={{ orderNumber: dispute.order.orderNumber, storeName: dispute.seller.store?.name ?? "Lojista" }}
+              />
             </li>
           ))}
         </AdminList>

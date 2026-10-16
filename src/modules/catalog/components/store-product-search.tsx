@@ -1,7 +1,4 @@
-import { Search } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { ProductSearchCombobox } from "@/modules/products/components/search/product-search-combobox";
+import { SearchForm } from "@/modules/products/components/search/search-form";
 
 type StoreProductSearchParams = {
   storeProductQ: string | null;
@@ -27,27 +24,17 @@ export function StoreProductSearch({
   const preservedParams = getPreservedParams(storeParams);
 
   return (
-    <form className="flex min-w-0 gap-2" method="get" action="#produtos" role="search" aria-label="Buscar nesta loja">
-      {preservedParams.map(([name, value]) => (
-        <input key={name} type="hidden" name={name} value={value} />
-      ))}
-      <label htmlFor="store-product-search" className="sr-only">
-        Buscar nesta loja
-      </label>
-      <ProductSearchCombobox
-        id="store-product-search"
-        name="storeProductQ"
-        className="flex-1"
-        inputClassName="h-12"
-        defaultValue={storeParams.storeProductQ ?? ""}
-        placeholder="Buscar nesta loja: nome, marca, categoria ou SKU"
-        sellerId={sellerId}
-      />
-      <Button type="submit" size="lg" className="h-12 px-5">
-        <Search aria-hidden="true" />
-        <span className="max-sm:sr-only">Buscar</span>
-      </Button>
-    </form>
+    <SearchForm
+      action="#produtos"
+      label="Buscar nesta loja"
+      inputId="store-product-search"
+      name="storeProductQ"
+      defaultValue={storeParams.storeProductQ ?? ""}
+      preservedEntries={preservedParams}
+      placeholder="Buscar nesta loja: nome, marca, categoria ou SKU"
+      sellerId={sellerId}
+      iconOnlyOnPhone
+    />
   );
 }
 

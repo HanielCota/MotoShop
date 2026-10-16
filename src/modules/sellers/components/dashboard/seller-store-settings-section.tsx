@@ -19,8 +19,8 @@ type Store = ComponentProps<typeof ShippingOriginForm>["store"] & {
 };
 
 /**
- * Perfil público, identidade visual (apenas quem gerencia a loja) e dados de remetente.
- * O gating replica o painel original: dados de envio ficam visíveis para todos os membros.
+ * Perfil público, identidade visual e dados de remetente, todos só para quem gerencia a loja.
+ * O documento e o endereço de origem não chegam ao navegador dos outros perfis (L-11).
  */
 export function SellerStoreSettingsSection({ store, canManageStore }: { store: Store; canManageStore: boolean }) {
   return (
@@ -28,9 +28,7 @@ export function SellerStoreSettingsSection({ store, canManageStore }: { store: S
       {canManageStore ? (
         <Card id="seller-profile" className="scroll-mt-24">
           <CardHeader>
-            <CardTitle>
-              <h2 className="text-lg">Perfil público da loja</h2>
-            </CardTitle>
+            <CardTitle>Perfil público da loja</CardTitle>
             <CardDescription>
               Nome, endereço público e apresentação exibidos na vitrine do Moto Shop. Dados de origem ficam em uma seção
               separada e não são publicados.
@@ -54,9 +52,7 @@ export function SellerStoreSettingsSection({ store, canManageStore }: { store: S
       {canManageStore ? (
         <Card id="seller-branding" className="scroll-mt-24">
           <CardHeader>
-            <CardTitle>
-              <h2 className="text-lg">Identidade visual</h2>
-            </CardTitle>
+            <CardTitle>Identidade visual</CardTitle>
             <CardDescription>Adicione a logo e o banner que serão exibidos na vitrine pública da loja.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -69,19 +65,26 @@ export function SellerStoreSettingsSection({ store, canManageStore }: { store: S
           </CardContent>
         </Card>
       ) : null}
-      <Card id="seller-shipping" className="scroll-mt-24">
-        <CardHeader>
-          <CardTitle>
-            <h2 className="text-lg">Dados de envio</h2>
-          </CardTitle>
-          <CardDescription>
-            Preencha o remetente usado nas etiquetas do Melhor Envio. O endereço do cliente vem de cada pedido.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ShippingOriginForm store={store} />
-        </CardContent>
-      </Card>
+      {canManageStore ? (
+        <Card id="seller-shipping" className="scroll-mt-24">
+          <CardHeader>
+            <CardTitle>Dados de envio</CardTitle>
+            <CardDescription>
+              Preencha o remetente usado nas etiquetas do Melhor Envio. O endereço do cliente vem de cada pedido.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ShippingOriginForm store={store} />
+          </CardContent>
+        </Card>
+      ) : (
+        <Card id="seller-shipping" className="scroll-mt-24">
+          <CardHeader>
+            <CardTitle>Dados de envio</CardTitle>
+            <CardDescription>Só quem gerencia a loja vê o documento e o endereço de origem.</CardDescription>
+          </CardHeader>
+        </Card>
+      )}
     </>
   );
 }

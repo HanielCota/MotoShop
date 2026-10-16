@@ -2,75 +2,128 @@
 
 import { Prisma } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { db } from "@/lib/database";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { toActionError } from "@/shared/errors/action-error";
 
-import { canManageSellerMember } from "../domain/member-management";
+import { consumeRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
-const addMemberSchema = z.object({
-  email: z.email("Informe um e-mail válido.").transform((value) => value.toLowerCase()),
-  role: z.enum(["ADMIN", "CATALOG", "ORDERS", "FINANCE"]),
-});
+import {
+  createSellerMemberInvite,
+  getSellerInviteUrl,
+  leaveSellerStore,
+  renewSellerMemberInviteLink,
+  revokeSellerMemberInvite,
+} from "../application/member-invites";
+import { sendSellerInviteEmail } from "../application/send-seller-invite-email";
+import { SELLER_INVITE_SENT_MESSAGE } from "../domain/member-invite";
+import { canManageSellerMember } from "../domain/member-management";
+import { getSellerMemberRoleLabel } from "../domain/member-roles";
+import { readSellerInviteForm, sellerInviteSchema } from "../schemas/member-invite";
 
 const memberIdSchema = z.string().cuid();
 const updateRoleSchema = z.object({
   role: z.enum(["ADMIN", "CATALOG", "ORDERS", "FINANCE"]),
 });
 
-export type SellerMemberActionState = { error?: string; success?: string };
+const INVITE_RATE_LIMIT = { windowSeconds: 3600, max: 10 } as const;
 
-export async function addSellerMemberAction(
+export type SellerMemberActionState = { error?: string; success?: string; inviteUrl?: string };
+export type SellerInviteLinkResult = { error?: string; url?: string };
+
+/**
+ * Convida um e-mail para a equipe (M-04). A resposta é a mesma exista ou não uma conta com o
+ * e-mail; o vínculo só nasce quando a pessoa aceita. Limite de convites por loja contra enumeração.
+ */
+export async function inviteSellerMemberAction(
   _previousState: SellerMemberActionState,
   formData: FormData,
 ): Promise<SellerMemberActionState> {
   const context = await requireSellerAccess("SELLER_MANAGE");
-  const parsed = addMemberSchema.safeParse({ email: formData.get("email"), role: formData.get("role") });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os dados do membro." };
-  if (!canManageSellerMember({ actorRole: context.membership.role, currentRole: null, nextRole: parsed.data.role })) {
-    return { error: "Só o responsável pela loja pode adicionar administradores." };
-  }
+  const parsed = sellerInviteSchema.safeParse(readSellerInviteForm(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira os dados do convite." };
 
   try {
-    const result = await db.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({ where: { email: parsed.data.email } });
-      if (!user) return { error: "O usuário precisa criar uma conta no Moto Shop antes de ser adicionado." };
-      if (user.id === context.session.user.id) return { error: "O responsável atual já faz parte da equipe." };
-      // TODO(convite): adicionar membros sem consentimento não é o fluxo final. Substituir por um
-      // convite: criar SellerMemberInvite (sellerId, email, role, tokenHash, expiresAt, status),
-      // enviar e-mail com link de aceite, criar o SellerMember apenas quando o usuário convidado
-      // (logado com o mesmo e-mail verificado) aceitar, e permitir revogar/expirar convites.
-      // Até lá, exigimos pelo menos que o e-mail do usuário de destino esteja verificado.
-      if (!user.emailVerified) {
-        return { error: "O usuário precisa confirmar o e-mail da conta no Moto Shop antes de ser adicionado." };
-      }
+    const rateLimit = await consumeRateLimit({ key: `seller-invite:${context.seller.id}`, ...INVITE_RATE_LIMIT });
+    if (!rateLimit.allowed) return { error: "Muitos convites em pouco tempo. Tente de novo mais tarde." };
 
-      await tx.$queryRaw`SELECT id FROM "users" WHERE id = ${user.id} FOR UPDATE`;
-      const existingMembership = await tx.sellerMember.findFirst({ where: { userId: user.id } });
-      if (existingMembership) return { error: "Este usuário já está vinculado a uma loja." };
+    const actor = {
+      sellerId: context.seller.id,
+      actorUserId: context.session.user.id,
+      actorRole: context.membership.role,
+    };
+    const result = await createSellerMemberInvite(actor, parsed.data);
+    if (!result.ok) return { error: result.error };
 
-      const member = await tx.sellerMember.create({
-        data: { sellerId: context.seller.id, userId: user.id, role: parsed.data.role },
-      });
-      await tx.auditLog.create({
-        data: {
-          action: "SELLER_MEMBER_ADDED",
-          entityType: "SELLER_MEMBER",
-          entityId: member.id,
-          actorUserId: context.session.user.id,
-          metadata: { sellerId: context.seller.id, userId: user.id, role: parsed.data.role } as Prisma.InputJsonValue,
-        },
-      });
-      return { success: `${user.email} foi adicionado à equipe.` };
+    const inviteUrl = getSellerInviteUrl(result.token);
+    await sendSellerInviteEmail({
+      inviteId: result.inviteId,
+      to: parsed.data.email,
+      storeName: result.storeName,
+      roleLabel: getSellerMemberRoleLabel(parsed.data.role),
+      url: inviteUrl,
+      token: result.token,
     });
-    if ("error" in result) return result;
-    revalidatePath("/seller", "layout");
-    return result;
+    revalidatePath("/seller/settings");
+    return { success: SELLER_INVITE_SENT_MESSAGE, inviteUrl };
   } catch (error) {
-    return { error: toActionError(error, "addSellerMemberAction").message };
+    return { error: toActionError(error, "inviteSellerMemberAction").message };
   }
+}
+
+/** Gera e devolve um novo link do convite pendente; o link anterior deixa de valer. */
+export async function renewSellerInviteLinkAction(inviteId: string): Promise<SellerInviteLinkResult> {
+  const context = await requireSellerAccess("SELLER_MANAGE");
+  const parsedInviteId = memberIdSchema.safeParse(inviteId);
+  if (!parsedInviteId.success) return { error: "Convite inválido." };
+
+  try {
+    const actor = {
+      sellerId: context.seller.id,
+      actorUserId: context.session.user.id,
+      actorRole: context.membership.role,
+    };
+    const result = await renewSellerMemberInviteLink(actor, parsedInviteId.data);
+    if (!result.ok) return { error: result.error };
+    revalidatePath("/seller/settings");
+    return { url: getSellerInviteUrl(result.token) };
+  } catch (error) {
+    return { error: toActionError(error, "renewSellerInviteLinkAction").message };
+  }
+}
+
+export async function revokeSellerInviteAction(inviteId: string): Promise<void> {
+  const context = await requireSellerAccess("SELLER_MANAGE");
+  const parsedInviteId = memberIdSchema.safeParse(inviteId);
+  if (!parsedInviteId.success) return;
+
+  try {
+    const actor = {
+      sellerId: context.seller.id,
+      actorUserId: context.session.user.id,
+      actorRole: context.membership.role,
+    };
+    if (await revokeSellerMemberInvite(actor, parsedInviteId.data)) revalidatePath("/seller/settings");
+  } catch (error) {
+    throw toActionError(error, "revokeSellerInviteAction");
+  }
+}
+
+/** Qualquer membro, menos o responsável, pode sair da loja por conta própria. */
+export async function leaveSellerStoreAction(): Promise<SellerMemberActionState> {
+  const context = await requireSellerAccess();
+  try {
+    const result = await leaveSellerStore(context.session.user.id);
+    if (!result.ok) return { error: result.error };
+  } catch (error) {
+    return { error: toActionError(error, "leaveSellerStoreAction").message };
+  }
+
+  revalidatePath("/seller", "layout");
+  redirect("/seller");
 }
 
 export async function updateSellerMemberRoleAction(memberId: string, formData: FormData): Promise<void> {

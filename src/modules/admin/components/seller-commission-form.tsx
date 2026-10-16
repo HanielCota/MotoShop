@@ -46,14 +46,13 @@ export function SellerCommissionForm({
           inputMode="decimal"
           placeholder="Usar comissão padrão"
           defaultValue={commissionBpsOverride == null ? "" : formatPriceInputFromCents(commissionBpsOverride)}
-          className="border-input bg-background h-10 min-w-0 rounded-md border px-3 text-sm"
         />
       </label>
       <p className="text-muted-foreground text-xs">
         Em branco usa a comissão padrão. Zero define 0%. Aplica-se somente a novos pedidos.
       </p>
-      <Button type="submit" disabled={pending} className="rounded-md">
-        {pending ? "Salvando..." : "Salvar comissão da loja"}
+      <Button pending={pending} pendingLabel="Salvando…" type="submit">
+        Salvar comissão da loja
       </Button>
       <FormMessage error={state.error ?? null} success={state.success ?? null} />
     </form>

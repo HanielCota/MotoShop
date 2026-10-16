@@ -14,7 +14,7 @@ export function CheckoutCustomerFields({
 }) {
   return (
     <section aria-labelledby="checkout-customer-title" className="bg-card rounded-xl border p-4 sm:p-6">
-      <h2 id="checkout-customer-title" className="text-lg font-semibold">
+      <h2 id="checkout-customer-title" className="section-title">
         Seus dados
       </h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -51,7 +51,7 @@ export function CheckoutCustomerFields({
           required
         />
         <CheckoutFormField
-          label="CPF do comprador"
+          label="Seu CPF"
           name="customerTaxId"
           value={form.customerTaxId}
           onChange={onChange}

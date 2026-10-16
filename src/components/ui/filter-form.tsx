@@ -5,21 +5,27 @@ import type { ReactNode } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { DateFilterInput } from "@/components/ui/date-filter-input";
 import { DesignSelect } from "@/components/ui/design-select";
+import { InlineNotice } from "@/components/ui/inline-notice";
 import { Input } from "@/components/ui/input";
+import { formatDateFilter, isInvertedDateRange } from "@/lib/date-filter";
 
 /** Formulário GET de filtros com layout consistente entre as seções. */
 export function FilterForm({
   resetHref,
   children,
   label = "Filtros",
+  action,
 }: {
   resetHref: Route;
   children: ReactNode;
   label?: string;
+  /** Destino do GET; sem ele, o formulário envia para a própria página. */
+  action?: string;
 }) {
   return (
     <form
       method="get"
+      action={action}
       aria-label={label}
       className="bg-surface-sunken/60 grid min-w-0 gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end"
     >
@@ -58,7 +64,7 @@ export function FilterText({
 }) {
   return (
     <FilterField label={label}>
-      <Input className="h-9" name={name} defaultValue={value ?? ""} placeholder={placeholder} />
+      <Input size="sm" name={name} defaultValue={value ?? ""} placeholder={placeholder} />
     </FilterField>
   );
 }
@@ -76,7 +82,7 @@ export function FilterSelect({
 }) {
   return (
     <FilterField label={label}>
-      <DesignSelect aria-label={label} className="h-9" name={name} defaultValue={value}>
+      <DesignSelect aria-label={label} size="sm" name={name} defaultValue={value}>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -98,14 +104,22 @@ export function FilterDateRange({
   from: string | null | undefined;
   to: string | null | undefined;
 }) {
+  const inverted = isInvertedDateRange(from, to);
   return (
     <>
       <FilterField label="De">
-        <DateFilterInput className="h-9" name={fromName} value={from ?? null} />
+        <DateFilterInput size="sm" name={fromName} value={from ?? null} />
       </FilterField>
       <FilterField label="Até">
-        <DateFilterInput className="h-9" name={toName} value={to ?? null} />
+        <DateFilterInput size="sm" name={toName} value={to ?? null} />
       </FilterField>
+      {inverted ? (
+        // Sem o aviso, o período invertido só mostra "0 resultados" (BUG-012).
+        <InlineNotice tone="warning" className="sm:col-span-2 lg:col-span-4">
+          A data inicial ({formatDateFilter(from)}) é depois da final ({formatDateFilter(to)}). Ajuste o período para
+          ver resultados.
+        </InlineNotice>
+      ) : null}
     </>
   );
 }

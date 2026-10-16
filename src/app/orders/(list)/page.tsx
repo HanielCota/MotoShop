@@ -3,17 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { DesignSelect } from "@/components/ui/design-select";
 import { DateFilterInput } from "@/components/ui/date-filter-input";
-import Link from "next/link";
 import type { Metadata, Route } from "next";
 
-import { PackageSearch, ShoppingBag } from "lucide-react";
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { isInvertedDateRange } from "@/lib/date-filter";
-import { formatDate, formatMoneyInCents } from "@/lib/format";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
 import { listCustomerOrders } from "@/modules/orders/queries/customer-orders";
 import {
@@ -25,6 +19,8 @@ import {
 import { getStatusLabel, type StatusDomain } from "@/shared/presentation/status-labels";
 import { parseMoneyFilterToCents } from "@/modules/orders/domain/money-filter";
 import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
+import { domainIcons } from "@/shared/presentation/domain-icons";
+import { CustomerOrderCard } from "@/modules/orders/components/customer-order-card";
 
 export const metadata: Metadata = {
   title: "Meus pedidos",
@@ -94,116 +90,119 @@ export default async function CustomerOrdersPage({
         description="Acompanhe o pagamento e a entrega de cada compra."
       />
 
-      <p className="text-muted-foreground text-sm" aria-live="polite">
-        {result.total} {result.total === 1 ? "pedido encontrado" : "pedidos encontrados"}
-      </p>
-      <details className="border-border bg-card rounded-xl border p-4" open={hasFilters}>
-        <summary className="cursor-pointer list-none font-semibold [&::-webkit-details-marker]:hidden">
-          Filtros avançados{" "}
-          <span className="text-muted-foreground text-sm font-normal">(status, loja, valor e período)</span>
-        </summary>
-        <form className="mt-4 grid gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-4" method="get">
-          <label className="flex min-w-0 flex-col gap-2 text-sm font-medium sm:col-span-2 lg:col-span-2">
-            Buscar pedido
-            <Input name="orderQ" defaultValue={params.orderQ ?? ""} placeholder="Número, produto ou SKU" />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Valor mínimo (R$)
-            <Input
-              name="orderMinTotal"
-              type="text"
-              inputMode="decimal"
-              defaultValue={params.orderMinTotal ?? ""}
-              placeholder="Ex.: 50,00"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Valor máximo (R$)
-            <Input
-              name="orderMaxTotal"
-              type="text"
-              inputMode="decimal"
-              defaultValue={params.orderMaxTotal ?? ""}
-              placeholder="Ex.: 1000,00"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Envio
-            <DesignSelect aria-label="Envio" name="shipmentStatus" defaultValue={params.shipmentStatus}>
-              <option value="ALL">Todos</option>
-              {statusOptions("shipment", customerShipmentStatusValues).map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </DesignSelect>
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Buscar loja
-            <Input name="storeQ" defaultValue={params.storeQ ?? ""} placeholder="Nome da loja" />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Filtrar por status
-            <DesignSelect aria-label="Filtrar por status" name="orderStatus" defaultValue={params.orderStatus}>
-              <option value="ALL">Todos os pedidos</option>
-              {statusOptions("order", customerOrderStatusValues).map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </DesignSelect>
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Pagamento
-            <DesignSelect aria-label="Pagamento" name="paymentStatus" defaultValue={params.paymentStatus}>
-              <option value="ALL">Todos</option>
-              {statusOptions("payment", customerPaymentStatusValues).map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </DesignSelect>
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            De
-            <DateFilterInput name="orderFrom" value={params.orderFrom} />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Até
-            <DateFilterInput name="orderTo" value={params.orderTo} />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-medium">
-            Ordenação
-            <DesignSelect aria-label="Ordenação" name="orderSort" defaultValue={params.orderSort}>
-              <option value="newest">Mais recentes</option>
-              <option value="oldest">Mais antigos</option>
-              <option value="total_high">Maior valor</option>
-              <option value="total_low">Menor valor</option>
-            </DesignSelect>
-          </label>
-          <Button type="submit" className="rounded-md px-4">
-            Filtrar
-          </Button>
-        </form>
-      </details>
+      {/* No order yet and no filter: only the empty state, without a count or filters for nothing. */}
+      {allOrders.total > 0 || hasFilters ? (
+        <>
+          <p className="text-muted-foreground text-sm" aria-live="polite">
+            {result.total} {result.total === 1 ? "pedido encontrado" : "pedidos encontrados"}
+          </p>
+          <details className="border-border bg-card rounded-xl border p-4" open={hasFilters}>
+            <summary className="cursor-pointer list-none font-semibold [&::-webkit-details-marker]:hidden">
+              Filtros avançados{" "}
+              <span className="text-muted-foreground text-sm font-normal">(status, loja, valor e período)</span>
+            </summary>
+            <form className="mt-4 grid gap-3 sm:grid-cols-2 sm:items-end lg:grid-cols-4" method="get">
+              <label className="flex min-w-0 flex-col gap-2 text-sm font-medium sm:col-span-2 lg:col-span-2">
+                Buscar pedido
+                <Input name="orderQ" defaultValue={params.orderQ ?? ""} placeholder="Número, produto ou SKU" />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Valor mínimo (R$)
+                <Input
+                  name="orderMinTotal"
+                  type="text"
+                  inputMode="decimal"
+                  defaultValue={params.orderMinTotal ?? ""}
+                  placeholder="Ex.: 50,00"
+                />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Valor máximo (R$)
+                <Input
+                  name="orderMaxTotal"
+                  type="text"
+                  inputMode="decimal"
+                  defaultValue={params.orderMaxTotal ?? ""}
+                  placeholder="Ex.: 1000,00"
+                />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Envio
+                <DesignSelect aria-label="Envio" name="shipmentStatus" defaultValue={params.shipmentStatus}>
+                  <option value="ALL">Todos</option>
+                  {statusOptions("shipment", customerShipmentStatusValues).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </DesignSelect>
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Buscar loja
+                <Input name="storeQ" defaultValue={params.storeQ ?? ""} placeholder="Nome da loja" />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Filtrar por status
+                <DesignSelect aria-label="Filtrar por status" name="orderStatus" defaultValue={params.orderStatus}>
+                  <option value="ALL">Todos os pedidos</option>
+                  {statusOptions("order", customerOrderStatusValues).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </DesignSelect>
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Pagamento
+                <DesignSelect aria-label="Pagamento" name="paymentStatus" defaultValue={params.paymentStatus}>
+                  <option value="ALL">Todos</option>
+                  {statusOptions("payment", customerPaymentStatusValues).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </DesignSelect>
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                De
+                <DateFilterInput name="orderFrom" value={params.orderFrom} />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Até
+                <DateFilterInput name="orderTo" value={params.orderTo} />
+              </label>
+              <label className="flex flex-col gap-2 text-sm font-medium">
+                Ordenação
+                <DesignSelect aria-label="Ordenação" name="orderSort" defaultValue={params.orderSort}>
+                  <option value="newest">Mais recentes</option>
+                  <option value="oldest">Mais antigos</option>
+                  <option value="total_high">Maior valor</option>
+                  <option value="total_low">Menor valor</option>
+                </DesignSelect>
+              </label>
+              <Button type="submit">Filtrar</Button>
+            </form>
+          </details>
+        </>
+      ) : null}
       {result.orders.length === 0 ? (
         hasInvertedPeriod ? (
           <EmptyState
-            icon={PackageSearch}
+            icon={domainIcons.notFound}
             title="Período invertido"
             description="A data inicial está depois da data final. Ajuste o período e filtre de novo."
             action={{ label: "Limpar filtros", href: "/orders" }}
           />
         ) : hasFilters && allOrders.total > 0 ? (
           <EmptyState
-            icon={PackageSearch}
+            icon={domainIcons.notFound}
             title="Nenhum pedido encontrado"
             description="Nenhum pedido corresponde aos filtros selecionados."
             action={{ label: "Limpar filtros", href: "/orders" }}
           />
         ) : (
           <EmptyState
-            icon={ShoppingBag}
+            icon={domainIcons.order}
             title="Você ainda não fez nenhum pedido"
             description="Quando comprar, você acompanha pagamento e entregas por aqui."
             action={{ label: "Explorar produtos", href: "/products" }}
@@ -212,66 +211,7 @@ export default async function CustomerOrdersPage({
       ) : (
         <div className="space-y-4">
           {result.orders.map((order) => (
-            <Card key={order.orderNumber}>
-              <CardHeader>
-                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                  <div>
-                    <CardTitle>
-                      <Link className="hover:underline" href={`/orders/${order.orderNumber}` as Route}>
-                        {order.orderNumber}
-                      </Link>
-                    </CardTitle>
-                    <CardDescription>
-                      {formatDate(order.createdAt)} · {order.sellerOrders.length}{" "}
-                      {order.sellerOrders.length === 1 ? "loja" : "lojas"}
-                    </CardDescription>
-                  </div>
-                  <StatusBadge domain="order" status={order.status} />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span className="text-foreground font-semibold">{formatMoneyInCents(order.totalAmountInCents)}</span>
-                  {order.payments[0] ? (
-                    <StatusBadge
-                      domain="payment"
-                      status={order.payments[0].status}
-                      label={`Pagamento: ${getStatusLabel("payment", order.payments[0].status)}`}
-                    />
-                  ) : null}
-                  <Link
-                    className="text-brand-strong text-sm font-medium underline underline-offset-4"
-                    href={`/orders/${order.orderNumber}` as Route}
-                  >
-                    Ver detalhes
-                  </Link>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {order.sellerOrders.map((sellerOrder) => (
-                    <div key={sellerOrder.id} className="bg-surface-sunken rounded-md p-3 text-sm">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-foreground font-medium">{sellerOrder.storeNameSnapshot}</span>
-                        <StatusBadge domain="sellerOrder" status={sellerOrder.status} />
-                      </div>
-                      <p className="text-muted-foreground mt-1">
-                        {sellerOrder.items.length} {sellerOrder.items.length === 1 ? "item" : "itens"}
-                        {sellerOrder.shipment ? ` · ${getStatusLabel("shipment", sellerOrder.shipment.status)}` : ""}
-                      </p>
-                      {sellerOrder.shipment?.trackingUrl ? (
-                        <a
-                          className="text-brand-strong mt-2 inline-block text-xs underline"
-                          href={sellerOrder.shipment.trackingUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          Acompanhar entrega
-                        </a>
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <CustomerOrderCard key={order.orderNumber} order={order} />
           ))}
         </div>
       )}

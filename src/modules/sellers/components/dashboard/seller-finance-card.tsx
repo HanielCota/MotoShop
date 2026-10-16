@@ -20,9 +20,7 @@ export async function SellerFinanceCard({ sellerId }: { sellerId: string }) {
   return (
     <Card id="seller-finance" className="scroll-mt-24">
       <CardHeader>
-        <CardTitle>
-          <h2 className="text-lg">Resumo financeiro</h2>
-        </CardTitle>
+        <CardTitle>Resumo financeiro</CardTitle>
         <CardDescription>Vendas confirmadas e valores registrados por pedido.</CardDescription>
       </CardHeader>
       <CardContent>

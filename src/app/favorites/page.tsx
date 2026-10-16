@@ -1,5 +1,5 @@
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Pagination } from "@/components/ui/pagination";
 import { DesignSelect } from "@/components/ui/design-select";
 import Link from "next/link";
@@ -16,6 +16,7 @@ import { listFavoriteProducts } from "@/modules/favorites/queries/favorites";
 import { loadFavoriteSearchParams } from "@/modules/favorites/search-params";
 import { toProductCardData } from "@/modules/products/components/product-grid";
 import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Meus favoritos",
@@ -52,57 +53,58 @@ export default async function FavoritesPage({
 
   return (
     <CustomerAccountShell pathname="/favorites" userName={session.user.name}>
-      <PageHeader
-        eyebrow="Minha conta"
-        title="Meus favoritos"
-        description="Guarde produtos para revisitar antes da próxima sessão."
-      />
+      <PageHeader eyebrow="Minha conta" title="Meus favoritos" description="Guarde produtos para ver depois." />
 
-      <form
-        className="border-border bg-card grid gap-3 rounded-xl border p-4 sm:grid-cols-[1fr_180px_180px_auto] sm:items-end [&_[data-slot=select-trigger]]:h-11 [&_[data-slot=select-trigger]]:w-full"
-        method="get"
-      >
-        <label className="flex flex-col gap-2 text-sm font-medium">
-          Buscar favorito
-          <Input
-            type="search"
-            className="h-11"
-            name="favoriteQ"
-            defaultValue={params.favoriteQ ?? ""}
-            placeholder="Produto, marca ou loja"
-          />
-        </label>
-        <label className="flex flex-col gap-2 text-sm font-medium">
-          Disponibilidade
-          <DesignSelect
-            aria-label="Disponibilidade"
-            name="favoriteAvailability"
-            defaultValue={params.favoriteAvailability}
+      {/* No favorite yet and no filter: only the empty state, without a search for nothing. */}
+      {allFavorites.total > 0 || hasFilters ? (
+        <>
+          <form
+            className="border-border bg-card grid gap-3 rounded-xl border p-4 sm:grid-cols-[1fr_180px_180px_auto] sm:items-end [&_[data-slot=select-trigger]]:w-full"
+            method="get"
           >
-            <option value="ALL">Todos</option>
-            <option value="IN_STOCK">Em estoque</option>
-            <option value="OUT_OF_STOCK">Indisponíveis</option>
-          </DesignSelect>
-        </label>
-        <label className="flex flex-col gap-2 text-sm font-medium">
-          Ordenação
-          <DesignSelect aria-label="Ordenação" name="favoriteSort" defaultValue={params.favoriteSort}>
-            <option value="newest">Mais recentes</option>
-            <option value="oldest">Mais antigos</option>
-          </DesignSelect>
-        </label>
-        <Button type="submit" size="lg" className="px-4">
-          Filtrar
-        </Button>
-        {hasFilters ? (
-          <Link
-            href="/favorites"
-            className="text-brand-strong inline-flex min-h-10 items-center self-center text-sm underline underline-offset-4 sm:col-span-full"
-          >
-            Limpar filtros
-          </Link>
-        ) : null}
-      </form>
+            <label className="flex flex-col gap-2 text-sm font-medium">
+              Buscar favorito
+              <Input
+                type="search"
+                className="h-11"
+                name="favoriteQ"
+                defaultValue={params.favoriteQ ?? ""}
+                placeholder="Produto, marca ou loja"
+              />
+            </label>
+            <label className="flex flex-col gap-2 text-sm font-medium">
+              Disponibilidade
+              <DesignSelect
+                aria-label="Disponibilidade"
+                name="favoriteAvailability"
+                defaultValue={params.favoriteAvailability}
+              >
+                <option value="ALL">Todos</option>
+                <option value="IN_STOCK">Em estoque</option>
+                <option value="OUT_OF_STOCK">Indisponíveis</option>
+              </DesignSelect>
+            </label>
+            <label className="flex flex-col gap-2 text-sm font-medium">
+              Ordenação
+              <DesignSelect aria-label="Ordenação" name="favoriteSort" defaultValue={params.favoriteSort}>
+                <option value="newest">Mais recentes</option>
+                <option value="oldest">Mais antigos</option>
+              </DesignSelect>
+            </label>
+            <Button type="submit" size="lg" className="px-4">
+              Filtrar
+            </Button>
+            {hasFilters ? (
+              <Link
+                href="/favorites"
+                className={cn(buttonVariants({ variant: "link", size: "link" }), "self-center sm:col-span-full")}
+              >
+                Limpar filtros
+              </Link>
+            ) : null}
+          </form>
+        </>
+      ) : null}
 
       {result.favorites.length === 0 ? (
         hasFilters && allFavorites.total > 0 ? (

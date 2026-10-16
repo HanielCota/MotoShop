@@ -7,8 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { db } from "@/lib/database";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
 import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
-import { CustomerContactForm } from "@/modules/customers/components/customer-contact-form";
-import { CustomerNameForm } from "@/modules/customers/components/customer-name-form";
+import { CustomerProfileForm } from "@/modules/customers/components/customer-profile-form";
 import { NotificationPreferencesForm } from "@/modules/notifications/components/notification-preferences-form";
 
 export const metadata: Metadata = { title: "Dados cadastrais", robots: { index: false } };
@@ -33,18 +32,13 @@ export default async function CustomerProfilePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            <h2 className="text-xl">Seus dados</h2>
-          </CardTitle>
+          <CardTitle>Seus dados</CardTitle>
           <CardDescription className="text-base">
             O nome aparece nos seus pedidos e na saudação da conta.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
-          <CustomerNameForm defaultName={name} />
-          <div className="border-border border-t pt-5">
-            <CustomerContactForm taxId={user?.taxId ?? null} phone={user?.phone ?? null} />
-          </div>
+          <CustomerProfileForm defaultName={name} taxId={user?.taxId ?? null} phone={user?.phone ?? null} />
           <dl className="border-border flex flex-col gap-2 border-t pt-5">
             <dt className="text-base font-medium">E-mail</dt>
             <dd className="flex flex-wrap items-center gap-2 text-base break-all">
@@ -70,9 +64,7 @@ export default async function CustomerProfilePage() {
 
       <Card id="notificacoes" className="scroll-mt-28">
         <CardHeader>
-          <CardTitle>
-            <h2 className="text-xl">Notificações por e-mail</h2>
-          </CardTitle>
+          <CardTitle>Notificações por e-mail</CardTitle>
           <CardDescription className="text-base">
             As alterações valem para os próximos eventos do pedido.
           </CardDescription>

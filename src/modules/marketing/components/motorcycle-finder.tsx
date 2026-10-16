@@ -1,6 +1,6 @@
 "use client";
 
-import { Bike, Search, X } from "lucide-react";
+import { Motorbike, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { parseAsString, useQueryState } from "nuqs";
 import { type FormEvent, useState } from "react";
@@ -9,10 +9,7 @@ import { Button } from "@/components/ui/button";
 import { DesignSelect } from "@/components/ui/design-select";
 import { cn } from "@/lib/utils";
 import {
-  findFirstFitmentForManufacturer,
-  findFirstFitmentForModel,
   formatFitmentVariantLabel,
-  getFitmentCascade,
   resolveSelectedFitment,
   type FitmentOption,
 } from "@/modules/motorcycles/domain/fitment-options";
@@ -28,6 +25,10 @@ const fieldLabelClassName =
 const submitClassName = "h-14 rounded-md px-5 text-base font-bold [&_svg:not([class*=size-])]:size-5";
 const helperClassName = "text-muted-foreground col-span-full text-xs leading-5 sm:text-sm";
 
+function unique(values: string[]) {
+  return [...new Set(values)];
+}
+
 export function MotorcycleFinder({
   fitments,
   primaryFitmentId,
@@ -42,8 +43,40 @@ export function MotorcycleFinder({
     "moto",
     parseAsString.withDefault("").withOptions({ history: "replace", shallow: true }),
   );
-  const selectedFitment = resolveSelectedFitment(fitments, fitmentId, primaryFitmentId);
-  const { manufacturers, models, variants } = getFitmentCascade(fitments, selectedFitment);
+  // Starts from the URL or the saved primary motorcycle; otherwise empty, one field at a time.
+  const initialFitment = resolveSelectedFitment(fitments, fitmentId, primaryFitmentId);
+  const [manufacturer, setManufacturer] = useState(initialFitment?.manufacturer ?? "");
+  const [model, setModel] = useState(initialFitment?.model ?? "");
+  const [variantId, setVariantId] = useState(initialFitment?.id ?? "");
+  const manufacturers = unique(fitments.map((fitment) => fitment.manufacturer));
+  const models = unique(
+    fitments.filter((fitment) => fitment.manufacturer === manufacturer).map((fitment) => fitment.model),
+  );
+  const variants = fitments.filter((fitment) => fitment.manufacturer === manufacturer && fitment.model === model);
+  const selectedFitment = variants.find((fitment) => fitment.id === variantId);
+
+  // A single option is the only possible answer, so it is picked; with more, the customer chooses.
+  function chooseModel(nextManufacturer: string, nextModel: string) {
+    const nextVariants = fitments.filter(
+      (fitment) => fitment.manufacturer === nextManufacturer && fitment.model === nextModel,
+    );
+    const onlyVariant = nextVariants.length === 1 ? nextVariants[0] : undefined;
+    setModel(nextModel);
+    chooseVariant(onlyVariant?.id ?? "");
+  }
+
+  function chooseManufacturer(nextManufacturer: string) {
+    const nextModels = unique(
+      fitments.filter((fitment) => fitment.manufacturer === nextManufacturer).map((fitment) => fitment.model),
+    );
+    setManufacturer(nextManufacturer);
+    chooseModel(nextManufacturer, nextModels.length === 1 ? (nextModels[0] ?? "") : "");
+  }
+
+  function chooseVariant(nextVariantId: string) {
+    setVariantId(nextVariantId);
+    void setFitmentId(nextVariantId || null);
+  }
 
   async function handleFitmentSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -91,12 +124,11 @@ export function MotorcycleFinder({
               <span className={fieldLabelClassName}>Fabricante</span>
               <DesignSelect
                 aria-label="Fabricante"
-                disabled={!selectedFitment}
-                value={selectedFitment?.manufacturer ?? ""}
-                onValueChange={(value) => {
-                  void setFitmentId(findFirstFitmentForManufacturer(fitments, String(value))?.id ?? null);
-                }}
+                disabled={manufacturers.length === 0}
+                value={manufacturer}
+                onValueChange={(value) => chooseManufacturer(String(value ?? ""))}
               >
+                <option value="">Selecione o fabricante</option>
                 {manufacturers.map((name) => (
                   <option key={name}>{name}</option>
                 ))}
@@ -106,17 +138,13 @@ export function MotorcycleFinder({
               <span className={fieldLabelClassName}>Modelo</span>
               <DesignSelect
                 aria-label="Modelo"
-                disabled={!selectedFitment}
-                value={selectedFitment?.model ?? ""}
-                onValueChange={(value) => {
-                  if (!selectedFitment) return;
-                  void setFitmentId(
-                    findFirstFitmentForModel(fitments, selectedFitment.manufacturer, String(value))?.id ?? null,
-                  );
-                }}
+                disabled={!manufacturer}
+                value={model}
+                onValueChange={(value) => chooseModel(manufacturer, String(value ?? ""))}
               >
-                {models.map((model) => (
-                  <option key={model}>{model}</option>
+                <option value="">{manufacturer ? "Selecione o modelo" : "Escolha o fabricante antes"}</option>
+                {models.map((name) => (
+                  <option key={name}>{name}</option>
                 ))}
               </DesignSelect>
             </label>
@@ -124,13 +152,12 @@ export function MotorcycleFinder({
               <span className={fieldLabelClassName}>Ano e versão</span>
               <DesignSelect
                 aria-label="Ano e versão"
-                disabled={!selectedFitment}
+                disabled={!model}
                 name="moto"
                 value={selectedFitment?.id ?? ""}
-                onValueChange={(value) => {
-                  void setFitmentId(String(value));
-                }}
+                onValueChange={(value) => chooseVariant(String(value ?? ""))}
               >
+                <option value="">{model ? "Selecione o ano" : "Escolha o modelo antes"}</option>
                 {variants.map((fitment) => (
                   <option key={fitment.id} value={fitment.id}>
                     {formatFitmentVariantLabel(fitment)}
@@ -139,10 +166,10 @@ export function MotorcycleFinder({
               </DesignSelect>
             </label>
             <Button type="submit" disabled={!selectedFitment} className={cn(submitClassName, "col-span-full")}>
-              <Bike aria-hidden="true" /> Ver peças
+              <Motorbike aria-hidden="true" /> Ver peças
             </Button>
             <p className={helperClassName}>
-              {selectedFitment
+              {fitments.length > 0
                 ? "Mostramos as peças compatíveis com a moto selecionada."
                 : "A seleção de motos está indisponível no momento. Use a busca por produto ou explore o catálogo."}
             </p>
@@ -158,14 +185,14 @@ export function MotorcycleFinder({
                 value={searchQuery}
                 onValueChange={setSearchQuery}
                 placeholder="Ex.: filtro de ar"
-                inputClassName="h-14 rounded-md pr-12 text-base sm:h-14 sm:text-base [&::-webkit-search-cancel-button]:hidden"
+                inputClassName="h-14 rounded-md pr-12 text-base sm:text-base"
               />
               {searchQuery ? (
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground absolute top-1/2 right-2 -translate-y-1/2 rounded-md"
+                  className="text-muted-foreground absolute top-1/2 right-2 -translate-y-1/2"
                   onClick={() => setSearchQuery("")}
                   aria-label="Limpar busca"
                 >

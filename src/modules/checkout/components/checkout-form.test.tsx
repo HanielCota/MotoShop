@@ -85,23 +85,24 @@ it("links field errors and focuses the summary alert when validation fails", asy
   render(<CheckoutForm cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
   fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "01001000" } });
   await screen.findByText("Pista Norte");
-  fireEvent.change(screen.getByLabelText("CPF do comprador"), { target: { value: "11111111111" } });
-  expect(screen.getByLabelText("CPF do comprador")).toHaveValue("111.111.111-11");
+  fireEvent.change(screen.getByLabelText("Seu CPF"), { target: { value: "11111111111" } });
+  expect(screen.getByLabelText("Seu CPF")).toHaveValue("111.111.111-11");
   fireEvent.click(screen.getByRole("button", { name: "Finalizar pedido" }));
 
   const alert = await screen.findByText("Revise os campos destacados para continuar.");
   await waitFor(() => expect(alert.closest("[tabindex='-1']")).toHaveFocus());
-  const cpf = screen.getByLabelText("CPF do comprador");
+  const cpf = screen.getByLabelText("Seu CPF");
   expect(cpf).toHaveAttribute("aria-invalid", "true");
   const [errorId] = defined(cpf.getAttribute("aria-describedby")).split(" ");
   expect(document.getElementById(defined(errorId))).toHaveTextContent("Informe um CPF válido.");
   expect(checkout).not.toHaveBeenCalled();
 });
 
-it("does not invite the customer to pay before the seller connects a Mercado Pago account", () => {
+it("does not invite the customer to pay while payments are closed, nor blame the store", () => {
   render(<CheckoutForm paymentAvailable={false} cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
 
-  expect(screen.getByRole("status")).toHaveTextContent("O lojista precisa conectar a conta do Mercado Pago");
+  expect(screen.getByText("Pix e cartão aparecem aqui quando os pagamentos forem liberados.")).toBeInTheDocument();
+  expect(screen.queryByText(/lojista precisa conectar/)).not.toBeInTheDocument();
   expect(screen.queryByRole("radiogroup", { name: "Forma de pagamento" })).toBeNull();
   expect(screen.getByRole("button", { name: "Pagamento indisponível" })).toBeDisabled();
 });

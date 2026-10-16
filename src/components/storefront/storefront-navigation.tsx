@@ -3,24 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Menu, Search, UserRound, X } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { Menu as BaseMenu } from "@base-ui/react/menu";
+import { useRef, useState } from "react";
 
+import { pageContainerClassName } from "@/components/ui/page-container";
+import { popoverSurfaceClassName } from "@/components/ui/popover-surface";
+import { cn } from "@/lib/utils";
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
 import { SignOutButton } from "@/modules/auth/components/sign-out-button";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
 import { CartPreview } from "@/modules/cart/components/cart-preview";
+import { customerAccountLinks } from "@/modules/customers/account-links";
 import { ProductSearchCombobox } from "@/modules/products/components/search/product-search-combobox";
 
 import { isStorefrontPath, sellerLinkLabel } from "./storefront-routes";
-
-/** Atalhos da área do cliente exibidos no menu da conta. */
-export const accountLinks = [
-  { href: "/orders", label: "Meus pedidos" },
-  { href: "/favorites", label: "Favoritos" },
-  { href: "/account/profile", label: "Dados cadastrais" },
-  { href: "/account/password", label: "Redefinir senha" },
-  { href: "/account/addresses", label: "Meus endereços" },
-] as const;
 
 const iconButtonClassName =
   "inline-flex size-11 items-center justify-center rounded-md text-white/85 transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-3 focus-visible:ring-moto-brand/60 focus-visible:outline-none";
@@ -38,14 +34,14 @@ export function StorefrontNavigation() {
 
   return (
     <header
-      className="bg-moto-brand-foreground sticky top-0 z-50 border-b border-white/10 text-white shadow-sm"
+      className="bg-moto-brand-foreground z-header sticky top-0 border-b border-white/10 text-white shadow-sm"
       onKeyDown={(event) => {
         if (event.key !== "Escape" || !menuOpen) return;
         setMenuOpen(false);
         menuButton.current?.focus();
       }}
     >
-      <div className="mx-auto flex min-h-[68px] w-full max-w-6xl items-center gap-3 px-4 sm:px-6">
+      <div className={pageContainerClassName("default", "flex min-h-[68px] items-center gap-3")}>
         <MotoShopBrand />
 
         <nav
@@ -137,12 +133,12 @@ function HeaderSearch({ id, className }: { id: string; className?: string }) {
         className="w-full"
         listClassName="sm:w-80"
         placeholder="Buscar peças, marcas ou lojas"
-        inputClassName="focus-visible:border-moto-brand focus-visible:ring-moto-brand/40 h-11 w-full rounded-md border border-white/20 bg-white/10 pr-11 pl-3 text-base text-white placeholder:text-white/55 focus-visible:ring-3 focus-visible:outline-none md:h-10 md:text-sm"
+        inputClassName="focus-visible:border-moto-brand focus-visible:ring-moto-brand/40 h-11 w-full rounded-md border border-white/20 bg-white/10 pr-11 pl-3 text-base text-white placeholder:text-white/55 focus-visible:ring-3 focus-visible:outline-none md:text-sm"
       />
       <button
         type="submit"
         aria-label="Buscar"
-        className="focus-visible:ring-moto-brand/60 absolute right-0 inline-flex size-10 items-center justify-center rounded-md text-white/80 hover:text-white focus-visible:ring-3 focus-visible:outline-none"
+        className="focus-visible:ring-moto-brand/60 absolute right-0 inline-flex size-11 items-center justify-center rounded-md text-white/80 hover:text-white focus-visible:ring-3 focus-visible:outline-none"
       >
         <Search aria-hidden="true" className="size-4" />
       </button>
@@ -150,21 +146,12 @@ function HeaderSearch({ id, className }: { id: string; className?: string }) {
   );
 }
 
+const accountMenuItemClassName =
+  "data-[highlighted]:bg-muted flex min-h-10 w-full items-center rounded-md px-3 text-sm font-medium outline-none";
+
 function AccountMenu() {
   const { data: session } = authClient.useSession();
   const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuId = useId();
-
-  useEffect(() => {
-    if (!open) return;
-    function handlePointerDown(event: PointerEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
-    }
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [open]);
 
   if (!session?.user) {
     return (
@@ -175,56 +162,37 @@ function AccountMenu() {
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="relative"
-      onKeyDown={(event) => {
-        if (event.key !== "Escape" || !open) return;
-        event.stopPropagation();
-        setOpen(false);
-        triggerRef.current?.focus();
-      }}
-    >
-      <button
-        ref={triggerRef}
-        type="button"
-        aria-label="Minha conta"
-        aria-expanded={open}
-        aria-controls={menuId}
-        onClick={() => setOpen((value) => !value)}
-        className={`${iconButtonClassName} w-auto gap-0.5 px-2`}
-      >
+    <BaseMenu.Root open={open} onOpenChange={setOpen} modal={false}>
+      <BaseMenu.Trigger aria-label="Minha conta" className={`${iconButtonClassName} w-auto gap-0.5 px-2`}>
         <UserRound aria-hidden="true" className="size-5" />
         <ChevronDown aria-hidden="true" className="size-3.5" />
-      </button>
-      <div
-        id={menuId}
-        hidden={!open}
-        className="bg-popover text-popover-foreground border-border absolute right-0 z-50 mt-2 w-56 rounded-xl border p-1.5 shadow-lg"
-      >
-        <p className="text-muted-foreground truncate px-3 pt-1.5 pb-2 text-xs">
-          {session.user.name ? `Olá, ${session.user.name}` : "Minha conta"}
-        </p>
-        <ul aria-label="Minha conta">
-          {accountLinks.map((link) => (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className="hover:bg-muted focus-visible:bg-muted flex min-h-10 items-center rounded-md px-3 text-sm font-medium focus-visible:outline-none"
+      </BaseMenu.Trigger>
+      <BaseMenu.Portal>
+        <BaseMenu.Positioner side="bottom" align="end" sideOffset={8} className="z-popover">
+          <BaseMenu.Popup className={cn(popoverSurfaceClassName, "w-56 p-1.5 outline-none")}>
+            <p className="text-muted-foreground truncate px-3 pt-1.5 pb-2 text-xs">
+              {session.user.name ? `Olá, ${session.user.name}` : "Minha conta"}
+            </p>
+            {customerAccountLinks.map((link) => (
+              <BaseMenu.LinkItem
+                key={link.href}
+                closeOnClick
+                render={<Link href={link.href} />}
+                className={accountMenuItemClassName}
               >
                 {link.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <div className="border-border mt-1.5 border-t pt-1.5">
-          <SignOutButton
-            onSignedOut={() => setOpen(false)}
-            className="hover:bg-muted focus-visible:bg-muted w-full focus-visible:outline-none"
-          />
-        </div>
-      </div>
-    </div>
+              </BaseMenu.LinkItem>
+            ))}
+            <BaseMenu.Separator className="border-border my-1.5 border-t" />
+            <BaseMenu.Item
+              closeOnClick={false}
+              nativeButton
+              render={<SignOutButton onSignedOut={() => setOpen(false)} />}
+              className={accountMenuItemClassName}
+            />
+          </BaseMenu.Popup>
+        </BaseMenu.Positioner>
+      </BaseMenu.Portal>
+    </BaseMenu.Root>
   );
 }

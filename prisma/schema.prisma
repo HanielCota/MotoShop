@@ -29,6 +29,13 @@ enum SellerMemberRole {
   FINANCE
 }
 
+enum SellerMemberInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  REVOKED
+}
+
 enum ProductStatus {
   DRAFT
   SUBMITTED
@@ -212,6 +219,8 @@ model User {
   accounts                 Account[]
   sessions                 Session[]
   memberships              SellerMember[]
+  sentSellerInvites        SellerMemberInvite[]  @relation("SellerMemberInviteInviter")
+  acceptedSellerInvites    SellerMemberInvite[]  @relation("SellerMemberInviteAcceptor")
   carts                    Cart[]
   orders                   Order[]
   inventoryMovements       InventoryMovement[]   @relation("InventoryMovementActor")
@@ -295,9 +304,12 @@ model Seller {
   type                   SellerType
   status                 SellerStatus                @default(PENDING)
   commissionBpsOverride  Int?
+  /// Motivo informado pelo Admin ao recusar o cadastro (BUG-005); exibido ao lojista na Central.
+  rejectionReason        String?
   createdAt              DateTime                    @default(now())
   updatedAt              DateTime                    @updatedAt
   members                SellerMember[]
+  memberInvites          SellerMemberInvite[]
   store                  Store?
   products               Product[]
   productVariants        ProductVariant[]
@@ -370,6 +382,31 @@ model SellerMember {
   @@unique([sellerId, userId])
   @@index([userId])
   @@map("seller_members")
+}
+
+/// Convite para a equipe da loja (M-04): a pessoa só vira membro ao aceitar com a conta do mesmo
+/// e-mail verificado. Só o hash do token fica no banco; no máximo um convite PENDING por loja e e-mail
+/// (índice parcial na migração).
+model SellerMemberInvite {
+  id               String                   @id @default(cuid())
+  email            String
+  role             SellerMemberRole
+  tokenHash        String                   @unique
+  status           SellerMemberInviteStatus @default(PENDING)
+  expiresAt        DateTime
+  respondedAt      DateTime?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  sellerId         String
+  invitedByUserId  String?
+  acceptedByUserId String?
+  seller           Seller                   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  invitedBy        User?                    @relation("SellerMemberInviteInviter", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  acceptedBy       User?                    @relation("SellerMemberInviteAcceptor", fields: [acceptedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([sellerId, status, createdAt])
+  @@index([email, status])
+  @@map("seller_member_invites")
 }
 
 model Store {
@@ -1168,6 +1205,8 @@ model CouponSellerParticipation {
 model CouponRedemption {
   id                    String   @id @default(cuid())
   customerEmailSnapshot String
+  /// Canonical e-mail for per-customer coupon limits (lowercase, no +tag, Gmail without dots). M-07.
+  customerEmailKey      String?
   discountAmountInCents Int
   couponId              String
   orderId               String
@@ -1180,6 +1219,7 @@ model CouponRedemption {
   @@unique([couponId, orderId])
   @@index([couponId, userId])
   @@index([couponId, customerEmailSnapshot])
+  @@index([couponId, customerEmailKey])
   @@index([orderId])
   @@map("coupon_redemptions")
 }

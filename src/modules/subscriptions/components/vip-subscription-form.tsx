@@ -42,8 +42,8 @@ export function VipSubscriptionForm({
           <option value="12">12 meses</option>
         </DesignSelect>
       </label>
-      <Button type="submit" disabled={pending} className="rounded-md font-semibold">
-        {pending ? "Salvando..." : "Ativar VIP"}
+      <Button pending={pending} pendingLabel="Salvando…" type="submit" className="font-semibold">
+        Ativar VIP
       </Button>
       <FormMessage error={state.error ?? null} success={state.success ?? null} className="sm:col-span-3" />
     </form>

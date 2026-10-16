@@ -4,6 +4,10 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
 import { ApplicationError } from "@/shared/errors/application-error";
 
+import { canonicalCouponCustomerEmail, type CouponCustomer } from "../domain/coupon-customer-key";
+
+export type { CouponCustomer } from "../domain/coupon-customer-key";
+
 type CouponClient = Pick<Prisma.TransactionClient, "coupon" | "couponRedemption">;
 
 export type CouponLimitState = {
@@ -21,19 +25,21 @@ export function normalizeCouponCustomerEmail(email: string): string {
 }
 
 /**
- * Redemptions of the same customer: same e-mail (case-insensitive, so "A@x.com" and
- * "a@x.com" share the per-customer limit) or same signed-in user.
+ * Redemptions of the same customer (M-07): same canonical e-mail (case, "+tag" and Gmail dots
+ * ignored), same signed-in user, or an order with the same CPF. Rows created before the
+ * canonical key existed still match by the case-insensitive e-mail.
  */
 export function couponCustomerUsageWhere(
   couponId: string,
-  customerEmail: string,
-  userId?: string,
+  customer: CouponCustomer,
 ): Prisma.CouponRedemptionWhereInput {
   return {
     couponId,
     OR: [
-      { customerEmailSnapshot: { equals: normalizeCouponCustomerEmail(customerEmail), mode: "insensitive" } },
-      ...(userId ? [{ userId }] : []),
+      { customerEmailKey: canonicalCouponCustomerEmail(customer.email) },
+      { customerEmailSnapshot: { equals: normalizeCouponCustomerEmail(customer.email), mode: "insensitive" } },
+      ...(customer.userId ? [{ userId: customer.userId }] : []),
+      ...(customer.taxId ? [{ order: { customerTaxId: customer.taxId } }] : []),
     ],
   };
 }
@@ -54,8 +60,7 @@ export function getCouponAvailabilityProblem(
 async function countCouponUsage(
   client: CouponClient,
   coupon: { id: string } & CouponLimitState,
-  customerEmail: string,
-  userId?: string,
+  customer: CouponCustomer,
 ) {
   const [globalUsage, customerUsage] = await Promise.all([
     coupon.globalUsageLimit === null
@@ -63,7 +68,7 @@ async function countCouponUsage(
       : client.couponRedemption.count({ where: { couponId: coupon.id } }),
     coupon.perCustomerUsageLimit === null
       ? Promise.resolve(0)
-      : client.couponRedemption.count({ where: couponCustomerUsageWhere(coupon.id, customerEmail, userId) }),
+      : client.couponRedemption.count({ where: couponCustomerUsageWhere(coupon.id, customer) }),
   ]);
   return { globalUsage, customerUsage };
 }
@@ -75,17 +80,12 @@ const availabilityMessages: Record<CouponAvailabilityProblem, string> = {
 };
 
 /** Pre-check outside the order transaction (friendly, specific messages). */
-export async function findActiveCoupon(
-  code: string | undefined,
-  customerEmail: string,
-  userId?: string,
-  now: Date = new Date(),
-) {
+export async function findActiveCoupon(code: string | undefined, customer: CouponCustomer, now: Date = new Date()) {
   if (!code) return undefined;
   const coupon = await db.coupon.findUnique({ where: { code } });
   if (!coupon)
     throw new ApplicationError({ code: "CONFLICT", message: availabilityMessages.UNAVAILABLE, statusCode: 409 });
-  const problem = getCouponAvailabilityProblem(coupon, await countCouponUsage(db, coupon, customerEmail, userId), now);
+  const problem = getCouponAvailabilityProblem(coupon, await countCouponUsage(db, coupon, customer), now);
   if (problem)
     throw new ApplicationError({ code: "CONFLICT", message: availabilityMessages[problem], statusCode: 409 });
   return coupon;
@@ -101,15 +101,14 @@ export type ActiveCoupon = NonNullable<Awaited<ReturnType<typeof findActiveCoupo
 export async function assertCouponStillAvailableLocked(
   tx: Prisma.TransactionClient,
   snapshot: { id: string; updatedAt: Date },
-  customerEmail: string,
-  userId: string | undefined,
+  customer: CouponCustomer,
   now: Date,
 ): Promise<void> {
   await tx.$queryRaw`SELECT id FROM "coupons" WHERE id = ${snapshot.id} FOR UPDATE`;
   const coupon = await tx.coupon.findUniqueOrThrow({ where: { id: snapshot.id } });
   const [globalUsage, customerUsage] = await Promise.all([
     tx.couponRedemption.count({ where: { couponId: coupon.id } }),
-    tx.couponRedemption.count({ where: couponCustomerUsageWhere(coupon.id, customerEmail, userId) }),
+    tx.couponRedemption.count({ where: couponCustomerUsageWhere(coupon.id, customer) }),
   ]);
   if (
     coupon.updatedAt.getTime() !== snapshot.updatedAt.getTime() ||

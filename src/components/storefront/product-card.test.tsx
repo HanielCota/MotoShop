@@ -43,3 +43,10 @@ it("serves ImageKit images as already-resized URLs, without the Next optimizer",
   expect(image).not.toHaveAttribute("srcset");
   expect(image).toHaveAttribute("loading", "eager");
 });
+
+it("marks demo products with the badge only, not again in the stock line", () => {
+  render(<ProductCard product={{ ...card("/images/demo/capacete-apex.webp"), isDemo: true }} />);
+
+  expect(screen.getByText("Demonstração")).toBeInTheDocument();
+  expect(screen.queryByText(/· demonstração/)).not.toBeInTheDocument();
+});

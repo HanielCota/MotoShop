@@ -93,12 +93,25 @@ describe("marketing homepage", () => {
     expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveTextContent("2024 · R · 250 cc");
   });
 
-  it("submits the selected motorcycle even immediately after a manufacturer change", async () => {
+  it("starts empty for a visitor and unlocks model and year one at a time", () => {
+    renderHome();
+    expect(screen.getByRole("combobox", { name: "Fabricante" })).toHaveTextContent("Selecione o fabricante");
+    expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveAttribute("data-disabled");
+    expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveAttribute("data-disabled");
+    expect(screen.getByRole("button", { name: "Ver peças" })).toBeDisabled();
+  });
+
+  it("does not pick a model or year on its own when the manufacturer has several", async () => {
     renderHome();
     choose("Fabricante", "Yamaha");
+    expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveTextContent("Selecione o modelo");
+    expect(screen.getByRole("button", { name: "Ver peças" })).toBeDisabled();
+
+    choose("Modelo", "YZ250F");
+    // YZ250F has a single year, the only possible answer.
+    expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveTextContent("2025 · 250 cc");
     fireEvent.click(screen.getByRole("button", { name: "Ver peças" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/products?moto=yamaha-2025"));
-    expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveTextContent("YZ250F");
   });
 
   it("updates the model without retaining another model's fitment", () => {
@@ -110,6 +123,7 @@ describe("marketing homepage", () => {
 
   it("distinguishes versions in the same year and preserves selection when switching search mode", async () => {
     renderHome();
+    choose("Fabricante", "Honda");
     fireEvent.click(screen.getByRole("combobox", { name: "Ano e versão" }));
     expect(screen.getByRole("option", { name: "2025 · Special · 250 cc" })).toBeInTheDocument();
     const previousYear = screen.getByRole("option", { name: "2024 · R · 250 cc" });
@@ -122,10 +136,10 @@ describe("marketing homepage", () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith("/products?moto=honda-2024"));
   });
 
-  it("does not submit an unknown fitment from the URL", async () => {
+  it("does not submit an unknown fitment from the URL", () => {
     renderHome("?moto=removed-or-invalid");
-    fireEvent.click(screen.getByRole("button", { name: "Ver peças" }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/products?moto=honda-2025"));
+    expect(screen.getByRole("combobox", { name: "Fabricante" })).toHaveTextContent("Selecione o fabricante");
+    expect(screen.getByRole("button", { name: "Ver peças" })).toBeDisabled();
   });
 
   it("explains an empty motorcycle list without inventing a motorcycle", () => {
@@ -168,6 +182,15 @@ describe("marketing homepage", () => {
     renderHome();
     expect(screen.getByText(/preparando a primeira seleção/)).toBeInTheDocument();
     expect(screen.queryByText("Demonstração")).not.toBeInTheDocument();
+  });
+
+  it("shows featured products before the categories on phones and keeps the order from md up", () => {
+    renderHome("", { featuredProducts: [makeProduct("capacete", "Capacete")] });
+    const featured = document.querySelector(`[aria-labelledby="featured-products-title"]`)?.parentElement;
+    const categories = document.querySelector(`[aria-labelledby="home-categories-title"]`)?.parentElement;
+
+    expect(featured).toHaveClass("order-1", "md:order-2");
+    expect(categories).toHaveClass("order-2", "md:order-1");
   });
 
   it("links approved featured products to their details without invented installments", () => {

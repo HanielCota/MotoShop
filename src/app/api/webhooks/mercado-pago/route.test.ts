@@ -16,7 +16,11 @@ vi.mock("@/lib/inngest/client", () => ({ inngest: { send: mocks.send } }));
 
 import { POST } from "./route";
 
-function signedRequest(signatureValid = true, timestamp = String(Date.now())): Request {
+function signedRequest(
+  signatureValid = true,
+  timestamp = String(Date.now()),
+  notificationId = "notification-1",
+): Request {
   const paymentId = "123456";
   const requestId = "test-request-id";
   const hash = createHmac("sha256", signatureValid ? "test-webhook-secret" : "wrong-secret")
@@ -29,7 +33,7 @@ function signedRequest(signatureValid = true, timestamp = String(Date.now())): R
       "x-request-id": requestId,
       "x-signature": `ts=${timestamp},v1=${hash}`,
     },
-    body: JSON.stringify({ id: "notification-1", type: "payment", data: { id: paymentId } }),
+    body: JSON.stringify({ id: notificationId, type: "payment", data: { id: paymentId } }),
   });
 }
 
@@ -78,13 +82,24 @@ it("persists a signed payment notification before enqueueing it", async () => {
   expect(response.status).toBe(202);
   expect(await response.json()).toEqual({ received: true, duplicate: false });
   expect(mocks.create).toHaveBeenCalledWith(
-    expect.objectContaining({ data: expect.objectContaining({ externalId: "notification-1" }) }),
+    expect.objectContaining({ data: expect.objectContaining({ externalId: "123456:test-request-id" }) }),
   );
   expect(mocks.send).toHaveBeenCalledWith({
     name: "motoshop/payment.webhook.received",
     data: { webhookEventId: "event-1" },
   });
   expect(mocks.create.mock.invocationCallOrder[0]).toBeLessThan(defined(mocks.send.mock.invocationCallOrder[0]));
+});
+
+it("dedupes a replayed signed notification even when its unsigned id changes (L-06)", async () => {
+  mocks.create.mockResolvedValue({ id: "event-1", status: "RECEIVED" });
+  const timestamp = String(Date.now());
+
+  await POST(signedRequest(true, timestamp, "notification-1"));
+  await POST(signedRequest(true, timestamp, "forged-notification-2"));
+
+  const externalIds = mocks.create.mock.calls.map((call) => call[0]?.data?.externalId);
+  expect(externalIds).toEqual(["123456:test-request-id", "123456:test-request-id"]);
 });
 
 it("does not enqueue an already processed notification again", async () => {

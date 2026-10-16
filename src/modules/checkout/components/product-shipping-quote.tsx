@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { DesignSelect } from "@/components/ui/design-select";
 import { FormMessage } from "@/components/ui/form-message";
+import { Input } from "@/components/ui/input";
 import { formatMoneyInCents, formatCount } from "@/lib/format";
 import { formatCep, isCompleteCep } from "@/modules/customers/domain/brazilian-address";
 import { quoteProductShippingAction } from "../actions/shipping-actions";
@@ -72,7 +73,7 @@ export function ProductShippingQuote({ options }: { options: Option[] }) {
         </label>
         <label className="text-foreground text-xs font-medium">
           CEP
-          <input
+          <Input
             value={postalCode}
             onChange={(event) => setPostalCode(formatCep(event.currentTarget.value))}
             inputMode="numeric"
@@ -80,7 +81,7 @@ export function ProductShippingQuote({ options }: { options: Option[] }) {
             maxLength={9}
             placeholder="00000-000"
             aria-label="CEP para cálculo de frete"
-            className="border-input bg-background focus-visible:ring-moto-brand mt-1 min-h-10 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-2"
+            className="mt-1"
           />
         </label>
         <button
