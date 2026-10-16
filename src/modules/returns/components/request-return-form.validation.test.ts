@@ -20,3 +20,10 @@ it("explains the allowed range inline instead of the browser bubble", () => {
   expect(validateReturnQuantity(3)(formWith("4"))).toBe("Informe uma quantidade entre 1 e 3.");
   expect(validateReturnQuantity(3)(formWith("1.5"))).toBe("Informe uma quantidade entre 1 e 3.");
 });
+
+it("reads the text field strictly now that it is not a native number input (DN-07)", () => {
+  expect(validateReturnQuantity(3)(formWith(" 2 "))).toBeNull();
+  expect(validateReturnQuantity(3)(formWith(""))).toBe("Informe uma quantidade entre 1 e 3.");
+  expect(validateReturnQuantity(3)(formWith("1e0"))).toBe("Informe uma quantidade entre 1 e 3.");
+  expect(validateReturnQuantity(3)(formWith("2,0"))).toBe("Informe uma quantidade entre 1 e 3.");
+});
