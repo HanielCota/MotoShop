@@ -160,7 +160,21 @@ describe("simulated purchase of test products", () => {
       ],
       totals: { itemCount: 3, itemsSubtotalInCents: 25_000, shippingInCents: 1_990, totalInCents: 26_990 },
     });
-    expect(mocks.writes).toEqual([{ model: "cartItem", method: "deleteMany", args: { where: { cartId: "cart-1" } } }]);
+    expect(mocks.writes).toEqual([
+      {
+        model: "cartItem",
+        method: "deleteMany",
+        args: {
+          where: {
+            cartId: "cart-1",
+            OR: [
+              { id: "a", quantity: 2 },
+              { id: "b", quantity: 1 },
+            ],
+          },
+        },
+      },
+    ]);
     expect(mocks.createPayment).not.toHaveBeenCalled();
   });
 

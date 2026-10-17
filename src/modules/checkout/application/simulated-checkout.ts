@@ -34,7 +34,11 @@ export async function simulateTestCheckout(
   const { sellerCharges } = await priceCheckoutCart(input, cart, now);
   const purchase = buildSimulatedPurchase(input.data, sellerCharges);
 
-  await db.cartItem.deleteMany({ where: { cartId: cart.id } });
+  // Shipping quotes await network calls. Preserve items added or changed in another tab
+  // while this snapshot was being priced.
+  await db.cartItem.deleteMany({
+    where: { cartId: cart.id, OR: cart.items.map((item) => ({ id: item.id, quantity: item.quantity })) },
+  });
   logger.info({ event: "checkout.simulated_purchase", cartId: cart.id, sellerCount: sellerCharges.length });
   return purchase;
 }
