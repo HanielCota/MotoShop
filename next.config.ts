@@ -6,7 +6,11 @@ import { buildSecurityHeaders } from "./src/config/security-headers";
 const imageKitPublicUrl = process.env.IMAGEKIT_URL_ENDPOINT ? new URL(process.env.IMAGEKIT_URL_ENDPOINT) : undefined;
 
 const nextConfig: NextConfig = {
-  ...(process.env.NEXT_TEST_DIST_DIR ? { distDir: process.env.NEXT_TEST_DIST_DIR } : {}),
+  // E2E builds use their own dist dir and tsconfig, so Next does not rewrite tsconfig.json to add
+  // that dir's generated types (A4). tsconfig.e2e.json already lists them.
+  ...(process.env.NEXT_TEST_DIST_DIR
+    ? { distDir: process.env.NEXT_TEST_DIST_DIR, typescript: { tsconfigPath: "tsconfig.e2e.json" } }
+    : {}),
   typedRoutes: true,
   // No "X-Powered-By: Next.js": it only helps fingerprinting (L-22).
   poweredByHeader: false,
