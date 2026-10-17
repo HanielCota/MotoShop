@@ -36,6 +36,8 @@ const eslintConfig = defineConfig([
     "playwright-report-demo/**",
     "test-results/**",
     "test-results-demo/**",
+    // Local agent folders (worktrees with their own .next and src, notes, prints): not project code (A12).
+    ".claude/**",
   ]),
 ]);
 
