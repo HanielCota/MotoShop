@@ -3,8 +3,9 @@ import Image from "next/image";
 /**
  * Payment methods the checkout accepts through Mercado Pago (`paymentMethodId` in
  * modules/checkout/schemas/checkout.ts): Pix and the credit cards below. Boleto is not offered.
- * Official brand marks (Wikimedia Commons SVGs, checked for scripts) served from public/, on a white
- * tile so they read on the dark footer.
+ * Official brand marks served from public/, on a white tile so they read on the dark footer: Wikimedia
+ * Commons SVGs (checked for scripts) and the Cabal logo from cabal.coop. Pix shows only its symbol and
+ * Diners only its circle (viewBox cropped), since the full wordmarks are unreadable at this size.
  */
 const paymentMethods = [
   { name: "Pix", file: "pix.svg" },
@@ -14,7 +15,7 @@ const paymentMethods = [
   { name: "American Express", file: "american-express.svg" },
   { name: "Hipercard", file: "hipercard.svg" },
   { name: "Diners Club", file: "diners-club.svg" },
-  { name: "Cabal", file: "cabal.svg" },
+  { name: "Cabal", file: "cabal.png" },
 ] as const;
 
 export function PaymentMethodIcons() {

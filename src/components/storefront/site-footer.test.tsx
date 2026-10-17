@@ -63,7 +63,7 @@ it("lists only the payment methods the checkout accepts, with the official brand
     "/images/payment-methods/american-express.svg",
     "/images/payment-methods/hipercard.svg",
     "/images/payment-methods/diners-club.svg",
-    "/images/payment-methods/cabal.svg",
+    "/images/payment-methods/cabal.png",
   ]);
   expect(icons.map((icon) => icon.getAttribute("alt"))).toEqual([
     "Pix",
