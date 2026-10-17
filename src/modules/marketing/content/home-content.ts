@@ -1,5 +1,5 @@
 import type { Route } from "next";
-import { BadgeCheck, Clock, Shield, Truck, UserRoundCheck, Wrench, type LucideIcon } from "lucide-react";
+import { BadgeCheck, Shield, Truck, UserRoundCheck, Wrench, type LucideIcon } from "lucide-react";
 
 export const categoryCards: { title: string; description: string; eyebrow: string; href: Route; icon: LucideIcon }[] = [
   {
@@ -49,18 +49,10 @@ type HeroAssurance = { text: string; icon: LucideIcon };
 const approvedStoresAssurance: HeroAssurance = { icon: BadgeCheck, text: "Lojas aprovadas pelo Moto Shop" };
 
 /**
- * Garantias curtas exibidas logo abaixo da busca por moto, no hero. Enquanto o pagamento não está
- * liberado, nenhuma delas promete compra ou checkout.
+ * Garantias curtas exibidas logo abaixo da busca por moto, no hero. O site se comporta como em
+ * produção: nenhuma garantia avisa que as compras ainda não foram liberadas.
  */
-export function getHeroAssurances(paymentAvailable: boolean): HeroAssurance[] {
-  if (!paymentAvailable) {
-    return [
-      approvedStoresAssurance,
-      { icon: Clock, text: "Compras em breve" },
-      { icon: Truck, text: "Frete e prazo definidos por cada loja" },
-    ];
-  }
-
+export function getHeroAssurances(): HeroAssurance[] {
   return [
     approvedStoresAssurance,
     { icon: UserRoundCheck, text: "Compre sem criar conta" },

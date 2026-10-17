@@ -7,6 +7,7 @@ import { useCallback, useRef, useTransition, type RefObject } from "react";
 import type { SecureCardHandle } from "@/modules/payments/components/secure-card-fields";
 
 import { createCheckoutAction, type CheckoutActionState } from "../actions/checkout-actions";
+import type { SimulatedPurchase } from "../domain/simulated-purchase";
 import { toCheckoutFormEntries, type CheckoutFormState } from "./checkout-form-model";
 import { isTerminalCheckoutFailure } from "./checkout-submit-result";
 
@@ -22,9 +23,12 @@ const unknownFailureMessage = "Não foi possível concluir. Consulte seu pedido 
 export function useCheckoutSubmit({
   cardRef,
   onFailure,
+  onSimulatedPurchase,
 }: {
   cardRef: RefObject<SecureCardHandle | null>;
   onFailure: (message: string) => void;
+  /** Test products: nothing was recorded, so the page shows the summary instead of an order. */
+  onSimulatedPurchase: (purchase: SimulatedPurchase) => void;
 }) {
   const router = useRouter();
   const [isSubmitting, startSubmit] = useTransition();
@@ -60,6 +64,10 @@ export function useCheckoutSubmit({
             onFailure(result.error);
             return;
           }
+          if (result.simulatedPurchase) {
+            onSimulatedPurchase(result.simulatedPurchase);
+            return;
+          }
           if (result.orderNumber) router.push(`/orders/${encodeURIComponent(result.orderNumber)}` as Route);
         } catch (error) {
           onFailure(error instanceof Error && error.message ? error.message : unknownFailureMessage);
@@ -68,7 +76,7 @@ export function useCheckoutSubmit({
         }
       });
     },
-    [cardRef, onFailure, router],
+    [cardRef, onFailure, onSimulatedPurchase, router],
   );
 
   return { submit, isSubmitting };

@@ -226,7 +226,6 @@ function SuggestionOption({
           <span className="line-clamp-2 text-sm font-medium">{suggestion.name}</span>
           <span className="text-sm font-semibold tabular-nums">
             {suggestion.priceInCents !== null ? formatMoneyInCents(suggestion.priceInCents) : "Sob consulta"}
-            {suggestion.isDemo ? <span className="text-muted-foreground font-normal"> · demonstração</span> : null}
           </span>
         </span>
       </Link>

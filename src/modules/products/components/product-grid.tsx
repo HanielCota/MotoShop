@@ -25,7 +25,6 @@ type CardSourceProduct = {
   id: string;
   slug: string;
   name: string;
-  isDemo: boolean;
   isVip?: boolean;
   reviewedAt: Date | null;
   createdAt: Date;
@@ -62,7 +61,6 @@ export function toProductCardData(product: CardSourceProduct, now = new Date()):
     compareAtPriceInCents: compareAt,
     hasPriceRange: offer.hasPriceRange,
     availableQuantity: offer.availableQuantity,
-    isDemo: product.isDemo,
     sponsored: Boolean(product.isVip),
     isNew: isNewProduct(product, now),
   };

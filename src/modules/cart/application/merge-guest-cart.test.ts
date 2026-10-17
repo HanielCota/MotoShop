@@ -79,7 +79,7 @@ it("checks variants with the shared purchasable predicate requiring stock", asyn
     expect.objectContaining({
       active: true,
       inventory: { availableQuantity: { gt: 0 } },
-      product: expect.objectContaining({ status: "APPROVED", isDemo: false }),
+      product: expect.objectContaining({ status: "APPROVED" }),
     }),
   );
 });

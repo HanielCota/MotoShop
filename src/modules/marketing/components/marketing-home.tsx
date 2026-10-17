@@ -19,8 +19,6 @@ type MarketingHomeProps = {
   categories: MarketingCategory[];
   featuredProducts: ProductCardData[];
   primaryFitmentId?: string | null;
-  /** Mesmo resultado que o checkout usa; falso enquanto o pagamento pelo marketplace não está liberado. */
-  paymentAvailable: boolean;
 };
 
 // O slogan quebra antes da última palavra ("OFF-ROAD!"), mantendo a direção de arte do hero.
@@ -32,13 +30,7 @@ const sloganEnd = BRAND_SLOGAN.slice(sloganBreak + 1);
  * Página inicial: composição de seções server-rendered; apenas o seletor de moto é client component.
  * Cabeçalho e rodapé vêm do layout raiz (StorefrontNavigation/SiteFooter).
  */
-export function MarketingHome({
-  fitments,
-  categories,
-  featuredProducts,
-  primaryFitmentId,
-  paymentAvailable,
-}: MarketingHomeProps) {
+export function MarketingHome({ fitments, categories, featuredProducts, primaryFitmentId }: MarketingHomeProps) {
   return (
     <main className="bg-surface-sunken flex flex-col overflow-x-clip">
       <section className="bg-moto-brand-foreground relative isolate text-white" aria-labelledby="home-title">
@@ -68,7 +60,7 @@ export function MarketingHome({
             Peças, acessórios e equipamentos de lojistas parceiros. Escolha a sua moto e veja as peças compatíveis.
           </p>
           <MotorcycleFinder fitments={fitments} primaryFitmentId={primaryFitmentId} />
-          <HeroAssurances paymentAvailable={paymentAvailable} />
+          <HeroAssurances />
         </div>
       </section>
 

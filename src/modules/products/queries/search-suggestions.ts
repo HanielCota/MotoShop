@@ -28,7 +28,6 @@ export async function listSearchSuggestions(input: {
       href: card.href,
       imageUrl: card.imageUrl,
       priceInCents: card.priceInCents,
-      isDemo: card.isDemo,
     };
   });
 }

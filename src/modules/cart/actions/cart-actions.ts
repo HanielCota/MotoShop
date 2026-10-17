@@ -7,7 +7,6 @@ import { z } from "zod";
 import { db } from "@/lib/database";
 import { ApplicationError } from "@/shared/errors/application-error";
 import { logActionFailure, toActionError } from "@/shared/errors/action-error";
-import { getCheckoutPaymentAvailability } from "@/modules/payments/application/assert-payment-ready";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 import { getClientIp } from "@/shared/request/client-ip";
@@ -77,26 +76,23 @@ export async function getCartPreviewAction(): Promise<{
   }[];
   itemCount: number;
   subtotalInCents: number;
-  /** Same check the cart page and checkout use for this cart's stores. */
-  paymentAvailable: boolean;
   error?: string;
 }> {
   try {
     const identity = await getCartIdentity();
-    if (!identity) return { items: [], itemCount: 0, subtotalInCents: 0, paymentAvailable: false };
+    if (!identity) return { items: [], itemCount: 0, subtotalInCents: 0 };
     const cart = await db.cart.findFirst({
       where: { ...cartOwnerWhere(identity), status: "ACTIVE" },
       include: {
         items: {
           orderBy: { createdAt: "asc" },
           include: {
-            variant: { include: { inventory: true, product: { select: { name: true, sellerId: true } } } },
+            variant: { include: { inventory: true, product: { select: { name: true } } } },
           },
         },
       },
     });
     const cartItems = cart?.items ?? [];
-    const sellerCount = new Set(cartItems.map((item) => item.variant.product.sellerId)).size;
     const items = cartItems.map((item) => ({
       id: item.id,
       name: item.variant.product.name,
@@ -109,7 +105,6 @@ export async function getCartPreviewAction(): Promise<{
       items,
       itemCount: items.reduce((total, item) => total + item.quantity, 0),
       subtotalInCents: items.reduce((total, item) => total + item.unitPriceInCents * item.quantity, 0),
-      paymentAvailable: getCheckoutPaymentAvailability(sellerCount).available,
     };
   } catch (error) {
     logActionFailure("getCartPreviewAction", error);
@@ -117,7 +112,6 @@ export async function getCartPreviewAction(): Promise<{
       items: [],
       itemCount: 0,
       subtotalInCents: 0,
-      paymentAvailable: false,
       error: "Não foi possível carregar o carrinho.",
     };
   }

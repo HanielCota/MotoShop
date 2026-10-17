@@ -16,7 +16,6 @@ const suggestion = {
   href: "/products/capacete-off-road",
   imageUrl: null,
   priceInCents: 89990,
-  isDemo: false,
 };
 
 function request(query: string) {

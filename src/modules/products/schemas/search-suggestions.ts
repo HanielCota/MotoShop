@@ -16,7 +16,6 @@ export const searchSuggestionSchema = z.object({
   href: z.string(),
   imageUrl: z.string().nullable(),
   priceInCents: z.number().int().nullable(),
-  isDemo: z.boolean(),
 });
 
 export const searchSuggestionsResponseSchema = z.object({ suggestions: z.array(searchSuggestionSchema) });

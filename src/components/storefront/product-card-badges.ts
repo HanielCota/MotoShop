@@ -1,22 +1,20 @@
-export type ProductCardBadge = "DEMO" | "SPONSORED" | "SALE" | "NEW";
+export type ProductCardBadge = "SPONSORED" | "SALE" | "NEW";
 
 /** At most two badges on the card image, so the photo stays visible on phones. */
 export const MAX_PRODUCT_CARD_BADGES = 2;
 
 /**
- * Badges in priority order: "Demonstração" and "Patrocinado" identify the content and must win
- * (AGENTS.md §16 and the demo rule); then "Oferta", then "Novidade". Demo products are never
- * shown as sponsored.
+ * Badges in priority order: "Patrocinado" identifies the content and must win (AGENTS.md §16);
+ * then "Oferta", then "Novidade". Test products get no badge of their own: the storefront behaves
+ * like production.
  */
 export function getProductCardBadges(input: {
-  isDemo: boolean;
   sponsored: boolean;
   onSale: boolean;
   isNew: boolean;
 }): ProductCardBadge[] {
   const candidates: Array<[ProductCardBadge, boolean]> = [
-    ["DEMO", input.isDemo],
-    ["SPONSORED", input.sponsored && !input.isDemo],
+    ["SPONSORED", input.sponsored],
     ["SALE", input.onSale],
     ["NEW", input.isNew],
   ];

@@ -17,34 +17,36 @@ const variant: BuyBoxVariant = {
   onSale: false,
   stock: 3,
 };
-const paymentNotice = /As compras ainda não estão liberadas/;
+// Notices the storefront no longer shows: it behaves like production.
+const removedNotices = /As compras ainda não estão liberadas|Valor ilustrativo|exemplo ilustrativo/;
 
 afterEach(cleanup);
 
 describe("ProductBuyBox", () => {
-  it("keeps the cart button and warns that payment is not open yet", () => {
-    render(<ProductBuyBox variants={[variant]} isDemo={false} hasPriceRange={false} paymentAvailable={false} />);
+  it("keeps the cart button without any payment or demo notice", () => {
+    render(<ProductBuyBox variants={[variant]} hasPriceRange={false} />);
 
     expect(screen.getByRole("button", { name: "Adicionar ao carrinho" })).toBeInTheDocument();
-    expect(screen.getByText(paymentNotice)).toBeInTheDocument();
+    expect(screen.queryByText(removedNotices)).not.toBeInTheDocument();
   });
 
-  it("shows no payment warning when payment is available", () => {
-    render(<ProductBuyBox variants={[variant]} isDemo={false} hasPriceRange={false} paymentAvailable />);
+  it("shows the SKU with the stock and no illustrative labels", () => {
+    render(<ProductBuyBox variants={[{ ...variant, stock: 10 }]} hasPriceRange={false} />);
 
-    expect(screen.queryByText(paymentNotice)).not.toBeInTheDocument();
+    expect(screen.getByText("SKU SKU-1 · 10 em estoque")).toBeInTheDocument();
+    expect(screen.queryByText(removedNotices)).not.toBeInTheDocument();
   });
 
-  it("leaves demo products to their own presentation notice", () => {
-    render(<ProductBuyBox variants={[variant]} isDemo hasPriceRange={false} paymentAvailable={false} />);
+  it("marks an option without stock as sold out", () => {
+    const soldOut = { ...variant, id: "variant-2", title: "Branco · G", stock: 0 };
+    render(<ProductBuyBox variants={[variant, soldOut]} hasPriceRange={false} />);
 
-    expect(screen.queryByRole("button", { name: "Adicionar ao carrinho" })).not.toBeInTheDocument();
-    expect(screen.queryByText(paymentNotice)).not.toBeInTheDocument();
+    expect(screen.getByText(/R\$ 199,90 · Esgotado/)).toBeInTheDocument();
   });
 
   it("reads the old price and the offer as separate phrases", () => {
     const onSale = { ...variant, priceInCents: 89990, currentPriceInCents: 79990, onSale: true };
-    render(<ProductBuyBox variants={[onSale]} isDemo={false} hasPriceRange={false} paymentAvailable />);
+    render(<ProductBuyBox variants={[onSale]} hasPriceRange={false} />);
 
     const oldPrice = screen.getByText(/Preço anterior/).parentElement;
     expect(oldPrice?.textContent?.replace(/\s/g, " ")).toMatch(/R\$ 899,90\. Oferta · 11% de desconto/);
