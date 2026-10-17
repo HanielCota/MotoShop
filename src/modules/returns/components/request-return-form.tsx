@@ -22,7 +22,9 @@ const initialState: ReturnActionState = {};
 /** Same rule as the server: a whole quantity between 1 and what was bought (DN-03). */
 export function validateReturnQuantity(maxQuantity: number) {
   return (formData: FormData) => {
-    const quantity = Number(formData.get("quantity"));
+    // Texto com teclado numérico (DN-07): só dígitos, sem vazio virar 0 nem "1e0" virar 1.
+    const text = String(formData.get("quantity") ?? "").trim();
+    const quantity = /^\d+$/.test(text) ? Number(text) : Number.NaN;
     if (Number.isInteger(quantity) && quantity >= 1 && quantity <= maxQuantity) return null;
     return `Informe uma quantidade entre 1 e ${maxQuantity}.`;
   };
@@ -59,9 +61,8 @@ export function RequestReturnForm({ orderNumber, orderItemId, maxQuantity, idemp
         <Input
           size="sm"
           name="quantity"
-          type="number"
-          min={1}
-          max={maxQuantity}
+          inputMode="numeric"
+          autoComplete="off"
           defaultValue={maxQuantity}
           aria-invalid={clientError ? true : undefined}
         />

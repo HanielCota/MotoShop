@@ -60,6 +60,8 @@ Nunca usar Redis como fonte da verdade para pedidos, pagamentos, produtos, estoq
 
 **React Hook Form**, **Zod** e **@hookform/resolvers**. Toda entrada externa relevante deve ser validada: formulários, Server Actions, webhooks, query params, APIs externas e payloads de integrações.
 
+React Hook Form é obrigatório em formulário novo ou reescrito. Formulários existentes que validam à mão (ex.: login e checkout) continuam como estão até serem reescritos; não migrar só para cumprir a regra (decisão de 16/10/2026).
+
 ## Estado
 
 Usar a ferramenta correta para cada tipo de estado:
@@ -70,7 +72,7 @@ Usar a ferramenta correta para cada tipo de estado:
 
 ## Tabelas
 
-**TanStack Table**, principalmente para produtos, pedidos, sellers, pagamentos, devoluções, disputas, cupons e admin.
+**TanStack Table** quando a tabela precisar de ordenação, seleção de linhas ou filtro no navegador. Até lá, tabela HTML renderizada no servidor com paginação no banco, que é o padrão atual de produtos, pedidos, sellers, devoluções, disputas, cupons e admin (decisão de 16/10/2026).
 
 ## Cache e rate limit
 
@@ -233,13 +235,20 @@ Categorias e marcas são controladas pelo Moto Shop. Sellers não criam categori
 
 Nunca armazenar compatibilidade como texto livre: usar relacionamento estruturado (`Product → ProductCompatibility → MotorcycleFitment`). A base de motos é controlada pelo Moto Shop; sellers podem sugerir novos modelos, mas não criá-los.
 
+Regras de uso (decisões de 15 e 16/10/2026):
+
+- A moto principal do cliente é um **atalho**, não um filtro automático: busca, categoria e catálogo mostram tudo; a faixa "Minha moto principal" oferece "Ver peças para minha moto".
+- **Categoria universal**: uma marcação na categoria, ligada só pelo Admin (capacetes, vestuário, ferramentas). Com filtro de moto ativo, o catálogo mostra os produtos compatíveis mais os de categorias universais, sem exigir compatibilidade por produto. Na página de um produto universal, o texto é "Serve em qualquer moto".
+- Na página do produto, o seletor "Sua moto" fica perto do preço.
+- No seletor da home, escolher um fabricante preenche o modelo quando ele é o único cadastrado; o ano continua em branco.
+
 ---
 
 # 12. Cliente convidado
 
 O cliente pode comprar sem criar conta. O checkout pede **o mínimo necessário**: nome, e-mail, telefone, CPF quando necessário e endereço de entrega. Não obrigar criação de senha.
 
-Depois do pedido, fornecer link seguro para acompanhamento. Pedidos guest podem ser vinculados depois a uma conta autenticada, após validação segura do e-mail/identidade. Nunca usar IDs previsíveis como único mecanismo de acesso a pedido guest.
+Depois do pedido, fornecer link seguro para acompanhamento: o link vai por e-mail, o token entra num cookie com validade e a página do pedido deixa de precisar do token na URL (decisão de 15/10/2026). Pedidos guest podem ser vinculados depois a uma conta autenticada, após validação segura do e-mail/identidade. Nunca usar IDs previsíveis como único mecanismo de acesso a pedido guest.
 
 ---
 
@@ -311,7 +320,7 @@ Três tipos (modelo Shopee):
 
 - **Cupom Moto Shop**: criado e pago pelo Moto Shop, vale em todas as lojas.
 - **Campanha com adesão**: criada pelo Moto Shop e paga por cada loja que aderir; vale só nos itens das lojas aderentes, e o desconto sai do valor delas. É o padrão ao criar cupom no Admin.
-- **Cupom da loja**: criado e pago pelo seller, vale só nos itens dele.
+- **Cupom da loja**: criado e pago pelo seller, vale só nos itens dele. Tem início e fim de validade opcionais (decisão de 16/10/2026).
 
 Registrar claramente owner, desconto, limite, período, escopo e responsável financeiro pelo desconto. Nunca perder a informação de quem subsidiou o desconto.
 
@@ -338,7 +347,7 @@ O seller define preço normal, preço promocional, data inicial e data final. Gu
 
 # 24. Devoluções
 
-O cliente solicita devolução dentro do Moto Shop, por item, com anexos/fotos quando necessário. Status: `REQUESTED`, `UNDER_REVIEW`, `APPROVED`, `WAITING_RETURN`, `RETURNED`, `REFUNDED`, `REJECTED`.
+O cliente solicita devolução dentro do Moto Shop, por item, com até 3 fotos opcionais, enviadas direto ao ImageKit como as fotos de produto e visíveis para o Admin e para o lojista (decisão de 16/10/2026). Status: `REQUESTED`, `UNDER_REVIEW`, `APPROVED`, `WAITING_RETURN`, `RETURNED`, `REFUNDED`, `REJECTED`.
 
 ---
 
@@ -352,11 +361,13 @@ O cliente não cancela automaticamente: faz uma **solicitação de cancelamento*
 
 O Moto Shop faz a mediação entre cliente e seller. O Admin precisa de dados suficientes para analisar: pedido, item, produto, SKU, fotos, rastreamento, seller, cliente, histórico, pagamento e mensagens.
 
+A nota de resolução do Admin é interna (Admin e auditoria); o cliente vê o resultado, não a nota. O lojista vê, no card do pedido na Central, motivo, itens e status de devolução, cancelamento e disputa, sem ações: a mediação continua no Admin (decisões de 15 e 16/10/2026).
+
 ---
 
 # 27. Avaliações
 
-Avaliação de produto (`ProductReview`) e de seller (`SellerReview`) são entidades diferentes; não misturar as duas reputações. Somente compradores válidos avaliam.
+Avaliação de produto (`ProductReview`) e de seller (`SellerReview`) são entidades diferentes; não misturar as duas reputações. Somente compradores válidos avaliam. A nota é inteira, de 1 a 5 (a casa decimal só aparece na média); a avaliação aceita fotos, não vídeo; o servidor recusa nota quebrada e vídeo.
 
 ---
 
@@ -385,6 +396,8 @@ O seller pode ser CPF ou CNPJ e o cadastro precisa de aprovação do Moto Shop. 
 # 31. Permissões de seller
 
 Preparar o sistema para múltiplos membros por seller, com roles (`OWNER`, `ADMIN`, `CATALOG`, `ORDERS`, `FINANCE`) e, internamente, permissions granulares (`PRODUCT_CREATE`, `PRODUCT_UPDATE`, `PRODUCT_DELETE`, `ORDER_READ`, `ORDER_UPDATE`, `FINANCE_READ`, `SELLER_MANAGE`).
+
+A entrada na equipe é por convite com aceite: o lojista convida por e-mail e a pessoa só vira membro ao aceitar com a conta daquele e-mail verificado (`SellerMemberInvite`). Ninguém é adicionado sem consentimento.
 
 ---
 

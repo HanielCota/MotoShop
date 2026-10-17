@@ -7,15 +7,7 @@ import { cn } from "@/lib/utils";
 
 export type GalleryImage = { id: string; url: string; alt: string };
 
-export function ProductGallery({
-  images,
-  productName,
-  isDemo,
-}: {
-  images: GalleryImage[];
-  productName: string;
-  isDemo: boolean;
-}) {
+export function ProductGallery({ images, productName }: { images: GalleryImage[]; productName: string }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const active = images[activeIndex] ?? images[0];
 
@@ -39,11 +31,6 @@ export function ProductGallery({
             Imagem do produto em preparação
           </div>
         )}
-        {isDemo ? (
-          <span className="bg-foreground text-background absolute top-4 left-4 rounded-full px-3 py-1.5 text-xs font-bold tracking-[0.12em] uppercase shadow-sm">
-            Demonstração
-          </span>
-        ) : null}
       </div>
       {images.length > 1 ? (
         <ul className="mt-3 grid grid-cols-4 gap-3 sm:grid-cols-5" aria-label="Imagens do produto">

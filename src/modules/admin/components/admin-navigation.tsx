@@ -3,7 +3,8 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
-import { ChevronDown } from "lucide-react";
+
+import { Disclosure } from "@/components/ui/disclosure";
 
 import { adminSections } from "../admin-sections";
 
@@ -52,15 +53,12 @@ export function AdminNavigation() {
 
   return (
     <>
-      <details key={pathname} className="bg-card rounded-lg border p-3 lg:hidden">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-1 py-1 text-sm font-semibold marker:hidden [&::-webkit-details-marker]:hidden">
-          Navegar pelo Admin{" "}
-          <ChevronDown aria-hidden="true" className="size-4 transition-transform [details[open]_&]:rotate-180" />
-        </summary>
-        <div className="mt-4 border-t pt-4">
+      {/* Remonta a cada página para fechar depois de navegar; cabeçalho de 44px no celular (DS-09). */}
+      <Disclosure key={pathname} variant="section" summary="Navegar pelo Admin" className="lg:hidden">
+        <div className="border-t pt-4">
           <AdminLinks />
         </div>
-      </details>
+      </Disclosure>
       <aside className="bg-card hidden self-start rounded-lg border p-3 lg:sticky lg:top-6 lg:block">
         <AdminLinks />
       </aside>

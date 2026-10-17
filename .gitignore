@@ -64,3 +64,7 @@ next-env.d.ts
 
 # Local git worktrees
 .claude/worktrees/
+
+# Local review screenshots and work queues from the Claude chats
+.claude/fila-*/
+.claude/t13/

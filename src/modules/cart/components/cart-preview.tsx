@@ -91,12 +91,7 @@ export function CartPreview() {
       const result = await clearCartAction();
       if (result.error) return { error: result.error };
 
-      setData((current) => ({
-        items: [],
-        itemCount: 0,
-        subtotalInCents: 0,
-        paymentAvailable: current?.paymentAvailable ?? false,
-      }));
+      setData({ items: [], itemCount: 0, subtotalInCents: 0 });
       setMessage(result.success);
       return {};
     } catch (error) {
@@ -207,9 +202,6 @@ export function CartPreview() {
                   <span>Subtotal</span>
                   <strong>{formatMoneyInCents(data.subtotalInCents)}</strong>
                 </div>
-                {data.paymentAvailable ? null : (
-                  <p className="text-warning-foreground mt-3 text-xs font-semibold">Pagamento ainda não liberado</p>
-                )}
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   <Link
                     href="/cart"
@@ -218,7 +210,7 @@ export function CartPreview() {
                     Ver carrinho
                   </Link>
                   <Link href="/checkout" className={cn(buttonVariants({ className: "w-full font-semibold" }))}>
-                    {data.paymentAvailable ? "Finalizar compra" : "Conferir frete"}
+                    Finalizar compra
                   </Link>
                 </div>
               </>

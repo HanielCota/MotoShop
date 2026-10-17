@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { Package } from "lucide-react";
 
+import { Disclosure } from "@/components/ui/disclosure";
 import { ActionForm } from "@/components/ui/action-form";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -94,10 +95,7 @@ export async function SellerProductsCard({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <details className="mb-4" open={hasFilters}>
-          <summary className="flex min-h-11 cursor-pointer list-none items-center font-semibold [&::-webkit-details-marker]:hidden">
-            Filtros de produtos
-          </summary>
+        <Disclosure variant="section" summary="Filtros de produtos" defaultOpen={hasFilters} className="mb-4">
           <FilterForm resetHref={basePath} action={basePath} label="Filtrar produtos">
             <FilterText
               label="Buscar produto"
@@ -171,7 +169,7 @@ export async function SellerProductsCard({
               options={productSortOptions}
             />
           </FilterForm>
-        </details>
+        </Disclosure>
         {result.products.length === 0 ? (
           <EmptyState
             variant="inline"
