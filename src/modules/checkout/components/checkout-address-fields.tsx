@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DesignSelect } from "@/components/ui/design-select";
 import type { CustomerAddress } from "@/modules/customers/queries/customer-addresses";
@@ -29,7 +30,7 @@ export function CheckoutAddressFields({
   isQuoting: boolean;
 }) {
   return (
-    <section aria-labelledby="checkout-address-title" className="bg-card rounded-xl border p-4 sm:p-6">
+    <Card size="section" render={<section aria-labelledby="checkout-address-title" />}>
       <h2 id="checkout-address-title" className="section-title">
         Endereço de entrega
       </h2>
@@ -138,6 +139,6 @@ export function CheckoutAddressFields({
           />
         </div>
       </div>
-    </section>
+    </Card>
   );
 }

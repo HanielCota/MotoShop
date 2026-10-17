@@ -1,5 +1,6 @@
 "use client";
 
+import { Card } from "@/components/ui/card";
 import { ChevronDown } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 
@@ -38,9 +39,10 @@ export function CheckoutOrderSummary({
   const itemLabel = `${cartSummary.itemCount} ${cartSummary.itemCount === 1 ? "item" : "itens"}`;
 
   return (
-    <aside
-      aria-labelledby="checkout-summary-title"
-      className="bg-card h-fit min-w-0 rounded-xl border p-4 sm:p-6 lg:sticky lg:top-24"
+    <Card
+      size="section"
+      render={<aside aria-labelledby="checkout-summary-title" />}
+      className="h-fit min-w-0 lg:sticky lg:top-24"
     >
       <div className="flex items-center justify-between gap-3">
         <h2 id="checkout-summary-title" className="section-title">
@@ -121,6 +123,6 @@ export function CheckoutOrderSummary({
       </dl>
 
       {children}
-    </aside>
+    </Card>
   );
 }
