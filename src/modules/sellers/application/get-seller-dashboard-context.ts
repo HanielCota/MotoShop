@@ -2,7 +2,8 @@ import "server-only";
 
 import { cache } from "react";
 import type { SellerStatus } from "@/generated/prisma/enums";
-import { redirect } from "next/navigation";
+import type { Route } from "next";
+import { notFound, redirect } from "next/navigation";
 
 import { requireAuthenticatedUser, requireSellerAccess } from "@/modules/auth/application/authorization";
 import {
@@ -10,6 +11,7 @@ import {
   type SellerMemberRole,
   type SellerPermission,
 } from "@/modules/auth/domain/seller-permissions";
+import { sellerPermissionDeniedPath } from "@/modules/sellers/domain/permission-denied";
 import { getUserSellerMemberships } from "@/modules/sellers/queries/sellers";
 
 /** Capacidades da Central do Lojista derivadas do papel do membro (fonte única do gating de UI). */
@@ -72,13 +74,17 @@ export const getSellerDashboardContext = cache(async (): Promise<SellerDashboard
 });
 
 /**
- * Exige loja aprovada com vitrine (e, opcionalmente, uma permissão). Mantém a mesma
- * semântica de redirecionamento de `requireSellerAccess`.
+ * Exige loja aprovada com vitrine (e, opcionalmente, uma permissão), com a mesma semântica de
+ * `requireSellerAccess`: quem não é membro recebe 404, loja em análise volta para /seller e
+ * membro sem a permissão vai para a página de área restrita.
  */
 export async function requireSellerDashboardContext(permission?: SellerPermission) {
   const context = await getSellerDashboardContext();
+  if (context.status === "no-seller") notFound();
   if (context.status !== "ready" || !context.seller.store) redirect("/seller");
-  if (permission && !hasSellerPermission(context.membership.role, permission)) redirect("/seller?error=permission");
+  if (permission && !hasSellerPermission(context.membership.role, permission)) {
+    redirect(sellerPermissionDeniedPath(permission) as Route);
+  }
   return { ...context, store: context.seller.store };
 }
 
