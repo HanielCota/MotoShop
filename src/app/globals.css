@@ -228,7 +228,32 @@ textarea:-webkit-autofill[aria-invalid="true"] {
     0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent);
 }
 
+/* Field that failed validation on submit: two quick red pulses (see `shared/forms/field-error-focus.ts`).
+   Unlayered so the pulse wins over the ring utilities while it runs. */
+@keyframes field-error-flash {
+  0%,
+  50%,
+  100% {
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive) 20%, transparent);
+    background-color: transparent;
+  }
+  25%,
+  75% {
+    box-shadow: 0 0 0 5px color-mix(in oklch, var(--destructive) 45%, transparent);
+    background-color: color-mix(in oklch, var(--destructive) 10%, transparent);
+  }
+}
+
+[data-error-flash] {
+  animation: field-error-flash 600ms ease-in-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  /* Only the static red border stays. */
+  [data-error-flash] {
+    animation: none;
+  }
+
   *,
   *::before,
   *::after {

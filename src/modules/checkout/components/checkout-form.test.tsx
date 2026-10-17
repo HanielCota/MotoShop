@@ -80,7 +80,7 @@ it("shows a recoverable error when the quote request rejects", async () => {
   expect(await screen.findByRole("button", { name: "Calcular frete" })).toBeEnabled();
 });
 
-it("links field errors and focuses the summary alert when validation fails", async () => {
+it("links field errors and focuses the first wrong field when validation fails", async () => {
   quote.mockResolvedValue(sellerQuote("Pista Norte"));
   render(<CheckoutForm cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
   fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "01001000" } });
@@ -89,8 +89,10 @@ it("links field errors and focuses the summary alert when validation fails", asy
   expect(screen.getByLabelText("Seu CPF")).toHaveValue("111.111.111-11");
   fireEvent.click(screen.getByRole("button", { name: "Finalizar pedido" }));
 
-  const alert = await screen.findByText("Revise os campos destacados para continuar.");
-  await waitFor(() => expect(alert.closest("[tabindex='-1']")).toHaveFocus());
+  await screen.findByText("Revise os campos destacados para continuar.");
+  // The notice stays by the button; focus goes to the first field marked wrong, which flashes.
+  await waitFor(() => expect(document.activeElement).toHaveAttribute("aria-invalid", "true"));
+  expect(document.activeElement).toHaveAttribute("data-error-flash");
   const cpf = screen.getByLabelText("Seu CPF");
   expect(cpf).toHaveAttribute("aria-invalid", "true");
   const [errorId] = defined(cpf.getAttribute("aria-describedby")).split(" ");
