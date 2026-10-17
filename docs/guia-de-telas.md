@@ -1,6 +1,6 @@
 # Guia de telas — O Moto Shop
 
-Roteiro para revisar todas as telas com dados de demonstração. Tudo o que aparece com **"· demonstração"** ou **"(demonstração)"** é fictício: lojas, produtos, preços e pedidos foram criados só para esta revisão e não podem ser comprados.
+Roteiro para revisar todas as telas com dados de demonstração. Tudo o que aparece com **"· demonstração"** ou **"(demonstração)"** é fictício: lojas, produtos, preços e pedidos foram criados só para esta revisão. A compra desses produtos é simulada: o checkout mostra "Compra concluída", mas nada é gravado (nenhum pedido, pagamento ou e-mail).
 
 > O pagamento real está **bloqueado de propósito** (o Mercado Pago ainda não liberou a divisão de pagamento entre lojistas). Por isso o checkout mostra um aviso e não cria pedidos; esse comportamento é esperado.
 
@@ -98,8 +98,8 @@ Revise cada tela no **celular** (no Chrome: F12 → ícone de celular → iPhone
 | Categoria          | `/categoria/<slug>` (pela home ou pelo produto)                   | Página de categoria                                                                                                                                                   |
 | Marca              | `/marca/<slug>` (link da marca no produto)                        | Página de marca                                                                                                                                                       |
 | Moto               | `/moto/<fabricante>/<modelo>/<ano>` (pela busca "Minha Moto")     | Peças compatíveis com a moto                                                                                                                                          |
-| Carrinho           | `/cart`                                                           | Itens agrupados por loja, subtotal por loja, aviso de pagamento indisponível, barra fixa no celular                                                                   |
-| Checkout           | `/checkout`                                                       | Formulário (CEP preenche o endereço), cotação de frete, aviso de pagamento indisponível                                                                               |
+| Carrinho           | `/cart`                                                           | Itens agrupados por loja, subtotal por loja, barra fixa no celular                                                                                                    |
+| Checkout           | `/checkout`                                                       | Formulário (CEP preenche o endereço), cotação de frete, só Pix com produtos de teste e tela "Compra concluída" sem gravar pedido                                      |
 | Login / cadastro   | `/login` e `/login?modo=cadastro`                                 | Erros por campo, botão de mostrar senha                                                                                                                               |
 | Esqueci a senha    | `/forgot-password`                                                | Recuperação de acesso                                                                                                                                                 |
 | Página inexistente | `/qualquer-coisa`                                                 | Tela de "não encontrado"                                                                                                                                              |
