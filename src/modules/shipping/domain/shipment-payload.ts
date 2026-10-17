@@ -1,4 +1,5 @@
 import type { ShippingAddress, ShippingProduct, ShippingVolume } from "@/shared/shipping/shipping-provider";
+import { onlyDigits } from "@/modules/customers/domain/tax-id";
 import { ApplicationError } from "@/shared/errors/application-error";
 
 export type ShipmentOriginStore = {
@@ -59,7 +60,8 @@ export function buildShipmentData(sellerOrder: ShipmentPayloadSource) {
   const to: ShippingAddress = {
     name: sellerOrder.order.customerName,
     email: sellerOrder.order.customerEmail,
-    phone: sellerOrder.order.customerPhone,
+    // Melhor Envio examples send digits only; phones saved before the mask may still carry punctuation.
+    phone: onlyDigits(sellerOrder.order.customerPhone),
     ...(sellerOrder.order.customerTaxId ? { document: sellerOrder.order.customerTaxId } : {}),
     address: address.street,
     number: address.number,
@@ -140,7 +142,7 @@ export function buildOriginAddress(store: ShipmentOriginStore, sellerType: "INDI
   return {
     name,
     email,
-    phone,
+    phone: onlyDigits(phone),
     ...(sellerType === "COMPANY" ? { company_document: document } : { document }),
     address: street,
     number,
