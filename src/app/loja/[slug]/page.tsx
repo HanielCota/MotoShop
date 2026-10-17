@@ -364,7 +364,7 @@ export default async function PublicStorePage({
               </Button>
             </form>
             {store.seller.sellerReviews.map((review) => (
-              <article key={review.id} className="border-border bg-card rounded-lg border p-4">
+              <Card key={review.id} size="section" render={<article />} className="rounded-lg text-sm sm:p-4">
                 <div className="flex items-center justify-between gap-3">
                   <ReviewStars rating={review.rating} />
                   <time className="text-muted-foreground text-xs" dateTime={review.createdAt.toISOString()}>
@@ -374,7 +374,7 @@ export default async function PublicStorePage({
                 <p className="mt-2 text-sm font-medium">{review.user.name ?? "Cliente"}</p>
                 {review.comment ? <p className="text-muted-foreground mt-2 text-sm">{review.comment}</p> : null}
                 <p className="text-muted-foreground mt-3 text-xs">Compra verificada</p>
-              </article>
+              </Card>
             ))}
             {store.reviewPageCount > 1 ? (
               <Pagination

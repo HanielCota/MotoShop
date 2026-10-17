@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/card";
 import type { Metadata, Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -66,11 +67,7 @@ export default async function CartPage() {
               );
               const storeItemCount = sellerItems.reduce((total, item) => total + item.quantity, 0);
               return (
-                <section
-                  key={sellerId}
-                  aria-labelledby={`cart-store-${sellerId}`}
-                  className="bg-card rounded-xl border p-4 sm:p-6"
-                >
+                <Card key={sellerId} size="section" render={<section aria-labelledby={`cart-store-${sellerId}`} />}>
                   <div className="flex items-start gap-3">
                     <Store aria-hidden="true" className="text-brand-strong mt-1 size-5 shrink-0" />
                     <div>
@@ -140,14 +137,15 @@ export default async function CartPage() {
                     </span>
                     <span className="font-semibold tabular-nums">{formatMoneyInCents(storeSubtotalInCents)}</span>
                   </div>
-                </section>
+                </Card>
               );
             })}
           </div>
 
-          <aside
-            aria-labelledby="cart-summary-title"
-            className="bg-card h-fit rounded-xl border p-4 sm:p-6 lg:sticky lg:top-24"
+          <Card
+            size="section"
+            render={<aside aria-labelledby="cart-summary-title" />}
+            className="h-fit lg:sticky lg:top-24"
           >
             <h2 id="cart-summary-title" className="section-title">
               Resumo
@@ -176,7 +174,7 @@ export default async function CartPage() {
             <p className="text-muted-foreground mt-3 text-xs">
               Preços e estoque são confirmados novamente ao finalizar a compra.
             </p>
-          </aside>
+          </Card>
 
           {/* Mobile/tablet: CTA sempre ao alcance do polegar; o resumo completo segue acima. */}
           <div

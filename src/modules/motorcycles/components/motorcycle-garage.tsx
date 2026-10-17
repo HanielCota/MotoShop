@@ -1,4 +1,5 @@
 "use client";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -63,7 +64,7 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
   );
 
   return (
-    <article className="border-border bg-card rounded-2xl border p-5 shadow-sm sm:p-6">
+    <Card size="section" render={<article />} className="rounded-2xl p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start gap-4">
         <div className="bg-moto-brand-surface text-brand-strong flex size-12 shrink-0 items-center justify-center rounded-xl">
           <Motorbike aria-hidden="true" className="size-6" />
@@ -153,7 +154,7 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
       <div className="mt-3 space-y-1" aria-live="polite">
         <ActionMessage state={primaryState} />
       </div>
-    </article>
+    </Card>
   );
 }
 
@@ -212,9 +213,10 @@ export function MotorcycleGarage({
         )}
       </section>
 
-      <section
-        className="border-border bg-card rounded-2xl border p-5 shadow-sm sm:p-6"
-        aria-labelledby="add-motorcycle-title"
+      <Card
+        size="section"
+        render={<section aria-labelledby="add-motorcycle-title" />}
+        className="rounded-2xl p-5 shadow-sm sm:p-6"
       >
         <div className="flex items-center gap-2">
           <h2 id="add-motorcycle-title" className="section-title text-foreground">
@@ -259,7 +261,7 @@ export function MotorcycleGarage({
           ) : null}
           <ActionMessage state={state} />
         </form>
-      </section>
+      </Card>
     </div>
   );
 }
