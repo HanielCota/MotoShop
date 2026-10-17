@@ -40,6 +40,26 @@ it("paginates all pending payments and dispatches isolated recovery jobs", async
   );
   expect(step.sendEvent).toHaveBeenCalledTimes(2);
 });
+it("stops asking the provider about payments older than seven days (A8)", async () => {
+  vi.useFakeTimers({ now: new Date("2026-10-17T12:00:00.000Z") });
+  try {
+    vi.mocked(db.payment.findMany).mockResolvedValueOnce([]);
+
+    expect(await schedule({ step })).toEqual({ dispatched: 0 });
+    expect(db.payment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          createdAt: {
+            gte: new Date("2026-10-10T12:00:00.000Z"),
+            lt: new Date("2026-10-17T11:58:00.000Z"),
+          },
+        }),
+      }),
+    );
+  } finally {
+    vi.useRealTimers();
+  }
+});
 it("does nothing without configured credentials", async () => {
   const token = testEnv.MERCADO_PAGO_ACCESS_TOKEN;
   testEnv.MERCADO_PAGO_ACCESS_TOKEN = undefined;

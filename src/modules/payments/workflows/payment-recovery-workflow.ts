@@ -3,12 +3,17 @@ import { env } from "@/config/env";
 import { db } from "@/lib/database";
 import { inngest } from "@/lib/inngest/client";
 import { recoverPayment } from "../application/recover-payment";
+import { paymentRecoveryWindow } from "../domain/unresolved-payment";
 
 export const schedulePaymentRecovery = inngest.createFunction(
   { id: "schedule-payment-recovery", retries: 3, triggers: [{ cron: "*/10 * * * *" }] },
   async ({ step }) => {
     if (!env.MERCADO_PAGO_ACCESS_TOKEN) return { skipped: true };
-    const cutoff = await step.run("cutoff", () => new Date(Date.now() - 120_000).toISOString());
+    // Frozen once per run (step results are replayed): every page uses the same window.
+    const recoveryWindow = await step.run("window", () => {
+      const { createdAfter, createdBefore } = paymentRecoveryWindow(new Date());
+      return { createdAfter: createdAfter.toISOString(), createdBefore: createdBefore.toISOString() };
+    });
     let cursor = "";
     let count = 0;
     // Keyset pagination visits all eligible payments, including those behind
@@ -20,7 +25,7 @@ export const schedulePaymentRecovery = inngest.createFunction(
             provider: "MERCADO_PAGO",
             status: { in: ["PENDING", "PROCESSING", "AUTHORIZED"] },
             order: { status: "PENDING_PAYMENT" },
-            createdAt: { lt: new Date(cutoff) },
+            createdAt: { gte: new Date(recoveryWindow.createdAfter), lt: new Date(recoveryWindow.createdBefore) },
             ...(cursor ? { id: { gt: cursor } } : {}),
           },
           orderBy: { id: "asc" },
