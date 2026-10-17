@@ -1,8 +1,12 @@
+"use client";
+
 import { useId } from "react";
 
 import type { FieldSize } from "@/components/ui/field-size";
 import { Input } from "@/components/ui/input";
 import { formatDateFilter, isInvalidDateFilter } from "@/lib/date-filter";
+import { maskDateTyping } from "@/shared/forms/date-mask";
+import { maskOnChange } from "@/shared/forms/digit-mask";
 
 /**
  * Date field of the GET filters. No `pattern`/`title`: the browser bubble and OS tooltip are not
@@ -33,6 +37,7 @@ export function DateFilterInput({
         maxLength={10}
         placeholder="dd/mm/aaaa"
         defaultValue={formatDateFilter(value)}
+        onChange={maskOnChange(maskDateTyping)}
         aria-invalid={invalid || undefined}
         aria-describedby={invalid ? errorId : undefined}
         size={size}
