@@ -70,3 +70,33 @@ describe("quoteShippingForCart", () => {
     );
   });
 });
+
+describe("own shipping fallback when the seller's Melhor Envio token fails", () => {
+  const ownMethod = {
+    id: "method-1",
+    active: true,
+    name: "Motoboy",
+    postalCodeStart: "01000000",
+    postalCodeEnd: "01999999",
+    priceInCents: 1500,
+    estimatedDeliveryDays: 2,
+  };
+  const expiredAuthorization = new Error("A autorização do Melhor Envio expirou. Reconecte a conta da loja.");
+  const cart = { items: [{ quantity: 1, variant }] } as never;
+
+  it("offers the store's own shipping instead of failing the checkout", async () => {
+    mocks.findMethods.mockResolvedValue([ownMethod]);
+    mocks.getToken.mockRejectedValue(expiredAuthorization);
+
+    const [seller] = await quoteShippingForCart(cart, "01310000");
+
+    expect(seller?.quotes).toEqual([expect.objectContaining({ provider: "OWN", priceInCents: 1500 })]);
+    expect(mocks.quote).not.toHaveBeenCalled();
+  });
+
+  it("keeps the error when the store has no own shipping to fall back on", async () => {
+    mocks.getToken.mockRejectedValue(expiredAuthorization);
+
+    await expect(quoteShippingForCart(cart, "01310000")).rejects.toThrow("autorização do Melhor Envio expirou");
+  });
+});

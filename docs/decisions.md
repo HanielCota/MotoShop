@@ -26,7 +26,7 @@ Decisões pontuais tomadas ao longo do MVP, agrupadas por domínio. Complementam
 - Ao entrar (ou criar conta) com carrinho de visitante ativo, o carrinho guest é mesclado no carrinho ativo do usuário na primeira leitura do carrinho (`getCartIdentity`): soma quantidades por variante limitadas ao estoque disponível e a 99 por item, ignora variantes não compráveis (demo/inativas/arquivadas/sem estoque), nunca reduz quantidades já existentes, trava os dois carrinhos na mesma transação, marca o guest como `ABANDONED` (idempotente) e remove o cookie do visitante.
 - Totais exibidos no checkout são informativos até a submissão; o serviço de checkout recalcula preços, estoque, cupom e frete no servidor.
 - Repetições da mesma chave de idempotência recuperam o pedido existente antes do limite de pendências. O teto por CPF é conferido sob lock na transação que cria o pedido, impedindo que checkouts simultâneos ultrapassem o limite.
-- A disponibilidade do pagamento exibida no carrinho e no checkout vem de `getCheckoutPaymentAvailability`, que reaproveita as mesmas verificações do serviço de checkout; nunca fixar o valor na página.
+- The storefront no longer displays payment-availability notices (16 October 2026). Real checkout still uses `getCheckoutPaymentAvailability` and the server payment checks. Test-only carts use the Pix-only simulation; mixed carts cannot create a real order containing test products.
 - Endereços salvos pertencem exclusivamente ao usuário autenticado em `CustomerAddress`; o checkout pode usá-los como preenchimento, mas sempre grava um snapshot independente em `OrderAddress`.
 
 ### Cupons e descontos
@@ -246,10 +246,11 @@ Filtros e ordenações já existentes, todos sob a regra acima:
 
 ## 9. Dados de demonstração
 
+- Simulated checkout removes only cart items whose IDs and quantities still match the priced snapshot. Items added or changed while shipping is calculated remain in the cart.
+
 - Exceção explícita aprovada para apresentação antes do catálogo oficial: produtos marcados `isDemo` podem existir no banco com fotos locais geradas e valores/estoque ilustrativos. Desde 16/10/2026 (decisão do responsável) o storefront se comporta como produção: nenhuma tela pública mostra aviso de demonstração (selo, "Valor ilustrativo", aviso de produto de apresentação, "Compras em breve" ou aviso de pagamento não liberado). Os nomes "(demonstração)" gravados no banco e o selo desenhado nas imagens ficam até uma mudança de dados aprovada à parte. Produtos de teste entram no carrinho, na cotação de frete e no checkout, mas terminam numa compra simulada (16/10/2026): com o carrinho só de produtos de teste, o servidor valida e calcula tudo como numa compra real (dados, frete, cupom e estoque) e responde com a tela "Compra concluída". Nada da compra é gravado: nenhum pedido, reserva de estoque, uso de cupom, pagamento, e-mail, job ou chamada ao Mercado Pago; a única escrita é esvaziar o carrinho do próprio cliente, e o limite de tentativas do checkout continua valendo. Só Pix, sem campos de cartão (que já chamariam o Mercado Pago). O pedido real continua recusando produto de teste no servidor, e um teste automatizado garante que a compra simulada não grava nada. Produtos de teste não emitem Product JSON-LD, não entram no sitemap e levam `noindex`. O seed é isolado por slugs `demo-*` e deve permanecer idempotente; nenhuma loja ou produto real pode ser sobrescrito. As lojas demo ficam `PENDING` até o código de bloqueio estar publicado.
 - As imagens geradas pelo seed de revisão (`public/images/demo/review-*.webp`) são versionadas no git apenas enquanto o site público for demonstração, para não darem 404 no deploy. Saem antes do lançamento junto com os dados demo, via `pnpm db:remove:review`; como o script só apaga os arquivos localmente, a remoção precisa ser commitada.
 - IDs determinísticos do seed de revisão usam o prefixo `czrvw` para passar na validação `z.cuid()` das Server Actions.
-- A palavra "Demonstração" aparece uma vez por card, no selo, e no nome do produto ou da loja como "(demonstração)"/"· demonstração"; nenhum outro texto repete o aviso (15/10/2026).
 
 ---
 

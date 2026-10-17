@@ -189,7 +189,7 @@ async function hasShippingIntegration(sellerId: string, fromPostalCode: string |
 
 /**
  * Quotes through the seller's Melhor Envio account when it is connected and every product is
- * measured. A provider failure only surfaces when the seller has no own shipping to fall back on.
+ * measured. A provider or token failure only surfaces when the seller has no own shipping to fall back on.
  */
 async function quoteProviderShipping(input: {
   sellerId: string;
@@ -203,10 +203,10 @@ async function quoteProviderShipping(input: {
   const { sellerId, fromPostalCode, products } = input;
   if (!input.hasIntegration || !fromPostalCode || !products) return [];
 
-  const accessToken = await getSellerMelhorEnvioAccessToken(sellerId);
-  if (!accessToken) return [];
-
   try {
+    // Token expirado, renovação recusada ou ilegível também cai para o frete próprio.
+    const accessToken = await getSellerMelhorEnvioAccessToken(sellerId);
+    if (!accessToken) return [];
     return await quoteIntegratedShipping(
       sellerId,
       { fromPostalCode, toPostalCode: input.toPostalCode, products },
