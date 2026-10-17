@@ -122,3 +122,13 @@ it("offers sign-in to visitors and the account to signed-in customers", () => {
   expect(signedIn.queryByRole("link", { name: "Entrar" })).not.toBeInTheDocument();
   expect(signedIn.getByRole("link", { name: "Minha conta" })).toHaveAttribute("href", "/account/profile");
 });
+
+it("shows the payment methods right below the institutional links, in the same column", () => {
+  navigation.pathname = "/";
+  renderFooter();
+  const column = within(screen.getByTestId("footer-institutional-column"));
+
+  expect(column.getByRole("navigation", { name: "Institucional" })).toBeInTheDocument();
+  expect(column.getByRole("list", { name: "Formas de pagamento aceitas" })).toBeInTheDocument();
+  expect(column.queryByRole("heading", { name: "Horário de atendimento" })).not.toBeInTheDocument();
+});
