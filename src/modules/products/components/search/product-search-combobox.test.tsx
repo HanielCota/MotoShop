@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -6,7 +6,9 @@ const navigation = vi.hoisted(() => ({ push: vi.fn() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: navigation.push }) }));
 vi.mock("next/link", () => ({ default: (props: ComponentProps<"a">) => <a {...props} /> }));
-vi.mock("next/image", () => ({ default: () => <span data-testid="suggestion-image" /> }));
+vi.mock("next/image", () => ({
+  default: ({ sizes }: { sizes?: string }) => <span data-testid="suggestion-image" data-sizes={sizes} />,
+}));
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 import { ProductSearchCombobox } from "./product-search-combobox";
@@ -83,6 +85,17 @@ describe("ProductSearchCombobox", () => {
     expect(screen.getByRole("option", { name: /Capacete Apex.*899,90/ })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /Capacete Kid.*499,90/ })).toBeInTheDocument();
     expect(screen.queryByText(/demonstração/)).not.toBeInTheDocument();
+  });
+
+  it("shows suggestion thumbnails about 20% bigger than before: 58px instead of 48px", async () => {
+    const { input } = renderSearch();
+
+    await typeAndWaitForSuggestions(input, "capa");
+
+    const image = within(screen.getByRole("option", { name: /Capacete Apex/ })).getByTestId("suggestion-image");
+    expect(image).toHaveAttribute("data-sizes", "58px");
+    expect(image.parentElement).toHaveClass("size-14.5");
+    expect(image.parentElement).not.toHaveClass("size-12");
   });
 
   it("moves through suggestions with the arrows and opens the highlighted one on Enter", async () => {
