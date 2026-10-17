@@ -2,6 +2,9 @@
 import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatCep } from "@/modules/customers/domain/brazilian-address";
+import { formatTaxId } from "@/modules/customers/domain/tax-id";
+import { maskOnChange, type DigitMask } from "@/shared/forms/digit-mask";
 
 import { updateShippingOriginAction, type SellerActionState } from "../actions/seller-actions";
 import { useClientValidation } from "@/shared/forms/client-validation";
@@ -36,12 +39,21 @@ export function ShippingOriginForm({ store }: ShippingOriginFormProps) {
       <Field label="Nome do remetente" name="originName" defaultValue={store.originName ?? ""} />
       <Field label="E-mail operacional" name="originEmail" type="email" defaultValue={store.originEmail ?? ""} />
       <Field label="Telefone" name="originPhone" inputMode="tel" defaultValue={store.originPhone ?? ""} />
-      <Field label="CPF ou CNPJ" name="originDocument" inputMode="numeric" defaultValue={store.originDocument ?? ""} />
+      <Field
+        label="CPF ou CNPJ"
+        name="originDocument"
+        inputMode="numeric"
+        mask={formatTaxId}
+        maxLength={18}
+        defaultValue={formatTaxId(store.originDocument ?? "")}
+      />
       <Field
         label="CEP de origem"
         name="originPostalCode"
         inputMode="numeric"
-        defaultValue={store.originPostalCode ?? ""}
+        mask={formatCep}
+        maxLength={9}
+        defaultValue={formatCep(store.originPostalCode ?? "")}
       />
       <Field label="Rua" name="originStreet" defaultValue={store.originStreet ?? ""} />
       <Field label="Número" name="originNumber" defaultValue={store.originNumber ?? ""} />
@@ -78,6 +90,7 @@ function Field({
   type = "text",
   inputMode,
   maxLength,
+  mask,
   required = true,
 }: {
   label: string;
@@ -86,6 +99,8 @@ function Field({
   type?: "text" | "email";
   inputMode?: "numeric" | "tel";
   maxLength?: number;
+  /** Formats the value while typing; the server keeps reading only the digits. */
+  mask?: DigitMask;
   required?: boolean;
 }) {
   return (
@@ -97,6 +112,7 @@ function Field({
         inputMode={inputMode}
         maxLength={maxLength}
         defaultValue={defaultValue}
+        onChange={mask ? maskOnChange(mask) : undefined}
         required={required}
       />
     </label>

@@ -9,11 +9,13 @@ import { DesignSelect } from "@/components/ui/design-select";
 import { useRef } from "react";
 
 import { slugify } from "@/lib/utils";
+import { formatCep } from "@/modules/customers/domain/brazilian-address";
 
 import { createSellerAction, type SellerActionState } from "@/modules/sellers/actions/seller-actions";
 import { validateSellerOnboardingForm } from "@/modules/sellers/schemas/seller-onboarding";
 import { STORE_SLUG_EXAMPLE } from "@/modules/sellers/schemas/store-slug";
 import { useClientValidation } from "@/shared/forms/client-validation";
+import { maskOnChange } from "@/shared/forms/digit-mask";
 import { useServerActionState } from "@/shared/forms/server-action-submit";
 
 const initialState: SellerActionState = {};
@@ -66,7 +68,9 @@ export function SellerOnboardingForm() {
           inputMode="numeric"
           pattern="\d{5}-?\d{3}"
           placeholder="01001-000"
-          defaultValue={state.values?.originPostalCode ?? ""}
+          maxLength={9}
+          defaultValue={formatCep(state.values?.originPostalCode ?? "")}
+          onChange={maskOnChange(formatCep)}
           aria-describedby="origin-postal-code-help"
           required
         />

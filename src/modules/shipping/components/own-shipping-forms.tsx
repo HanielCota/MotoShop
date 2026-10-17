@@ -14,6 +14,8 @@ import {
 import { validateOwnShippingMethodForm } from "../domain/own-shipping";
 import { useClientValidation } from "@/shared/forms/client-validation";
 import { useServerActionState } from "@/shared/forms/server-action-submit";
+import { maskOnChange } from "@/shared/forms/digit-mask";
+import { formatCep } from "@/modules/customers/domain/brazilian-address";
 
 const initial: OwnShippingState = {};
 function Feedback({ state, clientError = null }: { state: OwnShippingState; clientError?: string | null }) {
@@ -37,12 +39,22 @@ export function OwnShippingMethodForm() {
           inputMode="numeric"
           pattern="[0-9]{5}-?[0-9]{3}"
           placeholder="00000-000"
+          maxLength={9}
+          onChange={maskOnChange(formatCep)}
           required
         />
       </label>
       <label className="grid gap-2">
         CEP final
-        <Input name="postalCodeEnd" inputMode="numeric" pattern="[0-9]{5}-?[0-9]{3}" placeholder="00000-000" required />
+        <Input
+          name="postalCodeEnd"
+          inputMode="numeric"
+          pattern="[0-9]{5}-?[0-9]{3}"
+          placeholder="00000-000"
+          maxLength={9}
+          onChange={maskOnChange(formatCep)}
+          required
+        />
       </label>
       <label className="grid gap-2">
         Preço por pedido da loja (R$)

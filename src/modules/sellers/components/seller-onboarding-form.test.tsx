@@ -20,6 +20,14 @@ it("suggests the store identifier from the name until the seller edits it", () =
   expect(slug).toHaveValue("luiz-motos");
 });
 
+it("formats the origin CEP while typing", () => {
+  render(<SellerOnboardingForm />);
+  const postalCode = screen.getByLabelText(/CEP de origem dos envios/);
+
+  fireEvent.change(postalCode, { target: { value: "01001000" } });
+  expect(postalCode).toHaveValue("01001-000");
+});
+
 it("goes back to suggesting when the seller clears the identifier", () => {
   render(<SellerOnboardingForm />);
   const slug = screen.getByLabelText("Identificador da loja");
