@@ -67,5 +67,4 @@ next-env.d.ts
 
 # Local review screenshots and work queues from the Claude chats
 .claude/fila-*/
-.claude/margot-*/
 .claude/t13/
