@@ -20,6 +20,7 @@ import { SellerInventoryHistoryCard } from "@/modules/sellers/components/dashboa
 import { SellerLowStockCard } from "@/modules/sellers/components/dashboard/seller-low-stock-card";
 import { SellerOverviewStats } from "@/modules/sellers/components/dashboard/seller-overview-stats";
 import { getLegacySellerDashboardRedirect } from "@/modules/sellers/application/legacy-dashboard-links";
+import { dashboardPanelsGridClassName } from "@/modules/sellers/domain/dashboard-grid";
 
 export const metadata: Metadata = {
   title: "Central do Lojista",
@@ -100,7 +101,7 @@ export default async function SellerHomePage({ searchParams }: { searchParams: S
         </Suspense>
       ) : null}
       {permissions.canManageCatalog || permissions.canReadFinances ? (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className={dashboardPanelsGridClassName(countVisiblePanels(permissions))}>
           {permissions.canManageCatalog ? (
             <Suspense fallback={<SellerCardSkeleton label="Carregando estoque baixo" />}>
               <SellerLowStockCard sellerId={seller.id} />
@@ -120,4 +121,9 @@ export default async function SellerHomePage({ searchParams }: { searchParams: S
       ) : null}
     </>
   );
+}
+
+/** Low stock (catalog) and finance panels shown to this member. */
+function countVisiblePanels(permissions: { canManageCatalog: boolean; canReadFinances: boolean }) {
+  return [permissions.canManageCatalog, permissions.canReadFinances].filter(Boolean).length;
 }
