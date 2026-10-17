@@ -14,6 +14,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { DesignSelect } from "@/components/ui/design-select";
+import { Disclosure } from "@/components/ui/disclosure";
 import { FormField } from "@/components/ui/form-field";
 import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
@@ -218,20 +219,19 @@ export function ProductFormFields({
           />
         )}
       </FormField>
-      <details
-        open={hasMeasurements(defaultValues) || hasMeasurementErrors(errors)}
-        className="rounded-lg border p-3 sm:col-span-2"
+      <Disclosure
+        variant="section"
+        defaultOpen={hasMeasurements(defaultValues) || hasMeasurementErrors(errors)}
+        className="sm:col-span-2"
+        summary={
+          <>
+            Dados de embalagem{" "}
+            <span className="text-muted-foreground font-normal">{intro ? "(opcional no rascunho)" : "(opcional)"}</span>
+          </>
+        }
       >
-        <summary className="flex min-h-11 cursor-pointer items-center font-medium">
-          Dados de embalagem{" "}
-          <span className="text-muted-foreground ml-1 text-sm font-normal">
-            {intro ? "(opcional no rascunho)" : "(opcional)"}
-          </span>
-        </summary>
-        <div className="mt-3">
-          <MeasurementFields register={register} errors={errors} />
-        </div>
-      </details>
+        <MeasurementFields register={register} errors={errors} />
+      </Disclosure>
       <h2 className="border-b pb-2 text-base font-semibold sm:col-span-2">Variações</h2>
       <VariantsEditor control={control} register={register} errors={errors} />
       <FormMessage error={state.error ?? null} success={state.success ?? null} className="sm:col-span-2" />
@@ -298,8 +298,9 @@ function VariantsEditor({
               )}
             </FormField>
             <VariantAttributeFields control={control} register={register} errors={variantErrors} index={index} />
-            <details
-              open={Boolean(
+            <Disclosure
+              variant="section"
+              defaultOpen={Boolean(
                 field.promotionalPriceInCents ||
                 field.promotionStartsAt ||
                 field.promotionEndsAt ||
@@ -308,12 +309,14 @@ function VariantsEditor({
                 variantErrors?.promotionEndsAt,
               )}
               className="sm:col-span-4"
+              summary={
+                <>
+                  Promoção <span className="text-muted-foreground font-normal">(opcional)</span>
+                </>
+              }
             >
-              <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">
-                Promoção <span className="text-muted-foreground ml-1 font-normal">(opcional)</span>
-              </summary>
-              <fieldset className="grid min-w-0 gap-3 rounded-lg border p-3 sm:grid-cols-3">
-                <legend className="px-1 text-sm font-medium">Promoção da variação {index + 1}</legend>
+              <fieldset className="grid min-w-0 gap-3 sm:grid-cols-3">
+                <legend className="sr-only">Promoção da variação {index + 1}</legend>
                 <FormField
                   id={fieldId("promotionalPriceInCents")}
                   label="Preço promocional (R$)"
@@ -350,13 +353,19 @@ function VariantsEditor({
                   preço promocional e as datas.
                 </p>
               </fieldset>
-            </details>
-            <details open={hasMeasurements(field)} className="min-w-0 sm:col-span-4">
-              <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium">
-                Embalagem desta variação <span className="text-muted-foreground ml-1 font-normal">(opcional)</span>
-              </summary>
+            </Disclosure>
+            <Disclosure
+              variant="section"
+              defaultOpen={hasMeasurements(field)}
+              className="min-w-0 sm:col-span-4"
+              summary={
+                <>
+                  Embalagem desta variação <span className="text-muted-foreground font-normal">(opcional)</span>
+                </>
+              }
+            >
               <MeasurementFields register={register} errors={errors} variantIndex={index} />
-            </details>
+            </Disclosure>
             {fields.length > 1 ? (
               <Button
                 type="button"

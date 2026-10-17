@@ -1,3 +1,4 @@
+import { Disclosure } from "@/components/ui/disclosure";
 import { FilterDateRange, FilterForm, FilterSelect, FilterText } from "@/components/ui/filter-form";
 import { Pagination } from "@/components/ui/pagination";
 import type { Metadata, Route } from "next";
@@ -98,10 +99,7 @@ export default async function SellerOrdersPage({
         </CardHeader>
         <CardContent>
           <SellerOrderQueueTabs current={queue} counts={queueCounts} hrefFor={queueHref} />
-          <details className="mb-5" open={hasFilters}>
-            <summary className="flex min-h-11 cursor-pointer list-none items-center font-semibold [&::-webkit-details-marker]:hidden">
-              Filtros de pedidos
-            </summary>
+          <Disclosure variant="section" summary="Filtros de pedidos" defaultOpen={hasFilters} className="mb-5">
             <FilterForm resetHref={basePath} action={basePath} label="Filtrar pedidos">
               <input type="hidden" name="queue" value={params.queue} />
               <FilterText label="Buscar pedido" name="q" value={params.q} placeholder="Número, cliente ou e-mail" />
@@ -115,7 +113,7 @@ export default async function SellerOrdersPage({
               <FilterSelect label="Ordenação" name="sort" value={params.sort} options={sortOptions} />
               <FilterDateRange fromName="from" toName="to" from={params.from} to={params.to} />
             </FilterForm>
-          </details>
+          </Disclosure>
 
           {result.orders.length === 0 ? (
             <EmptyState

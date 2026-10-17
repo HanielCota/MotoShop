@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata, Route } from "next";
 import { MessageCircleQuestion } from "lucide-react";
 
+import { Disclosure } from "@/components/ui/disclosure";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -59,39 +60,34 @@ export default async function SellerQuestionsPage({
         description="Responda dúvidas publicamente para ajudar outros pilotos."
       />
 
-      <details className="bg-card rounded-xl border p-4" open={hasFilters}>
-        <summary className="flex min-h-11 cursor-pointer list-none items-center font-semibold [&::-webkit-details-marker]:hidden">
-          Filtros das perguntas
-        </summary>
-        <div className="mt-3">
-          <FilterForm resetHref={basePath} action={basePath} label="Filtrar perguntas">
-            <FilterText
-              label="Buscar pergunta"
-              name="questionQ"
-              value={params.questionQ}
-              placeholder="Pergunta, produto ou e-mail completo"
-            />
-            <FilterSelect
-              label="Exibir"
-              name="questionFilter"
-              value={params.questionFilter}
-              options={questionFilterOptions}
-            />
-            <FilterDateRange
-              fromName="questionFrom"
-              toName="questionTo"
-              from={params.questionFrom}
-              to={params.questionTo}
-            />
-            <FilterSelect
-              label="Ordenação"
-              name="questionSort"
-              value={params.questionSort}
-              options={questionSortOptions}
-            />
-          </FilterForm>
-        </div>
-      </details>
+      <Disclosure variant="section" summary="Filtros das perguntas" defaultOpen={hasFilters}>
+        <FilterForm resetHref={basePath} action={basePath} label="Filtrar perguntas">
+          <FilterText
+            label="Buscar pergunta"
+            name="questionQ"
+            value={params.questionQ}
+            placeholder="Pergunta, produto ou e-mail completo"
+          />
+          <FilterSelect
+            label="Exibir"
+            name="questionFilter"
+            value={params.questionFilter}
+            options={questionFilterOptions}
+          />
+          <FilterDateRange
+            fromName="questionFrom"
+            toName="questionTo"
+            from={params.questionFrom}
+            to={params.questionTo}
+          />
+          <FilterSelect
+            label="Ordenação"
+            name="questionSort"
+            value={params.questionSort}
+            options={questionSortOptions}
+          />
+        </FilterForm>
+      </Disclosure>
 
       {result.questions.length === 0 ? (
         <EmptyState
