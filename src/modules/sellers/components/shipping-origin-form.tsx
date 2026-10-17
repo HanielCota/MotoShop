@@ -3,7 +3,7 @@ import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCep } from "@/modules/customers/domain/brazilian-address";
-import { formatTaxId } from "@/modules/customers/domain/tax-id";
+import { formatPhone, formatTaxId } from "@/modules/customers/domain/tax-id";
 import { maskOnChange, type DigitMask } from "@/shared/forms/digit-mask";
 
 import { updateShippingOriginAction, type SellerActionState } from "../actions/seller-actions";
@@ -38,7 +38,14 @@ export function ShippingOriginForm({ store }: ShippingOriginFormProps) {
     <form action={action} onSubmit={onSubmit} noValidate className="grid gap-4 sm:grid-cols-2">
       <Field label="Nome do remetente" name="originName" defaultValue={store.originName ?? ""} />
       <Field label="E-mail operacional" name="originEmail" type="email" defaultValue={store.originEmail ?? ""} />
-      <Field label="Telefone" name="originPhone" inputMode="tel" defaultValue={store.originPhone ?? ""} />
+      <Field
+        label="Telefone"
+        name="originPhone"
+        inputMode="tel"
+        mask={formatPhone}
+        maxLength={15}
+        defaultValue={formatPhone(store.originPhone ?? "")}
+      />
       <Field
         label="CPF ou CNPJ"
         name="originDocument"

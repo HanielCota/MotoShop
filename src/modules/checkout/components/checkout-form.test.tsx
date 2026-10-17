@@ -146,3 +146,10 @@ function defined<T>(value: T | null | undefined): T {
   if (value === null || value === undefined) throw new Error("Expected value to be defined");
   return value;
 }
+
+it("formats the phone while typing", () => {
+  render(<CheckoutForm cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
+
+  fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
+  expect(screen.getByLabelText("Telefone")).toHaveValue("(11) 98765-4321");
+});
