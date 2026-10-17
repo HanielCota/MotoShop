@@ -17,7 +17,7 @@ const variant: BuyBoxVariant = {
   onSale: false,
   stock: 3,
 };
-// Notices the storefront no longer shows: it behaves like production (margot#350).
+// Notices the storefront no longer shows: it behaves like production.
 const removedNotices = /As compras ainda não estão liberadas|Valor ilustrativo|exemplo ilustrativo/;
 
 afterEach(cleanup);

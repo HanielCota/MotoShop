@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
- * margot#351: the simulated purchase of test products runs against the same database as the live
+ * The simulated purchase of test products runs against the same database as the live
  * site, so these tests use a database where every write is recorded. The only write allowed is
  * emptying the customer's own cart; no order, reservation, coupon use, payment, e-mail or job.
  */

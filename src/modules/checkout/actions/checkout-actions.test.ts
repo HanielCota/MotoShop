@@ -14,7 +14,7 @@ vi.mock("@/modules/auth/application/authorization", () => ({ getCurrentSession: 
 vi.mock("@/modules/cart/infrastructure/cart-access", () => ({ getCartIdentity: mocks.identity }));
 vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
 vi.mock("@/modules/orders/infrastructure/guest-order-cookie", () => ({ setGuestOrderCookie: mocks.setCookie }));
-// The real order path; a test-only cart answers with the simulated purchase instead (margot#351).
+// The real order path; a test-only cart answers with the simulated purchase instead.
 vi.mock("../application/submit-checkout", () => ({
   submitCheckout: async (...args: unknown[]) => {
     const simulated = mocks.simulated();

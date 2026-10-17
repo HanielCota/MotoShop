@@ -6,7 +6,7 @@ import type { Prisma } from "@/generated/prisma/client";
  * variant of an approved product whose seller, category and brand are all
  * enabled. Shared by the cart and shipping quotes so they cannot drift. Test
  * products (`isDemo`) pass too: they end in the simulated purchase, and the
- * real order refuses them on its own (margot#351).
+ * real order refuses them on its own.
  * `requireStock` additionally demands available inventory.
  */
 export function purchasableVariantWhere(

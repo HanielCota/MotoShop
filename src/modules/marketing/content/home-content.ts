@@ -50,7 +50,7 @@ const approvedStoresAssurance: HeroAssurance = { icon: BadgeCheck, text: "Lojas 
 
 /**
  * Garantias curtas exibidas logo abaixo da busca por moto, no hero. O site se comporta como em
- * produção (margot#350): nenhuma garantia avisa que as compras ainda não foram liberadas.
+ * produção: nenhuma garantia avisa que as compras ainda não foram liberadas.
  */
 export function getHeroAssurances(): HeroAssurance[] {
   return [

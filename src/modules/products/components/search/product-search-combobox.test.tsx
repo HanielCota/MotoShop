@@ -73,7 +73,7 @@ describe("ProductSearchCombobox", () => {
     expect(input).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("lists suggestions with name and price, without any demo mark (margot#350)", async () => {
+  it("lists suggestions with name and price, without any demo mark", async () => {
     const { input } = renderSearch();
 
     await typeAndWaitForSuggestions(input, "capa");

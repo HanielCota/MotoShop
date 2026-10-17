@@ -1,8 +1,8 @@
 import { sumMoneyInCents } from "@/modules/orders/domain/money";
 
 /**
- * What the "Compra concluída" screen shows after the simulated purchase of test products
- * (margot#351). Built on the server from the priced cart, never from what the browser sent.
+ * What the "Compra concluída" screen shows after the simulated purchase of test products.
+ * Built on the server from the priced cart, never from what the browser sent.
  */
 export type SimulatedPurchase = {
   customer: { name: string; email: string; phone: string };

@@ -16,7 +16,7 @@ export function isTestOnlyCart(cart: CheckoutCart): boolean {
 }
 
 /**
- * Simulated purchase of test products (margot#351). It validates and prices exactly like a real
+ * Simulated purchase of test products. It validates and prices exactly like a real
  * checkout (data, shipping, coupon, stock), then answers with the summary. Nothing about a
  * purchase is written: no order, stock reservation, coupon redemption, payment, e-mail, job or
  * payment provider call. The only write is emptying the customer's own cart, as a purchase would.

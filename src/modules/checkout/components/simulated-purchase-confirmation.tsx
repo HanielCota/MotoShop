@@ -13,7 +13,7 @@ import type { SimulatedPurchase } from "../domain/simulated-purchase";
 const sectionClassName = "bg-card rounded-xl border p-4 sm:p-6";
 
 /**
- * "Compra concluída" after the simulated purchase of test products (margot#351). Everything comes
+ * "Compra concluída" after the simulated purchase of test products. Everything comes
  * from the server summary; there is no order number because no order exists.
  */
 export function SimulatedPurchaseConfirmation({ purchase }: { purchase: SimulatedPurchase }) {

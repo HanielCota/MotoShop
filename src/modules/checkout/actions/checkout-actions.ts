@@ -24,7 +24,7 @@ export type CheckoutActionState = {
   error?: string;
   orderNumber?: string;
   paymentDeclined?: true;
-  /** Test products only (margot#351): nothing was recorded, the page shows this summary. */
+  /** Test products only: nothing was recorded, the page shows this summary. */
   simulatedPurchase?: SimulatedPurchase;
 };
 

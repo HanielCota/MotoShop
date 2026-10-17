@@ -6,7 +6,7 @@ export const MAX_PRODUCT_CARD_BADGES = 2;
 /**
  * Badges in priority order: "Patrocinado" identifies the content and must win (AGENTS.md §16);
  * then "Oferta", then "Novidade". Test products get no badge of their own: the storefront behaves
- * like production (margot#350).
+ * like production.
  */
 export function getProductCardBadges(input: {
   sponsored: boolean;

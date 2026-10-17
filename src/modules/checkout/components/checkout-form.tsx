@@ -58,7 +58,7 @@ export function CheckoutForm({
   items?: CheckoutSummaryItem[] | undefined;
   cardPublicKey?: string | undefined;
   paymentAvailable?: boolean | undefined;
-  /** Test products (margot#351): Pix only, no card fields (they would already call Mercado Pago). */
+  /** Test products: Pix only, no card fields (they would already call Mercado Pago). */
   pixOnly?: boolean | undefined;
   /** Page heading, replaced by the confirmation after a simulated purchase. */
   header?: ReactNode | undefined;

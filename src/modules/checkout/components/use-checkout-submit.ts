@@ -27,7 +27,7 @@ export function useCheckoutSubmit({
 }: {
   cardRef: RefObject<SecureCardHandle | null>;
   onFailure: (message: string) => void;
-  /** Test products (margot#351): nothing was recorded, so the page shows the summary instead of an order. */
+  /** Test products: nothing was recorded, so the page shows the summary instead of an order. */
   onSimulatedPurchase: (purchase: SimulatedPurchase) => void;
 }) {
   const router = useRouter();

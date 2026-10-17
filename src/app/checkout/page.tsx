@@ -62,7 +62,7 @@ export default async function CheckoutPage({
     lineTotalInCents: getCurrentPriceInCents(item.variant, now) * item.quantity,
   }));
   const payment = getCheckoutPaymentAvailability(new Set(cart.items.map((item) => item.variant.product.sellerId)).size);
-  // Test products end in the simulated purchase (margot#351): Pix only, nothing recorded.
+  // Test products end in the simulated purchase: Pix only, nothing recorded.
   const testOnlyCart = cart.items.every((item) => item.variant.product.isDemo);
   const cartSummary = {
     itemCount: items.reduce((total, item) => total + item.quantity, 0),

@@ -17,7 +17,7 @@ export function CheckoutPaymentSection({
   cardRef,
 }: {
   paymentAvailable: boolean;
-  /** Test products (margot#351): only Pix, no card option or card fields. */
+  /** Test products: only Pix, no card option or card fields. */
   pixOnly?: boolean | undefined;
   cardPublicKey?: string | undefined;
   paymentType: CheckoutPaymentType;

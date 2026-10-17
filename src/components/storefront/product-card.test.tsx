@@ -43,7 +43,7 @@ it("serves ImageKit images as already-resized URLs, without the Next optimizer",
   expect(image).toHaveAttribute("loading", "eager");
 });
 
-it("shows the price range and the sponsored badge without any demo notice (margot#350)", () => {
+it("shows the price range and the sponsored badge without any demo notice", () => {
   render(
     <ProductCard product={{ ...card("/images/demo/capacete-apex.webp"), hasPriceRange: true, sponsored: true }} />,
   );
