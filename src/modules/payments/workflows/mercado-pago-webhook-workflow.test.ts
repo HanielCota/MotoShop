@@ -16,6 +16,7 @@ vi.mock("@/lib/inngest/client", () => ({
   },
 }));
 
+import { STALE_WEBHOOK_PROCESSING_MS } from "../domain/webhook-retry";
 import { markWebhookEventFailedAfterRetries } from "./mercado-pago-webhook-workflow";
 
 const failureEvent = (data: unknown) => ({ data: { event: { data } } });
@@ -29,6 +30,13 @@ it("registers the failure handler on the webhook reconciliation function", () =>
   expect(mocks.createdFunctions).toContainEqual(
     expect.objectContaining({ id: "reconcile-mercado-pago-webhook", onFailure: markWebhookEventFailedAfterRetries }),
   );
+});
+
+it("cancels a hung webhook run at the mark the Admin retry accepts it as stuck (A10)", () => {
+  expect(mocks.createdFunctions).toContainEqual(
+    expect.objectContaining({ id: "reconcile-mercado-pago-webhook", timeouts: { finish: "15m" } }),
+  );
+  expect(STALE_WEBHOOK_PROCESSING_MS).toBe(15 * 60 * 1000);
 });
 
 it("marks a webhook stuck in PROCESSING as FAILED with the final error", async () => {

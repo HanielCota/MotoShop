@@ -1,6 +1,12 @@
 export const STALE_WEBHOOK_PROCESSING_MS = 15 * 60 * 1000;
 
 /**
+ * Longest a webhook processing run may take (A10). A run that hangs is cancelled at the same mark
+ * the Admin retry starts accepting the event as stuck, so it never stays PROCESSING with no way out.
+ */
+export const WEBHOOK_PROCESSING_FINISH_TIMEOUT = "15m";
+
+/**
  * WebhookEvent has no `updatedAt` column, so `receivedAt` is the staleness reference for
  * PROCESSING events. Reprocessing is safe because reconciliation locks the order and is
  * idempotent; the threshold only avoids racing a run that is genuinely still in flight.
