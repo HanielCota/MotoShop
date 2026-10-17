@@ -4,6 +4,7 @@ import { db } from "@/lib/database";
 import { inngest } from "@/lib/inngest/client";
 import { mercadoPagoProvider } from "@/lib/payment/mercado-pago-provider";
 import { reconcileMercadoPagoPayment } from "@/modules/payments/application/reconcile-payment";
+import { WEBHOOK_PROCESSING_FINISH_TIMEOUT } from "@/modules/payments/domain/webhook-retry";
 
 type PaymentWebhookEventData = { webhookEventId: string };
 
@@ -38,6 +39,7 @@ export const reconcileMercadoPagoWebhook = inngest.createFunction(
   {
     id: "reconcile-mercado-pago-webhook",
     retries: 3,
+    timeouts: { finish: WEBHOOK_PROCESSING_FINISH_TIMEOUT },
     triggers: [{ event: "motoshop/payment.webhook.received" }],
     onFailure: markWebhookEventFailedAfterRetries,
   },
