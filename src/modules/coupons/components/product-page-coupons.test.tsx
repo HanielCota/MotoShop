@@ -45,3 +45,23 @@ it("asks to copy manually when the clipboard is blocked", async () => {
 
   expect(await screen.findByText("Copie manualmente")).toBeInTheDocument();
 });
+
+it("keeps every copy button in its own right-hand column instead of wrapping under the text", () => {
+  render(
+    <ProductPageCoupons
+      coupons={[
+        { ...coupon, code: "REVIEW-GARAGEM-PRODUTO10", minimumPurchase: null },
+        { ...coupon, code: "TRILHA10" },
+      ]}
+    />,
+  );
+
+  const rows = screen.getAllByTestId("product-coupon");
+  expect(rows).toHaveLength(2);
+  for (const row of rows) {
+    expect(row.className).toContain("grid-cols-[minmax(0,1fr)_auto]");
+    expect(row.className).not.toContain("flex-wrap");
+    expect(row.lastElementChild?.tagName).toBe("BUTTON");
+    expect(row.lastElementChild).toHaveTextContent("Copiar");
+  }
+});
