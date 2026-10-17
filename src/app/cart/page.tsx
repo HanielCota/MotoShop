@@ -10,7 +10,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { CartItemControls } from "@/modules/cart/components/cart-item-controls";
-import { VisualCartPreview } from "@/modules/cart/components/visual-preview";
 import { getActiveCart } from "@/modules/cart/queries/cart";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
 
@@ -21,10 +20,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function CartPage({ searchParams }: { searchParams: Promise<{ preview?: string | string[] }> }) {
-  const { preview } = await searchParams;
-  if (process.env.NODE_ENV !== "production" && preview === "1") return <VisualCartPreview />;
-
+export default async function CartPage() {
   const cart = await getActiveCart();
   const items = cart?.items ?? [];
   const thumbnails = await getCartThumbnails(items);
@@ -53,21 +49,12 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
       />
 
       {items.length === 0 ? (
-        <div className="space-y-3">
-          <EmptyState
-            icon={ShoppingBag}
-            title="Seu carrinho está vazio"
-            description="Encontre peças, equipamentos e acessórios para sua próxima sessão."
-            action={{ label: "Ver produtos", href: "/products" }}
-          />
-          {process.env.NODE_ENV !== "production" ? (
-            <p className="text-center">
-              <Link href="/cart?preview=1" className="text-sm underline underline-offset-4">
-                Ver prévia com produtos de exemplo
-              </Link>
-            </p>
-          ) : null}
-        </div>
+        <EmptyState
+          icon={ShoppingBag}
+          title="Seu carrinho está vazio"
+          description="Encontre peças, equipamentos e acessórios para sua próxima sessão."
+          action={{ label: "Ver produtos", href: "/products" }}
+        />
       ) : (
         <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
           <div className="min-w-0 space-y-4">

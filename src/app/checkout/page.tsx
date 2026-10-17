@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 
 import { pageContainerClassName } from "@/components/ui/page-container";
@@ -7,7 +6,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getActiveCart } from "@/modules/cart/queries/cart";
-import { VisualCheckoutPreview } from "@/modules/cart/components/visual-preview";
 import { CheckoutForm } from "@/modules/checkout/components/checkout-form";
 import { getCustomerContact } from "@/modules/customers/queries/customer-contact";
 import { listCustomerAddresses } from "@/modules/customers/queries/customer-addresses";
@@ -19,14 +17,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function CheckoutPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ preview?: string | string[] }>;
-}) {
-  const { preview } = await searchParams;
-  if (process.env.NODE_ENV !== "production" && preview === "1") return <VisualCheckoutPreview />;
-
+export default async function CheckoutPage() {
   const [cart, session] = await Promise.all([getActiveCart(), getCurrentSession()]);
   if (!cart || cart.items.length === 0) {
     return (
@@ -38,13 +29,6 @@ export default async function CheckoutPage({
           description="Adicione um produto ao carrinho para continuar a compra."
           action={{ label: "Ver produtos", href: "/products" }}
         />
-        {process.env.NODE_ENV !== "production" ? (
-          <p className="text-center">
-            <Link href="/checkout?preview=1" className="text-sm underline underline-offset-4">
-              Ver prévia com produtos de exemplo
-            </Link>
-          </p>
-        ) : null}
       </main>
     );
   }

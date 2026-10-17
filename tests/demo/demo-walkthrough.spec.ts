@@ -71,9 +71,9 @@ test.describe("Loja pública (visitante)", () => {
     await visit(page, must(categoryHref, "category link"));
   });
 
-  test("prévias de carrinho e checkout, login e página inexistente", async ({ page }) => {
-    await visit(page, "/cart?preview=1", { h1: /Carrinho/ });
-    await visit(page, "/checkout?preview=1", { h1: /Finalizar compra/ });
+  test("carrinho e checkout vazios, login e página inexistente", async ({ page }) => {
+    await visit(page, "/cart", { h1: /Carrinho/ });
+    await visit(page, "/checkout", { h1: /Finalizar compra/ });
     await visit(page, "/login", { text: ["Entrar"] });
     await visit(page, "/login?modo=cadastro");
     await visit(page, "/forgot-password");
