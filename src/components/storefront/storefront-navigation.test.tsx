@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const navigation = vi.hoisted(() => ({ pathname: "/products", search: "" }));
 vi.mock("next/navigation", () => ({
@@ -25,8 +25,20 @@ vi.mock("next/image", () => ({
 
 import { StorefrontNavigation } from "./storefront-navigation";
 
+const areaAccess = vi.hoisted(() => ({ admin: false, seller: false }));
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ ...areaAccess })),
+  );
+});
+
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
+  areaAccess.admin = false;
+  areaAccess.seller = false;
   navigation.pathname = "/products";
   navigation.search = "";
 });
@@ -85,6 +97,43 @@ it("gives signed-in customers an account menu with their shortcuts", async () =>
   await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "false"));
   await waitFor(() => expect(trigger).toHaveFocus());
   authMocks.useSession.mockReset();
+});
+
+it("puts the Admin and Central do Lojista shortcuts on top for whoever can open them", async () => {
+  areaAccess.admin = true;
+  areaAccess.seller = true;
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "admin-seller", name: "Guilherme" } } });
+  render(<StorefrontNavigation />);
+  fireEvent.click(screen.getByRole("button", { name: "Minha conta" }));
+
+  const menu = await screen.findByRole("menu");
+  await within(menu).findByRole("menuitem", { name: "Painel do Admin" });
+  const items = within(menu).getAllByRole("menuitem");
+  expect(items.slice(0, 3).map((item) => [item.textContent, item.getAttribute("href")])).toEqual([
+    ["Painel do Admin", "/admin"],
+    ["Central do Lojista", "/seller"],
+    ["Meus pedidos", "/orders"],
+  ]);
+  expect(fetch).toHaveBeenCalledWith("/api/account/area-access", expect.objectContaining({ cache: "no-store" }));
+  authMocks.useSession.mockReset();
+});
+
+it("shows only the Central do Lojista to a store member", async () => {
+  areaAccess.seller = true;
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "member", name: "Juliana" } } });
+  render(<StorefrontNavigation />);
+  fireEvent.click(screen.getByRole("button", { name: "Minha conta" }));
+
+  const menu = await screen.findByRole("menu");
+  expect(await within(menu).findByRole("menuitem", { name: "Central do Lojista" })).toHaveAttribute("href", "/seller");
+  expect(within(menu).queryByRole("menuitem", { name: "Painel do Admin" })).not.toBeInTheDocument();
+  authMocks.useSession.mockReset();
+});
+
+it("does not ask for area shortcuts while signed out", () => {
+  authMocks.useSession.mockReturnValue({ data: null });
+  render(<StorefrontNavigation />);
+  expect(fetch).not.toHaveBeenCalled();
 });
 
 it("links visitors to the login page", () => {
