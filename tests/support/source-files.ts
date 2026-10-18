@@ -1,5 +1,6 @@
-import { readdirSync } from "node:fs";
-import { join } from "node:path";
+import { execFileSync } from "node:child_process";
+import { readdirSync, readFileSync } from "node:fs";
+import { basename, join, sep } from "node:path";
 
 export const sourceDirectory = join(process.cwd(), "src");
 
@@ -18,8 +19,52 @@ export function listSourceFiles(options: SourceFileOptions, directory = sourceDi
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) return SKIPPED_DIRECTORIES.has(entry.name) ? [] : listSourceFiles(options, path);
-    if (!options.extensions.some((extension) => entry.name.endsWith(extension))) return [];
-    if (!options.includeTests && entry.name.includes(".test.")) return [];
-    return [path];
+    return isWantedFile(entry.name, options) ? [path] : [];
   });
+}
+
+/**
+ * The source files whose text matches `pattern`, for convention tests that look for one word. `git grep`
+ * finds them natively in a fraction of a second, so the test only reads those few files instead of
+ * the whole project, which timed out on a busy machine. Without git, it falls back to a full scan.
+ * `pattern` must be valid both as a JavaScript regex and as a POSIX extended regex (no lookarounds).
+ */
+export function listSourceFilesMatching(pattern: string, options: SourceFileOptions): string[] {
+  const matching = gitGrepSourceFiles(pattern);
+  if (matching) return matching.filter((path) => isWantedPath(path, options));
+
+  const regex = new RegExp(pattern);
+  return listSourceFiles(options).filter((path) => regex.test(readFileSync(path, "utf8")));
+}
+
+/** Tracked and untracked (not ignored) files under src/ that match, or `null` when git cannot answer. */
+function gitGrepSourceFiles(pattern: string): string[] | null {
+  try {
+    const output = execFileSync("git", ["grep", "-l", "--untracked", "-E", pattern, "--", "src"], {
+      cwd: process.cwd(),
+      encoding: "utf8",
+    });
+    return output
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => join(process.cwd(), line));
+  } catch (error) {
+    // Exit status 1 means "no file matches"; anything else (no git, not a repository) falls back.
+    return isNoMatch(error) ? [] : null;
+  }
+}
+
+function isNoMatch(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "status" in error && error.status === 1;
+}
+
+function isWantedPath(path: string, options: SourceFileOptions): boolean {
+  const directories = path.split(sep);
+  if (directories.some((directory) => SKIPPED_DIRECTORIES.has(directory))) return false;
+  return isWantedFile(basename(path), options);
+}
+
+function isWantedFile(name: string, options: SourceFileOptions): boolean {
+  if (!options.extensions.some((extension) => name.endsWith(extension))) return false;
+  return options.includeTests === true || !name.includes(".test.");
 }
