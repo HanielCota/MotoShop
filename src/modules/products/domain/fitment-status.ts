@@ -22,7 +22,7 @@ export function resolveFitmentStatus({
   selectedFitment,
 }: FitmentStatusInput): FitmentStatus {
   if (universal) return { kind: "universal", motorcycleLabel: selectedFitment?.label ?? null };
-  if (!selectedFitment) return { kind: "no-motorcycle" };
+  if (selectedFitment == null) return { kind: "no-motorcycle" };
 
   const motorcycleLabel = selectedFitment.label;
   if (compatibleFitmentIds.length === 0) return { kind: "unknown", motorcycleLabel };

@@ -59,7 +59,7 @@ function variantAttributeCondition(input: PublicProductFilter) {
  * Only needed when a motorcycle filter is active, so the recursive part is left out otherwise.
  */
 function universalCategoriesCte(fitments: string[]) {
-  if (!fitments.length) return Prisma.sql`WITH`;
+  if (fitments.length === 0) return Prisma.sql`WITH`;
 
   return Prisma.sql`WITH RECURSIVE universal_categories AS (
     SELECT id FROM categories WHERE universal = true
@@ -70,7 +70,7 @@ function universalCategoriesCte(fitments: string[]) {
 
 /** With a motorcycle chosen: products confirmed for it, plus products of universal categories (AGENTS.md). */
 function motorcycleCondition(fitments: string[]) {
-  if (!fitments.length) return Prisma.empty;
+  if (fitments.length === 0) return Prisma.empty;
 
   return Prisma.sql`AND (EXISTS (SELECT 1 FROM product_compatibilities pc WHERE pc."productId" = p.id AND pc."motorcycleFitmentId" IN (${Prisma.join(fitments)}))
         OR p."categoryId" IN (SELECT id FROM universal_categories))`;
