@@ -69,8 +69,10 @@ export function parseCouponForm(formData: FormData, now = new Date()): ParsedCou
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Confira os dados do cupom." };
   const discountAmount = readDiscountAmount(parsed.data);
   if ("error" in discountAmount) return { ok: false, error: discountAmount.error };
+
   const validityError = findCouponValidityError(parsed.data, now);
-  if (validityError) return { ok: false, error: validityError };
+  if (validityError != null) return { ok: false, error: validityError };
+
   return { ok: true, data: parsed.data, discountAmount };
 }
 

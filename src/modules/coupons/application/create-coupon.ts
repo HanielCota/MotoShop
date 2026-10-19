@@ -53,8 +53,8 @@ function toCouponData(owner: CouponOwner, input: CreateCouponInput, discountAmou
     minimumPurchaseInCents: input.minimumPurchaseInCents,
     ...(input.globalUsageLimit !== undefined ? { globalUsageLimit: input.globalUsageLimit } : {}),
     ...(input.perCustomerUsageLimit !== undefined ? { perCustomerUsageLimit: input.perCustomerUsageLimit } : {}),
-    ...(input.startsAt ? { startsAt: input.startsAt } : {}),
-    ...(input.endsAt ? { endsAt: input.endsAt } : {}),
+    ...(input.startsAt != null ? { startsAt: input.startsAt } : {}),
+    ...(input.endsAt != null ? { endsAt: input.endsAt } : {}),
     fundedBy: owner.fundedBy,
     showOnProductPage: owner.ownerType === "SELLER" && input.showOnProductPage === true,
   };
