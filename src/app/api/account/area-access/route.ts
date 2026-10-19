@@ -12,7 +12,7 @@ const privateHeaders = { "Cache-Control": "private, no-store" };
  * Which restricted areas the signed-in person can open, for the header account menu. The root layout
  * stays static, so the menu asks after the page loads. Each area still checks access on entry.
  */
-export async function GET() {
+export async function GET(): Promise<NextResponse> {
   try {
     const session = await getCurrentSession();
     if (!session) return NextResponse.json(noAccountAreaAccess, { headers: privateHeaders });

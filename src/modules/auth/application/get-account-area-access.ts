@@ -14,6 +14,7 @@ type AccountUser = { id: string; email: string; emailVerified: boolean };
  */
 export async function getAccountAreaAccess(user: AccountUser): Promise<AccountAreaAccess> {
   const admin = user.emailVerified && isConfiguredAdminEmail(user.email, env.ADMIN_EMAILS);
+
   const membership = await db.sellerMember.findFirst({
     where: {
       userId: user.id,

@@ -2,7 +2,17 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronRight, Menu, Search, ShieldCheck, Store, UserRound, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Menu,
+  Search,
+  ShieldCheck,
+  Store,
+  UserRound,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { Menu as BaseMenu } from "@base-ui/react/menu";
 import { Suspense, useRef, useState } from "react";
 
@@ -249,7 +259,13 @@ function AccountMenu() {
   );
 }
 
+const areaShortcutIcons: Readonly<Record<AccountAreaShortcut["area"], LucideIcon>> = {
+  admin: ShieldCheck,
+  seller: Store,
+};
+
 function AreaShortcutIcon({ area }: { area: AccountAreaShortcut["area"] }) {
-  const Icon = area === "admin" ? ShieldCheck : Store;
+  const Icon = areaShortcutIcons[area];
+
   return <Icon aria-hidden="true" className="size-4 shrink-0" />;
 }
