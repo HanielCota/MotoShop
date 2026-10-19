@@ -85,6 +85,7 @@ export function ProductGrid({
     );
   }
 
+  // oxlint-disable-next-line react/purity -- Server Component: it renders once per request, on the server, so the date cannot drift between renders.
   const now = new Date();
   return (
     <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">

@@ -203,6 +203,7 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
             <Badge variant="neutral">{product.brand.name}</Badge>
             {offer.hasPromotion ? <Badge>Oferta</Badge> : null}
             {product.seller.subscriptions.length > 0 ? <Badge variant="brand">Patrocinado · Loja VIP</Badge> : null}
+            {/* oxlint-disable-next-line react/purity -- Server Component: it renders once per request, on the server, so the date cannot drift between renders. */}
             {isNewProduct(product, new Date()) ? <Badge variant="inverse">Novidade</Badge> : null}
           </div>
           <h1 id="product-title" className="text-foreground mt-5 text-3xl leading-tight sm:text-4xl">
