@@ -13,6 +13,7 @@ import { AdminNavigation } from "@/modules/admin/components/admin-navigation";
  */
 export async function generateMetadata(): Promise<Metadata> {
   await requireAdminAccess();
+
   return {};
 }
 

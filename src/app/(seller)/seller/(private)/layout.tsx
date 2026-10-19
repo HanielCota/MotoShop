@@ -11,10 +11,12 @@ import { requireSellerDashboardContext } from "@/modules/sellers/application/get
  */
 export async function generateMetadata(): Promise<Metadata> {
   await requireSellerDashboardContext();
+
   return {};
 }
 
 export default async function SellerPrivateLayout({ children }: Readonly<{ children: ReactNode }>) {
   await requireSellerDashboardContext();
+
   return children;
 }

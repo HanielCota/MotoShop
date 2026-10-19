@@ -4,8 +4,6 @@ import {
   type SellerPermission,
 } from "@/modules/auth/domain/seller-permissions";
 
-const sellerMemberRoles: readonly SellerMemberRole[] = ["OWNER", "ADMIN", "CATALOG", "ORDERS", "FINANCE"];
-
 /** How each role reads in "Esta área é ... da loja". */
 const roleOwnershipPhrases: Record<SellerMemberRole, string> = {
   OWNER: "do dono",
@@ -14,6 +12,9 @@ const roleOwnershipPhrases: Record<SellerMemberRole, string> = {
   ORDERS: "da equipe de pedidos",
   FINANCE: "do financeiro",
 };
+
+// Taken from the map above, so a new role cannot be left out of the list.
+const sellerMemberRoles = Object.keys(roleOwnershipPhrases) as readonly SellerMemberRole[];
 
 /** What the member was trying to do, used in "Para ..., peça a ...". */
 const actionByPermission: Record<SellerPermission, string> = {
@@ -28,7 +29,7 @@ const actionByPermission: Record<SellerPermission, string> = {
 };
 
 /** Page a member is sent to when their role does not include the permission of the area they opened. */
-export function sellerPermissionDeniedPath(permission: SellerPermission) {
+export function sellerPermissionDeniedPath(permission: SellerPermission): string {
   return `/seller/sem-permissao?permissao=${permission}`;
 }
 
@@ -37,8 +38,9 @@ export function rolesWithPermission(permission: SellerPermission): SellerMemberR
 }
 
 /** "a, b ou c" */
-function joinAsList(items: readonly string[]) {
+function joinAsList(items: readonly string[]): string {
   if (items.length <= 1) return items.join("");
+
   return `${items.slice(0, -1).join(", ")} ou ${items.at(-1)}`;
 }
 
@@ -46,8 +48,13 @@ function joinAsList(items: readonly string[]) {
  * Title and explanation of the restricted area, built from the permission table. Only the owner or an
  * administrator changes a member's role, so the explanation points to them.
  */
-export function describePermissionDenied(permission: SellerPermission, memberRoleLabel: string, storeName: string) {
+export function describePermissionDenied(
+  permission: SellerPermission,
+  memberRoleLabel: string,
+  storeName: string,
+): { title: string; description: string } {
   const owners = rolesWithPermission(permission).map((role) => roleOwnershipPhrases[role]);
+
   return {
     title: `Esta área é ${joinAsList(owners)} da loja`,
     description: `Seu papel na equipe da ${storeName} é ${memberRoleLabel}. Para ${actionByPermission[permission]}, peça ao dono ou ao administrador da loja que mude o seu papel.`,

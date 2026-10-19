@@ -56,6 +56,7 @@ export async function requireSellerAccess(permission?: SellerPermission) {
 async function denyNonMember(userId: string): Promise<never> {
   const pendingMembership = await db.sellerMember.findFirst({ where: { userId }, select: { id: true } });
   if (pendingMembership) redirect("/seller");
+
   notFound();
 }
 
