@@ -45,6 +45,7 @@ const cancellationReasonLabels: Record<string, string> = { CUSTOMER_REQUEST: "Pe
 /** Cancelamentos, devoluções e disputas da parte do pedido da loja, sem ações: quem decide é o Moto Shop. */
 export function SellerOrderAfterSales({ order }: { order: SellerOrderAfterSalesData }) {
   const total = order.cancellationRequests.length + order.returnRequests.length + order.disputes.length;
+
   if (total === 0) return null;
 
   const orderItems = describeItems(order.items.map(toItemLine));
@@ -76,7 +77,7 @@ function CancellationBlock({ request, orderItems }: { request: CancellationSumma
       details={[
         ["Itens", orderItems],
         ["Motivo", cancellationReasonLabels[request.reason] ?? request.reason],
-        ["Mensagem do cliente", request.customerMessage ? `"${request.customerMessage}"` : null],
+        ["Mensagem do cliente", hasText(request.customerMessage) ? `"${request.customerMessage}"` : null],
         ["Aberto em", formatDate(request.createdAt)],
       ]}
       footer={
@@ -92,6 +93,7 @@ function CancellationBlock({ request, orderItems }: { request: CancellationSumma
 
 function ReturnBlock({ request }: { request: ReturnSummary }) {
   const items = request.items.map((item) => toItemLine({ ...item.orderItem, quantity: item.quantity }));
+
   return (
     <AfterSalesBlock
       title="Devolução"
@@ -155,7 +157,7 @@ function AfterSalesBlock({
       </div>
       <dl className="grid gap-1">
         {details.map(([label, value]) =>
-          value ? (
+          hasText(value) ? (
             <div key={label} className="text-muted-foreground break-words">
               <dt className="text-foreground inline font-medium">{label}:</dt> <dd className="inline">{value}</dd>
             </div>
@@ -167,10 +169,15 @@ function AfterSalesBlock({
   );
 }
 
-function toItemLine(item: { quantity: number; productNameSnapshot: string; skuSnapshot: string }) {
+function toItemLine(item: { quantity: number; productNameSnapshot: string; skuSnapshot: string }): string {
   return `${item.quantity} × ${item.productNameSnapshot} · SKU ${item.skuSnapshot}`;
 }
 
-function describeItems(lines: readonly string[]) {
+function describeItems(lines: readonly string[]): string {
   return lines.join("; ");
+}
+
+/** A detail with only spaces says nothing, so it is left out like an empty one. */
+function hasText(value: string | null): value is string {
+  return value != null && value.trim().length > 0;
 }

@@ -59,6 +59,7 @@ export async function listSellerOrders(sellerId: string, input: SellerOrderListI
  */
 export function buildSellerOrderAfterSalesInclude(sellerId: string) {
   const newestFirst = { createdAt: "desc" as const };
+
   return {
     cancellationRequests: {
       where: { sellerId },
