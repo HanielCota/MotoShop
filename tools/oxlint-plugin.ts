@@ -23,7 +23,8 @@ const noElse = {
     return {
       IfStatement(node: Node) {
         const alternate = asNode(node.alternate);
-        if (!alternate) return;
+        if (alternate == null) return;
+
         context.report({
           node: alternate,
           message: "Não use else: retorne cedo (early return), use continue em laços ou extraia uma função.",
@@ -39,6 +40,7 @@ const noThen = {
     return {
       CallExpression(node: Node) {
         if (propertyName(asNode(node.callee)) !== "then") return;
+
         context.report({ node, message: "Use async/await em vez de .then()." });
       },
     };
@@ -62,12 +64,14 @@ const noLocationAssignRelativeDestination = {
       CallExpression(node: Node) {
         const callee = asNode(node.callee);
         if (propertyName(callee) !== "assign" || !isLocation(asNode(callee?.object))) return;
+
         const [destination] = Array.isArray(node.arguments) ? node.arguments : [];
         if (isRelativeDestination(asNode(destination))) report(node, "location.assign()");
       },
       AssignmentExpression(node: Node) {
         const target = asNode(node.left);
         if (propertyName(target) !== "href" || !isLocation(asNode(target?.object))) return;
+
         if (isRelativeDestination(asNode(node.right))) report(node, "location.href");
       },
     };
@@ -76,15 +80,18 @@ const noLocationAssignRelativeDestination = {
 
 function asNode(value: unknown): Node | null {
   if (typeof value !== "object" || value === null || !("type" in value)) return null;
+
   return value as Node;
 }
 
 /** `name` of `object.name` or `object["name"]`. */
 function propertyName(node: Node | null): string | undefined {
   if (node?.type !== "MemberExpression") return undefined;
+
   const property = asNode(node.property);
-  if (!property) return undefined;
+  if (property == null) return undefined;
   if (!node.computed && typeof property.name === "string") return property.name;
+
   return property.type === "Literal" && typeof property.value === "string" ? property.value : undefined;
 }
 
@@ -92,6 +99,7 @@ function propertyName(node: Node | null): string | undefined {
 function isLocation(node: Node | null): boolean {
   if (node?.type === "Identifier") return node.name === "location";
   if (propertyName(node) !== "location") return false;
+
   const root = asNode(node?.object);
   return root?.type === "Identifier" && typeof root.name === "string" && LOCATION_ROOTS.has(root.name);
 }
@@ -105,10 +113,12 @@ function isRelativeDestination(node: Node | null): boolean {
 function staticPrefix(node: Node | null): string | null {
   if (node?.type === "Literal") return typeof node.value === "string" ? node.value : null;
   if (node?.type !== "TemplateLiteral" || !Array.isArray(node.quasis)) return null;
+
   // The quasi's `value` is a plain `{ raw, cooked }` object, not a node.
   const value = asNode(node.quasis[0])?.value;
   const cooked = typeof value === "object" && value !== null && "cooked" in value ? value.cooked : null;
   if (typeof cooked !== "string") return null;
+
   // `${origin}/path` starts with an unknown value: it may well be absolute.
   return cooked === "" && node.quasis.length > 1 ? null : cooked;
 }
