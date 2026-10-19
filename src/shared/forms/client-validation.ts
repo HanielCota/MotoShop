@@ -23,7 +23,8 @@ export function useClientValidation<Problem = string | FieldProblem>(validate: C
   // Runs after the error rendered, so fields marked by it are already `aria-invalid`.
   useEffect(() => {
     const form = failedForm.current;
-    if (!form) return;
+    if (form == null) return;
+
     failedForm.current = null;
     highlightInvalidField(form, problemField(problem));
   }, [failedAttempt, problem]);

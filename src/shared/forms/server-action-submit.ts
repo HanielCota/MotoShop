@@ -69,7 +69,8 @@ export function useServerActionState<State extends StateWithError, Payload = For
   useEffect(() => {
     const form = submittedForm.current;
     submittedForm.current = null;
-    if (!form?.isConnected || !state.error) return;
+    if (form == null || !form.isConnected || !state.error) return;
+
     highlightInvalidField(form, state.field);
   }, [state]);
 
