@@ -42,20 +42,26 @@ export function listSourceFilesMatching(pattern: string, options: SourceFileOpti
 /** Tracked and untracked (not ignored) files under src/ that match, or `null` when git cannot answer. */
 function gitGrepSourceFiles(pattern: string): string[] | null {
   try {
-    const output = execFileSync("git", ["grep", "-l", "--untracked", "-E", pattern, "--", "src"], {
+    // -z: names come NUL-separated and unquoted, so accented file names keep their real path.
+    const output = execFileSync("git", ["grep", "-l", "-z", "--untracked", "-E", pattern, "--", "src"], {
       cwd: process.cwd(),
       encoding: "utf8",
       // A stuck git must not hang the test run; the timeout error falls back to the full scan.
       timeout: GIT_GREP_TIMEOUT_MS,
     });
-    return output
-      .split("\n")
-      .filter((line) => line.length > 0)
-      .map((line) => join(process.cwd(), line));
+    return parseGitFileList(output, process.cwd());
   } catch (error) {
     // Exit status 1 means "no file matches"; anything else (no git, not a repository) falls back.
     return isNoMatch(error) ? [] : null;
   }
+}
+
+/** Absolute paths from the NUL-separated file list of `git grep -l -z`. */
+export function parseGitFileList(output: string, root: string): string[] {
+  return output
+    .split("\0")
+    .filter((name) => name.length > 0)
+    .map((name) => join(root, name));
 }
 
 function isNoMatch(error: unknown): boolean {
