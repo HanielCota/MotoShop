@@ -17,6 +17,7 @@ export function maskInput(input: HTMLInputElement, mask: DigitMask) {
 
   input.value = masked;
   if (document.activeElement !== input) return;
+
   const position = typingAtEnd ? masked.length : positionAfterDigits(masked, digitsBeforeCaret);
   input.setSelectionRange(position, position);
 }
