@@ -71,7 +71,7 @@ export function VariantAttributeFilterFields({
 /** Color name with a small swatch; the swatch is decorative, the name is what is read and sent. */
 function ColorChoice({ name }: { name: string }) {
   const background = colorSwatchBackground(name);
-  if (!background) return name;
+  if (background == null) return name;
 
   return (
     <span className="inline-flex items-center gap-2">

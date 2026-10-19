@@ -28,7 +28,10 @@ const toneByColorWord: Readonly<Record<string, string>> = {
   bege: "#d9c3a0",
 };
 
-function normalizeWord(text: string) {
+// "Azul/amarelo" gets two halves; a name with more parts gets no swatch.
+const maximumColorParts = 2;
+
+function normalizeWord(text: string): string | undefined {
   return text
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
@@ -39,18 +42,21 @@ function normalizeWord(text: string) {
 
 function toneOf(part: string): string | null {
   const word = normalizeWord(part);
-  if (!word) return null;
+  if (word == null || word.length === 0) return null;
+
   return toneByColorWord[word] ?? null;
 }
 
 /** CSS background for the swatch, or null when any part of the name has no known tone. */
 export function colorSwatchBackground(colorName: string): string | null {
   const tones = colorName.split("/").map(toneOf);
-  if (tones.length === 0 || tones.length > 2) return null;
+  if (tones.length === 0 || tones.length > maximumColorParts) return null;
   if (tones.some((tone) => tone === null)) return null;
 
   const [first, second] = tones;
-  if (!first) return null;
-  if (!second) return first;
+  if (first == null) return null;
+
+  if (second == null) return first;
+
   return `linear-gradient(135deg, ${first} 50%, ${second} 50%)`;
 }
