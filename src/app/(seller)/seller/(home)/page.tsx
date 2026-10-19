@@ -124,6 +124,6 @@ export default async function SellerHomePage({ searchParams }: { searchParams: S
 }
 
 /** Low stock (catalog) and finance panels shown to this member. */
-function countVisiblePanels(permissions: { canManageCatalog: boolean; canReadFinances: boolean }) {
+function countVisiblePanels(permissions: { canManageCatalog: boolean; canReadFinances: boolean }): number {
   return [permissions.canManageCatalog, permissions.canReadFinances].filter(Boolean).length;
 }

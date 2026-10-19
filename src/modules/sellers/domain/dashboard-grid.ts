@@ -9,12 +9,15 @@ const overviewStatsColumns: Readonly<Record<number, string>> = {
   3: "grid gap-3 sm:grid-cols-3",
 };
 
+const fourColumnStatsClassName = "grid gap-3 sm:grid-cols-2 lg:grid-cols-4";
+const minimumPanelsSideBySide = 2;
+
 /** Indicator cards at the top: one column per visible card, up to four. */
 export function overviewStatsGridClassName(visibleCards: number): string {
-  return overviewStatsColumns[visibleCards] ?? "grid gap-3 sm:grid-cols-2 lg:grid-cols-4";
+  return overviewStatsColumns[visibleCards] ?? fourColumnStatsClassName;
 }
 
 /** Low stock and finance panels: side by side only when both are visible. */
 export function dashboardPanelsGridClassName(visiblePanels: number): string {
-  return visiblePanels >= 2 ? "grid gap-6 lg:grid-cols-2" : "grid gap-6";
+  return visiblePanels >= minimumPanelsSideBySide ? "grid gap-6 lg:grid-cols-2" : "grid gap-6";
 }
