@@ -8,6 +8,8 @@ const MARKED_ATTRIBUTE = "data-error-marked";
 // Slightly longer than the CSS animation, so the attribute is gone even when `animationend` never fires.
 const FLASH_DURATION_MS = 700;
 const FOCUSABLE_CONTROL = "input:not([type=hidden]), textarea, select, button, [role=combobox]";
+/** The running flash timer of each control; weak, so removed fields are not kept alive. */
+const flashTimers = new WeakMap<HTMLElement, number>();
 
 /** The field named by a validation problem, when the problem is an object that carries one. */
 export function problemField(problem: unknown): string | undefined {
@@ -55,11 +57,19 @@ function firstInvalidControl(form: HTMLFormElement): HTMLElement | null {
 }
 
 function flash(control: HTMLElement) {
-  // Removing and re-adding the attribute restarts the animation on a repeated submit.
+  // A repeated submit restarts the flash; the timer of the previous one must not end it early.
+  const pending = flashTimers.get(control);
+  if (pending !== undefined) window.clearTimeout(pending);
+
+  // Removing and re-adding the attribute restarts the animation.
   control.removeAttribute(FLASH_ATTRIBUTE);
   void control.offsetWidth;
   control.setAttribute(FLASH_ATTRIBUTE, "");
-  window.setTimeout(() => control.removeAttribute(FLASH_ATTRIBUTE), FLASH_DURATION_MS);
+  const timer = window.setTimeout(() => {
+    control.removeAttribute(FLASH_ATTRIBUTE);
+    flashTimers.delete(control);
+  }, FLASH_DURATION_MS);
+  flashTimers.set(control, timer);
 }
 
 /** The red border set here (not by React) goes away as soon as the person edits the field. */

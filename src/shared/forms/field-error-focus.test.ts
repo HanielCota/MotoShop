@@ -61,3 +61,19 @@ it("reads the field only from problems that carry one", () => {
   expect(problemField("Informe o código.")).toBeUndefined();
   expect(problemField({ error: "Informe o nome." })).toBeUndefined();
 });
+
+// Regression: a second failed submit 400 ms after the first had its flash cut short by the first timer.
+it("keeps the whole flash of a repeated submit", () => {
+  vi.useFakeTimers();
+  const form = renderForm('<input name="code" />');
+  const code = form.querySelector<HTMLInputElement>("[name=code]");
+
+  highlightInvalidField(form, "code");
+  vi.advanceTimersByTime(400);
+  highlightInvalidField(form, "code");
+  vi.advanceTimersByTime(400);
+
+  expect(code).toHaveAttribute("data-error-flash");
+  vi.advanceTimersByTime(300);
+  expect(code).not.toHaveAttribute("data-error-flash");
+});
