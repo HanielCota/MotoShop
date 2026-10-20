@@ -120,8 +120,8 @@ export function StorefrontNavigation() {
 type HeaderSearchProps = { id: string; className?: string };
 
 /**
- * The header search stays on the catalog too, filled with the term searched there, so a customer can
- * fix the search where they typed it. Reading the URL needs a Suspense boundary.
+ * The header search stays on the catalog too, filled with the term searched there and keeping the
+ * filters already applied, like the catalog search band. Reading the URL needs a Suspense boundary.
  */
 function CatalogAwareHeaderSearch(props: HeaderSearchProps) {
   return (
@@ -134,15 +134,27 @@ function CatalogAwareHeaderSearch(props: HeaderSearchProps) {
 function HeaderSearchWithCatalogQuery(props: HeaderSearchProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const catalogQuery = pathname === "/products" ? (searchParams.get("q")?.trim() ?? "") : "";
+  if (pathname !== "/products") return <HeaderSearch {...props} />;
+
+  const catalogQuery = searchParams.get("q")?.trim() ?? "";
+  // A new search starts on the first page; the term itself comes from the field.
+  const preservedEntries = [...searchParams.entries()].filter(([name]) => name !== "q" && name !== "page");
 
   // key: a new search remounts the field with the new term instead of keeping the old text.
-  return <HeaderSearch key={catalogQuery} {...props} defaultValue={catalogQuery} />;
+  return <HeaderSearch key={catalogQuery} {...props} defaultValue={catalogQuery} preservedEntries={preservedEntries} />;
 }
 
-function HeaderSearch({ id, className, defaultValue = "" }: HeaderSearchProps & { defaultValue?: string }) {
+function HeaderSearch({
+  id,
+  className,
+  defaultValue = "",
+  preservedEntries = [],
+}: HeaderSearchProps & { defaultValue?: string; preservedEntries?: readonly [string, string][] }) {
   return (
     <form action="/products" method="get" role="search" className={`relative items-center ${className ?? ""}`}>
+      {preservedEntries.map(([name, value]) => (
+        <input key={`${name}=${value}`} type="hidden" name={name} value={value} />
+      ))}
       <label htmlFor={id} className="sr-only">
         Buscar produtos
       </label>

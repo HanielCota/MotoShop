@@ -120,6 +120,24 @@ it("keeps the header search on the catalog, filled with the current search", () 
   expect(fields.every((field) => (field as HTMLInputElement).value === "capacete")).toBe(true);
 });
 
+it("keeps the filters applied on the catalog when a new search is sent from the header", () => {
+  authMocks.useSession.mockReturnValue({ data: null });
+  navigation.pathname = "/products";
+  navigation.search = "category=capacetes&q=fox&page=3";
+
+  render(<StorefrontNavigation />);
+
+  const forms = screen.getAllByRole("search", { hidden: true });
+  for (const form of forms) {
+    const hidden = [...form.querySelectorAll<HTMLInputElement>("input[type=hidden]")].map((input) => [
+      input.name,
+      input.value,
+    ]);
+
+    expect(hidden).toEqual([["category", "capacetes"]]);
+  }
+});
+
 it("starts the header search empty outside the catalog", () => {
   authMocks.useSession.mockReturnValue({ data: null });
   navigation.pathname = "/products/capacete";
