@@ -20,7 +20,7 @@ import { SellerInventoryHistoryCard } from "@/modules/sellers/components/dashboa
 import { SellerLowStockCard } from "@/modules/sellers/components/dashboard/seller-low-stock-card";
 import { SellerOverviewStats } from "@/modules/sellers/components/dashboard/seller-overview-stats";
 import { getLegacySellerDashboardRedirect } from "@/modules/sellers/application/legacy-dashboard-links";
-import { dashboardPanelsGridClassName } from "@/modules/sellers/domain/dashboard-grid";
+import { countOverviewStatCards, dashboardPanelsGridClassName } from "@/modules/sellers/domain/dashboard-grid";
 
 export const metadata: Metadata = {
   title: "Central do Lojista",
@@ -92,7 +92,7 @@ export default async function SellerHomePage({ searchParams }: { searchParams: S
       {query.error === "permission" ? (
         <FormMessage error="Seu perfil na equipe não tem acesso a essa área. Fale com o responsável pela loja." />
       ) : null}
-      <Suspense fallback={<SellerStatsSkeleton />}>
+      <Suspense fallback={<SellerStatsSkeleton items={countOverviewStatCards(permissions)} />}>
         <SellerOverviewStats sellerId={seller.id} permissions={permissions} />
       </Suspense>
       {permissions.canManageCatalog ? (

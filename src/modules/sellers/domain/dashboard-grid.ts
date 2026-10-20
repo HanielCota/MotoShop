@@ -12,6 +12,17 @@ const overviewStatsColumns: Readonly<Record<number, string>> = {
 const fourColumnStatsClassName = "grid gap-3 sm:grid-cols-2 lg:grid-cols-4";
 const minimumPanelsSideBySide = 2;
 
+/** Indicator cards each role sees: orders, then questions and low stock (catalog), then month sales. */
+export function countOverviewStatCards(permissions: {
+  canReadOrders: boolean;
+  canManageCatalog: boolean;
+  canReadFinances: boolean;
+}): number {
+  const catalogCards = permissions.canManageCatalog ? 2 : 0;
+
+  return Number(permissions.canReadOrders) + catalogCards + Number(permissions.canReadFinances);
+}
+
 /** Indicator cards at the top: one column per visible card, up to four. */
 export function overviewStatsGridClassName(visibleCards: number): string {
   return overviewStatsColumns[visibleCards] ?? fourColumnStatsClassName;
