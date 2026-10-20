@@ -34,6 +34,31 @@ export function validateReturnQuantity(maxQuantity: number) {
   };
 }
 
+type UploadedReturnPhoto = { key: string; fileId: string };
+
+/**
+ * Sends the return and, when it is not registered (an error answer or no answer at all), deletes the
+ * photos already uploaded, so they do not stay orphaned in ImageKit.
+ */
+export async function submitReturnWithoutOrphanPhotos(input: {
+  target: { orderNumber: string; orderItemId: string };
+  photos: readonly UploadedReturnPhoto[];
+  submit: () => Promise<ReturnActionState>;
+  discard?: typeof discardReturnPhotos;
+}): Promise<ReturnActionState> {
+  const discard = input.discard ?? discardReturnPhotos;
+
+  try {
+    const result = await input.submit();
+    if (result.error) await discard(input.target, input.photos);
+
+    return result;
+  } catch (error) {
+    await discard(input.target, input.photos);
+    throw error;
+  }
+}
+
 export function RequestReturnForm({ orderNumber, orderItemId, maxQuantity, idempotencyKey }: RequestReturnFormProps) {
   const [photos, setPhotos] = useState<File[]>([]);
   const [state, action, pending] = useServerActionState(
@@ -43,17 +68,19 @@ export function RequestReturnForm({ orderNumber, orderItemId, maxQuantity, idemp
       const uploaded = await uploadPhotosOrError(target, photos);
       if ("error" in uploaded) return { error: uploaded.error };
 
-      const result = await requestReturnAction({
-        ...target,
-        quantity: Number(formData.get("quantity")),
-        reason: String(formData.get("reason") ?? ""),
-        customerMessage: String(formData.get("customerMessage") ?? "").trim(),
-        idempotencyKey,
+      return submitReturnWithoutOrphanPhotos({
+        target,
         photos: uploaded.photos,
+        submit: async () =>
+          requestReturnAction({
+            ...target,
+            quantity: Number(formData.get("quantity")),
+            reason: String(formData.get("reason") ?? ""),
+            customerMessage: String(formData.get("customerMessage") ?? "").trim(),
+            idempotencyKey,
+            photos: uploaded.photos,
+          }),
       });
-      // A devolução não foi registrada: as fotos enviadas não ficam órfãs no ImageKit.
-      if (result.error) await discardReturnPhotos(target, uploaded.photos);
-      return result;
     },
     initialState,
   );
