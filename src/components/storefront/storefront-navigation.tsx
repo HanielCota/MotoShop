@@ -120,9 +120,8 @@ export function StorefrontNavigation() {
 type HeaderSearchProps = { id: string; className?: string };
 
 /**
- * The header search stays on the catalog too, so a new search happens where the last one started:
- * there it starts with the term searched,
- * so a customer can fix the search where they typed it. Reading the URL needs a Suspense boundary.
+ * The header search stays on the catalog too, filled with the term searched there, so a customer can
+ * fix the search where they typed it. Reading the URL needs a Suspense boundary.
  */
 function CatalogAwareHeaderSearch(props: HeaderSearchProps) {
   return (

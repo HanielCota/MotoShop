@@ -33,7 +33,7 @@ export function CatalogSearchBand({
         inputClassName="border-moto-brand bg-card border-2 shadow-[0_2px_8px_rgb(255_106_0/0.15)]"
         iconOnlyOnPhone
       />
-      {defaultValue ? null : <CatalogSearchExamples preservedEntries={preservedEntries} />}
+      {defaultValue.trim().length > 0 ? null : <CatalogSearchExamples preservedEntries={preservedEntries} />}
     </div>
   );
 }
@@ -52,8 +52,9 @@ function CatalogSearchExamples({ preservedEntries }: { preservedEntries: [string
 }
 
 /** Same address the search form would send: the applied filters plus the example as the search. */
-function buildExampleHref(example: string, preservedEntries: [string, string][]) {
+function buildExampleHref(example: string, preservedEntries: [string, string][]): Route {
   const params = new URLSearchParams(preservedEntries.filter(([name]) => name !== "q"));
   params.set("q", example);
+
   return `/products?${params.toString()}` as Route;
 }
