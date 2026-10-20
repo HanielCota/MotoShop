@@ -1,7 +1,7 @@
 /**
  * Tone shown next to a color name in the public filter. The color is free text typed by
  * the store, so the swatch is only a visual hint: it reads the first word of each part ("Preto fosco"
- * → preto, "Azul/amarelo" → azul and amarelo), ignoring accents, case and the feminine form.
+ * → preto, "Azul/amarelo" or "Azul e amarelo" → azul and amarelo), ignoring accents, case and the feminine form.
  */
 const toneByColorWord: Readonly<Record<string, string>> = {
   preto: "#111111",
@@ -49,7 +49,8 @@ function toneOf(part: string): string | null {
 
 /** CSS background for the swatch, or null when any part of the name has no known tone. */
 export function colorSwatchBackground(colorName: string): string | null {
-  const tones = colorName.split("/").map(toneOf);
+  // "Azul/amarelo" and "Preto e vermelho" both name two colors.
+  const tones = colorName.split(/\s*\/\s*|\s+e\s+/i).map(toneOf);
   if (tones.length === 0 || tones.length > maximumColorParts) return null;
   if (tones.some((tone) => tone === null)) return null;
 

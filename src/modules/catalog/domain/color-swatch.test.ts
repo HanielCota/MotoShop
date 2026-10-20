@@ -16,6 +16,11 @@ describe("colorSwatchBackground", () => {
     expect(colorSwatchBackground("Preta/laranja")).toBe("linear-gradient(135deg, #111111 50%, #ff6a00 50%)");
   });
 
+  it("also splits names joined by 'e', as stores usually write them", () => {
+    expect(colorSwatchBackground("Preto e vermelho")).toBe("linear-gradient(135deg, #111111 50%, #d32f2f 50%)");
+    expect(colorSwatchBackground("Branca E Azul")).toBe("linear-gradient(135deg, #ffffff 50%, #1f5bd8 50%)");
+  });
+
   it("shows no swatch when a part has no known tone", () => {
     expect(colorSwatchBackground("Camuflado")).toBeNull();
     expect(colorSwatchBackground("Preto/neon")).toBeNull();
