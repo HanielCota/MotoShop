@@ -26,7 +26,7 @@ export function PaymentMethodIcons() {
           key={method.name}
           className="flex h-[30px] w-12 items-center justify-center rounded-[4px] bg-white px-1 ring-1 ring-white/20"
         >
-          {/* unoptimized: an SVG is already sharp at any size and needs no resizing. */}
+          {/* unoptimized: the SVGs are sharp at any size and the Cabal PNG has only 6 KB, so resizing gains nothing. */}
           <Image
             src={`/images/payment-methods/${method.file}`}
             alt={method.name}
