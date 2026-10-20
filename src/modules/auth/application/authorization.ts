@@ -1,6 +1,7 @@
 import "server-only";
 
 import { headers } from "next/headers";
+import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import type { Route } from "next";
 
@@ -11,9 +12,8 @@ import { hasSellerPermission, type SellerPermission } from "@/modules/auth/domai
 import { auth } from "@/modules/auth/infrastructure/auth";
 import { sellerPermissionDeniedPath } from "@/modules/sellers/domain/permission-denied";
 
-export async function getCurrentSession() {
-  return auth.api.getSession({ headers: await headers() });
-}
+/** Memoized per request: layouts, metadata and pages of the same request share one session lookup. */
+export const getCurrentSession = cache(async () => auth.api.getSession({ headers: await headers() }));
 
 export async function requireAuthenticatedUser(nextPath: string) {
   const session = await getCurrentSession();
