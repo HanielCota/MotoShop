@@ -98,6 +98,15 @@ export async function verifyReturnPhotos(
     photos.map(async (photo, sortOrder) => {
       if (!isReturnPhotoKeyOf(orderItemId, photo.key))
         throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Foto fora da devolução deste item." });
+
+      const attached = await db.returnRequestPhoto.findUnique({
+        where: { storageKey: photo.key },
+        select: { id: true },
+      });
+      if (attached != null) {
+        throw new ApplicationError({ code: "CONFLICT", message: "Esta foto já faz parte de outra devolução." });
+      }
+
       const asset = await provider.verifyAsset({
         key: photo.key,
         fileId: photo.fileId,

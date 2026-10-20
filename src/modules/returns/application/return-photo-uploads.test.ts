@@ -102,6 +102,14 @@ describe("verifyReturnPhotos", () => {
 
     await expect(verifyReturnPhotos("item-1", [photo, photo])).rejects.toThrow("duas vezes");
   });
+
+  it("refuses a photo that already belongs to another return with a clear message", async () => {
+    mocks.findPhoto.mockResolvedValue({ id: "photo-of-first-return" });
+
+    await expect(verifyReturnPhotos("item-1", [{ key: validKey, fileId: "file-1" }])).rejects.toThrow(
+      "já faz parte de outra devolução",
+    );
+  });
 });
 
 describe("removeReturnPhotoUpload", () => {
