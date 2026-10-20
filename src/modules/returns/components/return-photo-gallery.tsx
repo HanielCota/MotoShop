@@ -21,8 +21,9 @@ function signPhotos(photos: readonly ReturnPhotoSummary[]): SignedPhoto[] | null
       provider.createSignedUrl({
         key,
         expiresInSeconds: RETURN_PHOTO_LINK_TTL_IN_SECONDS,
-        ...(width ? { width } : {}),
+        ...(width != null ? { width } : {}),
       });
+
     return photos.map((photo) => ({
       id: photo.id,
       thumbnailUrl: sign(photo.storageKey, THUMBNAIL_WIDTH),
@@ -39,7 +40,8 @@ export function ReturnPhotoGallery({ photos, title }: { photos: readonly ReturnP
   if (photos.length === 0) return null;
 
   const signed = signPhotos(photos);
-  if (!signed) return <p className="text-muted-foreground text-xs">As fotos da devolução estão indisponíveis agora.</p>;
+  if (signed == null)
+    return <p className="text-muted-foreground text-xs">As fotos da devolução estão indisponíveis agora.</p>;
 
   return (
     <div className="mt-1">

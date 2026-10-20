@@ -28,16 +28,21 @@ export const uploadedReturnPhotosSchema = z
 export type UploadedReturnPhoto = z.infer<typeof uploadedReturnPhotosSchema>[number];
 
 /** Pasta das fotos de um item; o caminho só é aceito dentro dela. */
-export function returnPhotoFolder(orderItemId: string) {
+export function returnPhotoFolder(orderItemId: string): string {
   return `returns/${orderItemId}/`;
 }
 
-export function buildReturnPhotoKey(orderItemId: string, fileName: string, contentType: ReturnPhotoContentType) {
+export function buildReturnPhotoKey(
+  orderItemId: string,
+  fileName: string,
+  contentType: ReturnPhotoContentType,
+): string {
   return `${returnPhotoFolder(orderItemId)}${fileName}.${returnPhotoExtensions[contentType]}`;
 }
 
-export function isReturnPhotoKeyOf(orderItemId: string, key: string) {
+export function isReturnPhotoKeyOf(orderItemId: string, key: string): boolean {
   const folder = returnPhotoFolder(orderItemId);
   if (!key.startsWith(folder)) return false;
+
   return /^[a-f0-9-]{36}\.(jpg|png|webp)$/.test(key.slice(folder.length));
 }

@@ -38,9 +38,11 @@ async function findReturnableOrderItem(target: ReturnPhotoTarget) {
     },
     select: { id: true, sellerOrder: { select: { status: true } } },
   });
-  if (!item) throw new ApplicationError({ code: "NOT_FOUND", message: "Item do pedido não encontrado." });
+
+  if (item == null) throw new ApplicationError({ code: "NOT_FOUND", message: "Item do pedido não encontrado." });
   if (!isSellerOrderEligibleForReturn(item.sellerOrder.status))
     throw new ApplicationError({ code: "CONFLICT", message: "A devolução fica disponível após a entrega." });
+
   return item;
 }
 
@@ -48,12 +50,13 @@ async function findReturnableOrderItem(target: ReturnPhotoTarget) {
 export async function createReturnPhotoUpload(
   target: ReturnPhotoTarget,
   file: { contentType: ReturnPhotoContentType; sizeInBytes: number },
-) {
+): ReturnType<ImageKitStorageProvider["createUploadUrl"]> {
   if (file.sizeInBytes > MAX_RETURN_PHOTO_SIZE_IN_BYTES)
     throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Cada foto pode ter até 5 MB." });
 
   const item = await findReturnableOrderItem(target);
   const key = buildReturnPhotoKey(item.id, randomUUID(), file.contentType);
+
   return new ImageKitStorageProvider().createUploadUrl({
     key,
     contentType: file.contentType,
@@ -66,10 +69,14 @@ export async function createReturnPhotoUpload(
 export async function removeReturnPhotoUpload(target: ReturnPhotoTarget, key: string): Promise<void> {
   if (!isReturnPhotoKeyOf(target.orderItemId, key))
     throw new ApplicationError({ code: "NOT_FOUND", message: "Arquivo não encontrado." });
+
   await findReturnableOrderItem(target);
 
   const attached = await db.returnRequestPhoto.findUnique({ where: { storageKey: key }, select: { id: true } });
-  if (attached) throw new ApplicationError({ code: "CONFLICT", message: "Esta foto já faz parte da devolução." });
+  if (attached != null) {
+    throw new ApplicationError({ code: "CONFLICT", message: "Esta foto já faz parte da devolução." });
+  }
+
   await new ImageKitStorageProvider().deleteObject({ key });
 }
 
@@ -86,6 +93,7 @@ export async function verifyReturnPhotos(
     throw new ApplicationError({ code: "VALIDATION_ERROR", message: "A mesma foto foi anexada duas vezes." });
 
   const provider = new ImageKitStorageProvider();
+
   return Promise.all(
     photos.map(async (photo, sortOrder) => {
       if (!isReturnPhotoKeyOf(orderItemId, photo.key))

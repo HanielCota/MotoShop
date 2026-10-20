@@ -70,9 +70,12 @@ async function resolveReturnIdentity(
 ): Promise<{ error: string } | { identity: CustomerOrderIdentity }> {
   const session = await getCurrentSession();
   const accessToken = await readGuestOrderCookie();
-  if (!session && !accessToken) return { error: "Acesse o pedido pelo link seguro do checkout." };
+  const hasAccessToken = accessToken != null && accessToken.length > 0;
+  if (session == null && !hasAccessToken) return { error: "Acesse o pedido pelo link seguro do checkout." };
+
   const identity = await resolveCustomerOrderIdentity({ orderNumber, accessToken, userId: session?.user.id });
-  if (!identity) return { error: "Pedido não encontrado." };
+  if (identity == null) return { error: "Pedido não encontrado." };
+
   return { identity };
 }
 

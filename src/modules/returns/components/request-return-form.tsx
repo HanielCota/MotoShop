@@ -105,7 +105,10 @@ export function RequestReturnForm({ orderNumber, orderItemId, maxQuantity, idemp
   );
 }
 
-async function uploadPhotosOrError(target: { orderNumber: string; orderItemId: string }, files: readonly File[]) {
+async function uploadPhotosOrError(
+  target: { orderNumber: string; orderItemId: string },
+  files: readonly File[],
+): Promise<{ photos: Awaited<ReturnType<typeof uploadReturnPhotos>> } | { error: string }> {
   try {
     return { photos: await uploadReturnPhotos(target, files) };
   } catch (error) {

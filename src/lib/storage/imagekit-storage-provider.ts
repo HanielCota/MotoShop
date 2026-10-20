@@ -110,6 +110,10 @@ function signUploadToken(config: { publicKey: string; privateKey: string }, clai
   return `${signingInput}.${signature}`;
 }
 
+const MAX_SIGNED_LINK_SECONDS = 3600;
+const MAX_SIGNED_IMAGE_WIDTH = 2000;
+const MILLISECONDS_PER_SECOND = 1000;
+
 const signedPathSchema = z.string().regex(/^[a-zA-Z0-9_/-]+\/[a-zA-Z0-9_-]+\.(jpg|png|webp)$/);
 
 /**
@@ -126,19 +130,25 @@ export function signImageKitUrl(input: {
   now: Date;
 }): string {
   const key = signedPathSchema.parse(input.key);
-  const expiresInSeconds = z.number().int().positive().max(3600).parse(input.expiresInSeconds);
-  const path = input.width ? `tr:w-${z.number().int().positive().max(2000).parse(input.width)}/${key}` : key;
-  const expiresAt = Math.floor(input.now.getTime() / 1000) + expiresInSeconds;
+  const expiresInSeconds = z.number().int().positive().max(MAX_SIGNED_LINK_SECONDS).parse(input.expiresInSeconds);
+  const path =
+    input.width != null
+      ? `tr:w-${z.number().int().positive().max(MAX_SIGNED_IMAGE_WIDTH).parse(input.width)}/${key}`
+      : key;
+  const expiresAt = Math.floor(input.now.getTime() / MILLISECONDS_PER_SECOND) + expiresInSeconds;
   const signature = createHmac("sha1", input.privateKey).update(`${path}${expiresAt}`).digest("hex");
+
   return `${input.endpoint.replace(/\/$/, "")}/${path}?ik-t=${expiresAt}&ik-s=${signature}`;
 }
 
-function getUrlEndpoint() {
-  if (!env.IMAGEKIT_URL_ENDPOINT)
+function getUrlEndpoint(): string {
+  if (env.IMAGEKIT_URL_ENDPOINT == null || env.IMAGEKIT_URL_ENDPOINT.trim().length === 0) {
     throw new ApplicationError({
       code: "CONFIGURATION_ERROR",
       message: "O armazenamento de imagens ainda não está configurado.",
     });
+  }
+
   return env.IMAGEKIT_URL_ENDPOINT;
 }
 
@@ -235,6 +245,7 @@ export class ImageKitStorageProvider implements StorageProvider {
   createSignedUrl(input: { key: string; expiresInSeconds: number; width?: number }): string {
     const { privateKey } = this.getConfig();
     const endpoint = getUrlEndpoint();
+
     return signImageKitUrl({ ...input, endpoint, privateKey, now: new Date() });
   }
 

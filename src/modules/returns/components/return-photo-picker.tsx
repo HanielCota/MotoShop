@@ -14,10 +14,12 @@ type UploadedPhoto = { key: string; fileId: string };
 /** Confere tipo, tamanho e quantidade antes de aceitar a seleção; devolve a mensagem de erro ou null. */
 export function validateReturnPhotoSelection(current: readonly File[], selected: readonly File[]): string | null {
   if (current.length + selected.length > MAX_RETURN_PHOTOS) return `Anexe no máximo ${MAX_RETURN_PHOTOS} fotos.`;
+
   for (const file of selected) {
     if (!(returnPhotoContentTypes as readonly string[]).includes(file.type)) return "Use imagens JPG, PNG ou WebP.";
     if (file.size > MAX_RETURN_PHOTO_SIZE_IN_BYTES) return `A foto ${file.name} passa de 5 MB.`;
   }
+
   return null;
 }
 
@@ -38,6 +40,7 @@ export async function uploadReturnPhotos(target: ReturnPhotoTarget, files: reado
       const fileId = await uploadFileToImageKit({ url: authorization.url, fields: authorization.fields, file });
       uploaded.push({ key: authorization.key, fileId });
     }
+
     return uploaded;
   } catch (error) {
     await discardReturnPhotos(target, uploaded);
@@ -46,7 +49,7 @@ export async function uploadReturnPhotos(target: ReturnPhotoTarget, files: reado
 }
 
 /** Apaga fotos enviadas que não entraram numa devolução. */
-export async function discardReturnPhotos(target: ReturnPhotoTarget, photos: readonly UploadedPhoto[]) {
+export async function discardReturnPhotos(target: ReturnPhotoTarget, photos: readonly UploadedPhoto[]): Promise<void> {
   await Promise.all(photos.map((photo) => removeReturnPhotoUploadAction({ ...target, key: photo.key })));
 }
 
@@ -64,11 +67,13 @@ export function ReturnPhotoPicker({
   const [error, setError] = useState<string | null>(null);
 
   function selectFiles(list: FileList | null) {
-    if (!list?.length) return;
+    if (list == null || list.length === 0) return;
+
     const selected = Array.from(list);
     const selectionError = validateReturnPhotoSelection(files, selected);
     setError(selectionError);
-    if (selectionError) return;
+    if (selectionError != null) return;
+
     onFilesChange([...files, ...selected]);
   }
 
