@@ -37,6 +37,10 @@ export function getSellerDashboardPermissions(role: SellerMemberRole): SellerDas
   };
 }
 
+function isApprovedSellerStatus(status: SellerStatus): boolean {
+  return status === "APPROVED" || status === "ACTIVE";
+}
+
 type Membership = Awaited<ReturnType<typeof getUserSellerMemberships>>[number];
 export type DashboardSeller = Membership["seller"];
 type PendingSeller = DashboardSeller & { status: Exclude<SellerStatus, "APPROVED" | "ACTIVE"> };
@@ -58,10 +62,12 @@ export type SellerDashboardContext =
  */
 export const getSellerDashboardContext = cache(async (): Promise<SellerDashboardContext> => {
   const session = await requireAuthenticatedUser("/seller");
-  const [membership] = await getUserSellerMemberships(session.user.id);
+  const memberships = await getUserSellerMemberships(session.user.id);
+  // Same choice as requireSellerAccess: an approved store wins over an older one still under review.
+  const membership = memberships.find((item) => isApprovedSellerStatus(item.seller.status)) ?? memberships[0];
   if (!membership) return { status: "no-seller" };
   const { seller } = membership;
-  if (seller.status !== "ACTIVE" && seller.status !== "APPROVED") {
+  if (!isApprovedSellerStatus(seller.status)) {
     return { status: "pending", seller: seller as PendingSeller };
   }
   return {
