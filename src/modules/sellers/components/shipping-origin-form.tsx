@@ -3,7 +3,7 @@ import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatCep } from "@/modules/customers/domain/brazilian-address";
-import { formatPhone, formatTaxId } from "@/modules/customers/domain/tax-id";
+import { formatPhone, formatTaxId, onlyDigits } from "@/modules/customers/domain/tax-id";
 import { maskOnChange, type DigitMask } from "@/shared/forms/digit-mask";
 
 import { updateShippingOriginAction, type SellerActionState } from "../actions/seller-actions";
@@ -30,6 +30,20 @@ type ShippingOriginFormProps = {
 
 const initialState: SellerActionState = {};
 
+/** A Brazilian phone with area code has at most 11 digits: (00) 00000-0000. */
+const MAX_PHONE_DIGITS = 11;
+
+/**
+ * Phones saved before the mask existed may carry a country code (+55). Masking those would cut
+ * digits and show a wrong number, so they appear as saved for the seller to fix.
+ */
+function savedPhoneForEditing(phone: string | null): string {
+  if (phone == null) return "";
+  if (onlyDigits(phone).length > MAX_PHONE_DIGITS) return phone;
+
+  return formatPhone(phone);
+}
+
 export function ShippingOriginForm({ store }: ShippingOriginFormProps) {
   const [state, action, pending] = useServerActionState(updateShippingOriginAction, initialState);
   const { clientError, onSubmit } = useClientValidation(validateShippingOriginForm);
@@ -44,7 +58,7 @@ export function ShippingOriginForm({ store }: ShippingOriginFormProps) {
         inputMode="tel"
         mask={formatPhone}
         maxLength={15}
-        defaultValue={formatPhone(store.originPhone ?? "")}
+        defaultValue={savedPhoneForEditing(store.originPhone)}
       />
       <Field
         label="CPF ou CNPJ"

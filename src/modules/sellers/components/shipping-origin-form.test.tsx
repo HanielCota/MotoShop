@@ -43,3 +43,10 @@ it("formats the phone, CEP and CPF or CNPJ while typing and shows saved digits f
   fireEvent.change(screen.getByLabelText("CPF ou CNPJ"), { target: { value: "52998224725" } });
   expect(screen.getByLabelText("CPF ou CNPJ")).toHaveValue("529.982.247-25");
 });
+
+// Regression: a phone saved before the mask with the country code showed as "(55) 11987-6543".
+it("shows a phone saved with the country code as it was saved instead of cutting digits", () => {
+  render(<ShippingOriginForm store={{ ...emptyStore, originPhone: "+55 11 98765-4321" }} />);
+
+  expect(screen.getByLabelText("Telefone")).toHaveValue("+55 11 98765-4321");
+});
