@@ -37,7 +37,19 @@ export type SellerOrderAfterSalesData = {
 
 type Detail = readonly [label: string, value: string | null];
 
-const OPEN_CANCELLATION_STATUSES = new Set(["REQUESTED", "APPROVED"]);
+// Requested: the Moto Shop is still deciding. Approved: decided, the order is being cancelled.
+const cancellationWarnings: Readonly<Record<string, ReactNode>> = {
+  REQUESTED: (
+    <>
+      <strong>Não despache este pedido</strong> enquanto o Moto Shop analisa.
+    </>
+  ),
+  APPROVED: (
+    <>
+      <strong>Não despache este pedido.</strong> Cancelamento aprovado pelo Moto Shop.
+    </>
+  ),
+};
 const OPEN_RETURN_STATUSES = new Set(["REQUESTED", "UNDER_REVIEW", "APPROVED", "WAITING_RETURN", "RETURNED"]);
 const OPEN_DISPUTE_STATUSES = new Set(["OPEN", "UNDER_REVIEW"]);
 const cancellationReasonLabels: Record<string, string> = { CUSTOMER_REQUEST: "Pedido do cliente" };
@@ -80,13 +92,7 @@ function CancellationBlock({ request, orderItems }: { request: CancellationSumma
         ["Mensagem do cliente", hasText(request.customerMessage) ? `"${request.customerMessage}"` : null],
         ["Aberto em", formatDate(request.createdAt)],
       ]}
-      footer={
-        OPEN_CANCELLATION_STATUSES.has(request.status) ? (
-          <>
-            <strong>Não despache este pedido</strong> enquanto o Moto Shop analisa.
-          </>
-        ) : null
-      }
+      footer={cancellationWarnings[request.status] ?? null}
     />
   );
 }

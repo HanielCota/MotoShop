@@ -31,6 +31,19 @@ describe("SellerOrderAfterSales", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("tells the seller an approved cancellation is decided, not still under analysis", () => {
+    const order = buildOrder({
+      cancellationRequests: [
+        { id: "c2", status: "APPROVED", reason: "CUSTOMER_REQUEST", customerMessage: null, createdAt },
+      ],
+    });
+    render(<SellerOrderAfterSales order={order} />);
+    const block = blockFor("Cancelamento");
+
+    expect(block.getByText(/Cancelamento aprovado pelo Moto Shop/)).toBeInTheDocument();
+    expect(block.queryByText(/enquanto o Moto Shop analisa/)).not.toBeInTheDocument();
+  });
+
   it("shows the open cancellation with reason, items and the do-not-ship warning (UX-13)", () => {
     const order = buildOrder({
       cancellationRequests: [
