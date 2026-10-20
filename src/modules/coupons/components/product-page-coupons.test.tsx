@@ -65,3 +65,12 @@ it("keeps every copy button in its own right-hand column instead of wrapping und
     expect(row.lastElementChild).toHaveTextContent("Copiar");
   }
 });
+
+it("announces the copy result to screen readers, not only on the button", async () => {
+  Object.assign(navigator, { clipboard: { writeText: vi.fn(async () => Promise.reject(new Error("denied"))) } });
+  render(<ProductPageCoupons coupons={[coupon]} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Copiar código BOX25" }));
+
+  expect(await screen.findByRole("status")).toHaveTextContent("Não foi possível copiar o código BOX25");
+});

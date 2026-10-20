@@ -15,6 +15,15 @@ const copyButtonLabels: Readonly<Record<CopyStatus, string>> = {
   failed: "Copie manualmente",
 };
 
+// The button keeps a fixed accessible name, so the result is read out from a separate live region.
+function copyResultAnnouncement(status: CopyStatus, code: string): string {
+  if (status === "copied") return `Código ${code} copiado.`;
+
+  if (status === "failed") return `Não foi possível copiar o código ${code}. Selecione e copie manualmente.`;
+
+  return "";
+}
+
 function CopyCodeButton({ code }: { code: string }) {
   const [status, setStatus] = useState<CopyStatus>("idle");
 
@@ -28,17 +37,22 @@ function CopyCodeButton({ code }: { code: string }) {
   }
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      onClick={copy}
-      aria-label={`Copiar código ${code}`}
-      className="h-11 shrink-0 gap-1.5 px-3 sm:h-9"
-    >
-      {status === "copied" ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-      {copyButtonLabels[status]}
-    </Button>
+    <>
+      <span role="status" className="sr-only">
+        {copyResultAnnouncement(status, code)}
+      </span>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={copy}
+        aria-label={`Copiar código ${code}`}
+        className="h-11 shrink-0 gap-1.5 px-3 sm:h-9"
+      >
+        {status === "copied" ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+        {copyButtonLabels[status]}
+      </Button>
+    </>
   );
 }
 
