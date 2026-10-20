@@ -7,8 +7,16 @@ import { Button } from "@/components/ui/button";
 
 import type { ProductPageCouponView } from "../domain/product-page-coupon-view";
 
+type CopyStatus = "idle" | "copied" | "failed";
+
+const copyButtonLabels: Readonly<Record<CopyStatus, string>> = {
+  idle: "Copiar",
+  copied: "Copiado",
+  failed: "Copie manualmente",
+};
+
 function CopyCodeButton({ code }: { code: string }) {
-  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
+  const [status, setStatus] = useState<CopyStatus>("idle");
 
   async function copy() {
     try {
@@ -29,7 +37,7 @@ function CopyCodeButton({ code }: { code: string }) {
       className="h-11 shrink-0 gap-1.5 px-3 sm:h-9"
     >
       {status === "copied" ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-      {status === "copied" ? "Copiado" : status === "failed" ? "Copie manualmente" : "Copiar"}
+      {copyButtonLabels[status]}
     </Button>
   );
 }
