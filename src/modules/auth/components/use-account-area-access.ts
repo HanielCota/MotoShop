@@ -18,13 +18,18 @@ export function useAccountAreaAccess(userId: string | undefined): AccountAreaAcc
     if (!userId) return;
 
     const controller = new AbortController();
+    // A timer instead of AbortSignal.timeout/any, which Safari only has since 17.4.
+    const timeout = setTimeout(() => controller.abort(), accountAreaAccessTimeoutMs);
     const load = async () => {
       const access = await fetchAccountAreaAccess(controller.signal);
       if (access) setLoaded({ userId, access });
     };
     void load();
 
-    return () => controller.abort();
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
   }, [userId]);
 
   // Results from a previous account never leak into the menu of the next one.
@@ -36,7 +41,7 @@ export function useAccountAreaAccess(userId: string | undefined): AccountAreaAcc
 async function fetchAccountAreaAccess(signal: AbortSignal) {
   try {
     const response = await fetch("/api/account/area-access", {
-      signal: AbortSignal.any([signal, AbortSignal.timeout(accountAreaAccessTimeoutMs)]),
+      signal,
       cache: "no-store",
     });
     if (!response.ok) return null;

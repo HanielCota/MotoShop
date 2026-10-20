@@ -118,6 +118,24 @@ it("puts the Admin and Central do Lojista shortcuts on top for whoever can open 
   authMocks.useSession.mockReset();
 });
 
+it("shows the shortcuts on browsers without AbortSignal.any (Safari before 17.4)", async () => {
+  const originalAny = AbortSignal.any;
+  Reflect.deleteProperty(AbortSignal, "any");
+  areaAccess.admin = true;
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "old-safari-admin", name: "Renata" } } });
+
+  try {
+    render(<StorefrontNavigation />);
+    fireEvent.click(screen.getByRole("button", { name: "Minha conta" }));
+
+    const menu = await screen.findByRole("menu");
+    expect(await within(menu).findByRole("menuitem", { name: "Painel do Admin" })).toHaveAttribute("href", "/admin");
+  } finally {
+    AbortSignal.any = originalAny;
+    authMocks.useSession.mockReset();
+  }
+});
+
 it("shows only the Central do Lojista to a store member", async () => {
   areaAccess.seller = true;
   authMocks.useSession.mockReturnValue({ data: { user: { id: "member", name: "Juliana" } } });
