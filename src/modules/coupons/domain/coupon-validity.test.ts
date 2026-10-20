@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { findCouponValidityError, parseCouponValidityDate } from "./coupon-validity";
+import { couponValidityLabel, findCouponValidityError, parseCouponValidityDate } from "./coupon-validity";
 
 describe("parseCouponValidityDate (BUG-025)", () => {
   it("starts at 00:00 Brasília time, stored in UTC", () => {
@@ -41,5 +41,25 @@ describe("findCouponValidityError", () => {
   it("rejects an end already over", () => {
     const endsAt = parseCouponValidityDate("15/10/2026", "end");
     expect(findCouponValidityError({ endsAt }, now)).toMatch(/já passou/);
+  });
+});
+
+describe("couponValidityLabel", () => {
+  const now = new Date("2026-10-20T15:00:00Z");
+
+  it("shows the start of a coupon that only begins later, so it does not look valid now", () => {
+    const startsAt = parseCouponValidityDate("01/11/2026", "start");
+    const endsAt = parseCouponValidityDate("30/11/2026", "end");
+
+    expect(couponValidityLabel({ startsAt, endsAt }, now)).toBe("de 01/11/2026 até 30/11/2026");
+    expect(couponValidityLabel({ startsAt, endsAt: null }, now)).toBe("a partir de 01/11/2026");
+  });
+
+  it("keeps the short label once the coupon has started", () => {
+    const startsAt = parseCouponValidityDate("01/10/2026", "start");
+    const endsAt = parseCouponValidityDate("30/11/2026", "end");
+
+    expect(couponValidityLabel({ startsAt, endsAt }, now)).toBe("até 30/11/2026");
+    expect(couponValidityLabel({ startsAt: null, endsAt: null }, now)).toBe("Sem prazo");
   });
 });

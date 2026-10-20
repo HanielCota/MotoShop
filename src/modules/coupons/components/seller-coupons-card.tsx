@@ -10,7 +10,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { DataTable, tableCellClassName } from "@/components/ui/table";
 import { FilterForm, FilterSelect, FilterText } from "@/components/ui/filter-form";
 import { Pagination } from "@/components/ui/pagination";
-import { formatDate, formatMoneyInCents, formatPercentFromBps } from "@/lib/format";
+import { formatMoneyInCents, formatPercentFromBps } from "@/lib/format";
+import { couponValidityLabel } from "@/modules/coupons/domain/coupon-validity";
 import {
   setSellerCouponActiveAction,
   setSellerCouponProductPageAction,
@@ -42,6 +43,7 @@ const couponSortOptions = [
 
 export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: string; searchParams: SearchParams }) {
   const params = await loadCouponSearchParams(searchParams);
+  const now = new Date();
   const result = await listSellerCoupons(sellerId, {
     query: params.couponQ,
     active: params.couponActive,
@@ -104,7 +106,7 @@ export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: 
                     </div>
                   </div>
                   <p className="text-muted-foreground text-xs">
-                    {couponUsageLabel(coupon)} · {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "Sem prazo"}
+                    {couponUsageLabel(coupon)} · {couponValidityLabel(coupon, now)}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <CouponProductPageToggle couponId={coupon.id} shown={coupon.showOnProductPage} />
@@ -133,9 +135,7 @@ export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: 
                     </div>
                   </td>
                   <td className={`${tableCellClassName} tabular-nums`}>{couponUsageLabel(coupon)}</td>
-                  <td className={`${tableCellClassName} text-muted-foreground`}>
-                    {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "Sem prazo"}
-                  </td>
+                  <td className={`${tableCellClassName} text-muted-foreground`}>{couponValidityLabel(coupon, now)}</td>
                   <td className={tableCellClassName}>
                     <div className="flex flex-wrap gap-2">
                       <CouponProductPageToggle couponId={coupon.id} shown={coupon.showOnProductPage} />

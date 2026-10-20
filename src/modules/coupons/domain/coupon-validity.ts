@@ -1,4 +1,5 @@
 import { parseDateFilter } from "@/lib/date-filter";
+import { formatDate } from "@/lib/format";
 
 export type CouponValidityBound = "start" | "end";
 
@@ -37,4 +38,20 @@ export function findCouponValidityError(
   if (endsAt < now) return "O fim da validade já passou. Escolha hoje ou uma data futura.";
 
   return null;
+}
+
+type CouponValidity = { startsAt?: Date | null | undefined; endsAt?: Date | null | undefined };
+
+/** Validity shown in the coupon lists; the start appears only while it is still ahead, so a scheduled coupon does not look valid now. */
+export function couponValidityLabel(validity: CouponValidity, now: Date): string {
+  const upcomingStart = validity.startsAt != null && validity.startsAt > now ? validity.startsAt : null;
+  const end = validity.endsAt ?? null;
+
+  if (upcomingStart != null && end != null) return `de ${formatDate(upcomingStart)} até ${formatDate(end)}`;
+
+  if (upcomingStart != null) return `a partir de ${formatDate(upcomingStart)}`;
+
+  if (end != null) return `até ${formatDate(end)}`;
+
+  return "Sem prazo";
 }
