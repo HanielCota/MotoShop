@@ -2,7 +2,12 @@ import type { ReactNode } from "react";
 
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, formatMoneyInCents } from "@/lib/format";
-import { disputeReasonLabels, returnReasonLabels, type StatusDomain } from "@/shared/presentation/status-labels";
+import {
+  cancellationReasonLabels,
+  disputeReasonLabels,
+  returnReasonLabels,
+  type StatusDomain,
+} from "@/shared/presentation/status-labels";
 
 // Só o que o lojista pode ver: as notas internas do Admin nunca chegam aqui (UX-13).
 type OrderItemSummary = { id: string; quantity: number; productNameSnapshot: string; skuSnapshot: string };
@@ -52,7 +57,6 @@ const cancellationWarnings: Readonly<Record<string, ReactNode>> = {
 };
 const OPEN_RETURN_STATUSES = new Set(["REQUESTED", "UNDER_REVIEW", "APPROVED", "WAITING_RETURN", "RETURNED"]);
 const OPEN_DISPUTE_STATUSES = new Set(["OPEN", "UNDER_REVIEW"]);
-const cancellationReasonLabels: Record<string, string> = { CUSTOMER_REQUEST: "Pedido do cliente" };
 
 /** Cancelamentos, devoluções e disputas da parte do pedido da loja, sem ações: quem decide é o Moto Shop. */
 export function SellerOrderAfterSales({ order }: { order: SellerOrderAfterSalesData }) {
