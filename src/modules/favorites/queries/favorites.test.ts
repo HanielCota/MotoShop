@@ -36,8 +36,6 @@ it("lists only the customer's favorites of approved products from approved or ac
 });
 
 it("caps the page size and the search term so the query stays bounded", async () => {
-  // Enough favorites for a second page of 48, so page 2 is a real page and not clamped to the last.
-  mocks.count.mockResolvedValue(100);
   await listFavoriteProducts("user-1", { pageSize: 500, page: 2, query: `  ${"a".repeat(150)}  ` });
 
   const args = mocks.findMany.mock.calls[0]?.[0] as {
