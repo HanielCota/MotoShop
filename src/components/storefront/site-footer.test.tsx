@@ -76,6 +76,11 @@ it("lists only the payment methods the checkout accepts, with the official brand
     "Cabal",
   ]);
   expect(methods.queryByLabelText("Boleto")).not.toBeInTheDocument();
+  // Every mark keeps its own size inside the tile's 40x20 area.
+  for (const icon of icons) {
+    expect(Number(icon.getAttribute("width"))).toBeLessThanOrEqual(40);
+    expect(Number(icon.getAttribute("height"))).toBeLessThanOrEqual(20);
+  }
 });
 
 it("shows the rights line without a CNPJ or social links", () => {

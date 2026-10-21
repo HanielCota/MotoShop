@@ -7,15 +7,17 @@ import Image from "next/image";
  * Commons SVGs (checked for scripts) and the Cabal logo from cabal.coop. Pix shows only its symbol and
  * Diners only its circle (viewBox cropped), since the full wordmarks are unreadable at this size.
  */
+// width/height: each mark's own aspect ratio, fitted in the tile's 40x20 area, so the browser reserves the
+// rendered size and next/image does not warn that CSS changed only one dimension.
 const paymentMethods = [
-  { name: "Pix", file: "pix.svg" },
-  { name: "Visa", file: "visa.svg" },
-  { name: "Mastercard", file: "mastercard.svg" },
-  { name: "Elo", file: "elo.svg" },
-  { name: "American Express", file: "american-express.svg" },
-  { name: "Hipercard", file: "hipercard.svg" },
-  { name: "Diners Club", file: "diners-club.svg" },
-  { name: "Cabal", file: "cabal.png" },
+  { name: "Pix", file: "pix.svg", width: 26, height: 20 },
+  { name: "Visa", file: "visa.svg", width: 40, height: 13 },
+  { name: "Mastercard", file: "mastercard.svg", width: 32, height: 20 },
+  { name: "Elo", file: "elo.svg", width: 40, height: 16 },
+  { name: "American Express", file: "american-express.svg", width: 20, height: 20 },
+  { name: "Hipercard", file: "hipercard.svg", width: 40, height: 18 },
+  { name: "Diners Club", file: "diners-club.svg", width: 20, height: 20 },
+  { name: "Cabal", file: "cabal.png", width: 40, height: 14 },
 ] as const;
 
 export function PaymentMethodIcons() {
@@ -30,10 +32,10 @@ export function PaymentMethodIcons() {
           <Image
             src={`/images/payment-methods/${method.file}`}
             alt={method.name}
-            width={40}
-            height={20}
+            width={method.width}
+            height={method.height}
             unoptimized
-            className="max-h-5 w-auto max-w-10 object-contain"
+            className="object-contain"
           />
         </li>
       ))}
