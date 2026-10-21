@@ -6,7 +6,6 @@ import { Plus } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { FormMessage } from "@/components/ui/form-message";
 import { PageHeader } from "@/components/ui/page-header";
 import { getSellerCatalogProgress } from "@/modules/sellers/queries/seller-catalog-progress";
 import { getSellerDashboardContext } from "@/modules/sellers/application/get-seller-dashboard-context";
@@ -88,9 +87,6 @@ export default async function SellerHomePage({ searchParams }: { searchParams: S
           ) : null
         }
       />
-      {query.error === "permission" ? (
-        <FormMessage error="Seu perfil na equipe não tem acesso a essa área. Fale com o responsável pela loja." />
-      ) : null}
       <Suspense fallback={<SellerStatsSkeleton />}>
         <SellerOverviewStats sellerId={seller.id} permissions={permissions} />
       </Suspense>
