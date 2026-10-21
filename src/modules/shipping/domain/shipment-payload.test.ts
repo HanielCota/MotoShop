@@ -18,6 +18,33 @@ const store = {
 };
 
 describe("buildShipmentData", () => {
+  it("sends phones saved before the mask as digits only, like the Melhor Envio examples", () => {
+    const data = buildShipmentData({
+      seller: { type: "INDIVIDUAL" },
+      store: { ...store, originPhone: "(11) 99999-9999" },
+      order: {
+        customerName: "Cliente",
+        customerEmail: "cliente@example.test",
+        customerPhone: "(11) 98888-7777",
+        customerTaxId: null,
+        shippingAddress: {
+          street: "Rua B",
+          number: "20",
+          complement: null,
+          neighborhood: "Centro",
+          city: "São Paulo",
+          postalCode: "01310000",
+          country: "BR",
+          state: "SP",
+        },
+      },
+      items: [],
+    });
+
+    expect(data.from.phone).toBe("11999999999");
+    expect(data.to.phone).toBe("11988887777");
+  });
+
   it("sends unit insurance per product and the total insured value of the shipment", () => {
     const data = buildShipmentData({
       seller: { type: "INDIVIDUAL" },

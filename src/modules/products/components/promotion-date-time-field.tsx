@@ -6,6 +6,8 @@ import { useController, type Control } from "react-hook-form";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import type { ProductInput } from "@/modules/products/schemas/product-input";
+import { maskDateTyping } from "@/shared/forms/date-mask";
+import { maskInput } from "@/shared/forms/digit-mask";
 
 import { splitPromotionDateValue, toPromotionDateValue, type PromotionBound } from "../domain/promotion-date-input";
 import type { ProductFormValues } from "./product-form-model";
@@ -49,7 +51,11 @@ export function PromotionDateTimeField({
             name={field.name}
             onBlur={field.onBlur}
             value={parts.date}
-            onChange={(event) => update({ ...parts, date: event.target.value })}
+            onChange={(event) => {
+              // Masked in place first, so the caret stays where the person is typing.
+              maskInput(event.currentTarget, maskDateTyping);
+              update({ ...parts, date: event.currentTarget.value });
+            }}
             inputMode="numeric"
             autoComplete="off"
             maxLength={10}

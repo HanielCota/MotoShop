@@ -47,7 +47,7 @@ export function CheckoutCustomerFields({
           error={errors.customerPhone}
           autoComplete="tel"
           placeholder="(11) 90000-0000"
-          maxLength={30}
+          maxLength={15}
           required
         />
         <CheckoutFormField

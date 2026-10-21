@@ -60,3 +60,7 @@ it.each([
 ])("bounds the address snapshot like saved addresses %j", (address) => {
   expect(checkoutSchema.safeParse({ ...checkout, ...address }).success).toBe(false);
 });
+it("stores the masked phone as digits and refuses an incomplete one", () => {
+  expect(checkoutSchema.parse({ ...checkout, customerPhone: "(11) 98765-4321" }).customerPhone).toBe("11987654321");
+  expect(checkoutSchema.safeParse({ ...checkout, customerPhone: "(11) 9876" }).success).toBe(false);
+});
