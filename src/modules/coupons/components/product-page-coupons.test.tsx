@@ -34,6 +34,7 @@ it("copies the code and confirms", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Copiar código BOX25" }));
 
   expect(await screen.findByText("Copiado")).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Código BOX25 copiado.");
   expect(writeText).toHaveBeenCalledWith("BOX25");
 });
 
