@@ -6,7 +6,7 @@ vi.mock("@/shared/storage/public-storage-url", () => ({
   getPublicStorageImageUrl: (key: string) => `/images/${key}`,
 }));
 vi.mock("next/image", () => ({
-  // eslint-disable-next-line @next/next/no-img-element
+  // oxlint-disable-next-line nextjs/no-img-element
   default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
 }));
 vi.mock("next/link", () => ({ default: (props: ComponentProps<"a">) => <a {...props} /> }));

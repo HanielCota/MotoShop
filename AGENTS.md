@@ -525,7 +525,7 @@ Padrões de código do projeto:
 - **No máximo 3 níveis** de blocos aninhados (`if`/`for`/`try`) por função; acima disso, extrair uma função.
 - **Espaçamento:** o Prettier define indentação e quebras; separar blocos lógicos (validação, consulta, efeito, retorno) com uma linha em branco, sem linhas em branco duplicadas.
 
-O ESLint aplica as regras verificáveis: `no-restricted-syntax` (`else` e `.then()`), `@typescript-eslint/no-non-null-assertion` e `max-depth: 3`; `pnpm lint` falha se forem violadas.
+O Oxlint (`pnpm lint`, configurado em `.oxlintrc.json`, com checagem de tipos) aplica as regras verificáveis: `moto-shop/no-else` e `moto-shop/no-then` (regras próprias em `tools/oxlint-plugin.ts`), `typescript/no-non-null-assertion` e `max-depth: 3`; `pnpm lint` falha se forem violadas.
 
 ---
 
