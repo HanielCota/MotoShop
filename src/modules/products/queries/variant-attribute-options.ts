@@ -3,7 +3,7 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
 
-import { isVariantGender, type VariantGenderValue } from "../domain/variant-attributes";
+import type { VariantGenderValue } from "../domain/variant-attributes";
 
 export type VariantAttributeFilter = {
   gender?: VariantGenderValue | null | undefined;
@@ -30,14 +30,12 @@ export function buildVariantAttributeWhere(filter: VariantAttributeFilter): Pris
   };
 }
 
-/** Opções de filtro com pelo menos uma variante pública, ordenadas para exibição. */
+/**
+ * Cores e tamanhos com pelo menos uma variante pública, ordenados para exibição. O gênero não é
+ * consultado: o filtro sempre oferece Masculino, Feminino e Unissex.
+ */
 export async function listPublicVariantAttributeOptions() {
-  const [genders, colors, sizes] = await Promise.all([
-    db.productVariant.findMany({
-      where: { ...publicVariantWhere, gender: { not: null } },
-      distinct: ["gender"],
-      select: { gender: true },
-    }),
+  const [colors, sizes] = await Promise.all([
     db.productVariant.findMany({
       where: { ...publicVariantWhere, color: { not: null } },
       distinct: ["color"],
@@ -53,7 +51,6 @@ export async function listPublicVariantAttributeOptions() {
   ]);
 
   return {
-    genders: genders.map((variant) => variant.gender).filter(isVariantGender),
     colors: colors.map((variant) => variant.color).filter((color): color is string => Boolean(color)),
     sizes: sizes.map((variant) => variant.size).filter((size): size is string => Boolean(size)),
   };
