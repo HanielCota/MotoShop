@@ -2,7 +2,7 @@
 
 Roteiro para revisar todas as telas com dados de demonstração. Tudo o que aparece com **"· demonstração"** ou **"(demonstração)"** é fictício: lojas, produtos, preços e pedidos foram criados só para esta revisão. A compra desses produtos é simulada: o checkout mostra "Compra concluída", mas nada é gravado (nenhum pedido, pagamento ou e-mail).
 
-> O pagamento real está **bloqueado de propósito** (o Mercado Pago ainda não liberou a divisão de pagamento entre lojistas). Por isso o checkout mostra um aviso e não cria pedidos; esse comportamento é esperado.
+> O pagamento real está **bloqueado de propósito** (o Mercado Pago ainda não liberou a divisão de pagamento entre lojistas). Por isso, com produtos reais no carrinho, o checkout mostra um aviso e não cria pedidos; esse comportamento é esperado.
 
 ---
 
@@ -128,7 +128,7 @@ Pedidos de demonstração (`/orders/MS-REVIEW-000X`):
 | MS-REVIEW-0007 | Duas lojas, parcialmente enviado | Um pedido dividido por loja, com cupom do marketplace |
 | MS-REVIEW-0008 | Convidado                        | Só pelo link do seed (ver seção 2)                    |
 
-Os produtos de demonstração não passam pelo checkout, e os pagamentos são fictícios. "Reconsultar pagamento" e "Reprocessar webhook" podem mostrar erro do Mercado Pago sem alterar nada.
+Esses pedidos foram criados pelo seed (a compra simulada no checkout não grava pedidos), e os pagamentos são fictícios. "Reconsultar pagamento" e "Reprocessar webhook" podem mostrar erro do Mercado Pago sem alterar nada.
 
 ## 5. Central do Lojista (`review.lojista@example.test`)
 
