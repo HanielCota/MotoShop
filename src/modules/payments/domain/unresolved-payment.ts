@@ -3,8 +3,9 @@ export const UNRESOLVED_PAYMENT_ALERT_MS = 6 * 60 * 60 * 1000;
 
 /**
  * The scheduled recovery stops asking the provider about a payment after this age (A8). Pix expires
- * in 30 minutes and cards answer at once, so a week is far past any provider answer; older pending
- * payments were already flagged at 6 h and stay in the Admin list, and webhooks still update them.
+ * in 30 minutes and cards answer at once, so a week is far past any provider answer. Webhooks still
+ * update older payments, and those without a provider id were already flagged at 6 h and stay in the
+ * Admin list (`listLongUnresolvedPayments`).
  */
 export const PAYMENT_RECOVERY_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
