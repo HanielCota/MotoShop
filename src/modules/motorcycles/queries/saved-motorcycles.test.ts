@@ -23,6 +23,7 @@ it("counts, per fitment, the catalog products confirmed for it or in a universal
   expect(sqlText()).toContain("universal_categories");
   expect(sqlText()).toContain("p.status = 'APPROVED'");
   expect(sqlText()).toContain("s.status IN ('APPROVED', 'ACTIVE')");
+  expect(sqlText()).toContain('v."productId" = p.id AND v.active = true');
 });
 
 it("skips the query when the garage is empty", async () => {

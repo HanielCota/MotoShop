@@ -103,7 +103,7 @@ describe("contagem de peças da garagem", () => {
     await testDb.category.deleteMany({ where: { id: { in: categoryIds } } });
   });
 
-  it("counts a product of a universal category for any motorcycle", async () => {
+  it("counts a product of a universal category for any motorcycle once it has an active variant", async () => {
     const fitmentId = must(fitmentIds[0], "fitment");
     const brand = await testDb.brand.findFirstOrThrow({ where: { active: true } });
     const category = await testDb.category.create({
@@ -121,7 +121,7 @@ describe("contagem de peças da garagem", () => {
     sellerIds.push(seller.id);
     const before = (await countCompatibleProductsByFitment([fitmentId])).get(fitmentId) ?? 0;
 
-    await testDb.product.create({
+    const product = await testDb.product.create({
       data: {
         name: `Capacete ${run}`,
         slug: `capacete-${run}`,
@@ -132,6 +132,14 @@ describe("contagem de peças da garagem", () => {
         categoryId: category.id,
         brandId: brand.id,
       },
+    });
+
+    // Like the catalog, a product without an active variant is not listed, so it is not counted.
+    const withoutVariant = (await countCompatibleProductsByFitment([fitmentId])).get(fitmentId) ?? 0;
+    expect(withoutVariant).toBe(before);
+
+    await testDb.productVariant.create({
+      data: { sku: `CAP-${run}`, title: "Único", priceInCents: 19_900, productId: product.id, sellerId: seller.id },
     });
 
     const after = (await countCompatibleProductsByFitment([fitmentId])).get(fitmentId) ?? 0;
