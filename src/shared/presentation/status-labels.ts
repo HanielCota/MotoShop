@@ -153,6 +153,10 @@ function humanizeStatus(status: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+export const cancellationReasonLabels: Record<string, string> = {
+  CUSTOMER_REQUEST: "Pedido do cliente",
+};
+
 export const returnReasonLabels: Record<string, string> = {
   DAMAGED: "Produto danificado",
   WRONG_ITEM: "Item diferente do pedido",

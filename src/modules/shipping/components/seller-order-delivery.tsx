@@ -1,5 +1,4 @@
 import { InlineNotice } from "@/components/ui/inline-notice";
-import { formatDate } from "@/lib/format";
 import { formatCep } from "@/modules/customers/domain/brazilian-address";
 import { formatPhone } from "@/modules/customers/domain/tax-id";
 
@@ -18,20 +17,7 @@ export function SellerOrderDelivery({ order }: { order: SellerOrderListItem }) {
     );
   }
 
-  const cancellation = order.cancellationRequests[0];
-  if (order.status === "CANCELLATION_REQUESTED" && cancellation) {
-    // Só o motivo, sem ações: a decisão do cancelamento é do Moto Shop (UX-13).
-    return (
-      <InlineNotice tone="warning">
-        <p>
-          <strong>Cancelamento pedido pelo cliente</strong> em {formatDate(cancellation.createdAt)}. O Moto Shop está
-          analisando; não despache este pedido.
-        </p>
-        <p>Motivo: {cancellation.customerMessage ? `"${cancellation.customerMessage}"` : "não informado"}</p>
-      </InlineNotice>
-    );
-  }
-
+  // Cancelamento em análise não mostra endereço; o motivo aparece na seção de pós-venda (UX-13).
   const address = order.order.shippingAddress;
   if (order.shipment?.provider !== "OWN" || !address || !canShowSellerOrderDeliveryData(order.status)) return null;
 

@@ -10,6 +10,7 @@ import {
   getSellerMonthNetSales,
   LOW_STOCK_THRESHOLD,
 } from "@/modules/sellers/queries/seller-overview-metrics";
+import { overviewStatsGridClassName } from "@/modules/sellers/domain/dashboard-grid";
 import { domainIcons } from "@/shared/presentation/domain-icons";
 
 /** Indicadores da visão geral; cada cartão só aparece para quem pode abrir a página de destino. */
@@ -76,7 +77,7 @@ export async function SellerOverviewStats({
   if (cards.length === 0) return null;
 
   return (
-    <section aria-label="Indicadores da loja" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section aria-label="Indicadores da loja" className={overviewStatsGridClassName(cards.length)}>
       {cards}
     </section>
   );

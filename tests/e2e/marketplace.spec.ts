@@ -165,7 +165,12 @@ test("store registration → approval → product → publication → catalog �
     await expect(staffPage.getByRole("heading", { name: "Equipe da loja" })).toHaveCount(0);
     await expect(staffPage.getByRole("heading", { name: "Resumo financeiro" })).toHaveCount(0);
     await staffPage.goto("/seller/products/new");
-    await expect(staffPage).toHaveURL(/\/seller\?error=permission$/);
+    await expect(staffPage).toHaveURL(/\/seller\/sem-permissao\?permissao=PRODUCT_CREATE$/);
+    await expect(staffPage.getByRole("heading", { name: /Esta área é do dono/ })).toBeVisible();
+    await expect(staffPage.getByRole("link", { name: "Voltar para a Central do Lojista" })).toHaveAttribute(
+      "href",
+      "/seller",
+    );
 
     await page.goto("/seller/orders");
     await expect(page.getByRole("heading", { name: "Preparação e envio" })).toBeVisible();
@@ -202,7 +207,8 @@ test("store registration → approval → product → publication → catalog �
       )
       .not.toBeNull();
     await page.goto("/admin");
-    await expect(page).toHaveURL(/\/forbidden$/);
+    await expect(page).toHaveURL(/\/admin$/);
+    await expect(page.locator("h1")).toHaveText(/Página não encontrada/);
 
     await adminPage.goto("/admin/moderation");
     await expect(adminPage.getByRole("heading", { name: "Moderação pública" })).toBeVisible();

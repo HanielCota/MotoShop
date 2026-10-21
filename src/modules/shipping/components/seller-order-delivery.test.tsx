@@ -12,7 +12,6 @@ function buildOrder(overrides: Partial<Order>): Order {
   return {
     status: "PAID",
     shipment: { provider: "OWN" },
-    cancellationRequests: [],
     items: [
       {
         id: "item-1",
@@ -54,16 +53,9 @@ describe("SellerOrderDelivery", () => {
     expect(screen.queryByText(/Avenida Paulista/)).not.toBeInTheDocument();
   });
 
-  it("shows the cancellation reason without the address (UX-13)", () => {
-    const order = buildOrder({
-      status: "CANCELLATION_REQUESTED",
-      cancellationRequests: [
-        { id: "c1", customerMessage: "Comprei errado", createdAt: new Date("2026-10-08T12:00:00Z") },
-      ],
-    });
-    render(<SellerOrderDelivery order={order} />);
+  it("hides the address while the cancellation is under review (UX-13)", () => {
+    const { container } = render(<SellerOrderDelivery order={buildOrder({ status: "CANCELLATION_REQUESTED" })} />);
 
-    expect(screen.getByText(/"Comprei errado"/)).toBeInTheDocument();
-    expect(screen.queryByText(/Avenida Paulista/)).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 });
