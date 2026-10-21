@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, Menu, Search, UserRound, X } from "lucide-react";
 import { Menu as BaseMenu } from "@base-ui/react/menu";
-import { useRef, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 
 import { pageContainerClassName } from "@/components/ui/page-container";
 import { popoverSurfaceClassName } from "@/components/ui/popover-surface";
@@ -29,8 +29,6 @@ export function StorefrontNavigation() {
   if (!isStorefrontPath(pathname)) return null;
 
   const catalogActive = pathname === "/products" || pathname.startsWith("/products/");
-  // The catalog has its own search band above the results; avoid two competing fields there.
-  const showHeaderSearch = pathname !== "/products";
 
   return (
     <header
@@ -60,11 +58,9 @@ export function StorefrontNavigation() {
           </Link>
         </nav>
 
-        {showHeaderSearch ? (
-          <HeaderSearch id="storefront-search" className="ml-auto hidden max-w-xs flex-1 md:flex" />
-        ) : null}
+        <CatalogAwareHeaderSearch id="storefront-search" className="ml-auto hidden max-w-xs flex-1 md:flex" />
 
-        <div className={`flex items-center gap-1 ${showHeaderSearch ? "ml-auto md:ml-0" : "ml-auto"}`}>
+        <div className="ml-auto flex items-center gap-1 md:ml-0">
           <AccountMenu />
           <CartPreview />
           <button
@@ -87,7 +83,7 @@ export function StorefrontNavigation() {
         className="bg-moto-brand-foreground border-t border-white/10 px-4 py-2 md:hidden"
         hidden={!menuOpen}
       >
-        {showHeaderSearch ? <HeaderSearch id="storefront-mobile-search" className="my-2 flex" /> : null}
+        <CatalogAwareHeaderSearch id="storefront-mobile-search" className="my-2 flex" />
         <Link
           href="/products"
           onClick={() => setMenuOpen(false)}
@@ -121,15 +117,51 @@ export function StorefrontNavigation() {
   );
 }
 
-function HeaderSearch({ id, className }: { id: string; className?: string }) {
+type HeaderSearchProps = { id: string; className?: string };
+
+/**
+ * The header search stays on the catalog too, filled with the term searched there and keeping the
+ * filters already applied, like the catalog search band. Reading the URL needs a Suspense boundary.
+ */
+function CatalogAwareHeaderSearch(props: HeaderSearchProps) {
+  return (
+    <Suspense fallback={<HeaderSearch {...props} />}>
+      <HeaderSearchWithCatalogQuery {...props} />
+    </Suspense>
+  );
+}
+
+function HeaderSearchWithCatalogQuery(props: HeaderSearchProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  if (pathname !== "/products") return <HeaderSearch {...props} />;
+
+  const catalogQuery = searchParams.get("q")?.trim() ?? "";
+  // A new search starts on the first page; the term itself comes from the field.
+  const preservedEntries = [...searchParams.entries()].filter(([name]) => name !== "q" && name !== "page");
+
+  // key: a new search remounts the field with the new term instead of keeping the old text.
+  return <HeaderSearch key={catalogQuery} {...props} defaultValue={catalogQuery} preservedEntries={preservedEntries} />;
+}
+
+function HeaderSearch({
+  id,
+  className,
+  defaultValue = "",
+  preservedEntries = [],
+}: HeaderSearchProps & { defaultValue?: string; preservedEntries?: readonly [string, string][] }) {
   return (
     <form action="/products" method="get" role="search" className={`relative items-center ${className ?? ""}`}>
+      {preservedEntries.map(([name, value]) => (
+        <input key={`${name}=${value}`} type="hidden" name={name} value={value} />
+      ))}
       <label htmlFor={id} className="sr-only">
         Buscar produtos
       </label>
       <ProductSearchCombobox
         id={id}
         variant="plain"
+        defaultValue={defaultValue}
         className="w-full"
         listClassName="sm:w-80"
         placeholder="Buscar peças, marcas ou lojas"

@@ -2,8 +2,12 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import type { ComponentProps } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
-const navigation = vi.hoisted(() => ({ pathname: "/products" }));
-vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname, useRouter: () => ({ push: vi.fn() }) }));
+const navigation = vi.hoisted(() => ({ pathname: "/products", search: "" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => navigation.pathname,
+  useSearchParams: () => new URLSearchParams(navigation.search),
+  useRouter: () => ({ push: vi.fn() }),
+}));
 const authMocks = vi.hoisted(() => ({ useSession: vi.fn() }));
 vi.mock("@/modules/cart/actions/cart-actions", () => ({
   getCartPreviewAction: vi.fn(async () => ({ items: [], itemCount: 0, subtotalInCents: 0 })),
@@ -24,6 +28,7 @@ import { StorefrontNavigation } from "./storefront-navigation";
 afterEach(() => {
   cleanup();
   navigation.pathname = "/products";
+  navigation.search = "";
 });
 
 it("renders the same header on the homepage with a single seller link label", () => {
@@ -103,15 +108,43 @@ it("closes the mobile navigation with Escape and restores trigger focus", () => 
   expect(menu).toHaveAttribute("hidden");
 });
 
-it("hides the header search only on the catalog page, which has its own search band", () => {
+it("keeps the header search on the catalog, filled with the current search", () => {
   authMocks.useSession.mockReturnValue({ data: null });
-
   navigation.pathname = "/products";
-  const { unmount } = render(<StorefrontNavigation />);
-  expect(screen.queryAllByRole("combobox", { name: "Buscar produtos" })).toHaveLength(0);
-  unmount();
+  navigation.search = "q=capacete";
 
-  navigation.pathname = "/products/capacete";
   render(<StorefrontNavigation />);
-  expect(screen.getAllByRole("combobox", { name: "Buscar produtos", hidden: true }).length).toBeGreaterThan(0);
+
+  const fields = screen.getAllByRole("combobox", { name: "Buscar produtos", hidden: true });
+  expect(fields.length).toBeGreaterThan(0);
+  expect(fields.every((field) => (field as HTMLInputElement).value === "capacete")).toBe(true);
+});
+
+it("keeps the filters applied on the catalog when a new search is sent from the header", () => {
+  authMocks.useSession.mockReturnValue({ data: null });
+  navigation.pathname = "/products";
+  navigation.search = "category=capacetes&q=fox&page=3";
+
+  render(<StorefrontNavigation />);
+
+  const forms = screen.getAllByRole("search", { hidden: true });
+  for (const form of forms) {
+    const hidden = [...form.querySelectorAll<HTMLInputElement>("input[type=hidden]")].map((input) => [
+      input.name,
+      input.value,
+    ]);
+
+    expect(hidden).toEqual([["category", "capacetes"]]);
+  }
+});
+
+it("starts the header search empty outside the catalog", () => {
+  authMocks.useSession.mockReturnValue({ data: null });
+  navigation.pathname = "/products/capacete";
+  navigation.search = "q=capacete";
+
+  render(<StorefrontNavigation />);
+
+  const fields = screen.getAllByRole("combobox", { name: "Buscar produtos", hidden: true });
+  expect(fields.every((field) => (field as HTMLInputElement).value === "")).toBe(true);
 });
