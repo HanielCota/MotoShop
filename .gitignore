@@ -68,3 +68,7 @@ next-env.d.ts
 # Local review screenshots and work queues from the Claude chats
 .claude/fila-*/
 .claude/t13/
+
+# Local agent skills (installed per machine, not project code)
+.agents/
+skills-lock.json

@@ -261,7 +261,7 @@ Executado na branch `chore/repo-hardening` (PR empilhado sobre `codex/moto-shop-
 | P3-3 Templates de issue                       | Feito                  | Bug e decisão de produto (formulários)                                                                                                                                               |
 | P3-4 Conventional Commits                     | Feito                  | Verificação do título do PR em `pull-request.yml`                                                                                                                                    |
 | P3-5 README + CHANGELOG                       | Feito                  | README enxuto; histórico das fases em `CHANGELOG.md`                                                                                                                                 |
-| P3-6 `.agents/` e `skills-lock.json`          | Sem mudança            | **Correção do diagnóstico:** eles não estão no `.gitignore`, só no `.vercelignore` (fora do deploy). Versionados de propósito; nada a fazer                                          |
+| P3-6 `.agents/` e `skills-lock.json`          | Feito                  | Removidos do índice e adicionados ao `.gitignore`: são ferramentas de agente instaladas por máquina, não código do projeto (cópias locais preservadas)                               |
 | P3-7 Limpeza local                            | Feito                  | ~3 GB de builds antigos removidos (`.next-*`, relatórios de teste e cache do Turbopack). `tmp/` preservado                                                                           |
 
 ### Checklist que depende do responsável (painel do GitHub)
