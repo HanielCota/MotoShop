@@ -12,6 +12,7 @@ import {
   MotorcycleModelForm,
 } from "@/modules/catalog/components/catalog-admin-forms";
 import {
+  setCategoryUniversalAction,
   toggleBrandAction,
   toggleCategoryAction,
   toggleMotorcycleManufacturerAction,
@@ -40,44 +41,67 @@ function CatalogRow({
   count,
   active,
   toggle,
+  badge,
+  extraAction,
 }: {
   label: ReactNode;
   count?: string;
   active: boolean;
   toggle: () => Promise<void>;
+  badge?: ReactNode;
+  extraAction?: ReactNode;
 }) {
   return (
     <li className="flex items-center justify-between gap-2 py-2 text-sm">
       <span className="min-w-0 break-words">
         {label} {count ? <span className="text-muted-foreground">({count})</span> : null}
+        {badge}
         {!active ? (
           <Badge variant="neutral" className="ml-2">
             Inativo
           </Badge>
         ) : null}
       </span>
-      {active ? (
-        // Desativar some com a referência dos filtros e do cadastro: pede confirmação (BUG-004).
-        <ConfirmDialog
-          trigger={
-            <button type="button" className={cn(buttonVariants({ variant: "link", size: "link-xs" }), "shrink-0")}>
-              Desativar
-            </button>
-          }
-          title={`Desativar ${typeof label === "string" ? label : "este item"}?`}
-          description="Ele deixa de aparecer para lojistas e no site até ser reativado. Produtos já cadastrados não são apagados."
-          confirmLabel="Desativar"
-          tone="destructive"
-          onConfirm={toggle}
-        />
-      ) : (
-        <ActionForm action={toggle}>
-          <button type="submit" className={cn(buttonVariants({ variant: "link", size: "link-xs" }), "shrink-0")}>
-            Ativar
-          </button>
-        </ActionForm>
-      )}
+      <span className="flex shrink-0 flex-col items-end gap-1">
+        {extraAction}
+        <StatusToggle label={label} active={active} toggle={toggle} />
+      </span>
     </li>
+  );
+}
+
+function StatusToggle({ label, active, toggle }: { label: ReactNode; active: boolean; toggle: () => Promise<void> }) {
+  return active ? (
+    // Desativar some com a referência dos filtros e do cadastro: pede confirmação (BUG-004).
+    <ConfirmDialog
+      trigger={
+        <button type="button" className={cn(buttonVariants({ variant: "link", size: "link-xs" }), "shrink-0")}>
+          Desativar
+        </button>
+      }
+      title={`Desativar ${typeof label === "string" ? label : "este item"}?`}
+      description="Ele deixa de aparecer para lojistas e no site até ser reativado. Produtos já cadastrados não são apagados."
+      confirmLabel="Desativar"
+      tone="destructive"
+      onConfirm={toggle}
+    />
+  ) : (
+    <ActionForm action={toggle}>
+      <button type="submit" className={cn(buttonVariants({ variant: "link", size: "link-xs" }), "shrink-0")}>
+        Ativar
+      </button>
+    </ActionForm>
+  );
+}
+
+/** Universal categories skip the motorcycle filter, so changing it is reversible and needs no dialog. */
+function UniversalToggle({ universal, toggle }: { universal: boolean; toggle: () => Promise<void> }) {
+  return (
+    <ActionForm action={toggle}>
+      <button type="submit" className={cn(buttonVariants({ variant: "link", size: "link-xs" }), "shrink-0")}>
+        {universal ? "Tirar universal" : "Marcar como universal"}
+      </button>
+    </ActionForm>
   );
 }
 
@@ -112,7 +136,7 @@ export async function AdminCatalogSection() {
     <AdminCard
       id="admin-catalog"
       title="Catálogo controlado pelo Moto Shop"
-      description="Lojistas usam estas categorias, marcas e motos aprovadas. Desativar preserva o histórico e impede novos usos."
+      description="Lojistas usam estas categorias, marcas e motos aprovadas. Desativar preserva o histórico e impede novos usos. Categoria universal (e as subcategorias dela) aparece com qualquer moto escolhida no catálogo."
       contentClassName="space-y-8"
     >
       <div className="grid gap-6 lg:grid-cols-3">
@@ -128,6 +152,19 @@ export async function AdminCatalogSection() {
                   count={formatCount(category._count.products, "produto", "produtos")}
                   active={category.active}
                   toggle={toggleCategoryAction.bind(null, category.id, !category.active)}
+                  badge={
+                    category.universal ? (
+                      <Badge variant="info" className="ml-2">
+                        Universal
+                      </Badge>
+                    ) : null
+                  }
+                  extraAction={
+                    <UniversalToggle
+                      universal={category.universal}
+                      toggle={setCategoryUniversalAction.bind(null, category.id, !category.universal)}
+                    />
+                  }
                 />
               ))}
             </ul>

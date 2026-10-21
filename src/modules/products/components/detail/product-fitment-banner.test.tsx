@@ -25,6 +25,24 @@ describe("ProductFitmentBanner", () => {
     expect(container.querySelector("#sua-moto")).not.toHaveClass("bg-warning-surface");
   });
 
+  it("says a universal product fits any motorcycle, without asking the store or offering a picker", () => {
+    render(<ProductFitmentBanner status={{ kind: "universal", motorcycleLabel }} picker={picker} />);
+
+    expect(screen.getByText("Serve em qualquer moto")).toBeInTheDocument();
+    expect(
+      screen.getByText(`Sua moto: ${motorcycleLabel} · este produto não depende do modelo da moto.`),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/pergunte à loja/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Trocar moto")).not.toBeInTheDocument();
+  });
+
+  it("shows the universal message before a motorcycle is chosen", () => {
+    render(<ProductFitmentBanner status={{ kind: "universal", motorcycleLabel: null }} picker={picker} />);
+
+    expect(screen.getByText("Serve em qualquer moto")).toBeInTheDocument();
+    expect(screen.queryByText("Escolher minha moto")).not.toBeInTheDocument();
+  });
+
   it("still points to the compatible list when the motorcycle is not in it", () => {
     render(<ProductFitmentBanner status={{ kind: "does-not-fit", motorcycleLabel }} picker={picker} />);
 
@@ -56,5 +74,12 @@ describe("ProductCompatibilityCard", () => {
 
     expect(screen.getByText("Motos em que a loja confirmou que esta peça serve.")).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+  });
+
+  it("replaces the missing-compatibility notice for a universal product", () => {
+    render(<ProductCompatibilityCard compatibilities={[]} selectedFitmentId={null} universal />);
+
+    expect(screen.getByText("Serve em qualquer moto: este produto não depende do modelo da moto.")).toBeInTheDocument();
+    expect(screen.queryByText(/ainda não informou compatibilidade/)).not.toBeInTheDocument();
   });
 });

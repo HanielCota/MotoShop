@@ -448,6 +448,8 @@ model Category {
   name      String
   slug      String     @unique
   active    Boolean    @default(true)
+  /// Fits any motorcycle (helmets, apparel, tools); set only by the Admin and inherited by subcategories.
+  universal Boolean    @default(false)
   sortOrder Int        @default(0)
   parentId  String?
   createdAt DateTime   @default(now())

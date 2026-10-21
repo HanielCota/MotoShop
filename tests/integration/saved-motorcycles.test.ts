@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { testDb } from "../support/database";
+import { cleanupFixtures, testDb } from "../support/database";
 import { must } from "../support/must";
 
 vi.mock("@/lib/database", async () => ({ db: (await import("../support/database")).testDb }));
@@ -12,7 +12,11 @@ import {
   removeSavedMotorcycle,
   setPrimarySavedMotorcycle,
 } from "@/modules/motorcycles/application/saved-motorcycles";
-import { getPrimarySavedMotorcycle, listSavedMotorcycles } from "@/modules/motorcycles/queries/saved-motorcycles";
+import {
+  countCompatibleProductsByFitment,
+  getPrimarySavedMotorcycle,
+  listSavedMotorcycles,
+} from "@/modules/motorcycles/queries/saved-motorcycles";
 
 const run = randomUUID().slice(0, 8);
 const emails = [`garage-${run}-a@example.test`, `garage-${run}-b@example.test`];
@@ -84,5 +88,61 @@ describe("garagem pessoal", () => {
     await removeSavedMotorcycle(ownerId, first.id);
     expect(await listSavedMotorcycles(ownerId)).toHaveLength(0);
     expect(await getPrimarySavedMotorcycle(ownerId)).toBeNull();
+  });
+});
+
+// Regression: the garage counted only products with a compatibility row, so a motorcycle whose only
+// products are in a universal category showed "Não encontramos nenhum equipamento" and no
+// "Ver peças compatíveis", while the catalog listed those products for it.
+describe("contagem de peças da garagem", () => {
+  const sellerIds: string[] = [];
+  const categoryIds: string[] = [];
+
+  afterAll(async () => {
+    await cleanupFixtures({ sellerIds, userIds: [], emails: [] });
+    await testDb.category.deleteMany({ where: { id: { in: categoryIds } } });
+  });
+
+  it("counts a product of a universal category for any motorcycle once it has an active variant", async () => {
+    const fitmentId = must(fitmentIds[0], "fitment");
+    const brand = await testDb.brand.findFirstOrThrow({ where: { active: true } });
+    const category = await testDb.category.create({
+      data: { name: `Universal ${run}`, slug: `universal-${run}`, active: true, universal: true },
+    });
+    categoryIds.push(category.id);
+    const seller = await testDb.seller.create({
+      data: {
+        type: "INDIVIDUAL",
+        status: "ACTIVE",
+        store: { create: { name: `Garagem ${run}`, slug: `garagem-${run}` } },
+      },
+      include: { store: true },
+    });
+    sellerIds.push(seller.id);
+    const before = (await countCompatibleProductsByFitment([fitmentId])).get(fitmentId) ?? 0;
+
+    const product = await testDb.product.create({
+      data: {
+        name: `Capacete ${run}`,
+        slug: `capacete-${run}`,
+        description: "Temporary test fixture",
+        status: "APPROVED",
+        sellerId: seller.id,
+        storeId: must(seller.store, "seller store").id,
+        categoryId: category.id,
+        brandId: brand.id,
+      },
+    });
+
+    // Like the catalog, a product without an active variant is not listed, so it is not counted.
+    const withoutVariant = (await countCompatibleProductsByFitment([fitmentId])).get(fitmentId) ?? 0;
+    expect(withoutVariant).toBe(before);
+
+    await testDb.productVariant.create({
+      data: { sku: `CAP-${run}`, title: "Único", priceInCents: 19_900, productId: product.id, sellerId: seller.id },
+    });
+
+    const after = (await countCompatibleProductsByFitment([fitmentId])).get(fitmentId) ?? 0;
+    expect(after - before).toBe(1);
   });
 });

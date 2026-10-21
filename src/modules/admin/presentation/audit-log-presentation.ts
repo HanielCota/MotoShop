@@ -11,6 +11,8 @@ export const auditActionLabels: Record<string, string> = {
   CATEGORY_ACTIVATED: "Categoria ativada",
   CATEGORY_CREATED: "Categoria criada",
   CATEGORY_DEACTIVATED: "Categoria desativada",
+  CATEGORY_UNIVERSAL_DISABLED: "Categoria deixou de ser universal",
+  CATEGORY_UNIVERSAL_ENABLED: "Categoria marcada como universal",
   COUPON_CAMPAIGN_JOINED: "Loja entrou na campanha",
   COUPON_CAMPAIGN_LEFT: "Loja saiu da campanha",
   COUPON_CREATED: "Cupom criado",
