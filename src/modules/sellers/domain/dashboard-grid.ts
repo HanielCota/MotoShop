@@ -23,6 +23,11 @@ export function countOverviewStatCards(permissions: {
   return Number(permissions.canReadOrders) + catalogCards + Number(permissions.canReadFinances);
 }
 
+/** Panels below the indicators: low stock (catalog) and finance summary. */
+export function countDashboardPanels(permissions: { canManageCatalog: boolean; canReadFinances: boolean }): number {
+  return Number(permissions.canManageCatalog) + Number(permissions.canReadFinances);
+}
+
 /** Indicator cards at the top: one column per visible card, up to four. */
 export function overviewStatsGridClassName(visibleCards: number): string {
   return overviewStatsColumns[visibleCards] ?? fourColumnStatsClassName;

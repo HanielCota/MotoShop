@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { countOverviewStatCards, dashboardPanelsGridClassName, overviewStatsGridClassName } from "./dashboard-grid";
+import {
+  countDashboardPanels,
+  countOverviewStatCards,
+  dashboardPanelsGridClassName,
+  overviewStatsGridClassName,
+} from "./dashboard-grid";
 
 describe("seller home grids follow the blocks each role can see", () => {
   it("never leaves empty columns beside the indicator cards", () => {
@@ -25,5 +30,14 @@ describe("indicator cards per role", () => {
     expect(countOverviewStatCards({ ...none, canManageCatalog: true })).toBe(2);
     expect(countOverviewStatCards({ ...none, canReadOrders: true, canReadFinances: true })).toBe(2);
     expect(countOverviewStatCards({ canReadOrders: true, canManageCatalog: true, canReadFinances: true })).toBe(4);
+  });
+});
+
+describe("bottom panels per role", () => {
+  it("counts the low stock and finance panels each role sees", () => {
+    expect(countDashboardPanels({ canManageCatalog: true, canReadFinances: true })).toBe(2);
+    expect(countDashboardPanels({ canManageCatalog: true, canReadFinances: false })).toBe(1);
+    expect(countDashboardPanels({ canManageCatalog: false, canReadFinances: true })).toBe(1);
+    expect(countDashboardPanels({ canManageCatalog: false, canReadFinances: false })).toBe(0);
   });
 });
