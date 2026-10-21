@@ -6,7 +6,6 @@ import { Plus } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { FormMessage } from "@/components/ui/form-message";
 import { PageHeader } from "@/components/ui/page-header";
 import { getSellerCatalogProgress } from "@/modules/sellers/queries/seller-catalog-progress";
 import { getSellerDashboardContext } from "@/modules/sellers/application/get-seller-dashboard-context";
@@ -20,6 +19,11 @@ import { SellerInventoryHistoryCard } from "@/modules/sellers/components/dashboa
 import { SellerLowStockCard } from "@/modules/sellers/components/dashboard/seller-low-stock-card";
 import { SellerOverviewStats } from "@/modules/sellers/components/dashboard/seller-overview-stats";
 import { getLegacySellerDashboardRedirect } from "@/modules/sellers/application/legacy-dashboard-links";
+import {
+  countDashboardPanels,
+  countOverviewStatCards,
+  dashboardPanelsGridClassName,
+} from "@/modules/sellers/domain/dashboard-grid";
 
 export const metadata: Metadata = {
   title: "Central do Lojista",
@@ -88,10 +92,7 @@ export default async function SellerHomePage({ searchParams }: { searchParams: S
           ) : null
         }
       />
-      {query.error === "permission" ? (
-        <FormMessage error="Seu perfil na equipe não tem acesso a essa área. Fale com o responsável pela loja." />
-      ) : null}
-      <Suspense fallback={<SellerStatsSkeleton />}>
+      <Suspense fallback={<SellerStatsSkeleton items={countOverviewStatCards(permissions)} />}>
         <SellerOverviewStats sellerId={seller.id} permissions={permissions} />
       </Suspense>
       {permissions.canManageCatalog ? (
@@ -100,7 +101,7 @@ export default async function SellerHomePage({ searchParams }: { searchParams: S
         </Suspense>
       ) : null}
       {permissions.canManageCatalog || permissions.canReadFinances ? (
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className={dashboardPanelsGridClassName(countDashboardPanels(permissions))}>
           {permissions.canManageCatalog ? (
             <Suspense fallback={<SellerCardSkeleton label="Carregando estoque baixo" />}>
               <SellerLowStockCard sellerId={seller.id} />

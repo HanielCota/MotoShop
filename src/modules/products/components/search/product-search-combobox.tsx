@@ -217,9 +217,9 @@ function SuggestionOption({
         onClick={onNavigate}
         className="hover:bg-muted flex items-center gap-3 px-3 py-2"
       >
-        <span className="bg-surface-sunken relative size-12 shrink-0 overflow-hidden rounded-md">
+        <span className="bg-surface-sunken relative size-14.5 shrink-0 overflow-hidden rounded-md">
           {suggestion.imageUrl ? (
-            <Image src={suggestion.imageUrl} alt="" fill sizes="48px" unoptimized className="object-cover" />
+            <Image src={suggestion.imageUrl} alt="" fill sizes="58px" unoptimized className="object-cover" />
           ) : null}
         </span>
         <span className="flex min-w-0 flex-col">

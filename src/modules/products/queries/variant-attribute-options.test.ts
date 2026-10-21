@@ -9,17 +9,16 @@ import { buildVariantAttributeWhere, listPublicVariantAttributeOptions } from ".
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.findMany
-    .mockResolvedValueOnce([{ gender: "UNISEX" }, { gender: "FEMALE" }])
     .mockResolvedValueOnce([{ color: "Azul" }, { color: "Preto" }])
     .mockResolvedValueOnce([{ size: "40" }, { size: "M" }]);
 });
 
-it("lists only options used by public variants", async () => {
+it("lists only colors and sizes used by public variants, without querying genders", async () => {
   expect(await listPublicVariantAttributeOptions()).toEqual({
-    genders: ["UNISEX", "FEMALE"],
     colors: ["Azul", "Preto"],
     sizes: ["40", "M"],
   });
+  expect(mocks.findMany).toHaveBeenCalledTimes(2);
   for (const [call] of mocks.findMany.mock.calls) {
     expect(call.where).toMatchObject({
       active: true,

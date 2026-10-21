@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 
 import { DateFilterInput } from "./date-filter-input";
@@ -19,4 +19,12 @@ it("flags a value that is not a date inline", () => {
 
   expect(field).toHaveAttribute("aria-invalid", "true");
   expect(field).toHaveAccessibleDescription(/Data inválida/);
+});
+
+it("adds the slashes while the date is typed", () => {
+  render(<DateFilterInput name="from" />);
+  const field = screen.getByPlaceholderText("dd/mm/aaaa");
+
+  fireEvent.change(field, { target: { value: "17102026" } });
+  expect(field).toHaveValue("17/10/2026");
 });

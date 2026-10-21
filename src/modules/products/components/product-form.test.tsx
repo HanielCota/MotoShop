@@ -56,6 +56,14 @@ it("uses text date and time fields for the promotion instead of the native picke
   );
 });
 
+it("adds the slashes while the promotion date is typed", () => {
+  render(<ProductForm {...options} />);
+  const start = screen.getByLabelText("Início da promoção");
+
+  fireEvent.change(start, { target: { value: "01112026" } });
+  expect(start).toHaveValue("01/11/2026");
+});
+
 it("does not use native number fields that change with the mouse wheel (DN-07)", () => {
   const { container } = render(<ProductForm {...options} />);
 

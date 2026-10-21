@@ -2,6 +2,9 @@
 import { FormMessage } from "@/components/ui/form-message";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatCep } from "@/modules/customers/domain/brazilian-address";
+import { formatPhone, formatTaxId, onlyDigits } from "@/modules/customers/domain/tax-id";
+import { maskOnChange, type DigitMask } from "@/shared/forms/digit-mask";
 
 import { updateShippingOriginAction, type SellerActionState } from "../actions/seller-actions";
 import { useClientValidation } from "@/shared/forms/client-validation";
@@ -27,6 +30,20 @@ type ShippingOriginFormProps = {
 
 const initialState: SellerActionState = {};
 
+/** A Brazilian phone with area code has at most 11 digits: (00) 00000-0000. */
+const MAX_PHONE_DIGITS = 11;
+
+/**
+ * Phones saved before the mask existed may carry a country code (+55). Masking those would cut
+ * digits and show a wrong number, so they appear as saved for the seller to fix.
+ */
+function savedPhoneForEditing(phone: string | null): string {
+  if (phone == null) return "";
+  if (onlyDigits(phone).length > MAX_PHONE_DIGITS) return phone;
+
+  return formatPhone(phone);
+}
+
 export function ShippingOriginForm({ store }: ShippingOriginFormProps) {
   const [state, action, pending] = useServerActionState(updateShippingOriginAction, initialState);
   const { clientError, onSubmit } = useClientValidation(validateShippingOriginForm);
@@ -35,13 +52,29 @@ export function ShippingOriginForm({ store }: ShippingOriginFormProps) {
     <form action={action} onSubmit={onSubmit} noValidate className="grid gap-4 sm:grid-cols-2">
       <Field label="Nome do remetente" name="originName" defaultValue={store.originName ?? ""} />
       <Field label="E-mail operacional" name="originEmail" type="email" defaultValue={store.originEmail ?? ""} />
-      <Field label="Telefone" name="originPhone" inputMode="tel" defaultValue={store.originPhone ?? ""} />
-      <Field label="CPF ou CNPJ" name="originDocument" inputMode="numeric" defaultValue={store.originDocument ?? ""} />
+      <Field
+        label="Telefone"
+        name="originPhone"
+        inputMode="tel"
+        mask={formatPhone}
+        maxLength={15}
+        defaultValue={savedPhoneForEditing(store.originPhone)}
+      />
+      <Field
+        label="CPF ou CNPJ"
+        name="originDocument"
+        inputMode="numeric"
+        mask={formatTaxId}
+        maxLength={18}
+        defaultValue={formatTaxId(store.originDocument ?? "")}
+      />
       <Field
         label="CEP de origem"
         name="originPostalCode"
         inputMode="numeric"
-        defaultValue={store.originPostalCode ?? ""}
+        mask={formatCep}
+        maxLength={9}
+        defaultValue={formatCep(store.originPostalCode ?? "")}
       />
       <Field label="Rua" name="originStreet" defaultValue={store.originStreet ?? ""} />
       <Field label="Número" name="originNumber" defaultValue={store.originNumber ?? ""} />
@@ -78,6 +111,7 @@ function Field({
   type = "text",
   inputMode,
   maxLength,
+  mask,
   required = true,
 }: {
   label: string;
@@ -86,6 +120,8 @@ function Field({
   type?: "text" | "email";
   inputMode?: "numeric" | "tel";
   maxLength?: number;
+  /** Formats the value while typing; the server keeps reading only the digits. */
+  mask?: DigitMask;
   required?: boolean;
 }) {
   return (
@@ -97,6 +133,7 @@ function Field({
         inputMode={inputMode}
         maxLength={maxLength}
         defaultValue={defaultValue}
+        onChange={mask ? maskOnChange(mask) : undefined}
         required={required}
       />
     </label>

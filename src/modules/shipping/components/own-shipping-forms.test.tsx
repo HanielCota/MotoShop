@@ -22,6 +22,16 @@ it("checks the delivery method in the browser before calling the server (BUG-011
   expect(mocks.create).not.toHaveBeenCalled();
 });
 
+it("formats both CEP fields while typing", () => {
+  render(<OwnShippingMethodForm />);
+
+  fireEvent.change(screen.getByLabelText("CEP inicial"), { target: { value: "01000000" } });
+  fireEvent.change(screen.getByLabelText("CEP final"), { target: { value: "05999999" } });
+
+  expect(screen.getByLabelText("CEP inicial")).toHaveValue("01000-000");
+  expect(screen.getByLabelText("CEP final")).toHaveValue("05999-999");
+});
+
 it("asks before marking an own shipment as shipped (BUG-004)", async () => {
   mocks.advance.mockResolvedValue({ success: "Envio atualizado." });
   render(<OwnShipmentActions sellerOrderId="cmf8w8m4p0000s6o5zj2q8v3k" canShip canDeliver={false} />);

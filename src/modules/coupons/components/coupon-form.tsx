@@ -34,6 +34,8 @@ const emptyValues = {
   minimumPurchase: "",
   globalUsageLimit: "",
   perCustomerUsageLimit: "",
+  startsAt: "",
+  endsAt: "",
 };
 
 /** Amounts are typed in % and R$; the server converts them to basis points and cents. */
@@ -173,6 +175,26 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
           />
         )}
       </FormField>
+      <CouponValidityField
+        id={`${ownerType}-coupon-starts-at`}
+        name="startsAt"
+        label="Início (opcional)"
+        hint="Vazio: o cupom vale a partir de agora."
+        value={values.startsAt}
+        onChange={(value) => updateValue("startsAt", value)}
+      />
+      <CouponValidityField
+        id={`${ownerType}-coupon-ends-at`}
+        name="endsAt"
+        label="Fim (opcional)"
+        hint="Vazio: sem prazo. Vale até 23:59 do dia."
+        value={values.endsAt}
+        onChange={(value) => updateValue("endsAt", value)}
+      />
+      <p className="text-muted-foreground -mt-2 text-xs sm:col-span-2">
+        Datas no horário de Brasília. O início vale desde 00:00 e o fim até 23:59 do dia escolhido. O fim não pode ser
+        antes do início.
+      </p>
       {ownerType === "SELLER" ? (
         <label className="flex items-start gap-3 rounded-lg border p-3 text-sm sm:col-span-2">
           <DesignCheckbox
@@ -199,5 +221,38 @@ export function CouponForm({ ownerType }: { ownerType: "MARKETPLACE" | "SELLER" 
         />
       </div>
     </form>
+  );
+}
+
+function CouponValidityField({
+  id,
+  name,
+  label,
+  hint,
+  value,
+  onChange,
+}: {
+  id: string;
+  name: "startsAt" | "endsAt";
+  label: string;
+  hint: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <FormField id={id} label={label} hint={hint}>
+      {(field) => (
+        <Input
+          {...field}
+          name={name}
+          inputMode="numeric"
+          autoComplete="off"
+          maxLength={10}
+          placeholder="dd/mm/aaaa"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      )}
+    </FormField>
   );
 }

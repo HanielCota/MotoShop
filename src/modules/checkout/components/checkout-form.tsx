@@ -6,6 +6,7 @@ import { flushSync } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { formatCep, formatCpf, isCompleteCep } from "@/modules/customers/domain/brazilian-address";
+import { formatPhone } from "@/modules/customers/domain/tax-id";
 import { useCepAutofill } from "@/modules/customers/components/use-cep-autofill";
 import type { CustomerAddress } from "@/modules/customers/queries/customer-addresses";
 import { notifyCartUpdated } from "@/modules/cart/components/cart-events";
@@ -37,6 +38,7 @@ import { useCheckoutSubmit, type CheckoutPaymentType } from "./use-checkout-subm
 const maskedFields: Partial<Record<CheckoutField, (value: string) => string>> = {
   postalCode: formatCep,
   customerTaxId: formatCpf,
+  customerPhone: formatPhone,
   state: (value) => value.toUpperCase(),
   couponCode: (value) => value.toUpperCase(),
 };

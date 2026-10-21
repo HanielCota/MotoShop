@@ -65,3 +65,37 @@ it("shows the coupon rule in the browser and does not call the server for an inv
   expect(await screen.findByRole("alert")).toHaveTextContent("Use de 3 a 40 caracteres");
   expect(mocks.create).not.toHaveBeenCalled();
 });
+
+it.each(["SELLER", "MARKETPLACE"] as const)(
+  "sends the validity dates from the %s form (BUG-025)",
+  async (ownerType) => {
+    mocks.create.mockReset();
+    mocks.create.mockResolvedValue({ success: "Cupom criado." });
+    render(<CouponForm ownerType={ownerType} />);
+
+    fireEvent.change(screen.getByLabelText(/Código do cupom/), { target: { value: "NATAL10" } });
+    fireEvent.change(screen.getByLabelText(/Desconto \(%\)/), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText(/Início/), { target: { value: "01/12/2099" } });
+    fireEvent.change(screen.getByLabelText(/Fim/), { target: { value: "31/12/2099" } });
+    fireEvent.click(screen.getByRole("button", { name: "Criar cupom" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Cupom criado.");
+    const formData = mocks.create.mock.calls[0]?.[1] as FormData;
+    expect(formData.get("startsAt")).toBe("01/12/2099");
+    expect(formData.get("endsAt")).toBe("31/12/2099");
+  },
+);
+
+it("shows the date rule in the browser and does not call the server (BUG-025)", async () => {
+  mocks.create.mockReset();
+  render(<CouponForm ownerType="SELLER" />);
+
+  fireEvent.change(screen.getByLabelText(/Código do cupom/), { target: { value: "NATAL10" } });
+  fireEvent.change(screen.getByLabelText(/Desconto \(%\)/), { target: { value: "10" } });
+  fireEvent.change(screen.getByLabelText(/Início/), { target: { value: "10/12/2099" } });
+  fireEvent.change(screen.getByLabelText(/Fim/), { target: { value: "01/12/2099" } });
+  fireEvent.click(screen.getByRole("button", { name: "Criar cupom" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("não pode ser antes do início");
+  expect(mocks.create).not.toHaveBeenCalled();
+});
