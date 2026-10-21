@@ -53,6 +53,7 @@ const sortOptions = [
 
 export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
   const params = await loadCouponSearchParams(searchParams);
+  // oxlint-disable-next-line react/purity -- Server Component: it renders once per request, on the server, so the date cannot drift between renders.
   const now = new Date();
   const result = await listMarketplaceCoupons({
     // Os parâmetros de cupom são compartilhados com a Central do Lojista; o Admin limita página e NUL aqui.

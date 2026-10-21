@@ -43,6 +43,7 @@ const couponSortOptions = [
 
 export async function SellerCouponsCard({ sellerId, searchParams }: { sellerId: string; searchParams: SearchParams }) {
   const params = await loadCouponSearchParams(searchParams);
+  // oxlint-disable-next-line react/purity -- Server Component: it renders once per request, on the server, so the date cannot drift between renders.
   const now = new Date();
   const result = await listSellerCoupons(sellerId, {
     query: params.couponQ,
