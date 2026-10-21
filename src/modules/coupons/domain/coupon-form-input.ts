@@ -1,5 +1,7 @@
 import { parsePriceInputToCents } from "@/modules/products/domain/price-input";
 
+import { parseCouponValidityDate } from "./coupon-validity";
+
 /**
  * Translates the human-friendly coupon form ("10,5" %, "25,90" R$) into the persisted units
  * (basis points and cents). Both use two decimal places, so the same exact string parser applies
@@ -23,5 +25,7 @@ export function readCouponFormInput(formData: FormData) {
     globalUsageLimit: optional("globalUsageLimit"),
     perCustomerUsageLimit: optional("perCustomerUsageLimit"),
     showOnProductPage: formData.get("showOnProductPage") === "on",
+    startsAt: parseCouponValidityDate(formData.get("startsAt"), "start"),
+    endsAt: parseCouponValidityDate(formData.get("endsAt"), "end"),
   };
 }

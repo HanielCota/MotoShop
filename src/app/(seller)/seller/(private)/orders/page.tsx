@@ -14,6 +14,7 @@ import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { ShipmentActions } from "@/modules/shipping/components/shipment-actions";
 import { OwnShipmentActions } from "@/modules/shipping/components/own-shipping-forms";
 import { hasSellerPermission } from "@/modules/auth/domain/seller-permissions";
+import { SellerOrderAfterSales } from "@/modules/returns/components/seller-order-after-sales";
 import { canAdvanceOwnShipment } from "@/modules/shipping/domain/own-shipping";
 import { SellerOrderDelivery } from "@/modules/shipping/components/seller-order-delivery";
 import { SellerOrderQueueTabs } from "@/modules/shipping/components/seller-order-queue-tabs";
@@ -168,6 +169,7 @@ export default async function SellerOrdersPage({
                       ) : null}
                     </div>
 
+                    <SellerOrderAfterSales order={order} />
                     <SellerOrderDelivery order={order} />
                     {hasSellerPermission(context.membership.role, "ORDER_UPDATE") &&
                       (shipment?.provider === "OWN" ? (

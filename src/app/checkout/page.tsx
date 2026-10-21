@@ -53,6 +53,7 @@ export default async function CheckoutPage({
     ? await Promise.all([listCustomerAddresses(session.user.id), getCustomerContact(session.user.id)])
     : [[], undefined];
   const customerDefaults = session && customerContact ? { ...customerContact, email: session.user.email } : undefined;
+  // oxlint-disable-next-line react/purity -- Server Component: it renders once per request, on the server, so the date cannot drift between renders.
   const now = new Date();
   const items = cart.items.map((item) => ({
     id: item.id,
