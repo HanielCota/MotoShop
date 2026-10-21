@@ -49,12 +49,23 @@ it("renders the shared footer on storefront routes with the client's sections", 
   expect(footer.getByText(/O Moto Shop Brasil é uma plataforma e-commerce/)).toBeInTheDocument();
 });
 
-it("lists only the payment methods the checkout accepts", () => {
+it("lists only the payment methods the checkout accepts, with the official brand marks", () => {
   navigation.pathname = "/";
   renderFooter();
   const methods = within(screen.getByRole("list", { name: "Formas de pagamento aceitas" }));
+  const icons = methods.getAllByRole("img");
 
-  expect(methods.getAllByRole("img").map((icon) => icon.getAttribute("aria-label"))).toEqual([
+  expect(icons.map((icon) => icon.getAttribute("src"))).toEqual([
+    "/images/payment-methods/pix.svg",
+    "/images/payment-methods/visa.svg",
+    "/images/payment-methods/mastercard.svg",
+    "/images/payment-methods/elo.svg",
+    "/images/payment-methods/american-express.svg",
+    "/images/payment-methods/hipercard.svg",
+    "/images/payment-methods/diners-club.svg",
+    "/images/payment-methods/cabal.png",
+  ]);
+  expect(icons.map((icon) => icon.getAttribute("alt"))).toEqual([
     "Pix",
     "Visa",
     "Mastercard",
@@ -65,6 +76,11 @@ it("lists only the payment methods the checkout accepts", () => {
     "Cabal",
   ]);
   expect(methods.queryByLabelText("Boleto")).not.toBeInTheDocument();
+  // Every mark keeps its own size inside the tile's 40x20 area.
+  for (const icon of icons) {
+    expect(Number(icon.getAttribute("width"))).toBeLessThanOrEqual(40);
+    expect(Number(icon.getAttribute("height"))).toBeLessThanOrEqual(20);
+  }
 });
 
 it("shows the rights line without a CNPJ or social links", () => {
@@ -110,4 +126,14 @@ it("offers sign-in to visitors and the account to signed-in customers", () => {
   const signedIn = within(screen.getByRole("navigation", { name: "Atalhos" }));
   expect(signedIn.queryByRole("link", { name: "Entrar" })).not.toBeInTheDocument();
   expect(signedIn.getByRole("link", { name: "Minha conta" })).toHaveAttribute("href", "/account/profile");
+});
+
+it("shows the payment methods right below the institutional links, in the same column", () => {
+  navigation.pathname = "/";
+  renderFooter();
+  const column = within(screen.getByTestId("footer-institutional-column"));
+
+  expect(column.getByRole("navigation", { name: "Institucional" })).toBeInTheDocument();
+  expect(column.getByRole("list", { name: "Formas de pagamento aceitas" })).toBeInTheDocument();
+  expect(column.queryByRole("heading", { name: "Horário de atendimento" })).not.toBeInTheDocument();
 });
