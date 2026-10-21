@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
-import { basename, join, sep } from "node:path";
+import { basename, join, relative, sep } from "node:path";
 
 export const sourceDirectory = join(process.cwd(), "src");
 
@@ -68,8 +68,10 @@ function isNoMatch(error: unknown): boolean {
   return typeof error === "object" && error !== null && "status" in error && error.status === 1;
 }
 
-function isWantedPath(path: string, options: SourceFileOptions): boolean {
-  const directories = path.split(sep);
+/** Whether a file under `root` passes the same filters as `listSourceFiles`. Only folders inside `root`
+ * count, so a checkout under e.g. ~/generated/ does not skip every file. */
+export function isWantedPath(path: string, options: SourceFileOptions, root = sourceDirectory): boolean {
+  const directories = relative(root, path).split(sep);
   if (directories.some((directory) => SKIPPED_DIRECTORIES.has(directory))) return false;
 
   return isWantedFile(basename(path), options);
