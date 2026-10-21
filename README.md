@@ -62,7 +62,7 @@ Cloudflare R2.
 | `pnpm dev:review`                               | Servidor para revisão com dados de demonstração (`localhost:3001`) |
 | `pnpm build` / `pnpm start`                     | Build e servidor de produção                                       |
 | `pnpm typecheck`                                | Gera os tipos de rota (`next typegen`) e verifica tipos (`tsc`)    |
-| `pnpm lint`                                     | ESLint                                                             |
+| `pnpm lint`                                     | Oxlint, com regras que usam os tipos (`.oxlintrc.json`)            |
 | `pnpm format` / `pnpm format:check`             | Prettier (formatar / verificar)                                    |
 | `pnpm test` / `pnpm test:watch`                 | Testes unitários (Vitest)                                          |
 | `pnpm test:integration`                         | Testes de integração contra banco de teste isolado                 |
