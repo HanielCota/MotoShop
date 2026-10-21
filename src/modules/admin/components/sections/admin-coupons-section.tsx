@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { formatDate, formatMoneyInCents, formatCount } from "@/lib/format";
+import { couponValidityLabel } from "@/modules/coupons/domain/coupon-validity";
 import { setMarketplaceCouponActiveAction } from "@/modules/coupons/actions/coupon-actions";
 import { CouponForm } from "@/modules/coupons/components/coupon-form";
 import { couponKindLabels, getCouponKind, isSellerFundedCampaign } from "@/modules/coupons/domain/coupon-kind";
@@ -52,6 +53,8 @@ const sortOptions = [
 
 export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
   const params = await loadCouponSearchParams(searchParams);
+  // oxlint-disable-next-line react/purity -- Server Component: it renders once per request, on the server, so the date cannot drift between renders.
+  const now = new Date();
   const result = await listMarketplaceCoupons({
     // Os parâmetros de cupom são compartilhados com a Central do Lojista; o Admin limita página e NUL aqui.
     query: params.couponQ?.replaceAll(String.fromCharCode(0), "") ?? null,
@@ -99,7 +102,7 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
                     {couponKindLabels[getCouponKind(coupon)]} · {couponDiscountLabel(coupon)} de desconto
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    {couponUsageLabel(coupon)} usos · {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "sem prazo"}
+                    {couponUsageLabel(coupon)} usos · {couponValidityLabel(coupon, now)}
                   </p>
                   <CouponActions coupon={coupon} participantsHref={participantsHref(coupon.id)} />
                 </li>
@@ -121,7 +124,7 @@ export async function AdminCouponsSection({ searchParams }: AdminSectionProps) {
                 </td>
                 <td className={`${cellClassName} tabular-nums`}>{couponUsageLabel(coupon)}</td>
                 <td className={`${cellClassName} text-muted-foreground whitespace-nowrap`}>
-                  {coupon.endsAt ? `até ${formatDate(coupon.endsAt)}` : "Sem prazo"}
+                  {couponValidityLabel(coupon, now)}
                 </td>
                 <td className={cellClassName}>
                   <CouponActions coupon={coupon} participantsHref={participantsHref(coupon.id)} />

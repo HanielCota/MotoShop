@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { overviewStatsGridClassName } from "@/modules/sellers/domain/dashboard-grid";
 
 /** Placeholder de card usado como fallback de <Suspense> na Central do Lojista. */
 export function SellerCardSkeleton({ rows = 3, label = "Carregando" }: { rows?: number; label?: string }) {
@@ -16,7 +17,7 @@ export function SellerCardSkeleton({ rows = 3, label = "Carregando" }: { rows?: 
 
 export function SellerStatsSkeleton({ items = 4 }: { items?: number }) {
   return (
-    <div role="status" aria-label="Carregando indicadores" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div role="status" aria-label="Carregando indicadores" className={overviewStatsGridClassName(items)}>
       {Array.from({ length: items }, (_, index) => (
         <Skeleton key={index} className="h-28 w-full rounded-xl" />
       ))}

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { readCouponFormInput } from "../domain/coupon-form-input";
+import { findCouponValidityError } from "../domain/coupon-validity";
 
 // Coupon amounts and limits are persisted as PostgreSQL int4.
 const MAX_INT32 = 2_147_483_647;
@@ -37,6 +38,8 @@ export const couponSchema = z.object({
   globalUsageLimit: usageLimit.optional(),
   perCustomerUsageLimit: usageLimit.optional(),
   showOnProductPage: z.boolean().default(false),
+  startsAt: z.date({ error: "Informe o início como dia/mês/ano, ex.: 01/11/2026." }).optional(),
+  endsAt: z.date({ error: "Informe o fim como dia/mês/ano, ex.: 30/11/2026." }).optional(),
 });
 
 /** O tipo escolhido define qual valor de desconto é obrigatório. */
@@ -61,11 +64,15 @@ export type ParsedCouponForm =
   | { ok: false; error: string };
 
 /** Mesma validação no servidor e no navegador (BUG-011). */
-export function parseCouponForm(formData: FormData): ParsedCouponForm {
+export function parseCouponForm(formData: FormData, now = new Date()): ParsedCouponForm {
   const parsed = couponSchema.safeParse(readCouponFormInput(formData));
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Confira os dados do cupom." };
   const discountAmount = readDiscountAmount(parsed.data);
   if ("error" in discountAmount) return { ok: false, error: discountAmount.error };
+
+  const validityError = findCouponValidityError(parsed.data, now);
+  if (validityError != null) return { ok: false, error: validityError };
+
   return { ok: true, data: parsed.data, discountAmount };
 }
 

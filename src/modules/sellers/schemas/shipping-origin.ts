@@ -1,11 +1,13 @@
 import { z } from "zod";
 
+import { isValidBrazilianPhone, onlyDigits } from "@/modules/customers/domain/tax-id";
 import { firstIssueMessage } from "@/shared/forms/first-issue-message";
 
 export const shippingOriginSchema = z.object({
   originName: z.string().trim().min(2, "Informe o nome do remetente.").max(120),
   originEmail: z.email("Informe um e-mail válido."),
-  originPhone: z.string().trim().min(10, "Informe um telefone válido.").max(30),
+  // Stored as digits, like the customer profile; the field only shows the (00) 00000-0000 mask.
+  originPhone: z.string().max(30).transform(onlyDigits).refine(isValidBrazilianPhone, "Informe um telefone válido."),
   originDocument: z
     .string()
     .trim()

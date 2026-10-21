@@ -7,6 +7,9 @@ vi.mock("next/navigation", () => ({
   redirect: (path: string) => {
     throw new Error(`redirect:${path}`);
   },
+  notFound: () => {
+    throw new Error("notFound");
+  },
 }));
 vi.mock("@/config/env", () => ({ env: { ADMIN_EMAILS: "admin@example.test" } }));
 vi.mock("@/lib/database", () => ({ db: { sellerMember: { findFirst: mocks.membershipFindFirst } } }));
@@ -22,13 +25,17 @@ beforeEach(() => {
   });
 });
 describe("administrator authorization", () => {
-  it("denies unverified allowlisted email", async () => {
-    mocks.session.mockResolvedValue({ user: { email: "admin@example.test", emailVerified: false } });
-    await expect(requireAdminAccess()).rejects.toThrow("redirect:/forbidden");
+  it("answers 404 to a visitor, without sending them to the login", async () => {
+    mocks.session.mockResolvedValue(null);
+    await expect(requireAdminAccess()).rejects.toThrow("notFound");
   });
-  it("denies verified users outside the allowlist", async () => {
+  it("answers 404 to an unverified allowlisted email", async () => {
+    mocks.session.mockResolvedValue({ user: { email: "admin@example.test", emailVerified: false } });
+    await expect(requireAdminAccess()).rejects.toThrow("notFound");
+  });
+  it("answers 404 to a signed-in customer outside the allowlist", async () => {
     mocks.session.mockResolvedValue({ user: { email: "other@example.test", emailVerified: true } });
-    await expect(requireAdminAccess()).rejects.toThrow("redirect:/forbidden");
+    await expect(requireAdminAccess()).rejects.toThrow("notFound");
   });
   it("accepts verified allowlisted users", async () => {
     const session = { user: { email: "ADMIN@example.test", emailVerified: true } };
@@ -49,13 +56,22 @@ describe("seller authorization", () => {
     );
   });
 
-  it("denies a seller member whose role lacks the requested permission", async () => {
-    await expect(requireSellerAccess("FINANCE_READ")).rejects.toThrow("redirect:/seller?error=permission");
+  it("sends a member whose role lacks the permission to the restricted area page", async () => {
+    await expect(requireSellerAccess("FINANCE_READ")).rejects.toThrow(
+      "redirect:/seller/sem-permissao?permissao=FINANCE_READ",
+    );
   });
 
-  it("sends users without an active store membership to onboarding", async () => {
+  it("answers 404 to a signed-in user who is not a member of any store", async () => {
     mocks.membershipFindFirst.mockResolvedValue(null);
 
-    await expect(requireSellerAccess()).rejects.toThrow("redirect:/seller");
+    await expect(requireSellerAccess("ORDER_READ")).rejects.toThrow("notFound");
+  });
+
+  it("sends a member of a store still under review back to the application status", async () => {
+    mocks.membershipFindFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: "pending-membership" });
+
+    await expect(requireSellerAccess("ORDER_READ")).rejects.toThrow("redirect:/seller");
+    expect(mocks.membershipFindFirst).toHaveBeenLastCalledWith({ where: { userId: "member-a" }, select: { id: true } });
   });
 });

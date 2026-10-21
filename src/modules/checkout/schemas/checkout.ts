@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isBrazilianStateCode } from "@/modules/customers/domain/brazilian-address";
+import { isValidBrazilianPhone, onlyDigits } from "@/modules/customers/domain/tax-id";
 
 import { isValidCpf } from "../domain/cpf";
 
@@ -11,7 +12,12 @@ export const checkoutSchema = z
       (value) => (typeof value === "string" ? value.trim().toLowerCase() : value),
       z.email("Informe um e-mail válido."),
     ),
-    customerPhone: z.string().trim().min(10, "Informe um telefone válido.").max(30),
+    // Stored as digits, like the customer profile; the field only shows the (00) 00000-0000 mask.
+    customerPhone: z
+      .string()
+      .max(30)
+      .transform(onlyDigits)
+      .refine(isValidBrazilianPhone, "Informe um telefone válido."),
     customerTaxId: z
       .string()
       .trim()

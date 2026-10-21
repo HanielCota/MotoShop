@@ -1,5 +1,5 @@
 import type { CustomerAddress } from "@/modules/customers/queries/customer-addresses";
-import { formatPhone } from "@/modules/customers/domain/tax-id";
+import { formatPhone, isValidBrazilianPhone, onlyDigits } from "@/modules/customers/domain/tax-id";
 import {
   formatCep,
   formatCpf,
@@ -106,7 +106,7 @@ export function validateCheckoutForm(form: CheckoutFormState): CheckoutFieldErro
   const errors: CheckoutFieldErrors = {};
   if (form.customerName.trim().length < 2) errors.customerName = "Informe seu nome.";
   if (!emailPattern.test(form.customerEmail.trim())) errors.customerEmail = "Informe um e-mail válido.";
-  if (form.customerPhone.replace(/\D/g, "").length < 10) errors.customerPhone = "Informe um telefone válido.";
+  if (!isValidBrazilianPhone(onlyDigits(form.customerPhone))) errors.customerPhone = "Informe um telefone válido.";
   const cpf = normalizeCpf(form.customerTaxId);
   if (!cpf) errors.customerTaxId = "Informe seu CPF para o pagamento.";
   if (cpf && !isValidCpf(cpf)) errors.customerTaxId = "Informe um CPF válido.";

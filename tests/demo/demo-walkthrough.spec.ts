@@ -106,10 +106,10 @@ test.describe("Área do cliente", () => {
     await visit(page, "/checkout", { h1: /Finalizar compra/ });
   });
 
-  test("cliente não acessa o Admin", async ({ page }) => {
+  test("cliente não acessa o Admin e nem descobre que ele existe", async ({ page }) => {
     await page.goto("/admin");
-    await expect(page).toHaveURL(/\/forbidden/);
-    await expect(page.locator("h1")).toHaveText(/Acesso não autorizado/);
+    await expect(page).toHaveURL(/\/admin$/);
+    await expect(page.locator("h1")).toHaveText(/Página não encontrada/);
   });
 });
 
