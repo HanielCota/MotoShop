@@ -70,36 +70,37 @@ export function SiteFooter() {
           </ul>
         </nav>
 
-        <nav aria-labelledby="footer-institutional">
-          <FooterHeading id="footer-institutional">Institucional</FooterHeading>
-          <ul>
-            {institutionalLinks.map((link) => (
-              <li key={link.label}>
-                <Link href={link.href} className={footerLinkClassName}>
-                  {link.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        <div className="space-y-8">
-          <section aria-labelledby="footer-service-hours">
-            <FooterHeading id="footer-service-hours">Horário de atendimento</FooterHeading>
-            <dl className="space-y-1.5 text-sm leading-6">
-              {serviceHours.map((entry) => (
-                <div key={entry.days}>
-                  <dt className="inline font-semibold text-white/90">{entry.days}</dt>
-                  <dd className="inline text-white/70"> - {entry.hours}</dd>
-                </div>
+        {/* Payment methods sit right below the institutional links, in the same column. */}
+        <div data-testid="footer-institutional-column" className="space-y-8">
+          <nav aria-labelledby="footer-institutional">
+            <FooterHeading id="footer-institutional">Institucional</FooterHeading>
+            <ul>
+              {institutionalLinks.map((link) => (
+                <li key={link.label}>
+                  <Link href={link.href} className={footerLinkClassName}>
+                    {link.label}
+                  </Link>
+                </li>
               ))}
-            </dl>
-          </section>
+            </ul>
+          </nav>
           <section aria-labelledby="footer-payment-methods">
             <FooterHeading id="footer-payment-methods">Formas de pagamento</FooterHeading>
             <PaymentMethodIcons />
           </section>
         </div>
+
+        <section aria-labelledby="footer-service-hours">
+          <FooterHeading id="footer-service-hours">Horário de atendimento</FooterHeading>
+          <dl className="space-y-1.5 text-sm leading-6">
+            {serviceHours.map((entry) => (
+              <div key={entry.days}>
+                <dt className="inline font-semibold text-white/90">{entry.days}</dt>
+                <dd className="inline text-white/70"> - {entry.hours}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
 
         <p className="border-t border-white/15 pt-4 text-xs leading-5 text-white/55 lg:order-5 lg:col-span-4 lg:text-right">
           © 2026 MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE. Todos os direitos reservados.
