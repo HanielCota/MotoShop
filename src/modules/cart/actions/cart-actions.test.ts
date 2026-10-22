@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => {
   return { tx, variant: vi.fn() };
 });
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("../queries/cart-thumbnails", () => ({ getCartThumbnails: vi.fn(async () => new Map()) }));
 vi.mock("@/lib/database", () => ({
   db: {
     productVariant: { findFirst: mocks.variant },
