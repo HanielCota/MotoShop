@@ -12,6 +12,10 @@ vi.mock("../actions/cart-actions", () => ({
   getCartPreviewAction: actions.preview,
   updateCartItemAction: actions.update,
 }));
+vi.mock("next/image", () => ({
+  // eslint-disable-next-line @next/next/no-img-element
+  default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
+}));
 vi.mock("next/link", () => ({
   default: ({ href, ...props }: React.ComponentProps<"a">) => <a href={href} {...props} />,
 }));
@@ -150,4 +154,32 @@ it("reads the item count in the cart button name (IC-11)", () => {
   expect(cartTriggerLabel(0)).toBe("Carrinho, vazio");
   expect(cartTriggerLabel(1)).toBe("Carrinho, 1 item");
   expect(cartTriggerLabel(3)).toBe("Carrinho, 3 itens");
+});
+
+it("shows each item's product photo, and the cart page placeholder when there is none", async () => {
+  const item = {
+    variant: "Preto · M",
+    quantity: 1,
+    availableQuantity: 5,
+    unitPriceInCents: 15000,
+  };
+  actions.preview.mockResolvedValue({
+    items: [
+      { ...item, id: "item-1", name: "Capacete off-road", thumbnailUrl: "https://ik.example/capacete.jpg" },
+      { ...item, id: "item-2", name: "Bota trilha", thumbnailUrl: null },
+      { ...item, id: "item-3", name: "Luva leve", thumbnailUrl: "https://ik.example/luva.jpg" },
+    ],
+    itemCount: 3,
+    subtotalInCents: 45000,
+  });
+  render(<CartPreview />);
+
+  fireEvent.click(screen.getByRole("button", { name: /^Carrinho,/ }));
+  const list = await screen.findByRole("list", { name: "Itens no carrinho" });
+  const thumbnails = within(list).getAllByTestId("cart-item-thumbnail");
+
+  expect(thumbnails).toHaveLength(3);
+  expect(thumbnails[0]?.querySelector("img")).toHaveAttribute("src", "https://ik.example/capacete.jpg");
+  expect(thumbnails[1]?.querySelector("img")).toBeNull();
+  expect(thumbnails[2]?.querySelector("img")).toHaveAttribute("src", "https://ik.example/luva.jpg");
 });

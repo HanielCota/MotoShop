@@ -1,7 +1,6 @@
 import type { Metadata, Route } from "next";
-import Image from "next/image";
 import Link from "next/link";
-import { ImageOff, ShoppingBag, Store } from "lucide-react";
+import { ShoppingBag, Store } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -10,10 +9,10 @@ import { PageHeader } from "@/components/ui/page-header";
 import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { CartItemControls } from "@/modules/cart/components/cart-item-controls";
+import { CartItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
 import { getActiveCart } from "@/modules/cart/queries/cart";
+import { getCartThumbnails } from "@/modules/cart/queries/cart-thumbnails";
 import { getCurrentPriceInCents } from "@/modules/products/domain/pricing";
-
-import { getCartThumbnails } from "./cart-thumbnails";
 
 export const metadata: Metadata = {
   title: "Carrinho",
@@ -89,23 +88,12 @@ export default async function CartPage() {
                       const productHref = `/products/${item.variant.product.slug}` as Route;
                       return (
                         <li key={item.id} className="flex gap-4 py-4 first:pt-0 last:pb-0">
-                          <Link
-                            href={productHref}
-                            tabIndex={-1}
-                            aria-hidden="true"
-                            className="bg-surface-sunken relative grid size-20 shrink-0 place-items-center overflow-hidden rounded-lg sm:size-24"
-                          >
-                            {thumbnail ? (
-                              <Image
-                                src={thumbnail.url}
-                                alt=""
-                                fill
-                                sizes="(max-width: 640px) 80px, 96px"
-                                className="object-cover"
-                              />
-                            ) : (
-                              <ImageOff aria-hidden="true" className="text-muted-foreground size-6" />
-                            )}
+                          <Link href={productHref} tabIndex={-1} aria-hidden="true" className="shrink-0">
+                            <CartItemThumbnail
+                              url={thumbnail?.url}
+                              sizes="(max-width: 640px) 80px, 96px"
+                              className="size-20 sm:size-24"
+                            />
                           </Link>
                           <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:justify-between">
                             <div className="min-w-0">

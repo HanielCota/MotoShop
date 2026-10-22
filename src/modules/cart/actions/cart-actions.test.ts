@@ -16,12 +16,14 @@ const mocks = vi.hoisted(() => {
       deleteMany: vi.fn(),
     },
   };
-  return { tx, variant: vi.fn() };
+  return { tx, variant: vi.fn(), cart: vi.fn(), thumbnails: vi.fn() };
 });
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("../queries/cart-thumbnails", () => ({ getCartThumbnails: mocks.thumbnails }));
 vi.mock("@/lib/database", () => ({
   db: {
     productVariant: { findFirst: mocks.variant },
+    cart: { findFirst: mocks.cart },
     $transaction: async (callback: (tx: unknown) => unknown) => callback(mocks.tx),
   },
 }));
@@ -30,13 +32,14 @@ vi.mock("../infrastructure/cart-access", () => ({
   cartOwnerWhere: () => ({ userId: "buyer" }),
   findOrCreateActiveCart: async () => ({ id: "cart" }),
 }));
-import { addToCartAction, clearCartAction, updateCartItemAction } from "./cart-actions";
+import { addToCartAction, clearCartAction, getCartPreviewAction, updateCartItemAction } from "./cart-actions";
 const id = "cmf8w8m4p0000s6o5zj2q8v3k";
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.variant.mockResolvedValue({ inventory: { availableQuantity: 1000 } });
   mocks.tx.cart.findFirst.mockResolvedValue({ id: "cart" });
   mocks.tx.cartItem.findUnique.mockResolvedValue({ quantity: 99 });
+  mocks.thumbnails.mockResolvedValue(new Map());
 });
 it("enforces the limit on the combined quantity, not just the incoming increment", async () => {
   expect((await addToCartAction(id, 1)).error).toContain("99");
@@ -102,4 +105,31 @@ it("limits adding to the cart per client IP, since each cookie-less call opens a
   await addToCartAction("cm123456789012345678901234", 1);
 
   expect(assertRateLimit).toHaveBeenCalledWith({ key: "cart-add:ip:203.0.113.7", windowSeconds: 60, max: 60 });
+});
+
+it("returns each preview item's thumbnail, or null when the item has no photo", async () => {
+  const cartItem = (itemId: string, variantId: string) => ({
+    id: itemId,
+    variantId,
+    quantity: 1,
+    variant: {
+      productId: "product",
+      title: "Preto · M",
+      priceInCents: 15000,
+      promotionalPriceInCents: null,
+      promotionStartsAt: null,
+      promotionEndsAt: null,
+      inventory: { availableQuantity: 5 },
+      product: { name: "Capacete off-road" },
+    },
+  });
+  const items = [cartItem("item-1", "variant-1"), cartItem("item-2", "variant-2")];
+  mocks.cart.mockResolvedValue({ items });
+  mocks.thumbnails.mockResolvedValue(new Map([["variant-1", { url: "https://ik.example/capacete.jpg", alt: "" }]]));
+
+  const preview = await getCartPreviewAction();
+
+  expect(mocks.thumbnails).toHaveBeenCalledWith(items);
+  expect(preview.error).toBeUndefined();
+  expect(preview.items.map((item) => item.thumbnailUrl)).toEqual(["https://ik.example/capacete.jpg", null]);
 });
