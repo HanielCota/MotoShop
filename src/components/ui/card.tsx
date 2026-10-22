@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
  * Surface for a titled block. Border, not ring, like the hand-made boxes it replaced (DS-10).
  * `render` keeps the semantics of the block: `<Card render={<section />}>`, `<form />`, `<aside />`.
  * `size="section"` is the storefront page section (checkout, cart, account): 16/24px padding, body
- * text size, children spaced by their own margins and nothing clipped.
+ * text size, normal block flow (children keep their own width and margins, as in the boxes it
+ * replaced; a flex column would stretch buttons to full width) and nothing clipped.
  */
 function Card({
   className,
@@ -21,7 +22,7 @@ function Card({
       {
         className: cn(
           "group/card bg-card text-card-foreground border-border flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl border py-(--card-spacing) text-sm [--card-spacing:--spacing(4)] has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
-          size === "section" && "gap-0 overflow-visible p-4 text-base sm:p-6",
+          size === "section" && "block gap-0 overflow-visible p-4 text-base sm:p-6",
           className,
         ),
       },
