@@ -1,0 +1,35 @@
+import Image from "next/image";
+import { ImageOff } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+
+/**
+ * Product photo of a cart item, with the same placeholder everywhere a cart item is listed (cart page,
+ * cart preview, checkout summary). Decorative: the item name next to it is what is read.
+ */
+export function CartItemThumbnail({
+  url,
+  sizes,
+  className,
+}: {
+  url: string | null | undefined;
+  sizes: string;
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "bg-surface-sunken relative grid shrink-0 place-items-center overflow-hidden rounded-lg",
+        className,
+      )}
+      data-testid="cart-item-thumbnail"
+    >
+      {url == null ? (
+        <ImageOff aria-hidden="true" className="text-muted-foreground size-6" />
+      ) : (
+        <Image src={url} alt="" fill sizes={sizes} className="object-cover" />
+      )}
+    </span>
+  );
+}
