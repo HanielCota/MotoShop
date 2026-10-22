@@ -1,11 +1,18 @@
 import { InlineNotice } from "@/components/ui/inline-notice";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate } from "@/lib/format";
+import { ReturnPhotoGallery, type ReturnPhotoSummary } from "@/modules/returns/components/return-photo-gallery";
 import { disputeReasonLabels, getStatusLabel, returnReasonLabels } from "@/shared/presentation/status-labels";
 
 // The team's notes (resolutionNote/adminNote) stay internal: the customer sees only what they sent.
 type DisputeSummary = { status: string; reason: string; description: string; createdAt: Date };
-type ReturnSummary = { status: string; reason: string; customerMessage: string | null; createdAt: Date };
+type ReturnSummary = {
+  status: string;
+  reason: string;
+  customerMessage: string | null;
+  createdAt: Date;
+  photos?: readonly ReturnPhotoSummary[];
+};
 
 const OPEN_DISPUTE_STATUSES = new Set(["OPEN", "UNDER_REVIEW"]);
 const OPEN_RETURN_STATUSES = new Set(["REQUESTED", "UNDER_REVIEW", "APPROVED", "WAITING_RETURN", "RETURNED"]);
@@ -51,6 +58,7 @@ export function ReturnDetails({ request }: { request: ReturnSummary }) {
         <Detail label="Motivo">{returnReasonLabels[request.reason] ?? request.reason}</Detail>
         {request.customerMessage ? <Detail label="O que você relatou">{request.customerMessage}</Detail> : null}
       </dl>
+      <ReturnPhotoGallery photos={request.photos ?? []} title="Suas fotos" />
       {OPEN_RETURN_STATUSES.has(request.status) ? (
         <p className="mt-2 text-sm">
           <strong>O que acontece agora:</strong> a loja e o Moto Shop acompanham a devolução e avisam por e-mail a cada

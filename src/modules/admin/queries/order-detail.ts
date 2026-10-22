@@ -27,6 +27,7 @@ export async function getAdminOrderDetail(orderNumber: string) {
             orderBy: { createdAt: "desc" },
             include: {
               items: { include: { orderItem: { select: { productNameSnapshot: true, skuSnapshot: true } } } },
+              photos: { select: { id: true, storageKey: true }, orderBy: { sortOrder: "asc" } },
             },
           },
           items: {

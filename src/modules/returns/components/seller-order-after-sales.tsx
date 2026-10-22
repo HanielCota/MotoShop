@@ -9,6 +9,8 @@ import {
   type StatusDomain,
 } from "@/shared/presentation/status-labels";
 
+import { ReturnPhotoGallery, type ReturnPhotoSummary } from "./return-photo-gallery";
+
 // Só o que o lojista pode ver: as notas internas do Admin nunca chegam aqui (UX-13).
 type OrderItemSummary = { id: string; quantity: number; productNameSnapshot: string; skuSnapshot: string };
 type CancellationSummary = {
@@ -30,6 +32,7 @@ type ReturnSummary = {
     quantity: number;
     orderItem: { productNameSnapshot: string; skuSnapshot: string };
   }[];
+  photos: readonly ReturnPhotoSummary[];
 };
 type DisputeSummary = { id: string; status: string; reason: string; description: string; createdAt: Date };
 
@@ -116,6 +119,7 @@ function ReturnBlock({ request }: { request: ReturnSummary }) {
         ["Valor estimado", formatMoneyInCents(request.amountInCents)],
         ["Aberta em", formatDate(request.createdAt)],
       ]}
+      extra={<ReturnPhotoGallery photos={request.photos} title="Fotos do cliente" />}
       footer={
         OPEN_RETURN_STATUSES.has(request.status)
           ? "O Moto Shop acompanha a devolução e avisa a loja a cada etapa."
@@ -151,12 +155,14 @@ function AfterSalesBlock({
   domain,
   status,
   details,
+  extra,
   footer,
 }: {
   title: string;
   domain: StatusDomain;
   status: string;
   details: readonly Detail[];
+  extra?: ReactNode;
   footer: ReactNode;
 }) {
   return (
@@ -174,6 +180,7 @@ function AfterSalesBlock({
           ) : null,
         )}
       </dl>
+      {extra}
       {footer ? <p className="mt-1">{footer}</p> : null}
     </div>
   );

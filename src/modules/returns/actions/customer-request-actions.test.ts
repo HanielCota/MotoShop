@@ -17,6 +17,11 @@ vi.mock("@/modules/orders/application/resolve-customer-order-access", () => ({
 }));
 vi.mock("@/modules/orders/infrastructure/guest-order-cookie", () => ({ readGuestOrderCookie: mocks.guestCookie }));
 vi.mock("../application/request-return", () => ({ requestReturn: mocks.requestReturn }));
+vi.mock("../application/return-photo-uploads", () => ({
+  createReturnPhotoUpload: vi.fn(),
+  removeReturnPhotoUpload: vi.fn(),
+}));
+vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
 vi.mock("../application/request-cancellation", () => ({ requestCancellation: mocks.requestCancellation }));
 vi.mock("@/modules/disputes/application/request-dispute", () => ({ requestDispute: mocks.requestDispute }));
 

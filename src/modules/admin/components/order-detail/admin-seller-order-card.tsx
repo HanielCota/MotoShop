@@ -6,6 +6,7 @@ import { formatDateTime, formatMoneyInCents } from "@/lib/format";
 import { DisputeStatusActions } from "@/modules/disputes/components/dispute-status-actions";
 import { ShipmentTracking } from "@/modules/orders/components/order-detail/shipment-tracking";
 import { CancellationStatusActions } from "@/modules/returns/components/cancellation-status-actions";
+import { ReturnPhotoGallery } from "@/modules/returns/components/return-photo-gallery";
 import { ReturnStatusActions } from "@/modules/returns/components/return-status-actions";
 import { returnReasonLabels, type StatusDomain } from "@/shared/presentation/status-labels";
 
@@ -96,6 +97,7 @@ export function AdminSellerOrderCard({
                   `Motivo: ${returnReasonLabels[request.reason] ?? request.reason}${request.customerMessage ? ` · ${request.customerMessage}` : ""}`,
                   request.adminNote ? `Nota: ${request.adminNote}` : null,
                 ]}
+                extra={<ReturnPhotoGallery photos={request.photos} title="Fotos do cliente" />}
                 actions={
                   <ReturnStatusActions
                     returnRequestId={request.id}
@@ -133,6 +135,7 @@ function AfterSalesRequest({
   status,
   createdAt,
   details,
+  extra,
   actions,
 }: {
   title: string;
@@ -140,6 +143,7 @@ function AfterSalesRequest({
   status: string;
   createdAt: Date;
   details: readonly (string | null)[];
+  extra?: ReactNode;
   actions: ReactNode;
 }) {
   return (
@@ -156,6 +160,7 @@ function AfterSalesRequest({
               {detail}
             </p>
           ))}
+        {extra}
         <p className="text-muted-foreground text-xs">Aberta em {formatDateTime(createdAt)}</p>
       </div>
       {actions}

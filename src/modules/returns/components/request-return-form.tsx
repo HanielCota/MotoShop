@@ -1,4 +1,6 @@
 "use client";
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { FormMessage } from "@/components/ui/form-message";
@@ -9,6 +11,8 @@ import { DesignSelect } from "@/components/ui/design-select";
 import { requestReturnAction, type ReturnActionState } from "../actions/return-actions";
 import { useClientValidation } from "@/shared/forms/client-validation";
 import { useServerActionState } from "@/shared/forms/server-action-submit";
+
+import { discardReturnPhotos, ReturnPhotoPicker, uploadReturnPhotos } from "./return-photo-picker";
 
 type RequestReturnFormProps = {
   orderNumber: string;
@@ -30,19 +34,53 @@ export function validateReturnQuantity(maxQuantity: number) {
   };
 }
 
+type UploadedReturnPhoto = { key: string; fileId: string };
+
+/**
+ * Sends the return and, when it is not registered (an error answer or no answer at all), deletes the
+ * photos already uploaded, so they do not stay orphaned in ImageKit.
+ */
+export async function submitReturnWithoutOrphanPhotos(input: {
+  target: { orderNumber: string; orderItemId: string };
+  photos: readonly UploadedReturnPhoto[];
+  submit: () => Promise<ReturnActionState>;
+  discard?: typeof discardReturnPhotos;
+}): Promise<ReturnActionState> {
+  const discard = input.discard ?? discardReturnPhotos;
+
+  try {
+    const result = await input.submit();
+    if (result.error) await discard(input.target, input.photos);
+
+    return result;
+  } catch (error) {
+    await discard(input.target, input.photos);
+    throw error;
+  }
+}
+
 export function RequestReturnForm({ orderNumber, orderItemId, maxQuantity, idempotencyKey }: RequestReturnFormProps) {
+  const [photos, setPhotos] = useState<File[]>([]);
   const [state, action, pending] = useServerActionState(
-    async (previousState: ReturnActionState, formData: FormData) => {
+    async (previousState: ReturnActionState, formData: FormData): Promise<ReturnActionState> => {
       void previousState;
-      const input = {
-        orderNumber,
-        orderItemId,
-        quantity: Number(formData.get("quantity")),
-        reason: String(formData.get("reason") ?? ""),
-        customerMessage: String(formData.get("customerMessage") ?? "").trim(),
-        idempotencyKey,
-      };
-      return requestReturnAction(input);
+      const target = { orderNumber, orderItemId };
+      const uploaded = await uploadPhotosOrError(target, photos);
+      if ("error" in uploaded) return { error: uploaded.error };
+
+      return submitReturnWithoutOrphanPhotos({
+        target,
+        photos: uploaded.photos,
+        submit: async () =>
+          requestReturnAction({
+            ...target,
+            quantity: Number(formData.get("quantity")),
+            reason: String(formData.get("reason") ?? ""),
+            customerMessage: String(formData.get("customerMessage") ?? "").trim(),
+            idempotencyKey,
+            photos: uploaded.photos,
+          }),
+      });
     },
     initialState,
   );
@@ -81,6 +119,7 @@ export function RequestReturnForm({ orderNumber, orderItemId, maxQuantity, idemp
         Observação (opcional)
         <Textarea className="h-20 min-h-20" name="customerMessage" maxLength={1000} />
       </label>
+      <ReturnPhotoPicker files={photos} onFilesChange={setPhotos} disabled={pending || Boolean(state.result)} />
       <FormMessage
         error={clientError ?? state.error ?? null}
         success={clientError ? null : (state.success ?? null)}
@@ -91,4 +130,15 @@ export function RequestReturnForm({ orderNumber, orderItemId, maxQuantity, idemp
       </Button>
     </form>
   );
+}
+
+async function uploadPhotosOrError(
+  target: { orderNumber: string; orderItemId: string },
+  files: readonly File[],
+): Promise<{ photos: Awaited<ReturnType<typeof uploadReturnPhotos>> } | { error: string }> {
+  try {
+    return { photos: await uploadReturnPhotos(target, files) };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Não foi possível enviar as fotos." };
+  }
 }

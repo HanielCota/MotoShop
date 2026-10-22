@@ -321,6 +321,7 @@ model Seller {
   coupons                Coupon[]
   couponParticipations   CouponSellerParticipation[]
   returnRequests         ReturnRequest[]
+  returnRequestPhotos    ReturnRequestPhoto[]
   productReviews         ProductReview[]
   sellerReviews          SellerReview[]
   productQuestions       ProductQuestion[]
@@ -965,29 +966,48 @@ model Shipment {
 }
 
 model ReturnRequest {
-  id              String       @id @default(cuid())
-  status          ReturnStatus @default(REQUESTED)
+  id              String               @id @default(cuid())
+  status          ReturnStatus         @default(REQUESTED)
   reason          String
   amountInCents   Int
   customerMessage String?
   adminNote       String?
-  idempotencyKey  String       @unique
+  idempotencyKey  String               @unique
   orderId         String
   sellerOrderId   String
   sellerId        String
   requesterUserId String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  order           Order        @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  sellerOrder     SellerOrder  @relation(fields: [sellerOrderId], references: [id], onDelete: Restrict)
-  seller          Seller       @relation(fields: [sellerId], references: [id], onDelete: Restrict)
-  requester       User?        @relation(fields: [requesterUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  order           Order                @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  sellerOrder     SellerOrder          @relation(fields: [sellerOrderId], references: [id], onDelete: Restrict)
+  seller          Seller               @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  requester       User?                @relation(fields: [requesterUserId], references: [id], onDelete: SetNull)
   items           ReturnItem[]
+  photos          ReturnRequestPhoto[]
 
   @@index([orderId, status, createdAt])
   @@index([sellerOrderId, status, createdAt])
   @@index([sellerId, status, createdAt])
   @@map("return_requests")
+}
+
+/// Fotos privadas que o cliente anexa ao pedir devolução (até 3). Só abrem por link assinado.
+model ReturnRequestPhoto {
+  id              String        @id @default(cuid())
+  returnRequestId String
+  sellerId        String
+  storageKey      String        @unique
+  contentType     String
+  sizeInBytes     Int
+  sortOrder       Int
+  createdAt       DateTime      @default(now())
+  returnRequest   ReturnRequest @relation(fields: [returnRequestId], references: [id], onDelete: Cascade)
+  seller          Seller        @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+
+  @@index([returnRequestId, sortOrder])
+  @@index([sellerId])
+  @@map("return_request_photos")
 }
 
 model ReturnItem {

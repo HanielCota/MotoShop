@@ -1,5 +1,15 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("server-only", () => ({}));
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
+vi.mock("@/config/env", () => ({
+  env: {
+    IMAGEKIT_PUBLIC_KEY: "public_test",
+    IMAGEKIT_PRIVATE_KEY: "private_test",
+    IMAGEKIT_URL_ENDPOINT: "https://ik.imagekit.io/example",
+  },
+}));
 
 import { SellerOrderAfterSales, type SellerOrderAfterSalesData } from "./seller-order-after-sales";
 
@@ -70,6 +80,7 @@ describe("SellerOrderAfterSales", () => {
           customerMessage: "Furação diferente",
           amountInCents: 32_990,
           createdAt,
+          photos: [{ id: "p1", storageKey: "returns/item-1/0b8a8f0e-6c38-4f8e-9f3c-1d2e3f4a5b6c.jpg" }],
           items: [
             { id: "ri-1", quantity: 1, orderItem: { productNameSnapshot: "Disco Onda", skuSnapshot: "SKU-DISCO" } },
           ],
@@ -84,6 +95,32 @@ describe("SellerOrderAfterSales", () => {
     expect(block.getByText("Furação diferente")).toBeInTheDocument();
     expect(block.getByText(/329,90/)).toBeInTheDocument();
     expect(block.getByText(/acompanha a devolução/)).toBeInTheDocument();
+  });
+
+  it("shows the customer's private photos through short-lived signed links", () => {
+    const order = buildOrder({
+      returnRequests: [
+        {
+          id: "r1",
+          status: "REQUESTED",
+          reason: "DAMAGED",
+          customerMessage: null,
+          amountInCents: 10_000,
+          createdAt,
+          photos: [{ id: "p1", storageKey: "returns/item-1/0b8a8f0e-6c38-4f8e-9f3c-1d2e3f4a5b6c.jpg" }],
+          items: [{ id: "ri-1", quantity: 1, orderItem: { productNameSnapshot: "Disco", skuSnapshot: "SKU-D" } }],
+        },
+      ],
+    });
+    render(<SellerOrderAfterSales order={order} />);
+    const block = blockFor("Devolução");
+
+    expect(block.getByText("Fotos do cliente (1)")).toBeInTheDocument();
+    const link = block.getByRole("link", { name: "Abrir foto 1 em tamanho real" });
+    expect(link.getAttribute("href")).toMatch(
+      /^https:\/\/ik\.imagekit\.io\/example\/returns\/item-1\/[a-f0-9-]+\.jpg\?ik-t=\d+&ik-s=[a-f0-9]{40}$/,
+    );
+    expect(block.getByRole("img").getAttribute("src")).toContain("/tr:w-160/returns/item-1/");
   });
 
   it("shows the open dispute with the customer's report (UX-13)", () => {

@@ -31,6 +31,7 @@ describe("listSellerOrders after-sales (UX-13)", () => {
     expect(args.include.cancellationRequests.where).toEqual({ sellerId: "seller-a" });
     expect(args.include.returnRequests.where).toEqual({ sellerId: "seller-a" });
     expect(args.include.returnRequests.select.items.where).toEqual({ sellerId: "seller-a" });
+    expect(args.include.returnRequests.select.photos.where).toEqual({ sellerId: "seller-a" });
     expect(args.include.disputes.where).toEqual({ sellerId: "seller-a" });
   });
 
