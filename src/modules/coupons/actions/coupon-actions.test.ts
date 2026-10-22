@@ -345,6 +345,8 @@ describe("coupon code oracle (L-10)", () => {
     const result = await createSellerCouponAction({}, codeForm("BLACKFRIDAY"));
 
     expect(result.error).toBe("Este código não está disponível. Escolha outro.");
+    // The form points at the code field, where the problem is.
+    expect(result.field).toBe("code");
   });
 
   it("limits coupon creation per store before touching the database", async () => {

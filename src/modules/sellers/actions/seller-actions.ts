@@ -19,6 +19,7 @@ export type SellerActionState = {
   error?: string;
   success?: string;
   slugError?: string;
+  field?: string;
   values?: Record<(typeof onboardingFields)[number], string>;
 };
 

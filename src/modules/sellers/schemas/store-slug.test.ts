@@ -14,6 +14,7 @@ it("sends the identifier error to the field and the first other error to the for
 
   expect(splitStoreSlugIssue(parsed.error, "storeSlug")).toEqual({
     error: "Informe o nome da loja.",
+    field: "storeName",
     slugError: "Use apenas letras minúsculas, números e hífens.",
   });
 });
