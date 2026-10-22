@@ -23,7 +23,7 @@ vi.mock("@/config/env", () => ({
   },
 }));
 
-import { ImageKitStorageProvider } from "./storage/imagekit-storage-provider";
+import { ImageKitStorageProvider, signImageKitUrl } from "./storage/imagekit-storage-provider";
 import { ResendEmailProvider, SKIPPED_RESERVED_DOMAIN_ID } from "./email/resend-email-provider";
 import { MelhorEnvioProvider } from "./shipping/melhor-envio-provider";
 import { MercadoPagoProvider } from "./payment/mercado-pago-provider";
@@ -256,3 +256,74 @@ function defined<T>(value: T | null | undefined): T {
   if (value === null || value === undefined) throw new Error("Expected value to be defined");
   return value;
 }
+
+it("signs a private ImageKit upload so the browser cannot turn it public", async () => {
+  const result = await new ImageKitStorageProvider().createUploadUrl({
+    key: "returns/item-1/0b8a8f0e-6c38-4f8e-9f3c-1d2e3f4a5b6c.jpg",
+    contentType: "image/jpeg",
+    maxSizeInBytes: 5 * 1024 * 1024,
+    isPrivate: true,
+  });
+  const [, payload] = defined(result.fields.token).split(".");
+  const claims = JSON.parse(Buffer.from(defined(payload), "base64url").toString());
+
+  expect(claims.isPrivateFile).toBe(true);
+  expect(result.fields.isPrivateFile).toBe("true");
+});
+
+it("refuses a return photo that ImageKit did not store as private", async () => {
+  const asset = {
+    fileId: "123456789012345678901234",
+    filePath: "/returns/item-1/0b8a8f0e-6c38-4f8e-9f3c-1d2e3f4a5b6c.jpg",
+    fileType: "image",
+    mime: "image/jpeg",
+    size: 1024,
+    isPrivateFile: false,
+  };
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => asset }));
+  const input = {
+    key: "returns/item-1/0b8a8f0e-6c38-4f8e-9f3c-1d2e3f4a5b6c.jpg",
+    fileId: asset.fileId,
+    maxSizeInBytes: 5 * 1024 * 1024,
+    contentTypes: ["image/jpeg"],
+    requirePrivate: true,
+  };
+
+  await expect(new ImageKitStorageProvider().verifyAsset(input)).rejects.toThrow(/não corresponde/i);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...asset, isPrivateFile: true }) }),
+  );
+  await expect(new ImageKitStorageProvider().verifyAsset(input)).resolves.toMatchObject({ contentType: "image/jpeg" });
+});
+
+it("signs a private file URL with HMAC-SHA1 of the path plus the expiry", () => {
+  const now = new Date("2026-10-16T12:00:00Z");
+  const expiresAt = Math.floor(now.getTime() / 1000) + 600;
+  const path = "tr:w-160/returns/item-1/0b8a8f0e-6c38-4f8e-9f3c-1d2e3f4a5b6c.jpg";
+  const signature = createHmac("sha1", "private_test").update(`${path}${expiresAt}`).digest("hex");
+
+  const url = signImageKitUrl({
+    endpoint: "https://ik.imagekit.io/example/",
+    privateKey: "private_test",
+    key: "returns/item-1/0b8a8f0e-6c38-4f8e-9f3c-1d2e3f4a5b6c.jpg",
+    expiresInSeconds: 600,
+    width: 160,
+    now,
+  });
+
+  expect(url).toBe(`https://ik.imagekit.io/example/${path}?ik-t=${expiresAt}&ik-s=${signature}`);
+  expect(url).not.toContain("private_test");
+});
+
+it("refuses to sign a path outside the expected storage keys", () => {
+  expect(() =>
+    signImageKitUrl({
+      endpoint: "https://ik.imagekit.io/example",
+      privateKey: "private_test",
+      key: "../outra-pasta/arquivo.jpg?x=1",
+      expiresInSeconds: 600,
+      now: new Date(),
+    }),
+  ).toThrow();
+});
