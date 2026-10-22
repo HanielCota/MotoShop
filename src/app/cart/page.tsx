@@ -1,10 +1,10 @@
-import { Card } from "@/components/ui/card";
 import type { Metadata, Route } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ImageOff, ShoppingBag, Store } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { pageContainerClassName } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
