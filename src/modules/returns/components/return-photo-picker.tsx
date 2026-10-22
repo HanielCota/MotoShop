@@ -48,9 +48,12 @@ export async function uploadReturnPhotos(target: ReturnPhotoTarget, files: reado
   }
 }
 
-/** Apaga fotos enviadas que não entraram numa devolução. */
+/**
+ * Apaga fotos enviadas que não entraram numa devolução. É limpeza de melhor esforço: uma falha aqui
+ * nunca substitui o erro original que o cliente precisa ver.
+ */
 export async function discardReturnPhotos(target: ReturnPhotoTarget, photos: readonly UploadedPhoto[]): Promise<void> {
-  await Promise.all(photos.map((photo) => removeReturnPhotoUploadAction({ ...target, key: photo.key })));
+  await Promise.allSettled(photos.map((photo) => removeReturnPhotoUploadAction({ ...target, key: photo.key })));
 }
 
 /** Seleção de até 3 fotos opcionais para a devolução; o envio acontece só ao confirmar o formulário. */

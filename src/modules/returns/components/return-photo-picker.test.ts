@@ -1,11 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("../actions/return-actions", () => ({
+const actions = vi.hoisted(() => ({
   createReturnPhotoUploadAction: vi.fn(),
   removeReturnPhotoUploadAction: vi.fn(),
 }));
+vi.mock("../actions/return-actions", () => actions);
 
-import { validateReturnPhotoSelection } from "./return-photo-picker";
+import { discardReturnPhotos, validateReturnPhotoSelection } from "./return-photo-picker";
 
 function photo(name: string, type = "image/jpeg", size = 1024) {
   return new File([new Uint8Array(size)], name, { type });
@@ -26,5 +27,21 @@ describe("validateReturnPhotoSelection", () => {
     expect(validateReturnPhotoSelection([], [photo("big.jpg", "image/jpeg", 5 * 1024 * 1024 + 1)])).toMatch(
       /passa de 5 MB/,
     );
+  });
+});
+
+describe("discardReturnPhotos", () => {
+  it("tries every photo and does not throw when one delete fails", async () => {
+    actions.removeReturnPhotoUploadAction.mockRejectedValueOnce(new Error("Failed to fetch")).mockResolvedValueOnce({});
+    const target = { orderNumber: "MS-1", orderItemId: "item-1" };
+
+    await expect(
+      discardReturnPhotos(target, [
+        { key: "returns/item-1/a.jpg", fileId: "file-a" },
+        { key: "returns/item-1/b.jpg", fileId: "file-b" },
+      ]),
+    ).resolves.toBeUndefined();
+    expect(actions.removeReturnPhotoUploadAction).toHaveBeenCalledTimes(2);
+    expect(actions.removeReturnPhotoUploadAction).toHaveBeenLastCalledWith({ ...target, key: "returns/item-1/b.jpg" });
   });
 });
