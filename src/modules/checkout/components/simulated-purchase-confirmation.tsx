@@ -1,8 +1,8 @@
-import { Card } from "@/components/ui/card";
 import { CircleCheck } from "lucide-react";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatCount, formatMoneyInCents } from "@/lib/format";
 import { formatCep } from "@/modules/customers/domain/brazilian-address";

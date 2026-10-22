@@ -1,9 +1,9 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
 import type { RefObject } from "react";
 
 import { cardPaymentMethods, PaymentMethodIcon, pixPaymentMethod } from "@/components/storefront/payment-method-icons";
+import { Card } from "@/components/ui/card";
 import { DesignRadio, DesignRadioGroup } from "@/components/ui/design-radio";
 import { SecureCardFields, type SecureCardHandle } from "@/modules/payments/components/secure-card-fields";
 
