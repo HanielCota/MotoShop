@@ -7,13 +7,14 @@ import { cn } from "@/lib/utils";
  * modules/checkout/schemas/checkout.ts): Pix and the credit cards below. Boleto is not offered.
  * Official brand marks served from public/, on a white tile so they read on the dark footer: Wikimedia
  * Commons SVGs (checked for scripts) and the Cabal logo from cabal.coop. Pix shows only its symbol and
- * Diners only its circle (viewBox cropped), since the full wordmarks are unreadable at this size.
+ * Diners only its circle (viewBox cropped), since the full wordmarks are unreadable at this size. The Pix
+ * crop is a square around the whole symbol (measured with getBBox), so none of its tips is cut.
  */
 // width/height: each mark's own aspect ratio, fitted in the tile's 40x20 area, so the browser reserves the
 // rendered size and next/image does not warn that CSS changed only one dimension.
 type PaymentMethodMark = { name: string; file: string; width: number; height: number };
 
-export const pixPaymentMethod: PaymentMethodMark = { name: "Pix", file: "pix.svg", width: 26, height: 20 };
+export const pixPaymentMethod: PaymentMethodMark = { name: "Pix", file: "pix.svg", width: 20, height: 20 };
 
 export const cardPaymentMethods: readonly PaymentMethodMark[] = [
   { name: "Visa", file: "visa.svg", width: 40, height: 13 },
