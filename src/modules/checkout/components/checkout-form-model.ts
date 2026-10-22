@@ -35,6 +35,8 @@ export type CheckoutSummaryItem = {
   variant: string;
   quantity: number;
   lineTotalInCents: number;
+  /** Same photo as the cart; null shows the cart placeholder. */
+  thumbnailUrl: string | null;
 };
 
 export const initialCheckoutForm: CheckoutFormState = {

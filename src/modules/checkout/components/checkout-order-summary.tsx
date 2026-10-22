@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+import { CartItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
+
 import type { CheckoutSummaryItem } from "./checkout-form-model";
 
 export function CheckoutOrderSummary({
@@ -62,8 +64,9 @@ export function CheckoutOrderSummary({
         {items.length > 0 ? (
           <ul className="space-y-2 border-b pb-4 text-sm" aria-label="Itens do pedido">
             {items.map((item) => (
-              <li key={item.id} className="flex justify-between gap-3">
-                <span className="min-w-0">
+              <li key={item.id} className="flex items-start gap-3">
+                <CartItemThumbnail url={item.thumbnailUrl} sizes="48px" className="size-12" />
+                <span className="min-w-0 flex-1">
                   <span className="line-clamp-2">
                     {item.quantity}× {item.name}
                   </span>

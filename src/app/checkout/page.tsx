@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { getActiveCart } from "@/modules/cart/queries/cart";
+import { getCartThumbnails } from "@/modules/cart/queries/cart-thumbnails";
 import { CheckoutForm } from "@/modules/checkout/components/checkout-form";
 import { getCustomerContact } from "@/modules/customers/queries/customer-contact";
 import { listCustomerAddresses } from "@/modules/customers/queries/customer-addresses";
@@ -33,9 +34,10 @@ export default async function CheckoutPage() {
     );
   }
 
-  const [savedAddresses, customerContact] = session
-    ? await Promise.all([listCustomerAddresses(session.user.id), getCustomerContact(session.user.id)])
-    : [[], undefined];
+  const [[savedAddresses, customerContact], thumbnails] = await Promise.all([
+    loadSignedInCheckoutData(session?.user.id),
+    getCartThumbnails(cart.items),
+  ]);
   const customerDefaults = session && customerContact ? { ...customerContact, email: session.user.email } : undefined;
   // oxlint-disable-next-line react/purity -- Server Component: it renders once per request, on the server, so the date cannot drift between renders.
   const now = new Date();
@@ -45,6 +47,7 @@ export default async function CheckoutPage() {
     variant: item.variant.title,
     quantity: item.quantity,
     lineTotalInCents: getCurrentPriceInCents(item.variant, now) * item.quantity,
+    thumbnailUrl: thumbnails.get(item.variantId)?.url ?? null,
   }));
   const payment = getCheckoutPaymentAvailability(new Set(cart.items.map((item) => item.variant.product.sellerId)).size);
   // Test products end in the simulated purchase: Pix only, nothing recorded.
@@ -74,4 +77,11 @@ export default async function CheckoutPage() {
       />
     </main>
   );
+}
+
+/** Saved addresses and contact of a signed-in customer; a guest has neither. */
+async function loadSignedInCheckoutData(userId: string | undefined) {
+  if (userId == null) return [[], undefined] as [Awaited<ReturnType<typeof listCustomerAddresses>>, undefined];
+
+  return Promise.all([listCustomerAddresses(userId), getCustomerContact(userId)]);
 }
