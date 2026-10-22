@@ -91,17 +91,8 @@ export function MotorcycleFinder({
       className="bg-card text-card-foreground w-full max-w-3xl scroll-mt-24 rounded-xl border border-white/20 shadow-2xl"
       id="minha-moto"
     >
-      {/* "Peças por moto" comes first and opens selected. */}
+      {/* "Buscar produto" stays on the left, but the page opens on "Peças por moto". */}
       <div className="border-border flex border-b" role="group" aria-label="Forma de busca">
-        <button
-          className={tabClassName}
-          type="button"
-          aria-pressed={finderMode === "motorcycle"}
-          aria-controls="marketing-search-panel"
-          onClick={() => setFinderMode("motorcycle")}
-        >
-          Peças por moto
-        </button>
         <button
           className={tabClassName}
           type="button"
@@ -110,6 +101,15 @@ export function MotorcycleFinder({
           onClick={() => setFinderMode("search")}
         >
           Buscar produto
+        </button>
+        <button
+          className={tabClassName}
+          type="button"
+          aria-pressed={finderMode === "motorcycle"}
+          aria-controls="marketing-search-panel"
+          onClick={() => setFinderMode("motorcycle")}
+        >
+          Peças por moto
         </button>
       </div>
 

@@ -77,15 +77,18 @@ describe("marketing homepage", () => {
   it.each([
     ["a visitor", {}],
     ["a customer with a saved motorcycle", { primaryFitmentId: "honda-2025" }],
-  ])("shows 'Peças por moto' first and selected for %s, with 'Buscar produto' on the right", (_who, options) => {
-    renderHome("", options);
+  ])(
+    "shows 'Buscar produto' on the left and 'Peças por moto' on the right, already selected, for %s",
+    (_who, options) => {
+      renderHome("", options);
 
-    const tabs = within(screen.getByRole("group", { name: "Forma de busca" })).getAllByRole("button");
-    expect(tabs.map((tab) => tab.textContent)).toEqual(["Peças por moto", "Buscar produto"]);
-    expect(tabs[0]).toHaveAttribute("aria-pressed", "true");
-    expect(tabs[1]).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "Ver peças" })).toBeInTheDocument();
-  });
+      const tabs = within(screen.getByRole("group", { name: "Forma de busca" })).getAllByRole("button");
+      expect(tabs.map((tab) => tab.textContent)).toEqual(["Buscar produto", "Peças por moto"]);
+      expect(tabs[0]).toHaveAttribute("aria-pressed", "false");
+      expect(tabs[1]).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "Ver peças" })).toBeInTheDocument();
+    },
+  );
 
   it("restores motorcycle fitment fields from the URL", async () => {
     renderHome("?moto=yamaha-2025");
