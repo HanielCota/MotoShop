@@ -19,13 +19,6 @@ describe("withNetworkErrorState", () => {
     });
   });
 
-  it("drops the field of the previous error, since a connection error is about no field", async () => {
-    const action = withNetworkErrorState<{ error?: string; field?: string }, FormData>(offline);
-
-    const state = await action({ error: "Código em uso.", field: "code" }, new FormData());
-    expect(state.field).toBeUndefined();
-  });
-
   it("lets server errors reach the error boundary", async () => {
     const action = withNetworkErrorState<{ error?: string }, FormData>(() =>
       Promise.reject(new Error("database down")),
@@ -45,14 +38,11 @@ describe("callServerAction", () => {
   });
 });
 
-type FieldState = { error?: string; field?: string };
-
-function Form({ action }: { action: (state: FieldState, formData: FormData) => Promise<FieldState> }) {
+function Form({ action }: { action: (state: { error?: string }, formData: FormData) => Promise<{ error?: string }> }) {
   const [state, formAction, pending] = useServerActionState(action, {});
   return (
     <form action={formAction}>
       <input name="code" defaultValue="MOTO10" />
-      <input name="discountPercent" defaultValue="10" />
       <button disabled={pending}>Salvar</button>
       {state.error ? <p role="alert">{state.error}</p> : null}
     </form>
@@ -65,17 +55,5 @@ it("useServerActionState shows the connection error inline", async () => {
   await act(async () => fireEvent.click(screen.getByRole("button", { name: "Salvar" })));
 
   expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível conectar");
-  expect(screen.getAllByRole("textbox")).toHaveLength(2);
-});
-
-it("useServerActionState flashes and focuses the field named by the server error", async () => {
-  render(<Form action={vi.fn(async () => ({ error: "Esse código não está disponível.", field: "code" }))} />);
-
-  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Salvar" })));
-
-  expect(await screen.findByRole("alert")).toHaveTextContent("Esse código não está disponível.");
-  const code = screen.getAllByRole("textbox")[0];
-  expect(code).toHaveFocus();
-  expect(code).toHaveAttribute("aria-invalid", "true");
-  expect(code).toHaveAttribute("data-error-flash");
+  expect(screen.getByRole("textbox")).toBeInTheDocument();
 });

@@ -1,9 +1,6 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useRef } from "react";
-
-import { highlightInvalidField } from "./field-error-focus";
-import { trackFormSubmits, lastSubmittedForm } from "./submitted-form";
+import { useActionState } from "react";
 
 export const NETWORK_ERROR_MESSAGE = "Não foi possível conectar. Verifique sua conexão e tente novamente.";
 
@@ -15,8 +12,7 @@ export function isNetworkError(error: unknown): boolean {
   return error instanceof TypeError;
 }
 
-/** `field` names the control (its `name`) that the error is about, so the form can point at it. */
-type StateWithError = { error?: string | null | undefined; field?: string | undefined };
+type StateWithError = { error?: string | null | undefined };
 
 // Form states are plain objects, never promises, so `Awaited<State>` (what React stores) is `State`.
 type FormState<State> = Awaited<State> & State;
@@ -36,53 +32,20 @@ export function withNetworkErrorState<State extends StateWithError, Payload>(
         payload instanceof FormData
           ? Object.fromEntries([...payload.entries()].filter((entry) => typeof entry[1] === "string"))
           : undefined;
-      // A connection error is about no field, so the previous result's field is dropped.
-      return {
-        ...state,
-        ...(values ? { values } : {}),
-        success: undefined,
-        field: undefined,
-        error: NETWORK_ERROR_MESSAGE,
-      };
+      return { ...state, ...(values ? { values } : {}), success: undefined, error: NETWORK_ERROR_MESSAGE };
     }
   };
 }
 
 /**
  * `useActionState` for Server Actions: same signature and return, but a dropped connection shows
- * the inline error of the form (its `state.error`) and keeps what the person typed. When the
- * result has an error, the wrong field of the submitted form flashes and receives focus.
+ * the inline error of the form (its `state.error`) and keeps what the person typed.
  */
 export function useServerActionState<State extends StateWithError, Payload = FormData>(
   action: (state: State, payload: Payload) => State | Promise<State>,
   initialState: State,
 ): [state: State, dispatch: (payload: Payload) => void, isPending: boolean] {
-  const [state, dispatch, isPending] = useActionState<State, Payload>(
-    withNetworkErrorState(action),
-    initialState as FormState<State>,
-  );
-  const submittedForm = useRef<HTMLFormElement | null>(null);
-
-  useEffect(trackFormSubmits, []);
-
-  // Runs after the result rendered, so fields it marked are already `aria-invalid`.
-  useEffect(() => {
-    const form = submittedForm.current;
-    submittedForm.current = null;
-    if (form == null || !form.isConnected || !state.error) return;
-
-    highlightInvalidField(form, state.field);
-  }, [state]);
-
-  const dispatchFromForm = useCallback(
-    (payload: Payload) => {
-      submittedForm.current = lastSubmittedForm();
-      dispatch(payload);
-    },
-    [dispatch],
-  );
-
-  return [state, dispatchFromForm, isPending];
+  return useActionState<State, Payload>(withNetworkErrorState(action), initialState as FormState<State>);
 }
 
 /**

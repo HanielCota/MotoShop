@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import type { FieldProblem } from "@/shared/forms/field-error-focus";
-
 import { readCouponFormInput } from "../domain/coupon-form-input";
 import { findCouponValidityError } from "../domain/coupon-validity";
 
@@ -44,25 +42,16 @@ export const couponSchema = z.object({
   endsAt: z.date({ error: "Informe o fim como dia/mês/ano, ex.: 30/11/2026." }).optional(),
 });
 
-/** Form control (its `name`) for each schema key whose name differs from it. */
-const couponFormFields: Partial<Record<string, string>> = {
-  percentageBps: "discountPercent",
-  fixedAmountInCents: "discountAmount",
-  minimumPurchaseInCents: "minimumPurchase",
-};
-
 /** O tipo escolhido define qual valor de desconto é obrigatório. */
 export function readDiscountAmount(
   data: z.infer<typeof couponSchema>,
-): { percentageBps: number } | { fixedAmountInCents: number } | { error: string; field: string } {
+): { percentageBps: number } | { fixedAmountInCents: number } | { error: string } {
   if (data.discountType === "PERCENTAGE") {
-    if (data.percentageBps === undefined)
-      return { error: "Informe o percentual de desconto.", field: "discountPercent" };
+    if (data.percentageBps === undefined) return { error: "Informe o percentual de desconto." };
     return { percentageBps: data.percentageBps };
   }
 
-  if (data.fixedAmountInCents === undefined)
-    return { error: "Informe o valor do desconto em reais.", field: "discountAmount" };
+  if (data.fixedAmountInCents === undefined) return { error: "Informe o valor do desconto em reais." };
   return { fixedAmountInCents: data.fixedAmountInCents };
 }
 
@@ -72,31 +61,22 @@ export type ParsedCouponForm =
       data: z.infer<typeof couponSchema>;
       discountAmount: { percentageBps: number } | { fixedAmountInCents: number };
     }
-  | { ok: false; error: string; field: string | undefined };
+  | { ok: false; error: string };
 
 /** Mesma validação no servidor e no navegador (BUG-011). */
 export function parseCouponForm(formData: FormData, now = new Date()): ParsedCouponForm {
   const parsed = couponSchema.safeParse(readCouponFormInput(formData));
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    const key = typeof issue?.path[0] === "string" ? issue.path[0] : undefined;
-    return {
-      ok: false,
-      error: issue?.message ?? "Confira os dados do cupom.",
-      field: key ? (couponFormFields[key] ?? key) : undefined,
-    };
-  }
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Confira os dados do cupom." };
   const discountAmount = readDiscountAmount(parsed.data);
-  if ("error" in discountAmount) return { ok: false, ...discountAmount };
+  if ("error" in discountAmount) return { ok: false, error: discountAmount.error };
 
-  // Both validity problems are about the end date.
   const validityError = findCouponValidityError(parsed.data, now);
-  if (validityError != null) return { ok: false, error: validityError, field: "endsAt" };
+  if (validityError != null) return { ok: false, error: validityError };
 
   return { ok: true, data: parsed.data, discountAmount };
 }
 
-export function validateCouponForm(formData: FormData): FieldProblem | null {
+export function validateCouponForm(formData: FormData): string | null {
   const parsed = parseCouponForm(formData);
-  return parsed.ok ? null : { message: parsed.error, field: parsed.field };
+  return parsed.ok ? null : parsed.error;
 }

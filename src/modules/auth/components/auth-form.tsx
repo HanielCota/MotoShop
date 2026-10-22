@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { cn } from "@/lib/utils";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
-import { highlightControl } from "@/shared/forms/field-error-focus";
 
 import { getAuthErrorMessage, isEmailNotVerifiedError, isInvalidCredentialsError } from "../domain/auth-error-message";
 import { parseAuthUserName } from "../domain/auth-user-name";
@@ -91,8 +90,7 @@ export function AuthForm({
     setFieldErrors(errors);
     const firstInvalid = (["name", "email", "password"] as const).find((field) => errors[field]);
     if (firstInvalid) {
-      const control = formRef.current?.querySelector<HTMLInputElement>(`#${fieldIds[firstInvalid]}`);
-      if (control) highlightControl(control);
+      formRef.current?.querySelector<HTMLInputElement>(`#${fieldIds[firstInvalid]}`)?.focus();
       return;
     }
     setPending(true);

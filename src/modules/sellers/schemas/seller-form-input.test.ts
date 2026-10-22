@@ -25,13 +25,8 @@ it("validates the sign-up and the store profile with the server schemas (BUG-011
   ).toBeNull();
   expect(
     validateSellerOnboardingForm(form({ storeName: "L", storeSlug: "!!!", originPostalCode: "123", type: "COMPANY" })),
-  ).toEqual({
-    error: "Informe o nome da loja.",
-    field: "storeName",
-    slugError: "Informe um identificador para a loja.",
-  });
+  ).toEqual({ error: "Informe o nome da loja.", slugError: "Informe um identificador para a loja." });
   expect(validateStoreProfileForm(form({ name: "Garagem MX", slug: "garagem-mx", instagramUrl: "http://x" }))).toEqual({
     error: "Use um link seguro iniciado por https://.",
-    field: "instagramUrl",
   });
 });

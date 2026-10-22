@@ -13,7 +13,7 @@ import { createCoupon, type CouponOwner } from "../application/create-coupon";
 import { setCouponParticipation } from "../application/set-coupon-participation";
 import { parseCouponForm } from "../schemas/coupon-input";
 
-export type CouponActionState = { error?: string; success?: string; field?: string | undefined };
+export type CouponActionState = { error?: string; success?: string };
 
 const COUPON_CODE_UNAVAILABLE_MESSAGE = "Este código não está disponível. Escolha outro.";
 // Limita tentativas de criar cupom por loja para que o código único não sirva de oráculo (L-10).
@@ -176,7 +176,7 @@ export async function setSellerCouponProductPageAction(couponId: string, show: b
 
 async function createCouponForOwner(formData: FormData, owner: CouponOwner): Promise<CouponActionState> {
   const parsed = parseCouponForm(formData);
-  if (!parsed.ok) return { error: parsed.error, field: parsed.field };
+  if (!parsed.ok) return { error: parsed.error };
   const { data, discountAmount } = parsed;
 
   try {
@@ -187,7 +187,7 @@ async function createCouponForOwner(formData: FormData, owner: CouponOwner): Pro
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       // Mensagem neutra (L-10): não confirma se o código pertence a outra loja ou ao Moto Shop.
-      return { error: COUPON_CODE_UNAVAILABLE_MESSAGE, field: "code" };
+      return { error: COUPON_CODE_UNAVAILABLE_MESSAGE };
     }
     return { error: toActionError(error, "createCouponForOwner").message };
   }
