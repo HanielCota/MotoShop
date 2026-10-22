@@ -2,6 +2,7 @@
 
 import type { RefObject } from "react";
 
+import { cardPaymentMethods, PaymentMethodIcon, pixPaymentMethod } from "@/components/storefront/payment-method-icons";
 import { DesignRadio, DesignRadioGroup } from "@/components/ui/design-radio";
 import { SecureCardFields, type SecureCardHandle } from "@/modules/payments/components/secure-card-fields";
 
@@ -44,12 +45,18 @@ export function CheckoutPaymentSection({
             >
               <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm">
                 <DesignRadio value="pix" />
+                <PaymentMethodIcon method={pixPaymentMethod} className="ring-border" decorative />
                 Pix
               </label>
               {pixOnly ? null : (
-                <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm">
+                <label className="flex min-h-11 cursor-pointer flex-wrap items-center gap-2 rounded-lg border p-3 text-sm">
                   <DesignRadio value="card" disabled={!cardPublicKey} />
                   Cartão de crédito · 1 parcela
+                  <span className="flex w-full flex-wrap gap-1.5 pl-7 sm:ml-auto sm:w-auto sm:pl-0" aria-hidden="true">
+                    {cardPaymentMethods.map((method) => (
+                      <PaymentMethodIcon key={method.name} method={method} className="ring-border" decorative />
+                    ))}
+                  </span>
                 </label>
               )}
             </DesignRadioGroup>
