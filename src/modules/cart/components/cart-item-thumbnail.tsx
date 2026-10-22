@@ -4,8 +4,8 @@ import { ImageOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Product photo of a cart item, with the same placeholder everywhere a cart item is listed (cart page,
- * cart preview, checkout summary). Decorative: the item name next to it is what is read.
+ * Product photo of a cart item, with the same placeholder wherever a cart item is listed (cart page and
+ * cart preview). Decorative: the item name next to it is what is read.
  */
 export function CartItemThumbnail({
   url,
