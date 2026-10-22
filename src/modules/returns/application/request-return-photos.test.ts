@@ -6,19 +6,33 @@ const mocks = vi.hoisted(() => {
     orderItem: { findUnique: vi.fn(), aggregate: vi.fn() },
     returnRequest: { findUnique: vi.fn(), create: vi.fn() },
   };
-  return { tx, item: vi.fn(), existing: vi.fn(), transaction: vi.fn(), verifyPhotos: vi.fn() };
+  return {
+    tx,
+    item: vi.fn(),
+    existing: vi.fn(),
+    attachedPhoto: vi.fn(),
+    transaction: vi.fn(),
+    verifyPhotos: vi.fn(),
+  };
 });
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/database", () => ({
   db: {
     orderItem: { findFirst: mocks.item },
     returnRequest: { findUnique: mocks.existing },
+    returnRequestPhoto: { findFirst: mocks.attachedPhoto },
     $transaction: mocks.transaction,
   },
 }));
 vi.mock("./return-photo-uploads", () => ({ verifyReturnPhotos: mocks.verifyPhotos }));
 
+import { Prisma } from "@/generated/prisma/client";
+
 import { requestReturn } from "./request-return";
+
+function uniqueViolation() {
+  return new Prisma.PrismaClientKnownRequestError("Unique constraint failed", { code: "P2002", clientVersion: "test" });
+}
 
 const photos = [{ key: "returns/item-1/0b8a8f0e-6c38-4f8e-9f3c-1d2e3f4a5b6c.jpg", fileId: "file-1" }];
 const input = {
@@ -99,5 +113,27 @@ describe("return photos", () => {
 
     await expect(requestReturn(input)).rejects.toThrow("Item do pedido não encontrado");
     expect(mocks.verifyPhotos).not.toHaveBeenCalled();
+  });
+
+  it("refuses with a clear message when another return saved the same photo first", async () => {
+    mocks.transaction.mockRejectedValue(uniqueViolation());
+    mocks.attachedPhoto.mockResolvedValue({ id: "photo-1" });
+
+    await expect(requestReturn(input)).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "Esta foto já faz parte de outra devolução.",
+    });
+    expect(mocks.attachedPhoto).toHaveBeenCalledWith({
+      where: { storageKey: { in: [photos[0]?.key] } },
+      select: { id: true },
+    });
+  });
+
+  it("keeps the original error when the unique violation is not about the photos", async () => {
+    const violation = uniqueViolation();
+    mocks.transaction.mockRejectedValue(violation);
+    mocks.attachedPhoto.mockResolvedValue(null);
+
+    await expect(requestReturn(input)).rejects.toBe(violation);
   });
 });

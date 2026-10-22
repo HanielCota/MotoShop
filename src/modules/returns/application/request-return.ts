@@ -103,8 +103,27 @@ async function recoverConcurrentReturnRequest(
   if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") throw error;
 
   const concurrentRequest = await findReturnRequestByIdempotencyKey(db, input.idempotencyKey);
-  if (!concurrentRequest) throw error;
-  return replayReturnRequest(concurrentRequest, orderItem, input);
+  if (concurrentRequest) return replayReturnRequest(concurrentRequest, orderItem, input);
+
+  await assertPhotosNotAttachedElsewhere(input.photos ?? []);
+  throw error;
+}
+
+/** Another return saved one of these photos between the check and the insert (unique storageKey). */
+async function assertPhotosNotAttachedElsewhere(photos: readonly UploadedReturnPhoto[]): Promise<void> {
+  if (photos.length === 0) return;
+
+  const attached = await db.returnRequestPhoto.findFirst({
+    where: { storageKey: { in: photos.map((photo) => photo.key) } },
+    select: { id: true },
+  });
+  if (attached == null) return;
+
+  throw new ApplicationError({
+    code: "CONFLICT",
+    message: "Esta foto já faz parte de outra devolução.",
+    statusCode: 409,
+  });
 }
 
 async function createReturnRequestWithLocks(
