@@ -2,7 +2,17 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronDown, Menu, Search, UserRound, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Menu,
+  Search,
+  ShieldCheck,
+  Store,
+  UserRound,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { Menu as BaseMenu } from "@base-ui/react/menu";
 import { Suspense, useRef, useState } from "react";
 
@@ -11,6 +21,8 @@ import { popoverSurfaceClassName } from "@/components/ui/popover-surface";
 import { cn } from "@/lib/utils";
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
 import { SignOutButton } from "@/modules/auth/components/sign-out-button";
+import { useAccountAreaAccess } from "@/modules/auth/components/use-account-area-access";
+import { accountAreaShortcuts, type AccountAreaShortcut } from "@/modules/auth/domain/account-area-shortcuts";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
 import { CartPreview } from "@/modules/cart/components/cart-preview";
 import { customerAccountLinks } from "@/modules/customers/account-links";
@@ -184,6 +196,7 @@ const accountMenuItemClassName =
 function AccountMenu() {
   const { data: session } = authClient.useSession();
   const [open, setOpen] = useState(false);
+  const shortcuts = accountAreaShortcuts(useAccountAreaAccess(session?.user.id));
 
   if (!session?.user) {
     return (
@@ -205,6 +218,23 @@ function AccountMenu() {
             <p className="text-muted-foreground truncate px-3 pt-1.5 pb-2 text-xs">
               {session.user.name ? `Olá, ${session.user.name}` : "Minha conta"}
             </p>
+            {shortcuts.length > 0 ? (
+              <>
+                {shortcuts.map((shortcut) => (
+                  <BaseMenu.LinkItem
+                    key={shortcut.href}
+                    closeOnClick
+                    render={<Link href={shortcut.href} />}
+                    className={cn(accountMenuItemClassName, "gap-2.5 font-semibold")}
+                  >
+                    <AreaShortcutIcon area={shortcut.area} />
+                    {shortcut.label}
+                    <ChevronRight aria-hidden="true" className="text-muted-foreground ml-auto size-4" />
+                  </BaseMenu.LinkItem>
+                ))}
+                <BaseMenu.Separator className="border-border my-1.5 border-t" />
+              </>
+            ) : null}
             {customerAccountLinks.map((link) => (
               <BaseMenu.LinkItem
                 key={link.href}
@@ -227,4 +257,15 @@ function AccountMenu() {
       </BaseMenu.Portal>
     </BaseMenu.Root>
   );
+}
+
+const areaShortcutIcons: Readonly<Record<AccountAreaShortcut["area"], LucideIcon>> = {
+  admin: ShieldCheck,
+  seller: Store,
+};
+
+function AreaShortcutIcon({ area }: { area: AccountAreaShortcut["area"] }) {
+  const Icon = areaShortcutIcons[area];
+
+  return <Icon aria-hidden="true" className="size-4 shrink-0" />;
 }
