@@ -6,7 +6,6 @@ import { useId, useState, type ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
-
 import { CartItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
 
 import type { CheckoutSummaryItem } from "./checkout-form-model";
