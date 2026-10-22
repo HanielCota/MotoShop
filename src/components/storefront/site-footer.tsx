@@ -103,7 +103,7 @@ export function SiteFooter() {
         </section>
 
         <p className="border-t border-white/15 pt-4 text-xs leading-5 text-white/55 lg:order-5 lg:col-span-4 lg:text-right">
-          © 2026 MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE. Todos os direitos reservados.
+          © 2026 MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE. Todos os direitos reservados CNPJ: 69.663.409/0001-94
         </p>
       </div>
     </footer>
