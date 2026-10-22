@@ -77,6 +77,52 @@ describe("findPublicProductPage", () => {
     expect(statement.sql).not.toContain("universal");
   });
 
+  it("searches each text column in its own UNION branch, so the trigram indexes can be used", async () => {
+    await findPublicProductPage({ query: " Capacete " }, new Date());
+
+    const statement = defined(mocks.queryRaw.mock.calls[0])[0] as { sql: string; values: unknown[] };
+    expect(statement.sql).toContain("AND p.id IN (");
+    expect(statement.sql).toContain("SELECT tp.id FROM products tp WHERE tp.name ILIKE ? OR tp.description ILIKE ?");
+    expect(statement.sql).toMatch(
+      /UNION SELECT tb\.id FROM products tb JOIN brands mb ON mb\.id = tb\."brandId" WHERE mb\.name ILIKE \?/,
+    );
+    expect(statement.sql).toMatch(
+      /UNION SELECT tc\.id FROM products tc JOIN categories mc ON mc\.id = tc\."categoryId" WHERE mc\.name ILIKE \?/,
+    );
+    expect(statement.sql).toMatch(
+      /UNION SELECT ts\.id FROM products ts JOIN stores ms ON ms\.id = ts\."storeId" WHERE ms\.name ILIKE \?/,
+    );
+    expect(statement.sql).toMatch(
+      /UNION SELECT v\."productId" FROM product_variants v WHERE v\.active = true AND v\.sku ILIKE \?/,
+    );
+    expect(statement.sql).not.toContain("FROM offers sk");
+    expect(statement.values).toContain("%capacete%");
+  });
+
+  it("escapes LIKE wildcards typed in the search", async () => {
+    await findPublicProductPage({ query: "50%_a\\b" }, new Date());
+
+    const statement = defined(mocks.queryRaw.mock.calls[0])[0] as { values: unknown[] };
+    expect(statement.values).toContain("%50\\%\\_a\\\\b%");
+  });
+
+  it("matches a SKU only on active variants that also match the chosen attributes", async () => {
+    await findPublicProductPage({ query: "sku-1", color: "Preto" }, new Date());
+
+    const statement = defined(mocks.queryRaw.mock.calls[0])[0] as { sql: string };
+    const skuBranch = defined(statement.sql.split('UNION SELECT v."productId"')[1]);
+    expect(skuBranch).toMatch(
+      /^ FROM product_variants v WHERE v\.active = true AND v\.sku ILIKE \?\s+AND lower\(v\.color\) = lower\(\?\)/,
+    );
+  });
+
+  it("leaves the text search out when the query is blank", async () => {
+    await findPublicProductPage({ query: "   " }, new Date());
+
+    const statement = defined(mocks.queryRaw.mock.calls[0])[0] as { sql: string };
+    expect(statement.sql).not.toContain("ILIKE");
+  });
+
   it("keeps relevance as the default order", async () => {
     await findPublicProductPage({}, new Date());
 

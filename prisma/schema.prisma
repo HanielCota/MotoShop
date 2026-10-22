@@ -516,6 +516,9 @@ model Product {
   @@index([storeId, status])
   @@index([categoryId, status])
   @@index([brandId, status])
+  /// Trigram indexes for the catalog text search (ILIKE '%term%'); pg_trgm is created by the migration.
+  @@index([name(ops: raw("gin_trgm_ops"))], map: "products_name_trgm_idx", type: Gin)
+  @@index([description(ops: raw("gin_trgm_ops"))], map: "products_description_trgm_idx", type: Gin)
   @@map("products")
 }
 
@@ -556,6 +559,7 @@ model ProductVariant {
   @@index([gender, active])
   @@index([color, active])
   @@index([size, active])
+  @@index([sku(ops: raw("gin_trgm_ops"))], map: "product_variants_sku_trgm_idx", type: Gin)
   @@map("product_variants")
 }
 
