@@ -16,9 +16,9 @@ const schema = readFileSync(join(root, "prisma/schema.prisma"), "utf8");
 const catalogQuery = readFileSync(join(root, "src/modules/products/queries/public-product-page.ts"), "utf8");
 
 const searchedColumns = [
-  { query: "p.name ILIKE", table: "products", column: "name", index: "products_name_trgm_idx" },
-  { query: "p.description ILIKE", table: "products", column: "description", index: "products_description_trgm_idx" },
-  { query: "sk.sku ILIKE", table: "product_variants", column: "sku", index: "product_variants_sku_trgm_idx" },
+  { query: "tp.name ILIKE", table: "products", column: "name", index: "products_name_trgm_idx" },
+  { query: "tp.description ILIKE", table: "products", column: "description", index: "products_description_trgm_idx" },
+  { query: "v.sku ILIKE", table: "product_variants", column: "sku", index: "product_variants_sku_trgm_idx" },
 ];
 
 it("creates pg_trgm before any trigram index", () => {
