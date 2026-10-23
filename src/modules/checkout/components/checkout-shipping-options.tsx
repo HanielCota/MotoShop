@@ -2,6 +2,7 @@
 
 import { Truck } from "lucide-react";
 
+import { Card } from "@/components/ui/card";
 import { DesignRadio, DesignRadioGroup } from "@/components/ui/design-radio";
 import { FormMessage } from "@/components/ui/form-message";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,10 +25,9 @@ export function CheckoutShippingOptions({
   error?: string | undefined;
 }) {
   return (
-    <section
-      aria-labelledby="checkout-shipping-title"
-      aria-busy={isQuoting || undefined}
-      className="bg-card rounded-xl border p-4 sm:p-6"
+    <Card
+      size="section"
+      render={<section aria-labelledby="checkout-shipping-title" aria-busy={isQuoting || undefined} />}
     >
       <h2 id="checkout-shipping-title" className="section-title">
         Frete por loja
@@ -92,6 +92,6 @@ export function CheckoutShippingOptions({
           ))}
         </div>
       )}
-    </section>
+    </Card>
   );
 }

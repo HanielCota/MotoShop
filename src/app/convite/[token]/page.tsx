@@ -57,8 +57,8 @@ export default async function SellerInvitePage({ params }: { params: Promise<{ t
           <span className="bg-moto-brand-surface text-brand-strong mb-2 grid size-10 place-items-center rounded-lg">
             <UsersRound className="size-5" aria-hidden="true" />
           </span>
-          <CardTitle>
-            <h1 className="text-xl">Convite para a equipe da {storeName}</h1>
+          <CardTitle as="h1" className="text-xl">
+            Convite para a equipe da {storeName}
           </CardTitle>
           <CardDescription>
             Perfil: {getSellerMemberRoleLabel(invite.role)}. Ao aceitar, sua conta passa a acessar a Central do Lojista

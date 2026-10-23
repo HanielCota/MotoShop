@@ -17,9 +17,7 @@ export async function SellerPendingInvites() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
-          <h2 className="text-lg">Convites para equipes</h2>
-        </CardTitle>
+        <CardTitle>Convites para equipes</CardTitle>
         <CardDescription>Aceite para entrar na equipe de uma loja em vez de cadastrar a sua.</CardDescription>
       </CardHeader>
       <CardContent className="divide-border divide-y">
