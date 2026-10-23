@@ -32,6 +32,7 @@ import {
   viewerCartId,
   viewerSavedMotorcycleId,
 } from "./review-seed-ids";
+import { REVIEW_FALLBACK_BRAND_LABELS, reviewBrandId } from "./review-scope";
 import { must } from "./must";
 
 // ---------------------------------------------------------------------------------------------
@@ -303,8 +304,8 @@ async function seedCatalog(input: ExpandedSeedInput) {
     orderBy: { name: "asc" },
   });
   if (brands.length < 5) {
-    const fallback = ["Pista", "Trilha", "Areia", "Box", "Largada"].map((label) => ({
-      id: reviewId("brand", label),
+    const fallback = REVIEW_FALLBACK_BRAND_LABELS.map((label) => ({
+      id: reviewBrandId(label),
       name: `Marca ${label} (demonstração)`,
       slug: `review-marca-${label.toLowerCase()}`,
     }));

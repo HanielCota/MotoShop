@@ -1,8 +1,8 @@
 /**
  * Remove SOMENTE os dados criados por scripts/seed-review-data.ts.
  *
- * Escopo: usuários `review.*@example.test`, lojas `review-*` com nome " · demonstração" (e tudo
- * dos sellers delas), produtos demo `review-*`, cupons `REVIEW-*`, pedidos `MS-REVIEW-*`, eventos
+ * Escopo: usuários `review.*@example.test`, lojas `review-*` cuja dona é uma conta de revisão (e
+ * tudo dos sellers delas), produtos demo `review-*`, cupons `REVIEW-*`, pedidos `MS-REVIEW-*`, eventos
  * de webhook/notificação/outbox de revisão e as linhas que referenciam esses registros.
  *
  * Contas de visualização (REVIEW_VIEWER_*_EMAILS) NUNCA são apagadas: saem apenas os vínculos e
@@ -21,9 +21,9 @@ import { existsSync, readdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 
 import { PrismaClient } from "../src/generated/prisma/client";
+import { REVIEW_STORE_WHERE, REVIEW_USER_WHERE, reviewBrandWhere } from "./review-scope";
 import {
   parseEmailList,
-  REVIEW_ADDRESS_LABEL_SUFFIX,
   REVIEW_ID_PREFIX,
   viewerAddressId,
   viewerCartId,
@@ -37,7 +37,6 @@ const databaseUrl = requireScriptDatabaseUrl(process.env, "db:remove:review");
 const dryRun = process.argv.includes("--dry-run");
 const db = new PrismaClient({ adapter: new PrismaNeon({ connectionString: databaseUrl }) });
 
-const REVIEW_USER_WHERE = { email: { startsWith: "review.", endsWith: "@example.test" } };
 const isReviewEmail = (email: string) => email.startsWith("review.") && email.endsWith("@example.test");
 
 async function main() {
@@ -53,7 +52,7 @@ async function main() {
       const reviewEmails = users.map((user) => user.email);
 
       const stores = await tx.store.findMany({
-        where: { slug: { startsWith: "review-" }, name: { endsWith: " · demonstração" } },
+        where: REVIEW_STORE_WHERE,
         select: { sellerId: true },
       });
       const sellerIds = stores.map((store) => store.sellerId);
@@ -97,7 +96,6 @@ async function main() {
         await tx.customerAddress.findMany({
           where: {
             id: { startsWith: REVIEW_ID_PREFIX },
-            label: { endsWith: REVIEW_ADDRESS_LABEL_SUFFIX },
             userId: { notIn: userIds },
           },
           select: { id: true, userId: true },
@@ -317,11 +315,7 @@ async function main() {
         () => tx.product.deleteMany({ where: productWhere }),
       );
       // Marcas de revisão só existem se o banco tinha menos de 5 marcas ativas; nunca apaga marca em uso.
-      const brandWhere = {
-        slug: { startsWith: "review-marca-" },
-        name: { endsWith: "(demonstração)" },
-        products: { none: { id: { notIn: productIds } } },
-      };
+      const brandWhere = reviewBrandWhere(productIds);
       await apply(
         "Brand",
         () => tx.brand.count({ where: brandWhere }),
