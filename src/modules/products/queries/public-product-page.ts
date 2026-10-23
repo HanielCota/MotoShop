@@ -76,6 +76,27 @@ function motorcycleCondition(fitments: string[]) {
         OR p."categoryId" IN (SELECT id FROM universal_categories))`;
 }
 
+/**
+ * Text search over name, description, brand, category, store and SKU. Each column is matched in its own
+ * branch of a UNION so PostgreSQL can use the trigram indexes on products.name, products.description and
+ * product_variants.sku; one OR across the joined tables, or a SKU match through the offers CTE, makes it
+ * read every product and variant. The SKU branch keeps the offers rule: active variants matching the
+ * chosen attributes.
+ */
+function textSearchCondition(query: string, input: PublicProductFilter) {
+  if (!query) return Prisma.empty;
+
+  const pattern = `%${query.replace(/[\\%_]/g, "\\$&")}%`;
+
+  return Prisma.sql`AND p.id IN (
+        SELECT tp.id FROM products tp WHERE tp.name ILIKE ${pattern} OR tp.description ILIKE ${pattern}
+        UNION SELECT tb.id FROM products tb JOIN brands mb ON mb.id = tb."brandId" WHERE mb.name ILIKE ${pattern}
+        UNION SELECT tc.id FROM products tc JOIN categories mc ON mc.id = tc."categoryId" WHERE mc.name ILIKE ${pattern}
+        UNION SELECT ts.id FROM products ts JOIN stores ms ON ms.id = ts."storeId" WHERE ms.name ILIKE ${pattern}
+        UNION SELECT v."productId" FROM product_variants v WHERE v.active = true AND v.sku ILIKE ${pattern}
+          ${variantAttributeCondition(input)})`;
+}
+
 function nonNegativeSafeInteger(value: number | null | undefined) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
@@ -86,7 +107,6 @@ export async function findPublicProductPage(input: PublicProductFilter, now: Dat
   const size = Math.min(Math.max(input.pageSize ?? 12, 1), 48);
   const requestedPage = Math.max(input.page ?? 1, 1);
   const query = input.query?.trim().toLocaleLowerCase("pt-BR") ?? "";
-  const pattern = `%${query.replace(/[\\%_]/g, "\\$&")}%`;
   const fitments = input.motorcycleFitmentIds?.length
     ? input.motorcycleFitmentIds
     : input.motorcycleFitmentId
@@ -116,7 +136,7 @@ export async function findPublicProductPage(input: PublicProductFilter, now: Dat
       ${input.brandId ? Prisma.sql`AND p."brandId" = ${input.brandId}` : Prisma.empty}
       ${input.sellerId ? Prisma.sql`AND p."sellerId" = ${input.sellerId}` : Prisma.empty}
       ${motorcycleCondition(fitments)}
-      ${query ? Prisma.sql`AND (p.name ILIKE ${pattern} OR p.description ILIKE ${pattern} OR b.name ILIKE ${pattern} OR c.name ILIKE ${pattern} OR st.name ILIKE ${pattern} OR EXISTS (SELECT 1 FROM offers sk WHERE sk."productId" = p.id AND sk.sku ILIKE ${pattern}))` : Prisma.empty}
+      ${textSearchCondition(query, input)}
     GROUP BY p.id
     HAVING true
       ${input.availability === "IN_STOCK" ? Prisma.sql`AND bool_or(o.available)` : input.availability === "OUT_OF_STOCK" ? Prisma.sql`AND NOT bool_or(o.available)` : Prisma.empty}

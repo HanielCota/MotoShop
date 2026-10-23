@@ -10,22 +10,24 @@ function formWith(quantity: string) {
   return formData;
 }
 
+const quantityProblem = { message: "Informe uma quantidade entre 1 e 3.", field: "quantity" };
+
 it("accepts a whole quantity up to what was bought", () => {
   expect(validateReturnQuantity(3)(formWith("2"))).toBeNull();
   expect(validateReturnQuantity(3)(formWith("3"))).toBeNull();
 });
 
 it("explains the allowed range inline instead of the browser bubble", () => {
-  expect(validateReturnQuantity(3)(formWith("0"))).toBe("Informe uma quantidade entre 1 e 3.");
-  expect(validateReturnQuantity(3)(formWith("4"))).toBe("Informe uma quantidade entre 1 e 3.");
-  expect(validateReturnQuantity(3)(formWith("1.5"))).toBe("Informe uma quantidade entre 1 e 3.");
+  expect(validateReturnQuantity(3)(formWith("0"))).toEqual(quantityProblem);
+  expect(validateReturnQuantity(3)(formWith("4"))).toEqual(quantityProblem);
+  expect(validateReturnQuantity(3)(formWith("1.5"))).toEqual(quantityProblem);
 });
 
 it("reads the text field strictly now that it is not a native number input (DN-07)", () => {
   expect(validateReturnQuantity(3)(formWith(" 2 "))).toBeNull();
-  expect(validateReturnQuantity(3)(formWith(""))).toBe("Informe uma quantidade entre 1 e 3.");
-  expect(validateReturnQuantity(3)(formWith("1e0"))).toBe("Informe uma quantidade entre 1 e 3.");
-  expect(validateReturnQuantity(3)(formWith("2,0"))).toBe("Informe uma quantidade entre 1 e 3.");
+  expect(validateReturnQuantity(3)(formWith(""))).toEqual(quantityProblem);
+  expect(validateReturnQuantity(3)(formWith("1e0"))).toEqual(quantityProblem);
+  expect(validateReturnQuantity(3)(formWith("2,0"))).toEqual(quantityProblem);
 });
 
 it("discards the uploaded photos when sending the return fails with no answer", async () => {

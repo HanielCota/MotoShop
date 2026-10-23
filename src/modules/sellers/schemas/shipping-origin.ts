@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 import { isValidBrazilianPhone, onlyDigits } from "@/modules/customers/domain/tax-id";
-import { firstIssueMessage } from "@/shared/forms/first-issue-message";
+import type { FieldProblem } from "@/shared/forms/field-error-focus";
+import { firstIssue } from "@/shared/forms/first-issue-message";
 
 export const shippingOriginSchema = z.object({
   originName: z.string().trim().min(2, "Informe o nome do remetente.").max(120),
@@ -50,6 +51,6 @@ export function readShippingOriginFormInput(formData: FormData) {
 }
 
 /** Mesma regra no navegador e no servidor, sem o balão nativo de campo obrigatório (DN-03). */
-export function validateShippingOriginForm(formData: FormData): string | null {
-  return firstIssueMessage(shippingOriginSchema, readShippingOriginFormInput(formData), "Confira os dados de envio.");
+export function validateShippingOriginForm(formData: FormData): FieldProblem | null {
+  return firstIssue(shippingOriginSchema, readShippingOriginFormInput(formData), "Confira os dados de envio.");
 }

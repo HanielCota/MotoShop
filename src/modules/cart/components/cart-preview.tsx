@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 
 import { clearCartAction, getCartPreviewAction, updateCartItemAction } from "../actions/cart-actions";
 import { CART_UPDATED_EVENT } from "./cart-events";
+import { CartItemThumbnail } from "./cart-item-thumbnail";
 
 type CartPreviewData = Awaited<ReturnType<typeof getCartPreviewAction>>;
 
@@ -166,8 +167,9 @@ export function CartPreview() {
               <>
                 <ul className="max-h-72 divide-y overflow-y-auto" aria-label="Itens no carrinho">
                   {data.items.slice(0, 5).map((item) => (
-                    <li key={item.id} className="flex items-start justify-between gap-3 py-3">
-                      <div className="min-w-0">
+                    <li key={item.id} className="flex items-start gap-3 py-3">
+                      <CartItemThumbnail url={item.thumbnailUrl} sizes="56px" className="size-14" />
+                      <div className="min-w-0 flex-1">
                         <p className="line-clamp-2 text-sm font-medium">{item.name}</p>
                         <p className="text-muted-foreground mt-0.5 text-xs">{item.variant}</p>
                         <QuantityStepper

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { firstIssueMessage } from "@/shared/forms/first-issue-message";
+import type { FieldProblem } from "@/shared/forms/field-error-focus";
+import { firstIssue } from "@/shared/forms/first-issue-message";
 
 export const sellerInviteSchema = z.object({
   email: z.email("Informe um e-mail válido.").transform((value) => value.trim().toLowerCase()),
@@ -12,6 +13,6 @@ export function readSellerInviteForm(formData: FormData) {
 }
 
 /** Mesma regra no navegador e no servidor, sem o balão nativo do e-mail (DN-03). */
-export function validateSellerInviteForm(formData: FormData): string | null {
-  return firstIssueMessage(sellerInviteSchema, readSellerInviteForm(formData), "Confira os dados do convite.");
+export function validateSellerInviteForm(formData: FormData): FieldProblem | null {
+  return firstIssue(sellerInviteSchema, readSellerInviteForm(formData), "Confira os dados do convite.");
 }

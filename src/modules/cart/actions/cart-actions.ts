@@ -18,6 +18,7 @@ import {
   updateCartItemQuantity,
 } from "../application/cart-items";
 import { cartOwnerWhere, getCartIdentity } from "../infrastructure/cart-access";
+import { getCartThumbnails } from "../queries/cart-thumbnails";
 
 const cartItemSchema = z.object({
   variantId: z.string().cuid(),
@@ -73,6 +74,7 @@ export async function getCartPreviewAction(): Promise<{
     quantity: number;
     availableQuantity: number;
     unitPriceInCents: number;
+    thumbnailUrl: string | null;
   }[];
   itemCount: number;
   subtotalInCents: number;
@@ -93,6 +95,7 @@ export async function getCartPreviewAction(): Promise<{
       },
     });
     const cartItems = cart?.items ?? [];
+    const thumbnails = await getCartThumbnails(cartItems);
     const items = cartItems.map((item) => ({
       id: item.id,
       name: item.variant.product.name,
@@ -100,6 +103,7 @@ export async function getCartPreviewAction(): Promise<{
       quantity: item.quantity,
       availableQuantity: item.variant.inventory?.availableQuantity ?? 0,
       unitPriceInCents: getCurrentPriceInCents(item.variant),
+      thumbnailUrl: thumbnails.get(item.variantId)?.url ?? null,
     }));
     return {
       items,

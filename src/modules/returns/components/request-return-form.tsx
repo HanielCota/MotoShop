@@ -30,7 +30,7 @@ export function validateReturnQuantity(maxQuantity: number) {
     const text = String(formData.get("quantity") ?? "").trim();
     const quantity = /^\d+$/.test(text) ? Number(text) : Number.NaN;
     if (Number.isInteger(quantity) && quantity >= 1 && quantity <= maxQuantity) return null;
-    return `Informe uma quantidade entre 1 e ${maxQuantity}.`;
+    return { message: `Informe uma quantidade entre 1 e ${maxQuantity}.`, field: "quantity" };
   };
 }
 
