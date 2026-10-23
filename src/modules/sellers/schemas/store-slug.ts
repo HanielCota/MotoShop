@@ -7,13 +7,16 @@ export const STORE_SLUG_EXAMPLE = "Ex.: luiz-parts: letras minúsculas, números
  * Separa o erro do identificador (exibido no próprio campo) dos demais erros do
  * formulário (exibidos na mensagem geral).
  */
-export type StoreSlugFormProblem = { error?: string; slugError?: string };
+export type StoreSlugFormProblem = { error?: string; slugError?: string; field?: string };
 
 export function splitStoreSlugIssue(error: ZodError, slugKey: string): StoreSlugFormProblem {
   const slugIssue = error.issues.find((issue) => issue.path[0] === slugKey);
   const otherIssue = error.issues.find((issue) => issue.path[0] !== slugKey);
+  const otherField = typeof otherIssue?.path[0] === "string" ? otherIssue.path[0] : undefined;
   return {
     ...(otherIssue ? { error: otherIssue.message } : {}),
+    // The form points at the field of the general message; the identifier is marked by its own error.
+    ...(otherField ? { field: otherField } : {}),
     ...(slugIssue ? { slugError: slugIssue.message } : {}),
   };
 }

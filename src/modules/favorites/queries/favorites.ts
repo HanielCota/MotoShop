@@ -2,6 +2,7 @@ import "server-only";
 
 import { Prisma, ProductStatus, SellerStatus } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
+import { resolvePage } from "@/modules/products/domain/pagination";
 import type { FavoriteAvailability, FavoriteSort } from "../search-params";
 
 export async function isProductFavorited(userId: string, productId: string) {
@@ -23,7 +24,6 @@ export async function listFavoriteProducts(
   } = {},
 ) {
   const pageSize = Math.min(Math.max(input.pageSize ?? 12, 1), 48);
-  const requestedPage = Math.max(input.page ?? 1, 1);
   const query = input.query?.trim().slice(0, 100);
   const productWhere: Prisma.ProductWhereInput = {
     status: ProductStatus.APPROVED,
@@ -49,26 +49,25 @@ export async function listFavoriteProducts(
     userId,
     product: productWhere,
   };
-  const [total, favorites] = await Promise.all([
-    db.favorite.count({ where }),
-    db.favorite.findMany({
-      where,
-      include: {
-        product: {
-          include: {
-            seller: { include: { store: true } },
-            category: true,
-            brand: true,
-            images: { orderBy: { sortOrder: "asc" }, take: 1 },
-            variants: { where: { active: true }, include: { inventory: true }, orderBy: { createdAt: "asc" } },
-          },
+  // Count first: a page past the last shows the last page, like the catalog, instead of an empty list.
+  const total = await db.favorite.count({ where });
+  const { page, pageCount, skip } = resolvePage(input.page, total, pageSize);
+  const favorites = await db.favorite.findMany({
+    where,
+    include: {
+      product: {
+        include: {
+          seller: { include: { store: true } },
+          category: true,
+          brand: true,
+          images: { orderBy: { sortOrder: "asc" }, take: 1 },
+          variants: { where: { active: true }, include: { inventory: true }, orderBy: { createdAt: "asc" } },
         },
       },
-      orderBy: { createdAt: input.sort === "oldest" ? "asc" : "desc" },
-      skip: (requestedPage - 1) * pageSize,
-      take: pageSize,
-    }),
-  ]);
-  const pageCount = Math.max(Math.ceil(total / pageSize), 1);
-  return { favorites, total, page: Math.min(requestedPage, pageCount), pageCount };
+    },
+    orderBy: { createdAt: input.sort === "oldest" ? "asc" : "desc" },
+    skip,
+    take: pageSize,
+  });
+  return { favorites, total, page, pageCount };
 }

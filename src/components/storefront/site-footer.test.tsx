@@ -83,15 +83,16 @@ it("lists only the payment methods the checkout accepts, with the official brand
   }
 });
 
-it("shows the rights line without a CNPJ or social links", () => {
+it("shows the rights line with the store's CNPJ and no social links", () => {
   navigation.pathname = "/";
   renderFooter();
   const footer = screen.getByRole("contentinfo");
 
   expect(
-    within(footer).getByText("© 2026 MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE. Todos os direitos reservados."),
+    within(footer).getByText(
+      "© 2026 MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE. Todos os direitos reservados CNPJ: 69.663.409/0001-94",
+    ),
   ).toBeInTheDocument();
-  expect(footer).not.toHaveTextContent(/CNPJ/);
   expect(within(footer).queryByText(/Redes sociais/i)).not.toBeInTheDocument();
 });
 

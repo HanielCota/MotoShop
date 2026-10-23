@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 import { parsePriceInputToCents } from "@/modules/products/domain/price-input";
-import { firstIssueMessage } from "@/shared/forms/first-issue-message";
+import type { FieldProblem } from "@/shared/forms/field-error-focus";
+import { firstIssue } from "@/shared/forms/first-issue-message";
 
 const postalCode = z
   .string()
@@ -43,8 +44,10 @@ export function readOwnShippingMethodForm(form: FormData) {
 }
 
 /** Mesma regra no servidor e no navegador (BUG-011). */
-export function validateOwnShippingMethodForm(form: FormData): string | null {
-  return firstIssueMessage(ownShippingMethodSchema, readOwnShippingMethodForm(form), OWN_SHIPPING_FORM_ERROR);
+export function validateOwnShippingMethodForm(form: FormData): FieldProblem | null {
+  return firstIssue(ownShippingMethodSchema, readOwnShippingMethodForm(form), OWN_SHIPPING_FORM_ERROR, {
+    priceInCents: "price",
+  });
 }
 export function quoteOwnShipping(
   methods: Array<OwnShippingMethodInput & { id: string; active: boolean }>,
