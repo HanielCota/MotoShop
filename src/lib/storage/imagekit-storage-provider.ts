@@ -265,10 +265,11 @@ export class ImageKitStorageProvider implements StorageProvider {
     skip: number;
     limit: number;
   }): Promise<StoredFile[]> {
+    // The `path` parameter only looks one level deep; the `path :` operator of searchQuery takes the
+    // folder and every subfolder. With searchQuery, `type` is ignored, so folders may come back too.
+    const folder = `/${input.folder.replace(/^\/+|\/+$/g, "")}/`;
     const query = new URLSearchParams({
-      path: `/${input.folder.replace(/^\/+|\/+$/g, "")}/`,
-      type: "file",
-      searchQuery: `createdAt < "${input.createdBefore.toISOString()}"`,
+      searchQuery: `path : "${folder}" AND createdAt < "${input.createdBefore.toISOString()}"`,
       sort: "ASC_CREATED",
       skip: String(input.skip),
       limit: String(input.limit),
@@ -276,7 +277,13 @@ export class ImageKitStorageProvider implements StorageProvider {
     const response = await this.managementRequest(`${managementEndpoint}?${query}`);
     if (!response.ok) throw new Error(`ImageKit file listing failed with status ${response.status}`);
 
-    return z.array(storedFileSchema).parse(await response.json());
+    const items = z.array(z.unknown()).parse(await response.json());
+
+    return items.flatMap((item) => {
+      const file = storedFileSchema.safeParse(item);
+
+      return file.success ? [file.data] : [];
+    });
   }
 
   /** Deletes up to 100 files in one call (ImageKit bulk delete). */

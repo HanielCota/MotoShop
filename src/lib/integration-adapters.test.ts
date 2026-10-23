@@ -172,11 +172,12 @@ it("deletes only an ImageKit asset with the exact storage path", async () => {
   expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "DELETE" });
 });
 
-it("lists the old files of a folder and bulk-deletes by id with a JSON body", async () => {
+it("lists the old files of a folder and its subfolders, skips folders, and bulk-deletes by id", async () => {
   const fetchMock = vi.fn().mockResolvedValue({
     ok: true,
     json: async () => [
       { fileId: "f1", filePath: "/returns/item/a.jpg", createdAt: "2026-10-20T10:00:00.000Z", size: 1 },
+      { type: "folder", folderId: "d1", folderPath: "/returns/item", createdAt: "2026-10-20T10:00:00.000Z" },
     ],
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -192,10 +193,9 @@ it("lists the old files of a folder and bulk-deletes by id with a JSON body", as
 
   const listUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
   expect(listUrl.origin + listUrl.pathname).toBe("https://api.imagekit.io/v1/files");
+  // The path parameter is one level only; the path operator of searchQuery covers the subfolders.
   expect(Object.fromEntries(listUrl.searchParams)).toEqual({
-    path: "/returns/",
-    type: "file",
-    searchQuery: 'createdAt < "2026-10-22T07:41:00.000Z"',
+    searchQuery: 'path : "/returns/" AND createdAt < "2026-10-22T07:41:00.000Z"',
     sort: "ASC_CREATED",
     skip: "100",
     limit: "100",
