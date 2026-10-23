@@ -3,6 +3,7 @@
 import type { RefObject } from "react";
 
 import { cardPaymentMethods, PaymentMethodIcon, pixPaymentMethod } from "@/components/storefront/payment-method-icons";
+import { Card } from "@/components/ui/card";
 import { DesignRadio, DesignRadioGroup } from "@/components/ui/design-radio";
 import { SecureCardFields, type SecureCardHandle } from "@/modules/payments/components/secure-card-fields";
 
@@ -27,7 +28,7 @@ export function CheckoutPaymentSection({
   cardRef: RefObject<SecureCardHandle | null>;
 }) {
   return (
-    <section aria-labelledby="checkout-payment-title" className="bg-card rounded-xl border p-4 sm:p-6">
+    <Card size="section" render={<section aria-labelledby="checkout-payment-title" />}>
       <h2 id="checkout-payment-title" className="section-title">
         Pagamento
       </h2>
@@ -74,6 +75,6 @@ export function CheckoutPaymentSection({
           Pix e cartão aparecem aqui quando os pagamentos forem liberados.
         </p>
       )}
-    </section>
+    </Card>
   );
 }

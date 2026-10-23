@@ -1,18 +1,36 @@
+import { mergeProps } from "@base-ui/react/merge-props";
+import { useRender } from "@base-ui/react/use-render";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-function Card({ className, size = "default", ...props }: React.ComponentProps<"div"> & { size?: "default" | "sm" }) {
-  return (
-    <div
-      data-slot="card"
-      data-size={size}
-      className={cn(
-        "group/card bg-card text-card-foreground ring-foreground/10 flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl py-(--card-spacing) text-sm ring-1 [--card-spacing:--spacing(4)] has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
-        className,
-      )}
-      {...props}
-    />
-  );
+/**
+ * Surface for a titled block. Border, not ring, like the hand-made boxes it replaced (DS-10).
+ * `render` keeps the semantics of the block: `<Card render={<section />}>`, `<form />`, `<aside />`.
+ * `size="section"` is the storefront page section (checkout, cart, account): 16/24px padding, body
+ * text size, normal block flow (children keep their own width and margins, as in the boxes it
+ * replaced; a flex column would stretch buttons to full width) and nothing clipped.
+ */
+function Card({
+  className,
+  size = "default",
+  render,
+  ...props
+}: useRender.ComponentProps<"div"> & { size?: "default" | "sm" | "section" }) {
+  return useRender({
+    defaultTagName: "div",
+    props: mergeProps<"div">(
+      {
+        className: cn(
+          "group/card bg-card text-card-foreground border-border flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl border py-(--card-spacing) text-sm [--card-spacing:--spacing(4)] has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+          size === "section" && "block gap-0 overflow-visible p-4 text-base sm:p-6",
+          className,
+        ),
+      },
+      props,
+    ),
+    render,
+    state: { slot: "card", size },
+  });
 }
 
 function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
@@ -29,8 +47,11 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 type CardTitleProps = React.ComponentProps<"h2"> & {
-  /** Heading level of the card title; `h2` under the page `h1`, `h3` inside a titled section. */
-  as?: "h2" | "h3" | undefined;
+  /**
+   * Heading level of the card title; `h2` under the page `h1`, `h3` inside a titled section, `h1`
+   * only when the card is the page itself (e.g. the team invite). Never nest a heading inside it.
+   */
+  as?: "h1" | "h2" | "h3" | undefined;
 };
 
 /** Card heading with one size for every area (Admin, Central do Lojista, storefront). */

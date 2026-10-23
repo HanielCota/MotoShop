@@ -3,6 +3,7 @@
 import { useId, useState, type HTMLInputAutoCompleteAttribute } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { DesignCheckbox } from "@/components/ui/design-checkbox";
 import { FormField } from "@/components/ui/form-field";
 import { FormMessage } from "@/components/ui/form-message";
@@ -66,7 +67,7 @@ export function CustomerAddressForm() {
   }
 
   return (
-    <form action={formAction} noValidate className="bg-card grid gap-4 rounded-xl border p-4 sm:grid-cols-2 sm:p-6">
+    <Card size="section" render={<form action={formAction} noValidate />} className="grid gap-4 sm:grid-cols-2">
       <h2 className="section-title sm:col-span-2">Adicionar endereço</h2>
       <Field
         label="Nome do endereço"
@@ -171,7 +172,7 @@ export function CustomerAddressForm() {
           Salvar endereço
         </Button>
       </div>
-    </form>
+    </Card>
   );
 }
 
