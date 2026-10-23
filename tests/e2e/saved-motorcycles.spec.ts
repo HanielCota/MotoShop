@@ -62,6 +62,8 @@ test("cliente salva, edita e usa sua moto principal", async ({ page }, testInfo)
       .toBe(secondFitment.id);
 
     await page.goto("/");
+    // The home opens on "Buscar produto"; the saved motorcycle fills the other tab.
+    await page.getByRole("button", { name: "Peças por moto" }).click();
     await expect(page.getByRole("combobox", { name: "Fabricante" })).toContainText(
       secondFitment.motorcycleModel.manufacturer.name,
     );
