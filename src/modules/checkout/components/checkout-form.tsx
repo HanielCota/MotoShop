@@ -22,6 +22,7 @@ import {
   checkoutFieldOrder,
   fieldForServerMessage,
   initialCheckoutForm,
+  validateCheckoutFieldOnBlur,
   validateCheckoutForm,
   type CheckoutCustomerDefaults,
   type CheckoutField,
@@ -121,6 +122,14 @@ export function CheckoutForm({
     if (hasItems && isCompleteCep(initialPostalCode.current)) requestQuote(initialPostalCode.current, { force: false });
   }, [hasItems, requestQuote]);
 
+  // The error shows as soon as the person leaves the field; editing it clears it (updateField).
+  function checkFieldOnBlur(field: CheckoutField) {
+    const message = validateCheckoutFieldOnBlur(form, field);
+    if (message == null) return;
+
+    setFieldErrors((current) => ({ ...current, [field]: message }));
+  }
+
   function updateField(field: CheckoutField, rawValue: string) {
     const value = maskedFields[field]?.(rawValue) ?? rawValue;
     if (field !== "couponCode") setSelectedAddressId("");
@@ -168,6 +177,11 @@ export function CheckoutForm({
   }
 
   const invalidFields = checkoutFieldOrder.filter((field) => fieldErrors[field]);
+  // A CEP the automatic lookup does not know shows in the field, in red, but does not block the order:
+  // a new street may exist before the lookup service lists it.
+  const cepNotFound = cep.status === "not-found" ? cep.hint : undefined;
+  const addressErrors =
+    cepNotFound && !fieldErrors.postalCode ? { ...fieldErrors, postalCode: cepNotFound } : fieldErrors;
 
   if (simulatedPurchase) return <SimulatedPurchaseConfirmation purchase={simulatedPurchase} />;
 
@@ -180,15 +194,16 @@ export function CheckoutForm({
         onSubmit={handleSubmit}
       >
         <div className="min-w-0 space-y-6">
-          <CheckoutCustomerFields form={form} errors={fieldErrors} onChange={updateField} />
+          <CheckoutCustomerFields form={form} errors={fieldErrors} onChange={updateField} onBlur={checkFieldOnBlur} />
           <CheckoutAddressFields
             form={form}
-            errors={fieldErrors}
+            errors={addressErrors}
+            onBlur={checkFieldOnBlur}
             onChange={updateField}
             savedAddresses={savedAddresses}
             selectedAddressId={selectedAddressId}
             onSelectSavedAddress={selectSavedAddress}
-            cepHint={cep.hint}
+            cepHint={cepNotFound ? undefined : cep.hint}
             isQuoting={shipping.isQuoting}
             onQuote={() => shipping.requestQuote(form.postalCode)}
           />

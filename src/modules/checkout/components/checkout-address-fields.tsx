@@ -5,12 +5,13 @@ import { DesignSelect } from "@/components/ui/design-select";
 import type { CustomerAddress } from "@/modules/customers/queries/customer-addresses";
 
 import { CheckoutFormField } from "./checkout-field";
-import type { CheckoutFieldChange, CheckoutFieldErrors, CheckoutFormState } from "./checkout-form-model";
+import type { CheckoutField, CheckoutFieldChange, CheckoutFieldErrors, CheckoutFormState } from "./checkout-form-model";
 
 export function CheckoutAddressFields({
   form,
   errors,
   onChange,
+  onBlur,
   savedAddresses,
   selectedAddressId,
   onSelectSavedAddress,
@@ -21,6 +22,7 @@ export function CheckoutAddressFields({
   form: CheckoutFormState;
   errors: CheckoutFieldErrors;
   onChange: CheckoutFieldChange;
+  onBlur: (field: CheckoutField) => void;
   savedAddresses: CustomerAddress[];
   selectedAddressId: string;
   onSelectSavedAddress: (addressId: string) => void;
@@ -57,6 +59,7 @@ export function CheckoutAddressFields({
             className="w-full max-w-48 flex-none"
             label="CEP"
             name="postalCode"
+            onBlur={onBlur}
             value={form.postalCode}
             onChange={onChange}
             error={errors.postalCode}

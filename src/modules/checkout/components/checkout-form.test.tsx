@@ -155,3 +155,65 @@ it("formats the phone while typing", () => {
   fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
   expect(screen.getByLabelText("Telefone")).toHaveValue("(11) 98765-4321");
 });
+
+/** The error text tied to a field through aria-describedby, or null. */
+function fieldError(label: string) {
+  const field = screen.getByLabelText(label);
+  const errorId = field
+    .getAttribute("aria-describedby")
+    ?.split(" ")
+    .find((id) => id.endsWith("-error"));
+  return errorId ? document.getElementById(errorId)?.textContent : null;
+}
+
+it("shows a wrong CPF in its field when the customer leaves it and clears it on edit", () => {
+  quote.mockResolvedValue(sellerQuote("Pista Norte"));
+  render(<CheckoutForm cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
+  const cpf = screen.getByLabelText("Seu CPF");
+
+  fireEvent.change(cpf, { target: { value: "23203029320" } });
+  expect(fieldError("Seu CPF")).toBeNull();
+  fireEvent.blur(cpf);
+
+  expect(cpf).toHaveAttribute("aria-invalid", "true");
+  expect(fieldError("Seu CPF")).toBe("Informe um CPF válido.");
+
+  fireEvent.change(cpf, { target: { value: "19119119100" } });
+  fireEvent.blur(cpf);
+  expect(cpf).not.toHaveAttribute("aria-invalid");
+});
+
+it.each([
+  ["E-mail", "luiz@semdominio", "Informe um e-mail válido."],
+  ["Telefone", "00123456789", "Informe um telefone válido."],
+  ["CEP", "12345", "Informe um CEP com 8 números."],
+])("shows a wrong %s in its field on blur", (label, value, message) => {
+  render(<CheckoutForm cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
+
+  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  fireEvent.blur(screen.getByLabelText(label));
+
+  expect(fieldError(label)).toBe(message);
+});
+
+it("does not flag an empty field just because the customer tabbed through it", () => {
+  render(<CheckoutForm cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
+
+  fireEvent.blur(screen.getByLabelText("Seu CPF"));
+
+  expect(screen.getByLabelText("Seu CPF")).not.toHaveAttribute("aria-invalid");
+});
+
+it("shows a CEP the lookup does not find as an error in the field, without blocking the order", async () => {
+  fetchMock.mockResolvedValue({ ok: true, json: async () => ({ erro: true }) });
+  quote.mockResolvedValue(sellerQuote("Pista Norte"));
+  render(<CheckoutForm cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
+
+  fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "99999999" } });
+
+  await waitFor(() =>
+    expect(fieldError("CEP")).toBe("CEP não encontrado na busca automática. Preencha o endereço manualmente."),
+  );
+  expect(screen.getByLabelText("CEP")).toHaveAttribute("aria-invalid", "true");
+  expect(await screen.findByText("Pista Norte")).toBeInTheDocument();
+});
