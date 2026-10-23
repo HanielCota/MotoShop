@@ -12,6 +12,7 @@ export function CheckoutFormField({
   name,
   value,
   onChange,
+  onBlur,
   error,
   hint,
   type = "text",
@@ -26,6 +27,8 @@ export function CheckoutFormField({
   name: CheckoutField;
   value: string;
   onChange: CheckoutFieldChange;
+  /** Called with the field name when the person leaves it. */
+  onBlur?: ((field: CheckoutField) => void) | undefined;
   error?: string | undefined;
   hint?: string | undefined;
   type?: HTMLInputTypeAttribute | undefined;
@@ -50,6 +53,7 @@ export function CheckoutFormField({
           autoComplete={autoComplete}
           placeholder={placeholder}
           onChange={(event) => onChange(name, event.target.value)}
+          onBlur={() => onBlur?.(name)}
         />
       )}
     </FormField>

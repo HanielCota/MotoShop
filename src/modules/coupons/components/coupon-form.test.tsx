@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ create: vi.fn() }));
@@ -97,5 +97,27 @@ it("shows the date rule in the browser and does not call the server (BUG-025)", 
   fireEvent.click(screen.getByRole("button", { name: "Criar cupom" }));
 
   expect(await screen.findByRole("alert")).toHaveTextContent("não pode ser antes do início");
+  expect(screen.getByLabelText(/Fim/)).toHaveFocus();
   expect(mocks.create).not.toHaveBeenCalled();
+});
+
+it("flashes and focuses the empty code field when the coupon is sent blank", async () => {
+  render(<CouponForm ownerType="SELLER" />);
+  fireEvent.click(screen.getByRole("button", { name: "Criar cupom" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Use de 3 a 40 caracteres");
+  expect(screen.getByLabelText(/Código do cupom/)).toHaveFocus();
+  expect(screen.getByLabelText(/Código do cupom/)).toHaveAttribute("aria-invalid", "true");
+});
+
+it("points at the code field when the server says the code is taken", async () => {
+  mocks.create.mockResolvedValue({ error: "Esse código já está em uso.", field: "code" });
+  render(<CouponForm ownerType="SELLER" />);
+  fireEvent.change(screen.getByLabelText(/Código do cupom/), { target: { value: "TRILHA10" } });
+  fireEvent.change(screen.getByLabelText(/Desconto \(%\)/), { target: { value: "10" } });
+  screen.getByRole("button", { name: "Criar cupom" }).focus();
+  fireEvent.click(screen.getByRole("button", { name: "Criar cupom" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Esse código já está em uso.");
+  await waitFor(() => expect(screen.getByLabelText(/Código do cupom/)).toHaveFocus());
 });

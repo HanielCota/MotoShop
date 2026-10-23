@@ -76,7 +76,7 @@ it("validates the fitment year with the server rule before sending (BUG-011)", (
   form.set("displacementCc", "250");
   form.set("year", "20");
 
-  expect(catalogFormValidators.fitment(form)).toBe("Informe o ano entre 1900 e 2200.");
+  expect(catalogFormValidators.fitment(form)).toEqual({ message: "Informe o ano entre 1900 e 2200.", field: "year" });
   form.set("year", "2025");
   expect(catalogFormValidators.fitment(form)).toBeNull();
 });

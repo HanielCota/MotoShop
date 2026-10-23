@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import type { CustomerAddress } from "@/modules/customers/queries/customer-addresses";
 import { formatPhone, isValidBrazilianPhone, onlyDigits } from "@/modules/customers/domain/tax-id";
 import {
@@ -101,13 +103,15 @@ export function applyCustomerDefaults(form: CheckoutFormState, defaults: Checkou
   };
 }
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// The same e-mail rule as `checkoutSchema`, so the browser and the server agree.
+const emailSchema = z.email();
 
 /** Espelha as regras de `checkoutSchema` para dar feedback por campo antes do envio. */
 export function validateCheckoutForm(form: CheckoutFormState): CheckoutFieldErrors {
   const errors: CheckoutFieldErrors = {};
   if (form.customerName.trim().length < 2) errors.customerName = "Informe seu nome.";
-  if (!emailPattern.test(form.customerEmail.trim())) errors.customerEmail = "Informe um e-mail válido.";
+  if (!emailSchema.safeParse(form.customerEmail.trim().toLowerCase()).success)
+    errors.customerEmail = "Informe um e-mail válido.";
   if (!isValidBrazilianPhone(onlyDigits(form.customerPhone))) errors.customerPhone = "Informe um telefone válido.";
   const cpf = normalizeCpf(form.customerTaxId);
   if (!cpf) errors.customerTaxId = "Informe seu CPF para o pagamento.";
@@ -119,6 +123,25 @@ export function validateCheckoutForm(form: CheckoutFormState): CheckoutFieldErro
   if (form.city.trim().length < 2) errors.city = "Informe a cidade.";
   if (!isBrazilianStateCode(form.state.trim().toUpperCase())) errors.state = "Informe a UF.";
   return errors;
+}
+
+/** Fields checked as soon as the person leaves them; the others wait for the submit. */
+export const blurCheckedFields: readonly CheckoutField[] = [
+  "customerEmail",
+  "customerPhone",
+  "customerTaxId",
+  "postalCode",
+];
+
+/**
+ * The error of one field when the person leaves it, with the same rules as the submit. A blank
+ * field waits for the submit, so tabbing through the form does not paint it red.
+ */
+export function validateCheckoutFieldOnBlur(form: CheckoutFormState, field: CheckoutField): string | undefined {
+  if (!blurCheckedFields.includes(field)) return undefined;
+  if (form[field].trim() === "") return undefined;
+
+  return validateCheckoutForm(form)[field];
 }
 
 /** Converte os valores mascarados para o formato aceito pela server action. */

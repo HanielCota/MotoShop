@@ -80,7 +80,7 @@ it("shows a recoverable error when the quote request rejects", async () => {
   expect(await screen.findByRole("button", { name: "Calcular frete" })).toBeEnabled();
 });
 
-it("links field errors and focuses the summary alert when validation fails", async () => {
+it("links field errors and focuses the first wrong field when validation fails", async () => {
   quote.mockResolvedValue(sellerQuote("Pista Norte"));
   render(<CheckoutForm cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
   fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "01001000" } });
@@ -89,8 +89,10 @@ it("links field errors and focuses the summary alert when validation fails", asy
   expect(screen.getByLabelText("Seu CPF")).toHaveValue("111.111.111-11");
   fireEvent.click(screen.getByRole("button", { name: "Finalizar pedido" }));
 
-  const alert = await screen.findByText("Revise os campos destacados para continuar.");
-  await waitFor(() => expect(alert.closest("[tabindex='-1']")).toHaveFocus());
+  await screen.findByText("Revise os campos destacados para continuar.");
+  // The notice stays by the button; focus goes to the first field marked wrong, which flashes.
+  await waitFor(() => expect(document.activeElement).toHaveAttribute("aria-invalid", "true"));
+  expect(document.activeElement).toHaveAttribute("data-error-flash");
   const cpf = screen.getByLabelText("Seu CPF");
   expect(cpf).toHaveAttribute("aria-invalid", "true");
   const [errorId] = defined(cpf.getAttribute("aria-describedby")).split(" ");
@@ -152,4 +154,85 @@ it("formats the phone while typing", () => {
 
   fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
   expect(screen.getByLabelText("Telefone")).toHaveValue("(11) 98765-4321");
+});
+
+/** The error text tied to a field through aria-describedby, or null. */
+function fieldError(label: string) {
+  const field = screen.getByLabelText(label);
+  const errorId = field
+    .getAttribute("aria-describedby")
+    ?.split(" ")
+    .find((id) => id.endsWith("-error"));
+  return errorId ? document.getElementById(errorId)?.textContent : null;
+}
+
+it("shows a wrong CPF in its field when the customer leaves it and clears it on edit", () => {
+  quote.mockResolvedValue(sellerQuote("Pista Norte"));
+  render(<CheckoutForm cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
+  const cpf = screen.getByLabelText("Seu CPF");
+
+  fireEvent.change(cpf, { target: { value: "23203029320" } });
+  expect(fieldError("Seu CPF")).toBeNull();
+  fireEvent.blur(cpf);
+
+  expect(cpf).toHaveAttribute("aria-invalid", "true");
+  expect(fieldError("Seu CPF")).toBe("Informe um CPF válido.");
+
+  fireEvent.change(cpf, { target: { value: "19119119100" } });
+  fireEvent.blur(cpf);
+  expect(cpf).not.toHaveAttribute("aria-invalid");
+});
+
+it.each([
+  ["E-mail", "luiz@semdominio", "Informe um e-mail válido."],
+  ["Telefone", "00123456789", "Informe um telefone válido."],
+  ["CEP", "12345", "Informe um CEP com 8 números."],
+])("shows a wrong %s in its field on blur", (label, value, message) => {
+  render(<CheckoutForm cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
+
+  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  fireEvent.blur(screen.getByLabelText(label));
+
+  expect(fieldError(label)).toBe(message);
+});
+
+it("does not flag an empty field just because the customer tabbed through it", () => {
+  render(<CheckoutForm cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
+
+  fireEvent.blur(screen.getByLabelText("Seu CPF"));
+
+  expect(screen.getByLabelText("Seu CPF")).not.toHaveAttribute("aria-invalid");
+});
+
+it("shows a CEP the lookup does not find as an error in the field, without blocking the order", async () => {
+  fetchMock.mockResolvedValue({ ok: true, json: async () => ({ erro: true }) });
+  quote.mockResolvedValue(sellerQuote("Pista Norte"));
+  render(<CheckoutForm cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
+
+  fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "99999999" } });
+
+  await waitFor(() =>
+    expect(fieldError("CEP")).toBe("CEP não encontrado na busca automática. Preencha o endereço manualmente."),
+  );
+  expect(screen.getByLabelText("CEP")).toHaveAttribute("aria-invalid", "true");
+  expect(await screen.findByText("Pista Norte")).toBeInTheDocument();
+});
+
+it("focuses the first field that blocks the order, not a CEP the lookup did not find", async () => {
+  fetchMock.mockResolvedValue({ ok: true, json: async () => ({ erro: true }) });
+  quote.mockResolvedValue(sellerQuote("Pista Norte"));
+  render(<CheckoutForm cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
+  fireEvent.change(screen.getByLabelText("Nome completo"), { target: { value: "Luiz Silva" } });
+  fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "luiz@example.com" } });
+  fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
+  fireEvent.change(screen.getByLabelText("Seu CPF"), { target: { value: "19119119100" } });
+  fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "99999999" } });
+  await waitFor(() => expect(screen.getByLabelText("CEP")).toHaveAttribute("aria-invalid", "true"));
+  await screen.findByText("Pista Norte");
+
+  fireEvent.click(screen.getByRole("button", { name: "Finalizar pedido" }));
+
+  await screen.findByText("Revise os campos destacados para continuar.");
+  expect(document.activeElement).toBe(screen.getByLabelText("Rua"));
+  expect(checkout).not.toHaveBeenCalled();
 });

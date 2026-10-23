@@ -3,16 +3,18 @@
 import { Card } from "@/components/ui/card";
 
 import { CheckoutFormField } from "./checkout-field";
-import type { CheckoutFieldChange, CheckoutFieldErrors, CheckoutFormState } from "./checkout-form-model";
+import type { CheckoutField, CheckoutFieldChange, CheckoutFieldErrors, CheckoutFormState } from "./checkout-form-model";
 
 export function CheckoutCustomerFields({
   form,
   errors,
   onChange,
+  onBlur,
 }: {
   form: CheckoutFormState;
   errors: CheckoutFieldErrors;
   onChange: CheckoutFieldChange;
+  onBlur: (field: CheckoutField) => void;
 }) {
   return (
     <Card size="section" render={<section aria-labelledby="checkout-customer-title" />}>
@@ -32,6 +34,7 @@ export function CheckoutCustomerFields({
         <CheckoutFormField
           label="E-mail"
           name="customerEmail"
+          onBlur={onBlur}
           type="email"
           inputMode="email"
           value={form.customerEmail}
@@ -43,6 +46,7 @@ export function CheckoutCustomerFields({
         <CheckoutFormField
           label="Telefone"
           name="customerPhone"
+          onBlur={onBlur}
           type="tel"
           value={form.customerPhone}
           onChange={onChange}
@@ -55,6 +59,7 @@ export function CheckoutCustomerFields({
         <CheckoutFormField
           label="Seu CPF"
           name="customerTaxId"
+          onBlur={onBlur}
           value={form.customerTaxId}
           onChange={onChange}
           error={errors.customerTaxId}
