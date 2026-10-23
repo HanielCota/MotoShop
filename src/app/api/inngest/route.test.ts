@@ -23,6 +23,9 @@ vi.mock("@/modules/notifications/workflows/seller-order-fulfillment-notification
 }));
 vi.mock("@/modules/outbox/workflows/dispatch-outbox-workflow", () => ({ dispatchPendingOutboxEventsWorkflow: {} }));
 vi.mock("@/shared/rate-limit/purge-rate-limits-workflow", () => ({ purgeExpiredRateLimitsWorkflow: {} }));
+vi.mock("@/modules/returns/workflows/cleanup-orphan-return-photos-workflow", () => ({
+  cleanupOrphanReturnPhotosWorkflow: {},
+}));
 
 import { POST, PUT } from "./route";
 

@@ -10,6 +10,7 @@ import { sendGuestOrderConfirmation } from "@/modules/notifications/workflows/gu
 import { sendOrderPaymentNotification } from "@/modules/notifications/workflows/order-payment-notification-workflow";
 import { sendSellerOrderFulfillmentNotification } from "@/modules/notifications/workflows/seller-order-fulfillment-notification-workflow";
 import { dispatchPendingOutboxEventsWorkflow } from "@/modules/outbox/workflows/dispatch-outbox-workflow";
+import { cleanupOrphanReturnPhotosWorkflow } from "@/modules/returns/workflows/cleanup-orphan-return-photos-workflow";
 import { purgeExpiredRateLimitsWorkflow } from "@/shared/rate-limit/purge-rate-limits-workflow";
 
 const handlers = serve({
@@ -23,6 +24,7 @@ const handlers = serve({
     schedulePaymentRecovery,
     recoverPendingPayment,
     purgeExpiredRateLimitsWorkflow,
+    cleanupOrphanReturnPhotosWorkflow,
   ],
 });
 
