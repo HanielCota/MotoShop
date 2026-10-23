@@ -164,7 +164,8 @@ export function CheckoutForm({
         setFieldErrors(errors);
         setFormError("Revise os campos destacados para continuar.");
       });
-      highlightInvalidField(event.currentTarget);
+      // By name: a CEP the lookup did not find is also `aria-invalid`, but it does not block the order.
+      highlightInvalidField(event.currentTarget, firstInvalid);
       return;
     }
     setFieldErrors(errors);

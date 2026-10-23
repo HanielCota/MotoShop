@@ -217,3 +217,22 @@ it("shows a CEP the lookup does not find as an error in the field, without block
   expect(screen.getByLabelText("CEP")).toHaveAttribute("aria-invalid", "true");
   expect(await screen.findByText("Pista Norte")).toBeInTheDocument();
 });
+
+it("focuses the first field that blocks the order, not a CEP the lookup did not find", async () => {
+  fetchMock.mockResolvedValue({ ok: true, json: async () => ({ erro: true }) });
+  quote.mockResolvedValue(sellerQuote("Pista Norte"));
+  render(<CheckoutForm cartSummary={{ itemCount: 1, itemsSubtotalInCents: 100 }} />);
+  fireEvent.change(screen.getByLabelText("Nome completo"), { target: { value: "Luiz Silva" } });
+  fireEvent.change(screen.getByLabelText("E-mail"), { target: { value: "luiz@example.com" } });
+  fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "11987654321" } });
+  fireEvent.change(screen.getByLabelText("Seu CPF"), { target: { value: "19119119100" } });
+  fireEvent.change(screen.getByLabelText("CEP"), { target: { value: "99999999" } });
+  await waitFor(() => expect(screen.getByLabelText("CEP")).toHaveAttribute("aria-invalid", "true"));
+  await screen.findByText("Pista Norte");
+
+  fireEvent.click(screen.getByRole("button", { name: "Finalizar pedido" }));
+
+  await screen.findByText("Revise os campos destacados para continuar.");
+  expect(document.activeElement).toBe(screen.getByLabelText("Rua"));
+  expect(checkout).not.toHaveBeenCalled();
+});
