@@ -33,6 +33,7 @@ import {
   viewerSavedMotorcycleId,
 } from "./review-seed-ids";
 import { REVIEW_FALLBACK_BRAND_LABELS, reviewBrandId } from "./review-scope";
+import { withoutDemoMarkers } from "./review-texts";
 import { must } from "./must";
 
 // ---------------------------------------------------------------------------------------------
@@ -79,7 +80,6 @@ export type ExpandedSeedInput = {
   trackMany: (entity: string, created: number, total: number) => void;
   viewerCustomerEmails: string[];
   viewerSellerEmails: string[];
-  notice: string;
 };
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -214,12 +214,8 @@ export async function renderProductImage(
   return writeSvgAsWebp(storageKey, svg);
 }
 
-function storeDisplayName(name: string) {
-  return name.replace(/ · demonstração$/, "");
-}
-
 export async function renderStoreLogo(storageKey: string, storeName: string) {
-  const initials = storeDisplayName(storeName)
+  const initials = withoutDemoMarkers(storeName)
     .split(/\s+/)
     .filter((word) => /^[A-Za-zÀ-ú0-9]/.test(word))
     .slice(0, 2)
@@ -240,7 +236,7 @@ export async function renderStoreBanner(storageKey: string, storeName: string) {
   <rect width="1600" height="480" fill="url(#bg)"/>
   <path d="M1080 480 L1280 0 L1600 0 L1600 480 Z" fill="${BRAND}" opacity="0.9"/>
   <path d="M960 480 L1160 0 L1210 0 L1010 480 Z" fill="${BRAND}" opacity="0.45"/>
-  <text x="96" y="236" font-family="${FONT}" font-size="76" font-weight="700" fill="#fafaf9">${escapeXml(storeDisplayName(storeName))}</text>
+  <text x="96" y="236" font-family="${FONT}" font-size="76" font-weight="700" fill="#fafaf9">${escapeXml(withoutDemoMarkers(storeName))}</text>
   <text x="96" y="306" font-family="${FONT}" font-size="32" fill="${BRAND}">Loja de demonstração · dados ilustrativos</text>
 </svg>`;
   return writeSvgAsWebp(storageKey, svg);
@@ -288,7 +284,7 @@ function promoPrice(price: number) {
 }
 
 async function seedCatalog(input: ExpandedSeedInput) {
-  const { db, now, stores, adminUserId, trackMany, notice } = input;
+  const { db, now, stores, adminUserId, trackMany } = input;
   const daysAgo = (days: number) => new Date(now.getTime() - days * DAY);
   const daysAhead = (days: number) => new Date(now.getTime() + days * DAY);
 
@@ -306,7 +302,7 @@ async function seedCatalog(input: ExpandedSeedInput) {
   if (brands.length < 5) {
     const fallback = REVIEW_FALLBACK_BRAND_LABELS.map((label) => ({
       id: reviewBrandId(label),
-      name: `Marca ${label} (demonstração)`,
+      name: `Marca ${label}`,
       slug: `review-marca-${label.toLowerCase()}`,
     }));
     await insertMany(trackMany, "Brand", fallback.slice(0, 5 - brands.length), (chunk) =>
@@ -344,9 +340,8 @@ async function seedCatalog(input: ExpandedSeedInput) {
 
   for (const [index, template] of productTemplates.entries()) {
     const slug = `review-${template.key}`;
-    const name = `${template.name} (demonstração)`;
-    if (!/^review-[a-z0-9-]+$/.test(slug) || !name.endsWith("(demonstração)"))
-      throw new Error(`Unsafe product ${slug}`);
+    const name = template.name;
+    if (!/^review-[a-z0-9-]+$/.test(slug)) throw new Error(`Unsafe product ${slug}`);
     const categoryId = categories.get(template.categorySlug);
     if (!categoryId) {
       console.warn(`Categoria ativa ${template.categorySlug} não encontrada; produto ${slug} ignorado.`);
@@ -383,7 +378,7 @@ async function seedCatalog(input: ExpandedSeedInput) {
       id,
       slug,
       name,
-      description: `${template.description}${notice}`,
+      description: template.description,
       isDemo: true,
       status,
       rejectionReason: template.rejectionReason ?? null,
@@ -1189,7 +1184,7 @@ async function seedOrders(
         sellerOrderId,
         provider: "OWN",
         serviceCode: `own:review-${p.part.store}`,
-        carrier: p.store.name.replace(" · demonstração", ""),
+        carrier: withoutDemoMarkers(p.store.name),
         service: p.shipping.name,
         priceInCents: p.shipping.price,
         estimatedDeliveryDays: p.shipping.days,
@@ -2304,7 +2299,7 @@ async function ensureLegacyProductImages(input: ExpandedSeedInput) {
     const storageKey = `demo/${product.slug}-1.webp`;
     await renderProductImage(storageKey, {
       label: categoryLabels[product.category.slug] ?? "Produto",
-      title: product.name.replace(/ \(demonstração\)$/, ""),
+      title: withoutDemoMarkers(product.name),
       caption: "Foto principal",
       variant: index % PRODUCT_BACKGROUNDS.length,
     });

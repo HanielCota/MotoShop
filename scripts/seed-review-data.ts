@@ -5,7 +5,7 @@
  * (storefront, conta do cliente, Central do Lojista e Admin). Tudo é isolado por:
  * - e-mails `review.*@example.test`;
  * - slugs `review-*`, SKUs/códigos `REVIEW-*` e pedidos `MS-REVIEW-*`;
- * - lojas com nome terminado em " · demonstração" e produtos `isDemo: true`;
+ * - lojas cuja dona é uma conta `review.*` e produtos `isDemo: true` (scripts/review-scope.ts);
  * - IDs determinísticos `czrvw…` (scripts/review-seed-ids.ts) no conjunto ampliado.
  *
  * Idempotente: pode ser executado várias vezes. Nunca apaga nem altera dados que não
@@ -38,6 +38,7 @@ import { ensureReviewCouponsAndCampaign, ensureReviewVariantColumns } from "./re
 import { renderStoreBanner, renderStoreLogo, seedExpandedData } from "./review-seed-expanded";
 import { must, requireEnv } from "./must";
 import { parseEmailList } from "./review-seed-ids";
+import { demoStoreDescription, isSameDemoName, withoutDemoMarkers } from "./review-texts";
 
 export const REVIEW_EMAIL_DOMAIN = "@example.test";
 export const REVIEW_ORDER_PREFIX = "MS-REVIEW-";
@@ -94,9 +95,8 @@ const storeDefinitions: Record<
 > = {
   garagem: {
     slug: "review-garagem-mx",
-    name: "Garagem MX · demonstração",
-    description:
-      "Loja fictícia para revisão visual: peças, equipamentos e acessórios de motocross com atendimento de pista. Preços, estoque e pedidos são ilustrativos.",
+    name: "Garagem MX",
+    description: demoStoreDescription("review-garagem-mx"),
     sellerType: "COMPANY",
     sellerStatus: "ACTIVE",
     commissionBpsOverride: null,
@@ -106,7 +106,7 @@ const storeDefinitions: Record<
       youtubeUrl: "https://www.youtube.com/@example",
       whatsappUrl: "https://wa.me/5511900000000",
       originPostalCode: "04571010",
-      originName: "Garagem MX Demonstração",
+      originName: "Garagem MX",
       originEmail: "review.lojista@example.test",
       originPhone: "11900000000",
       originStreet: "Rua das Pistas",
@@ -119,9 +119,8 @@ const storeDefinitions: Record<
   },
   box77: {
     slug: "review-box-77",
-    name: "Box 77 · demonstração",
-    description:
-      "Loja fictícia de transmissão, freios e luvas para revisar o carrinho e o checkout com várias lojas. Dados ilustrativos.",
+    name: "Box 77",
+    description: demoStoreDescription("review-box-77"),
     sellerType: "INDIVIDUAL",
     sellerStatus: "APPROVED",
     commissionBpsOverride: 1000,
@@ -135,8 +134,8 @@ const storeDefinitions: Record<
   },
   pendente: {
     slug: "review-oficina-pendente",
-    name: "Oficina Pendente · demonstração",
-    description: "Cadastro fictício aguardando aprovação do Admin (fila de sellers).",
+    name: "Oficina Pendente",
+    description: demoStoreDescription("review-oficina-pendente"),
     sellerType: "COMPANY",
     sellerStatus: "PENDING",
     commissionBpsOverride: null,
@@ -145,9 +144,8 @@ const storeDefinitions: Record<
   },
   trilha: {
     slug: "review-trilha-forte",
-    name: "Trilha Forte Motopeças · demonstração",
-    description:
-      "Loja fictícia especializada em enduro e trilha: vestuário impermeável, proteções e acessórios para longas distâncias. Dados ilustrativos.",
+    name: "Trilha Forte Motopeças",
+    description: demoStoreDescription("review-trilha-forte"),
     sellerType: "COMPANY",
     sellerStatus: "ACTIVE",
     commissionBpsOverride: null,
@@ -163,9 +161,8 @@ const storeDefinitions: Record<
   },
   racing: {
     slug: "review-racing-sul",
-    name: "Racing Sul MX · demonstração",
-    description:
-      "Loja fictícia de preparação: motor, suspensão e transmissão para pilotos de competição. Preços e estoque ilustrativos.",
+    name: "Racing Sul MX",
+    description: demoStoreDescription("review-racing-sul"),
     sellerType: "COMPANY",
     sellerStatus: "APPROVED",
     commissionBpsOverride: 800,
@@ -179,9 +176,8 @@ const storeDefinitions: Record<
   },
   areia: {
     slug: "review-areia-motos",
-    name: "Areia Motos Off-Road · demonstração",
-    description:
-      "Loja fictícia do Nordeste com acessórios, óculos e consumíveis para pistas de areia. Dados ilustrativos.",
+    name: "Areia Motos Off-Road",
+    description: demoStoreDescription("review-areia-motos"),
     sellerType: "INDIVIDUAL",
     sellerStatus: "ACTIVE",
     commissionBpsOverride: null,
@@ -196,9 +192,8 @@ const storeDefinitions: Record<
   },
   cross: {
     slug: "review-cross-center",
-    name: "Cross Center Campinas · demonstração",
-    description:
-      "Loja fictícia de equipamentos de proteção: capacetes, botas, óculos e joelheiras. Dados ilustrativos.",
+    name: "Cross Center Campinas",
+    description: demoStoreDescription("review-cross-center"),
     sellerType: "COMPANY",
     sellerStatus: "APPROVED",
     commissionBpsOverride: null,
@@ -214,8 +209,8 @@ const storeDefinitions: Record<
   },
   nova: {
     slug: "review-motopecas-nova",
-    name: "Motopeças Nova Era · demonstração",
-    description: "Cadastro fictício recente aguardando análise do Admin.",
+    name: "Motopeças Nova Era",
+    description: demoStoreDescription("review-motopecas-nova"),
     sellerType: "INDIVIDUAL",
     sellerStatus: "PENDING",
     commissionBpsOverride: null,
@@ -224,8 +219,8 @@ const storeDefinitions: Record<
   },
   suspensa: {
     slug: "review-loja-suspensa",
-    name: "Pit Stop Suspensa · demonstração",
-    description: "Loja fictícia suspensa pelo Admin (exemplo da fila de sellers).",
+    name: "Pit Stop Suspensa",
+    description: demoStoreDescription("review-loja-suspensa"),
     sellerType: "COMPANY",
     sellerStatus: "SUSPENDED",
     commissionBpsOverride: null,
@@ -234,8 +229,8 @@ const storeDefinitions: Record<
   },
   recusada: {
     slug: "review-loja-recusada",
-    name: "Moto Garage Recusada · demonstração",
-    description: "Cadastro fictício recusado por documentação incompleta (exemplo da fila de sellers).",
+    name: "Moto Garage Recusada",
+    description: demoStoreDescription("review-loja-recusada"),
     sellerType: "INDIVIDUAL",
     sellerStatus: "REJECTED",
     commissionBpsOverride: null,
@@ -276,16 +271,12 @@ type ProductDefinition = {
   variants: VariantDefinition[];
 };
 
-const NOTICE =
-  " Produto fictício criado para revisão visual do Moto Shop; preço, estoque e compatibilidade são ilustrativos.";
-
 const products: ProductDefinition[] = [
   {
     slug: "review-capacete-apex-pro",
-    name: "Capacete off-road Apex Pro (demonstração)",
+    name: "Capacete off-road Apex Pro",
     description:
-      "Capacete off-road com casco em fibra composta, pala ajustável, forração removível e ventilação frontal ampla." +
-      NOTICE,
+      "Capacete off-road com casco em fibra composta, pala ajustável, forração removível e ventilação frontal ampla.",
     store: "garagem",
     status: "APPROVED",
     categorySlug: "equipment-helmets",
@@ -323,9 +314,9 @@ const products: ProductDefinition[] = [
   },
   {
     slug: "review-botas-terra-trail",
-    name: "Botas off-road Terra Trail (demonstração)",
+    name: "Botas off-road Terra Trail",
     description:
-      "Botas de cano alto com quatro fivelas, proteção de tornozelo articulada e sola de borracha tratorada." + NOTICE,
+      "Botas de cano alto com quatro fivelas, proteção de tornozelo articulada e sola de borracha tratorada.",
     store: "garagem",
     status: "APPROVED",
     categorySlug: "equipment-boots",
@@ -359,9 +350,9 @@ const products: ProductDefinition[] = [
   },
   {
     slug: "review-oculos-vista-pro",
-    name: "Óculos off-road Vista Pro (demonstração)",
+    name: "Óculos off-road Vista Pro",
     description:
-      "Óculos com armação flexível, espuma tripla e lente transparente antiembaçante com pinos para tear-off." + NOTICE,
+      "Óculos com armação flexível, espuma tripla e lente transparente antiembaçante com pinos para tear-off.",
     store: "garagem",
     status: "APPROVED",
     categorySlug: "equipment-goggles",
@@ -381,8 +372,8 @@ const products: ProductDefinition[] = [
   },
   {
     slug: "review-disco-freio-onda-260",
-    name: "Disco de freio dianteiro Onda 260 mm (demonstração)",
-    description: "Disco de freio dianteiro ondulado de 260 mm em aço inox temperado." + NOTICE,
+    name: "Disco de freio dianteiro Onda 260 mm",
+    description: "Disco de freio dianteiro ondulado de 260 mm em aço inox temperado.",
     store: "garagem",
     status: "APPROVED",
     categorySlug: "parts-brakes",
@@ -406,8 +397,8 @@ const products: ProductDefinition[] = [
   },
   {
     slug: "review-kit-relacao-crf-250r",
-    name: "Kit relação CRF 250R (demonstração)",
-    description: "Kit de transmissão com corrente 520 com retentores, coroa e pinhão." + NOTICE,
+    name: "Kit relação CRF 250R",
+    description: "Kit de transmissão com corrente 520 com retentores, coroa e pinhão.",
     store: "garagem",
     status: "APPROVED",
     categorySlug: "parts-transmission",
@@ -437,8 +428,8 @@ const products: ProductDefinition[] = [
   },
   {
     slug: "review-filtro-ar-yz250f",
-    name: "Filtro de ar em espuma YZ250F (demonstração)",
-    description: "Filtro de ar em espuma de dupla camada, pré-lubrificado." + NOTICE,
+    name: "Filtro de ar em espuma YZ250F",
+    description: "Filtro de ar em espuma de dupla camada, pré-lubrificado.",
     store: "garagem",
     status: "APPROVED",
     categorySlug: "parts-engine",
@@ -458,8 +449,8 @@ const products: ProductDefinition[] = [
   },
   {
     slug: "review-mola-garfo-crf-250r",
-    name: "Molas de garfo CRF 250R (demonstração)",
-    description: "Par de molas de garfo para ajuste de carga conforme o peso do piloto." + NOTICE,
+    name: "Molas de garfo CRF 250R",
+    description: "Par de molas de garfo para ajuste de carga conforme o peso do piloto.",
     store: "garagem",
     status: "APPROVED",
     categorySlug: "parts-suspension",
@@ -486,8 +477,8 @@ const products: ProductDefinition[] = [
   },
   {
     slug: "review-protetor-mao-race",
-    name: "Protetor de mão Race (demonstração)",
-    description: "Par de protetores de mão com alma de alumínio e defletor plástico." + NOTICE,
+    name: "Protetor de mão Race",
+    description: "Par de protetores de mão com alma de alumínio e defletor plástico.",
     store: "garagem",
     status: "APPROVED",
     categorySlug: "parts-accessories",
@@ -507,8 +498,8 @@ const products: ProductDefinition[] = [
   },
   {
     slug: "review-camisa-motocross-rascunho",
-    name: "Camisa de motocross Sprint (demonstração)",
-    description: "Camisa leve em poliéster com punhos elásticos. Rascunho ainda não enviado para aprovação." + NOTICE,
+    name: "Camisa de motocross Sprint",
+    description: "Camisa leve em poliéster com punhos elásticos. Rascunho ainda não enviado para aprovação.",
     store: "garagem",
     status: "DRAFT",
     categorySlug: "apparel",
@@ -527,8 +518,8 @@ const products: ProductDefinition[] = [
   },
   {
     slug: "review-calca-motocross-enviada",
-    name: "Calça de motocross Sprint (demonstração)",
-    description: "Calça com painéis de couro nos joelhos e ajuste na cintura. Enviada para moderação." + NOTICE,
+    name: "Calça de motocross Sprint",
+    description: "Calça com painéis de couro nos joelhos e ajuste na cintura. Enviada para moderação.",
     store: "garagem",
     status: "SUBMITTED",
     categorySlug: "apparel",
@@ -554,8 +545,8 @@ const products: ProductDefinition[] = [
   },
   {
     slug: "review-pedaleira-rejeitada",
-    name: "Pedaleira forjada (demonstração)",
-    description: "Par de pedaleiras forjadas com dentes autolimpantes." + NOTICE,
+    name: "Pedaleira forjada",
+    description: "Par de pedaleiras forjadas com dentes autolimpantes.",
     store: "garagem",
     status: "REJECTED",
     rejectionReason:
@@ -576,8 +567,8 @@ const products: ProductDefinition[] = [
   },
   {
     slug: "review-guidao-arquivado",
-    name: "Guidão 7/8 Classic (demonstração)",
-    description: "Guidão de aço 7/8 polegadas. Produto arquivado pelo lojista." + NOTICE,
+    name: "Guidão 7/8 Classic",
+    description: "Guidão de aço 7/8 polegadas. Produto arquivado pelo lojista.",
     store: "garagem",
     status: "ARCHIVED",
     categorySlug: "parts-accessories",
@@ -596,8 +587,8 @@ const products: ProductDefinition[] = [
   },
   {
     slug: "review-luva-box77-grip",
-    name: "Luva de motocross Grip (demonstração)",
-    description: "Luva leve com palma em couro sintético e punho de neoprene." + NOTICE,
+    name: "Luva de motocross Grip",
+    description: "Luva leve com palma em couro sintético e punho de neoprene.",
     store: "box77",
     status: "APPROVED",
     categorySlug: "apparel",
@@ -623,8 +614,8 @@ const products: ProductDefinition[] = [
   },
   {
     slug: "review-corrente-box77-520",
-    name: "Corrente 520 com retentor 120 elos (demonstração)",
-    description: "Corrente de transmissão 520 com retentores, 120 elos e emenda de rebite." + NOTICE,
+    name: "Corrente 520 com retentor 120 elos",
+    description: "Corrente de transmissão 520 com retentores, 120 elos e emenda de rebite.",
     store: "box77",
     status: "APPROVED",
     categorySlug: "parts-transmission",
@@ -647,8 +638,8 @@ const products: ProductDefinition[] = [
   },
   {
     slug: "review-pastilha-box77-sinter",
-    name: "Pastilha de freio sinterizada (demonstração)",
-    description: "Jogo de pastilhas sinterizadas para uso em lama e areia." + NOTICE,
+    name: "Pastilha de freio sinterizada",
+    description: "Jogo de pastilhas sinterizadas para uso em lama e areia.",
     store: "box77",
     status: "APPROVED",
     categorySlug: "parts-brakes",
@@ -735,7 +726,8 @@ async function findOrCreateReviewStore(key: StoreKey, definition: (typeof storeD
     where: { slug: definition.slug },
     include: { seller: { select: { status: true } } },
   });
-  if (store && store.name !== definition.name) throw new Error(`Refusing to touch unrelated store ${definition.slug}`);
+  if (store && !isSameDemoName(store.name, definition.name))
+    throw new Error(`Refusing to touch unrelated store ${definition.slug}`);
   if (store) {
     track("Seller", false);
     track("Store", false);
@@ -992,8 +984,7 @@ async function ensureProducts(stores: Awaited<ReturnType<typeof ensureStores>>, 
   const productIds = new Map<string, string>();
 
   for (const definition of products) {
-    if (!definition.slug.startsWith("review-") || !definition.name.endsWith("(demonstração)"))
-      throw new Error("Unsafe product");
+    if (!definition.slug.startsWith("review-")) throw new Error("Unsafe product");
     const store = stores[definition.store];
     const categoryId = categories.get(definition.categorySlug);
     const brandId = brands.get(definition.brandSlug);
@@ -1654,7 +1645,7 @@ async function ensureOrders(
               sellerOrderId: sellerOrder.id,
               provider: "OWN",
               serviceCode: `own:review-${p.part.store}`,
-              carrier: store.name.replace(" · demonstração", ""),
+              carrier: withoutDemoMarkers(store.name),
               service: p.shipping.name,
               priceInCents: p.shipping.price,
               estimatedDeliveryDays: p.shipping.days,
@@ -2113,7 +2104,6 @@ async function main() {
     trackMany,
     viewerCustomerEmails: parseEmailList(process.env.REVIEW_VIEWER_CUSTOMER_EMAILS),
     viewerSellerEmails: parseEmailList(process.env.REVIEW_VIEWER_SELLER_EMAILS),
-    notice: NOTICE,
   });
 
   // 13/10/2026: variant gender/color/size, coupons shown on the product page and one campaign.
