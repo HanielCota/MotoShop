@@ -25,7 +25,6 @@ export type StoreProfileActionState = {
   error?: string;
   success?: string;
   slugError?: string;
-  field?: string;
   values?: Record<(typeof profileFields)[number], string>;
 };
 

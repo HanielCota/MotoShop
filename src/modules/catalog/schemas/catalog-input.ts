@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { slugify } from "@/lib/utils";
-import { firstIssue } from "@/shared/forms/first-issue-message";
+import { firstIssueMessage } from "@/shared/forms/first-issue-message";
 
 // O slug público deriva do nome: um nome só com símbolos ("!!!") geraria slug vazio.
 export const nameSchema = z.object({
@@ -67,9 +67,10 @@ export function readFitmentInput(formData: FormData) {
 
 /** Validadores do navegador (BUG-011), com os mesmos schemas das actions. */
 export const catalogFormValidators = {
-  category: (formData: FormData) => firstIssue(categorySchema, readCategoryInput(formData), "Categoria inválida."),
-  brand: (formData: FormData) => firstIssue(nameSchema, readNameInput(formData), "Marca inválida."),
-  manufacturer: (formData: FormData) => firstIssue(nameSchema, readNameInput(formData), "Fabricante inválido."),
-  model: (formData: FormData) => firstIssue(modelSchema, readModelInput(formData), "Modelo inválido."),
-  fitment: (formData: FormData) => firstIssue(fitmentSchema, readFitmentInput(formData), "Fitment inválido."),
+  category: (formData: FormData) =>
+    firstIssueMessage(categorySchema, readCategoryInput(formData), "Categoria inválida."),
+  brand: (formData: FormData) => firstIssueMessage(nameSchema, readNameInput(formData), "Marca inválida."),
+  manufacturer: (formData: FormData) => firstIssueMessage(nameSchema, readNameInput(formData), "Fabricante inválido."),
+  model: (formData: FormData) => firstIssueMessage(modelSchema, readModelInput(formData), "Modelo inválido."),
+  fitment: (formData: FormData) => firstIssueMessage(fitmentSchema, readFitmentInput(formData), "Fitment inválido."),
 };

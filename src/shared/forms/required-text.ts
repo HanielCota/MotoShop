@@ -5,5 +5,5 @@ import type { ClientFormValidator } from "./client-validation";
  * aparece no `FormMessage` do formulário, em português, e o servidor continua validando.
  */
 export function requiredTextValidator(name: string, message: string, minLength = 1): ClientFormValidator {
-  return (formData) => (String(formData.get(name) ?? "").trim().length >= minLength ? null : { message, field: name });
+  return (formData) => (String(formData.get(name) ?? "").trim().length >= minLength ? null : message);
 }

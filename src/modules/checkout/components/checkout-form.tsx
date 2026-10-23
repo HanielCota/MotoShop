@@ -11,7 +11,6 @@ import { useCepAutofill } from "@/modules/customers/components/use-cep-autofill"
 import type { CustomerAddress } from "@/modules/customers/queries/customer-addresses";
 import { notifyCartUpdated } from "@/modules/cart/components/cart-events";
 import type { SecureCardHandle } from "@/modules/payments/components/secure-card-fields";
-import { highlightControl, highlightInvalidField } from "@/shared/forms/field-error-focus";
 
 import { CheckoutAddressFields } from "./checkout-address-fields";
 import { CheckoutCustomerFields } from "./checkout-customer-fields";
@@ -86,19 +85,13 @@ export function CheckoutForm({
   const shipping = useCheckoutShippingQuotes();
   const cep = useCepAutofill(setForm);
 
-  // Renders the alert right away. A field error flashes and focuses that field; any other error
-  // moves focus to the alert, for screen readers and keyboard users.
+  // Renders the alert right away, then moves focus to it for screen readers and keyboard users.
   const handleFailure = useCallback((message: string) => {
     const field = fieldForServerMessage(message);
     flushSync(() => {
       if (field) setFieldErrors((current) => ({ ...current, [field]: message }));
       setFormError(message);
     });
-    const control = field ? document.getElementById(checkoutFieldId(field)) : null;
-    if (control) {
-      highlightControl(control);
-      return;
-    }
     errorRef.current?.focus();
   }, []);
   const [simulatedPurchase, setSimulatedPurchase] = useState<SimulatedPurchase>();
@@ -155,7 +148,7 @@ export function CheckoutForm({
         setFieldErrors(errors);
         setFormError("Revise os campos destacados para continuar.");
       });
-      highlightInvalidField(event.currentTarget);
+      errorRef.current?.focus();
       return;
     }
     setFieldErrors(errors);
