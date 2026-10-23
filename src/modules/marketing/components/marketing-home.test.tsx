@@ -77,21 +77,19 @@ describe("marketing homepage", () => {
   it.each([
     ["a visitor", {}],
     ["a customer with a saved motorcycle", { primaryFitmentId: "honda-2025" }],
-  ])(
-    "shows 'Buscar produto' on the left and 'Peças por moto' on the right, already selected, for %s",
-    (_who, options) => {
-      renderHome("", options);
+  ])("opens on 'Buscar produto', on the left, with 'Peças por moto' on the right, for %s", (_who, options) => {
+    renderHome("", options);
 
-      const tabs = within(screen.getByRole("group", { name: "Forma de busca" })).getAllByRole("button");
-      expect(tabs.map((tab) => tab.textContent)).toEqual(["Buscar produto", "Peças por moto"]);
-      expect(tabs[0]).toHaveAttribute("aria-pressed", "false");
-      expect(tabs[1]).toHaveAttribute("aria-pressed", "true");
-      expect(screen.getByRole("button", { name: "Ver peças" })).toBeInTheDocument();
-    },
-  );
+    const tabs = within(screen.getByRole("group", { name: "Forma de busca" })).getAllByRole("button");
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["Buscar produto", "Peças por moto"]);
+    expect(tabs[0]).toHaveAttribute("aria-pressed", "true");
+    expect(tabs[1]).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("button", { name: "Ver peças" })).not.toBeInTheDocument();
+  });
 
-  it("restores motorcycle fitment fields from the URL", async () => {
+  it("opens on 'Peças por moto' and restores the fields when the URL already has a motorcycle", async () => {
     renderHome("?moto=yamaha-2025");
+    expect(screen.getByRole("button", { name: "Peças por moto" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("combobox", { name: "Fabricante" })).toHaveTextContent("Yamaha");
     expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveTextContent("YZ250F");
     expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveTextContent("2025 · 250 cc");
@@ -101,6 +99,7 @@ describe("marketing homepage", () => {
 
   it("starts with the saved primary motorcycle while an explicit URL selection takes priority", () => {
     renderHome("", { primaryFitmentId: "yamaha-2025" });
+    fireEvent.click(screen.getByRole("button", { name: "Peças por moto" }));
     expect(screen.getByRole("combobox", { name: "Fabricante" })).toHaveTextContent("Yamaha");
     expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveTextContent("YZ250F");
     cleanup();
@@ -110,6 +109,7 @@ describe("marketing homepage", () => {
 
   it("starts empty for a visitor and unlocks model and year one at a time", () => {
     renderHome();
+    fireEvent.click(screen.getByRole("button", { name: "Peças por moto" }));
     expect(screen.getByRole("combobox", { name: "Fabricante" })).toHaveTextContent("Selecione o fabricante");
     expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveAttribute("data-disabled");
     expect(screen.getByRole("combobox", { name: "Ano e versão" })).toHaveAttribute("data-disabled");
@@ -118,6 +118,7 @@ describe("marketing homepage", () => {
 
   it("does not pick a model or year on its own when the manufacturer has several", async () => {
     renderHome();
+    fireEvent.click(screen.getByRole("button", { name: "Peças por moto" }));
     choose("Fabricante", "Yamaha");
     expect(screen.getByRole("combobox", { name: "Modelo" })).toHaveTextContent("Selecione o modelo");
     expect(screen.getByRole("button", { name: "Ver peças" })).toBeDisabled();
@@ -138,6 +139,7 @@ describe("marketing homepage", () => {
 
   it("distinguishes versions in the same year and preserves selection when switching search mode", async () => {
     renderHome();
+    fireEvent.click(screen.getByRole("button", { name: "Peças por moto" }));
     choose("Fabricante", "Honda");
     fireEvent.click(screen.getByRole("combobox", { name: "Ano e versão" }));
     expect(screen.getByRole("option", { name: "2025 · Special · 250 cc" })).toBeInTheDocument();
@@ -153,12 +155,14 @@ describe("marketing homepage", () => {
 
   it("does not submit an unknown fitment from the URL", () => {
     renderHome("?moto=removed-or-invalid");
+    fireEvent.click(screen.getByRole("button", { name: "Peças por moto" }));
     expect(screen.getByRole("combobox", { name: "Fabricante" })).toHaveTextContent("Selecione o fabricante");
     expect(screen.getByRole("button", { name: "Ver peças" })).toBeDisabled();
   });
 
   it("explains an empty motorcycle list without inventing a motorcycle", () => {
     renderHome("", { fitments: [] });
+    fireEvent.click(screen.getByRole("button", { name: "Peças por moto" }));
     expect(screen.getByRole("button", { name: "Ver peças" })).toBeDisabled();
     expect(screen.getByText(/A seleção de motos está indisponível/)).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Peças compatíveis" })).not.toBeInTheDocument();

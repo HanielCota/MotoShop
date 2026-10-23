@@ -37,11 +37,14 @@ export function MotorcycleFinder({
   primaryFitmentId?: string | null | undefined;
 }) {
   const router = useRouter();
-  const [finderMode, setFinderMode] = useState<"motorcycle" | "search">("motorcycle");
   const [searchQuery, setSearchQuery] = useState("");
   const [fitmentId, setFitmentId] = useQueryState(
     "moto",
     parseAsString.withDefault("").withOptions({ history: "replace", shallow: true }),
+  );
+  // Opens on "Buscar produto"; only a motorcycle already chosen in the URL opens "Peças por moto".
+  const [finderMode, setFinderMode] = useState<"motorcycle" | "search">(() =>
+    resolveSelectedFitment(fitments, fitmentId, null) == null ? "search" : "motorcycle",
   );
   // Starts from the URL or the saved primary motorcycle; otherwise empty, one field at a time.
   const initialFitment = resolveSelectedFitment(fitments, fitmentId, primaryFitmentId);
@@ -91,7 +94,7 @@ export function MotorcycleFinder({
       className="bg-card text-card-foreground w-full max-w-3xl scroll-mt-24 rounded-xl border border-white/20 shadow-2xl"
       id="minha-moto"
     >
-      {/* "Buscar produto" stays on the left, but the page opens on "Peças por moto". */}
+      {/* "Buscar produto" comes first and opens selected. */}
       <div className="border-border flex border-b" role="group" aria-label="Forma de busca">
         <button
           className={tabClassName}
