@@ -8,7 +8,7 @@ export type CartThumbnail = { url: string; alt: string };
 /**
  * Miniaturas dos itens do carrinho: prioriza a imagem da variante e cai para a primeira
  * imagem do produto. Consulta separada porque `getActiveCart` não inclui imagens.
- * Usada pela página do carrinho e pelo carrinho rápido do cabeçalho.
+ * Usada pela página do carrinho, pelo carrinho rápido do cabeçalho e pelo resumo do checkout.
  */
 export async function getCartThumbnails(
   items: { variantId: string; variant: { productId: string } }[],
