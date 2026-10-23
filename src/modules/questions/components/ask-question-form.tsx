@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { FormMessage } from "@/components/ui/form-message";
 import { Textarea } from "@/components/ui/textarea";
 import { askProductQuestionAction, type QuestionActionState } from "@/modules/questions/actions/question-actions";
@@ -16,7 +15,7 @@ export function AskQuestionForm({ productId }: { productId: string }) {
   );
 
   return (
-    <Card size="section" render={<form action={formAction} noValidate />} className="space-y-3 sm:p-4">
+    <form action={formAction} noValidate className="border-border bg-card space-y-3 rounded-xl border p-4">
       <label className="text-foreground block text-sm font-medium" htmlFor="question">
         Faça uma pergunta sobre este produto
       </label>
@@ -35,6 +34,6 @@ export function AskQuestionForm({ productId }: { productId: string }) {
       <Button pending={pending} pendingLabel="Enviando…" type="submit">
         Enviar pergunta
       </Button>
-    </Card>
+    </form>
   );
 }

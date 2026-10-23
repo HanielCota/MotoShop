@@ -1,7 +1,6 @@
 "use client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 
 import { DesignCheckbox } from "@/components/ui/design-checkbox";
 
@@ -64,7 +63,7 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
   );
 
   return (
-    <Card size="section" render={<article />} className="rounded-2xl p-5 shadow-sm sm:p-6">
+    <article className="border-border bg-card rounded-2xl border p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start gap-4">
         <div className="bg-moto-brand-surface text-brand-strong flex size-12 shrink-0 items-center justify-center rounded-xl">
           <Motorbike aria-hidden="true" className="size-6" />
@@ -154,7 +153,7 @@ function SavedMotorcycleCard({ saved, fitments }: { saved: SavedMotorcycle; fitm
       <div className="mt-3 space-y-1" aria-live="polite">
         <ActionMessage state={primaryState} />
       </div>
-    </Card>
+    </article>
   );
 }
 
@@ -213,10 +212,9 @@ export function MotorcycleGarage({
         )}
       </section>
 
-      <Card
-        size="section"
-        render={<section aria-labelledby="add-motorcycle-title" />}
-        className="rounded-2xl p-5 shadow-sm sm:p-6"
+      <section
+        className="border-border bg-card rounded-2xl border p-5 shadow-sm sm:p-6"
+        aria-labelledby="add-motorcycle-title"
       >
         <div className="flex items-center gap-2">
           <h2 id="add-motorcycle-title" className="section-title text-foreground">
@@ -261,7 +259,7 @@ export function MotorcycleGarage({
           ) : null}
           <ActionMessage state={state} />
         </form>
-      </Card>
+      </section>
     </div>
   );
 }

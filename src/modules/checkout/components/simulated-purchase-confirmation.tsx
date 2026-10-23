@@ -2,13 +2,15 @@ import { CircleCheck } from "lucide-react";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatCount, formatMoneyInCents } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { formatCep } from "@/modules/customers/domain/brazilian-address";
 import { formatPhone } from "@/modules/customers/domain/tax-id";
 
 import type { SimulatedPurchase } from "../domain/simulated-purchase";
+
+const sectionClassName = "bg-card rounded-xl border p-4 sm:p-6";
 
 /**
  * "Compra concluída" after the simulated purchase of test products. Everything comes
@@ -32,16 +34,16 @@ export function SimulatedPurchaseConfirmation({ purchase }: { purchase: Simulate
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start">
         <div className="flex min-w-0 flex-col gap-6">
-          <Card size="section" render={<section aria-labelledby="purchase-items-title" />}>
+          <section aria-labelledby="purchase-items-title" className={sectionClassName}>
             <h2 id="purchase-items-title" className="section-title">
               Itens e frete
             </h2>
             {purchase.stores.map((store) => (
               <PurchaseStore key={store.storeName} store={store} />
             ))}
-          </Card>
+          </section>
 
-          <Card size="section" render={<section aria-labelledby="purchase-delivery-title" />}>
+          <section aria-labelledby="purchase-delivery-title" className={sectionClassName}>
             <h2 id="purchase-delivery-title" className="section-title">
               Entrega
             </h2>
@@ -58,10 +60,10 @@ export function SimulatedPurchaseConfirmation({ purchase }: { purchase: Simulate
             <p className="text-sm">
               {purchase.customer.email} · {formatPhone(purchase.customer.phone)}
             </p>
-          </Card>
+          </section>
         </div>
 
-        <Card size="section" render={<aside aria-labelledby="purchase-summary-title" />} className="h-fit">
+        <aside aria-labelledby="purchase-summary-title" className={cn(sectionClassName, "h-fit")}>
           <h2 id="purchase-summary-title" className="section-title">
             Resumo
           </h2>
@@ -74,7 +76,7 @@ export function SimulatedPurchaseConfirmation({ purchase }: { purchase: Simulate
           <Link href="/" className={buttonVariants({ variant: "outline", size: "lg", className: "mt-3 w-full" })}>
             Voltar para a página inicial
           </Link>
-        </Card>
+        </aside>
       </div>
     </div>
   );

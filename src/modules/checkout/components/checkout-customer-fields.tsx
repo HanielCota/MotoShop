@@ -1,7 +1,5 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
-
 import { CheckoutFormField } from "./checkout-field";
 import type { CheckoutFieldChange, CheckoutFieldErrors, CheckoutFormState } from "./checkout-form-model";
 
@@ -15,7 +13,7 @@ export function CheckoutCustomerFields({
   onChange: CheckoutFieldChange;
 }) {
   return (
-    <Card size="section" render={<section aria-labelledby="checkout-customer-title" />}>
+    <section aria-labelledby="checkout-customer-title" className="bg-card rounded-xl border p-4 sm:p-6">
       <h2 id="checkout-customer-title" className="section-title">
         Seus dados
       </h2>
@@ -66,6 +64,6 @@ export function CheckoutCustomerFields({
           required
         />
       </div>
-    </Card>
+    </section>
   );
 }

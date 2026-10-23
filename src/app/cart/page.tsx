@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ShoppingBag, Store } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { pageContainerClassName } from "@/components/ui/page-container";
 import { PageHeader } from "@/components/ui/page-header";
@@ -66,7 +65,11 @@ export default async function CartPage() {
               );
               const storeItemCount = sellerItems.reduce((total, item) => total + item.quantity, 0);
               return (
-                <Card key={sellerId} size="section" render={<section aria-labelledby={`cart-store-${sellerId}`} />}>
+                <section
+                  key={sellerId}
+                  aria-labelledby={`cart-store-${sellerId}`}
+                  className="bg-card rounded-xl border p-4 sm:p-6"
+                >
                   <div className="flex items-start gap-3">
                     <Store aria-hidden="true" className="text-brand-strong mt-1 size-5 shrink-0" />
                     <div>
@@ -125,15 +128,14 @@ export default async function CartPage() {
                     </span>
                     <span className="font-semibold tabular-nums">{formatMoneyInCents(storeSubtotalInCents)}</span>
                   </div>
-                </Card>
+                </section>
               );
             })}
           </div>
 
-          <Card
-            size="section"
-            render={<aside aria-labelledby="cart-summary-title" />}
-            className="h-fit lg:sticky lg:top-24"
+          <aside
+            aria-labelledby="cart-summary-title"
+            className="bg-card h-fit rounded-xl border p-4 sm:p-6 lg:sticky lg:top-24"
           >
             <h2 id="cart-summary-title" className="section-title">
               Resumo
@@ -162,7 +164,7 @@ export default async function CartPage() {
             <p className="text-muted-foreground mt-3 text-xs">
               Preços e estoque são confirmados novamente ao finalizar a compra.
             </p>
-          </Card>
+          </aside>
 
           {/* Mobile/tablet: CTA sempre ao alcance do polegar; o resumo completo segue acima. */}
           <div
