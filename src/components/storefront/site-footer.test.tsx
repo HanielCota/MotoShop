@@ -83,17 +83,37 @@ it("lists only the payment methods the checkout accepts, with the official brand
   }
 });
 
-it("shows the rights line with the store's CNPJ and no social links", () => {
+it("shows the rights line and, right below it, the store's CNPJ on its own line", () => {
   navigation.pathname = "/";
   renderFooter();
   const footer = screen.getByRole("contentinfo");
 
-  expect(
-    within(footer).getByText(
-      "© 2026 MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE. Todos os direitos reservados CNPJ: 69.663.409/0001-94",
-    ),
-  ).toBeInTheDocument();
-  expect(within(footer).queryByText(/Redes sociais/i)).not.toBeInTheDocument();
+  const rights = within(footer).getByText(
+    "© 2026 MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE. Todos os direitos reservados.",
+  );
+  const cnpj = within(footer).getByText("CNPJ: 69.663.409/0001-94");
+
+  expect(rights.nextElementSibling).toBe(cnpj);
+  expect(rights).toHaveClass("block");
+  expect(cnpj).toHaveClass("block");
+});
+
+it("links the store's Instagram and YouTube right below the service hours, each in a new tab", () => {
+  navigation.pathname = "/";
+  renderFooter();
+  const hours = screen.getByRole("region", { name: "Horário de atendimento" });
+  const social = within(hours).getByRole("list", { name: "Redes sociais do Moto Shop" });
+
+  const links = within(social).getAllByRole("link");
+
+  expect(links.map((link) => [link.getAttribute("aria-label"), link.getAttribute("href")])).toEqual([
+    ["Instagram do Moto Shop", "https://www.instagram.com/motoshopbrasil.com.br/"],
+    ["YouTube do Moto Shop", "https://www.youtube.com/@motoshopbrasilcombr"],
+  ]);
+  for (const link of links) {
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  }
 });
 
 it("uses the stacked main logo in the footer, swapping black and orange plates on hover", () => {

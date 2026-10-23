@@ -23,6 +23,13 @@ const serviceHours = [
   { days: "Domingos e Feriados", hours: "Retorna no próximo dia útil!" },
 ];
 
+// Official marks from Simple Icons (CC0), tinted with the link color through a CSS mask. WhatsApp joins
+// when the store has a business number.
+const socialLinks = [
+  { label: "Instagram do Moto Shop", href: "https://www.instagram.com/motoshopbrasil.com.br/", icon: "instagram.svg" },
+  { label: "YouTube do Moto Shop", href: "https://www.youtube.com/@motoshopbrasilcombr", icon: "youtube.svg" },
+] as const;
+
 // 44px touch target on phones; about 30% tighter from the tablet up, where a mouse is used.
 const footerLinkClassName =
   "inline-flex min-h-11 items-center text-sm text-white/70 transition-colors hover:text-white sm:min-h-[31px]";
@@ -100,10 +107,30 @@ export function SiteFooter() {
               </div>
             ))}
           </dl>
+          <ul aria-label="Redes sociais do Moto Shop" className="mt-4 -ml-3 flex gap-1">
+            {socialLinks.map((link) => (
+              <li key={link.href}>
+                <a
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={link.label}
+                  className="focus-visible:ring-moto-brand/60 inline-flex size-11 items-center justify-center rounded-md text-white/70 transition-colors hover:text-white focus-visible:ring-3 focus-visible:outline-none"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="size-6 bg-current [mask-size:contain] [mask-position:center] [mask-repeat:no-repeat]"
+                    style={{ maskImage: `url(/images/social/${link.icon})` }}
+                  />
+                </a>
+              </li>
+            ))}
+          </ul>
         </section>
 
         <p className="border-t border-white/15 pt-4 text-xs leading-5 text-white/55 lg:order-5 lg:col-span-4 lg:text-right">
-          © 2026 MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE. Todos os direitos reservados CNPJ: 69.663.409/0001-94
+          <span className="block">© 2026 MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE. Todos os direitos reservados.</span>
+          <span className="block">CNPJ: 69.663.409/0001-94</span>
         </p>
       </div>
     </footer>
