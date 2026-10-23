@@ -96,7 +96,24 @@ it("shows the rights line and, right below it, the store's CNPJ on its own line"
   expect(rights.nextElementSibling).toBe(cnpj);
   expect(rights).toHaveClass("block");
   expect(cnpj).toHaveClass("block");
-  expect(within(footer).queryByText(/Redes sociais/i)).not.toBeInTheDocument();
+});
+
+it("links the store's Instagram and YouTube right below the service hours, each in a new tab", () => {
+  navigation.pathname = "/";
+  renderFooter();
+  const hours = screen.getByRole("region", { name: "Horário de atendimento" });
+  const social = within(hours).getByRole("list", { name: "Redes sociais do Moto Shop" });
+
+  const links = within(social).getAllByRole("link");
+
+  expect(links.map((link) => [link.getAttribute("aria-label"), link.getAttribute("href")])).toEqual([
+    ["Instagram do Moto Shop", "https://www.instagram.com/motoshopbrasil.com.br/"],
+    ["YouTube do Moto Shop", "https://www.youtube.com/@motoshopbrasilcombr"],
+  ]);
+  for (const link of links) {
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  }
 });
 
 it("uses the stacked main logo in the footer, swapping black and orange plates on hover", () => {
