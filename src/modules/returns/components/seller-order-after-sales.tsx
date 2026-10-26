@@ -2,7 +2,7 @@ import { Fragment, type ReactNode } from "react";
 
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, formatMoneyInCents } from "@/lib/format";
-import { CartItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
+import { InlineItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
 import type { CartThumbnail } from "@/modules/cart/queries/cart-thumbnails";
 import {
   cancellationReasonLabels,
@@ -203,11 +203,7 @@ function ItemLines({ items, thumbnails }: { items: readonly ItemLine[]; thumbnai
   return items.map((item, index) => (
     <Fragment key={item.id}>
       {index > 0 ? "; " : null}
-      <CartItemThumbnail
-        url={thumbnails.get(item.id)?.url}
-        sizes="28px"
-        className="mr-1.5 inline-grid size-7 align-middle [&>svg]:size-4"
-      />
+      <InlineItemThumbnail url={thumbnails.get(item.id)?.url} />
       {`${item.quantity} × ${item.productNameSnapshot} · SKU ${item.skuSnapshot}`}
     </Fragment>
   ));

@@ -1,5 +1,5 @@
 import { InlineNotice } from "@/components/ui/inline-notice";
-import { CartItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
+import { InlineItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
 import type { CartThumbnail } from "@/modules/cart/queries/cart-thumbnails";
 import { formatCep } from "@/modules/customers/domain/brazilian-address";
 import { formatPhone } from "@/modules/customers/domain/tax-id";
@@ -36,11 +36,7 @@ export function SellerOrderDelivery({
       <ul className="list-inside list-disc">
         {order.items.map((item) => (
           <li key={item.id}>
-            <CartItemThumbnail
-              url={thumbnails.get(item.id)?.url}
-              sizes="28px"
-              className="mr-1.5 inline-grid size-7 align-middle [&>svg]:size-4"
-            />
+            <InlineItemThumbnail url={thumbnails.get(item.id)?.url} />
             {item.quantity} × {item.productNameSnapshot} · {item.variantDescriptionSnapshot} · SKU {item.skuSnapshot}
           </li>
         ))}
