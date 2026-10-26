@@ -198,8 +198,10 @@ describe("marketing homepage", () => {
 
   it("shows each category card's product photo as decoration, hidden from screen readers", () => {
     renderHome();
+
     const grid = document.getElementById("categorias");
-    const photos = [...(grid?.querySelectorAll("[data-src^='/images/home/categories/']") ?? [])];
+    if (grid == null) throw new Error("categories section not rendered");
+    const photos = [...grid.querySelectorAll("[data-src^='/images/home/categories/']")];
 
     expect(photos.map((photo) => photo.getAttribute("data-src"))).toEqual([
       "/images/home/categories/pecas.webp",

@@ -21,10 +21,8 @@ export type MarketingCategory = { id: string; name: string; slug: string; parent
 // The orange stripe stays above the glass.
 const cardClassName =
   "group/category relative isolate flex overflow-hidden rounded-xl bg-(--card) p-5 text-white before:absolute before:inset-y-0 before:left-0 before:z-20 before:w-1.5 before:bg-moto-brand sm:p-6";
-const cardColors = [
-  "[--card:var(--moto-brand-foreground)]",
-  "[--card:color-mix(in_srgb,var(--foreground)_85%,transparent)]",
-];
+const firstCardColor = "[--card:var(--moto-brand-foreground)]";
+const otherCardColor = "[--card:color-mix(in_srgb,var(--foreground)_85%,transparent)]";
 const equipmentCardColor = "[--card:color-mix(in_oklab,var(--moto-brand-strong)_45%,var(--foreground))]";
 const iconClassName = "box-content size-6 shrink-0 rounded-md border border-white/25 p-1.5";
 const eyebrowClassName = "text-xs font-bold tracking-[0.12em] text-white/65 uppercase";
@@ -83,7 +81,7 @@ export function CategoryShowcase({ categories }: { categories: MarketingCategory
       />
       <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-[1.1fr_0.9fr_1.3fr]">
         {cards.map(({ title, description, eyebrow, href, icon: Icon, image }, index) => (
-          <Link className={cn(cardClassName, cardColors[index] ?? cardColors[1])} href={href} key={title}>
+          <Link className={cn(cardClassName, index === 0 ? firstCardColor : otherCardColor)} href={href} key={title}>
             <CardPhoto src={image} />
             <div className="relative z-20 w-full pr-8">
               <CardHeading
