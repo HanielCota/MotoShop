@@ -1,6 +1,10 @@
 import { expect, it } from "vitest";
 
-import { coversWholeCountry, storesMissingNationwideShipping } from "../../scripts/review-shipping";
+import {
+  VISIBLE_REVIEW_SELLER_WHERE,
+  coversWholeCountry,
+  storesMissingNationwideShipping,
+} from "../../scripts/review-shipping";
 
 const regional = { postalCodeStart: "01000000", postalCodeEnd: "09999999", active: true };
 const nationwide = { postalCodeStart: "01000000", postalCodeEnd: "99999999", active: true };
@@ -26,4 +30,14 @@ it("lists the demo stores that cannot deliver to every CEP and leaves the others
     "review-racing-sul",
     "review-sem-frete",
   ]);
+});
+
+// Regression: the script picked sellers by the "review-" slug alone, and sellers choose their own slug.
+it("only picks visible demo stores owned by a review account", () => {
+  expect(VISIBLE_REVIEW_SELLER_WHERE.store).toEqual({ slug: { startsWith: "review-" } });
+  expect(VISIBLE_REVIEW_SELLER_WHERE.status).toEqual({ in: ["APPROVED", "ACTIVE"] });
+  expect(VISIBLE_REVIEW_SELLER_WHERE.members.some).toEqual({
+    role: "OWNER",
+    user: { email: { startsWith: "review.", endsWith: "@example.test" } },
+  });
 });

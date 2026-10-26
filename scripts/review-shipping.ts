@@ -3,6 +3,17 @@
  * the store's own region (for example 78135-380, in Mato Grosso) must not be refused at checkout.
  * Shared by the review seed and by the script that fixes stores seeded before this rule.
  */
+import type { Prisma } from "../src/generated/prisma/client";
+
+/**
+ * Visible demo sellers: a "review-*" store owned by a review.*@example.test account. Sellers choose
+ * their own slug, so the prefix alone could also match a real store.
+ */
+export const VISIBLE_REVIEW_SELLER_WHERE = {
+  status: { in: ["APPROVED", "ACTIVE"] },
+  store: { slug: { startsWith: "review-" } },
+  members: { some: { role: "OWNER", user: { email: { startsWith: "review.", endsWith: "@example.test" } } } },
+} satisfies Prisma.SellerWhereInput;
 
 /** CEP range of the whole country, as own-shipping methods store it (8 digits). */
 export const WHOLE_COUNTRY = { postalCodeStart: "01000000", postalCodeEnd: "99999999" } as const;

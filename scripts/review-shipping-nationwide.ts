@@ -1,6 +1,7 @@
 /**
- * Gives every visible demo store (store slug "review-*", seller APPROVED or ACTIVE) an own-shipping
- * method that covers the whole country, when it has none. Touches only those stores.
+ * Gives every visible demo store (slug "review-*" owned by a review.* account, seller APPROVED or
+ * ACTIVE) an own-shipping method that covers the whole country, when it has none. Touches only those
+ * stores.
  *
  *   pnpm db:review:shipping --dry-run   lists each change and writes nothing
  *   pnpm db:review:shipping             creates the missing methods
@@ -11,7 +12,12 @@ import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { formatMoneyInCents } from "../src/lib/format";
 import { requireScriptDatabaseUrl } from "./database-guard";
-import { NATIONWIDE_REVIEW_METHOD, WHOLE_COUNTRY, storesMissingNationwideShipping } from "./review-shipping";
+import {
+  NATIONWIDE_REVIEW_METHOD,
+  VISIBLE_REVIEW_SELLER_WHERE,
+  WHOLE_COUNTRY,
+  storesMissingNationwideShipping,
+} from "./review-shipping";
 
 config({ path: ".env.local", quiet: true });
 
@@ -21,7 +27,7 @@ const database = new PrismaClient({ adapter: new PrismaNeon({ connectionString: 
 
 async function loadReviewStores() {
   const sellers = await database.seller.findMany({
-    where: { store: { slug: { startsWith: "review-" } }, status: { in: ["APPROVED", "ACTIVE"] } },
+    where: VISIBLE_REVIEW_SELLER_WHERE,
     select: {
       id: true,
       store: { select: { slug: true } },
