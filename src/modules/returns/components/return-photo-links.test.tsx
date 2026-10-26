@@ -81,3 +81,40 @@ it("ignores the device clock: a phone set ten minutes ahead still shows the fres
 
   expect(screen.queryByText("Os links das fotos expiraram.")).not.toBeInTheDocument();
 });
+
+it("renews the links on click when the device slept past their validity and the timer stood still", () => {
+  render(<ReturnPhotoLinks title="Fotos do cliente" photos={photos} validForMs={60_000} />);
+
+  // The wall clock moves on while the device sleeps; the pending timer does not fire.
+  vi.setSystemTime(Date.now() + 11 * 60_000);
+  const opened = fireEvent.click(screen.getByRole("link", { name: "Abrir foto 1 em tamanho real" }));
+
+  expect(opened).toBe(false);
+  expect(refresh).toHaveBeenCalledOnce();
+  expect(screen.getByText("Os links das fotos expiraram.")).toBeInTheDocument();
+});
+
+it("says the links expired as soon as the page comes back after their validity", () => {
+  render(<ReturnPhotoLinks title="Fotos do cliente" photos={photos} validForMs={60_000} />);
+
+  vi.setSystemTime(Date.now() + 11 * 60_000);
+  act(() => {
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+
+  expect(screen.getByText("Os links das fotos expiraram.")).toBeInTheDocument();
+});
+
+it("keeps the photos clickable when the page comes back within their validity", () => {
+  render(<ReturnPhotoLinks title="Fotos do cliente" photos={photos} validForMs={60_000} />);
+
+  vi.setSystemTime(Date.now() + 30_000);
+  act(() => {
+    window.dispatchEvent(new Event("focus"));
+  });
+  const opened = fireEvent.click(screen.getByRole("link", { name: "Abrir foto 1 em tamanho real" }));
+
+  expect(opened).toBe(true);
+  expect(refresh).not.toHaveBeenCalled();
+  expect(screen.queryByText("Os links das fotos expiraram.")).not.toBeInTheDocument();
+});
