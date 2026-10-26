@@ -28,7 +28,10 @@ vi.mock("@/modules/disputes/application/request-dispute", () => ({ requestDisput
 import { requestDisputeAction } from "@/modules/disputes/actions/dispute-actions";
 
 import { requestCancellationAction } from "./cancellation-actions";
-import { requestReturnAction } from "./return-actions";
+import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
+
+import { createReturnPhotoUpload } from "../application/return-photo-uploads";
+import { createReturnPhotoUploadAction, requestReturnAction } from "./return-actions";
 
 const cuid = "cjld2cjxh0000qzrmn831i7rn";
 const uuid = "6f1c2c1e-6c1a-4e0b-9b3f-2f8f5f7f8a11";
@@ -105,5 +108,30 @@ describe.each(cases)("$name action order access", ({ run, service }) => {
     mocks.resolve.mockResolvedValue(null);
     expect(await run({})).toEqual({ error: "Pedido não encontrado." });
     expect(service).not.toHaveBeenCalled();
+  });
+});
+
+describe("return photo upload authorization", () => {
+  it("caps the uploads of an item per minute and per day, so unattached files cannot pile up", async () => {
+    mocks.session.mockResolvedValue({ user: { id: "user-1" } });
+    mocks.resolve.mockResolvedValue({ userId: "user-1" });
+    vi.mocked(createReturnPhotoUpload).mockResolvedValue({
+      url: "https://upload.example",
+      key: "returns/item/photo.jpg",
+      expiresAt: new Date("2026-10-23T12:00:00Z"),
+      fields: {},
+    });
+
+    await createReturnPhotoUploadAction({
+      orderNumber: "MS-1",
+      orderItemId: cuid,
+      contentType: "image/jpeg",
+      sizeInBytes: 1024,
+    });
+
+    expect(vi.mocked(assertRateLimit).mock.calls.map(([limit]) => limit)).toEqual([
+      { key: `return-photo-upload:${cuid}`, windowSeconds: 60, max: 10 },
+      { key: `return-photo-upload-day:${cuid}`, windowSeconds: 86_400, max: 15 },
+    ]);
   });
 });

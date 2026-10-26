@@ -21,6 +21,12 @@ const assetSchema = z.object({
   isPrivateFile: z.boolean().optional(),
 });
 
+const storedFileSchema = z.object({ fileId: z.string(), filePath: z.string(), createdAt: z.coerce.date() });
+
+export type StoredFile = z.infer<typeof storedFileSchema>;
+
+const MAX_FILES_PER_BULK_DELETE = 100;
+
 const uploadEndpoint = "https://upload.imagekit.io/api/v2/files/upload";
 const managementEndpoint = "https://api.imagekit.io/v1/files";
 
@@ -249,6 +255,49 @@ export class ImageKitStorageProvider implements StorageProvider {
     return signImageKitUrl({ ...input, endpoint, privateKey, now: new Date() });
   }
 
+  /**
+   * One page of the files under `folder` created before `createdBefore`, oldest first. The caller
+   * filters the paths again: the search is a convenience, never the only check before a deletion.
+   */
+  async listFilesCreatedBefore(input: {
+    folder: string;
+    createdBefore: Date;
+    skip: number;
+    limit: number;
+  }): Promise<StoredFile[]> {
+    // The `path` parameter only looks one level deep; the `path :` operator of searchQuery takes the
+    // folder and every subfolder. With searchQuery, `type` is ignored, so folders may come back too.
+    const folder = `/${input.folder.replace(/^\/+|\/+$/g, "")}/`;
+    const query = new URLSearchParams({
+      searchQuery: `path : "${folder}" AND createdAt < "${input.createdBefore.toISOString()}"`,
+      sort: "ASC_CREATED",
+      skip: String(input.skip),
+      limit: String(input.limit),
+    });
+    const response = await this.managementRequest(`${managementEndpoint}?${query}`);
+    if (response.ok === false) throw new Error(`ImageKit file listing failed with status ${response.status}`);
+
+    const items = z.array(z.unknown()).parse(await response.json());
+
+    return items.flatMap((item) => {
+      const file = storedFileSchema.safeParse(item);
+
+      return file.success ? [file.data] : [];
+    });
+  }
+
+  /** Deletes up to 100 files in one call (ImageKit bulk delete). */
+  async deleteFilesById(fileIds: readonly string[]): Promise<void> {
+    if (fileIds.length === 0) return;
+
+    const ids = z.array(z.string().min(1)).max(MAX_FILES_PER_BULK_DELETE).parse(fileIds);
+    const response = await this.managementRequest(`${managementEndpoint}/batch/deleteByFileIds`, {
+      method: "POST",
+      body: JSON.stringify({ fileIds: ids }),
+    });
+    if (response.ok === false) throw new Error(`ImageKit bulk deletion failed with status ${response.status}`);
+  }
+
   async deleteObject(input: DeleteObjectInput): Promise<void> {
     const separator = input.key.lastIndexOf("/");
     if (separator < 0) return;
@@ -272,7 +321,10 @@ export class ImageKitStorageProvider implements StorageProvider {
     const { privateKey } = this.getConfig();
     return fetch(url, {
       ...init,
-      headers: { Authorization: `Basic ${Buffer.from(`${privateKey}:`).toString("base64")}` },
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${privateKey}:`).toString("base64")}`,
+        ...(init?.body == null ? {} : { "Content-Type": "application/json" }),
+      },
       cache: "no-store",
       signal: AbortSignal.timeout(10_000),
     });

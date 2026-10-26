@@ -172,6 +172,45 @@ it("deletes only an ImageKit asset with the exact storage path", async () => {
   expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "DELETE" });
 });
 
+it("lists the old files of a folder and its subfolders, skips folders, and bulk-deletes by id", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => [
+      { fileId: "f1", filePath: "/returns/item/a.jpg", createdAt: "2026-10-20T10:00:00.000Z", size: 1 },
+      { type: "folder", folderId: "d1", folderPath: "/returns/item", createdAt: "2026-10-20T10:00:00.000Z" },
+    ],
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  const provider = new ImageKitStorageProvider();
+
+  const files = await provider.listFilesCreatedBefore({
+    folder: "returns",
+    createdBefore: new Date("2026-10-22T07:41:00.000Z"),
+    skip: 100,
+    limit: 100,
+  });
+  await provider.deleteFilesById(["f1"]);
+
+  const listUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
+  expect(listUrl.origin + listUrl.pathname).toBe("https://api.imagekit.io/v1/files");
+  // The path parameter is one level only; the path operator of searchQuery covers the subfolders.
+  expect(Object.fromEntries(listUrl.searchParams)).toEqual({
+    searchQuery: 'path : "/returns/" AND createdAt < "2026-10-22T07:41:00.000Z"',
+    sort: "ASC_CREATED",
+    skip: "100",
+    limit: "100",
+  });
+  expect(files).toEqual([
+    { fileId: "f1", filePath: "/returns/item/a.jpg", createdAt: new Date("2026-10-20T10:00:00.000Z") },
+  ]);
+  expect(fetchMock.mock.calls[1]?.[0]).toBe("https://api.imagekit.io/v1/files/batch/deleteByFileIds");
+  expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+    method: "POST",
+    body: JSON.stringify({ fileIds: ["f1"] }),
+    headers: expect.objectContaining({ "Content-Type": "application/json" }),
+  });
+});
+
 it("sends a transactional email through the configured provider", async () => {
   sendEmail.mockResolvedValue({ data: { id: "email-test-id" }, error: null });
   const result = await new ResendEmailProvider().send({

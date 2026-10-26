@@ -32,6 +32,9 @@ const returnPhotoTargetSchema = z.object({
 });
 
 const RETURN_PHOTO_UPLOAD_LIMIT = { windowSeconds: 60, max: 10 };
+// A return takes at most 3 photos; 15 a day per item leaves room to retry without letting a script
+// fill the free ImageKit storage.
+const RETURN_PHOTO_DAILY_UPLOAD_LIMIT = { windowSeconds: 24 * 60 * 60, max: 15 };
 
 export type ReturnActionState = {
   error?: string;
@@ -93,6 +96,10 @@ export async function createReturnPhotoUploadAction(input: unknown): Promise<Ret
     const identity = await resolveReturnIdentity(parsed.data.orderNumber);
     if ("error" in identity) return identity;
     await assertRateLimit({ key: `return-photo-upload:${parsed.data.orderItemId}`, ...RETURN_PHOTO_UPLOAD_LIMIT });
+    await assertRateLimit({
+      key: `return-photo-upload-day:${parsed.data.orderItemId}`,
+      ...RETURN_PHOTO_DAILY_UPLOAD_LIMIT,
+    });
 
     const upload = await createReturnPhotoUpload(
       { orderNumber: parsed.data.orderNumber, orderItemId: parsed.data.orderItemId, identity: identity.identity },
