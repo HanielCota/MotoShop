@@ -43,6 +43,9 @@ const serverEnvSchema = z
     MERCADO_PAGO_API_URL: optionalUrl,
     MERCADO_PAGO_MULTI_SELLER_ENABLED: optionalBoolean,
     MERCADO_PAGO_WEBHOOK_SECRET: optionalString,
+    // Only with TEST- credentials and outside the Vercel production deployment (single-account-test-mode.ts).
+    MERCADO_PAGO_SINGLE_ACCOUNT_TEST_MODE: optionalBoolean,
+    VERCEL_ENV: optionalString,
     MELHOR_ENVIO_CLIENT_ID: optionalString,
     MELHOR_ENVIO_CLIENT_SECRET: optionalString,
     MELHOR_ENVIO_REDIRECT_URI: optionalUrl,

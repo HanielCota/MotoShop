@@ -14,6 +14,9 @@ import type {
 import { mercadoPagoRequest } from "./mercado-pago/http";
 import { mapPaymentResponse, mapRefundResponse } from "./mercado-pago/mappers";
 import { pixExpirationDate } from "./mercado-pago/pix-expiration";
+import { isSingleAccountTestModeActive } from "./mercado-pago/single-account-test-mode";
+
+const SINGLE_SELLER = 1;
 
 /**
  * Mercado Pago adapter: input validation and endpoint orchestration only.
@@ -24,7 +27,9 @@ export class MercadoPagoProvider implements PaymentProvider {
     // The marketplace has no seller-linked Mercado Pago OAuth connection yet.
     // A platform token plus application_fee is not a safe substitute for it.
     if (!Number.isSafeInteger(sellerCount) || sellerCount < 1) return false;
-    return false;
+
+    // Test mode only: one store, charged on the platform's own test account, with nothing to split.
+    return sellerCount === SINGLE_SELLER && this.isSingleAccountTestMode();
   }
 
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
@@ -75,7 +80,10 @@ export class MercadoPagoProvider implements PaymentProvider {
         // An unpaid Pix must not hold stock and coupons forever (M-06).
         ...(input.paymentMethodId === "pix" ? { date_of_expiration: pixExpirationDate(new Date()) } : {}),
         ...(env.MERCADO_PAGO_NOTIFICATION_URL ? { notification_url: env.MERCADO_PAGO_NOTIFICATION_URL } : {}),
-        ...(input.applicationFeeInCents !== undefined ? { application_fee: input.applicationFeeInCents / 100 } : {}),
+        // The platform's own test account charges itself: a marketplace fee only exists with a seller's token.
+        ...(input.applicationFeeInCents !== undefined && this.isSingleAccountTestMode() === false
+          ? { application_fee: input.applicationFeeInCents / 100 }
+          : {}),
       },
     });
 
@@ -125,6 +133,15 @@ export class MercadoPagoProvider implements PaymentProvider {
     });
 
     return mapRefundResponse(response);
+  }
+
+  private isSingleAccountTestMode(): boolean {
+    return isSingleAccountTestModeActive({
+      enabled: env.MERCADO_PAGO_SINGLE_ACCOUNT_TEST_MODE,
+      accessToken: env.MERCADO_PAGO_ACCESS_TOKEN,
+      publicKey: env.MERCADO_PAGO_PUBLIC_KEY,
+      deploymentEnvironment: env.VERCEL_ENV,
+    });
   }
 
   private assertConfigured(): void {
