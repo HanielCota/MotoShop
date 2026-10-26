@@ -95,11 +95,11 @@ export async function createReturnPhotoUploadAction(input: unknown): Promise<Ret
   try {
     const identity = await resolveReturnIdentity(parsed.data.orderNumber);
     if ("error" in identity) return identity;
-    await assertRateLimit({ key: `return-photo-upload:${parsed.data.orderItemId}`, ...RETURN_PHOTO_UPLOAD_LIMIT });
-    await assertRateLimit({
-      key: `return-photo-upload-day:${parsed.data.orderItemId}`,
-      ...RETURN_PHOTO_DAILY_UPLOAD_LIMIT,
-    });
+    // The order number was just checked against the caller's account or cookie, so it is part of the
+    // key: someone else's order cannot spend the quota of an item that is not theirs.
+    const quotaKey = `${parsed.data.orderNumber}:${parsed.data.orderItemId}`;
+    await assertRateLimit({ key: `return-photo-upload:${quotaKey}`, ...RETURN_PHOTO_UPLOAD_LIMIT });
+    await assertRateLimit({ key: `return-photo-upload-day:${quotaKey}`, ...RETURN_PHOTO_DAILY_UPLOAD_LIMIT });
 
     const upload = await createReturnPhotoUpload(
       { orderNumber: parsed.data.orderNumber, orderItemId: parsed.data.orderItemId, identity: identity.identity },
