@@ -35,3 +35,16 @@ it("does not query the database when no item still has its product", async () =>
   expect((await getOrderItemThumbnails([{ id: "item", productId: null, variantId: null }])).size).toBe(0);
   expect(mocks.findMany).not.toHaveBeenCalled();
 });
+
+it("returns photos only for the requested items, even when the query brings other products' images", async () => {
+  mocks.findMany.mockResolvedValue([
+    { productId: "product-a", storageKey: "a.jpg", variantId: null, altText: null },
+    { productId: "product-other", storageKey: "other.jpg", variantId: null, altText: null },
+  ]);
+
+  const thumbnails = await getOrderItemThumbnails([{ id: "item-a", productId: "product-a", variantId: null }]);
+
+  expect([...thumbnails.keys()]).toEqual(["item-a"]);
+  expect([...thumbnails.values()].map((thumbnail) => thumbnail.url)).toEqual(["https://ik.example/a.jpg"]);
+  expect(mocks.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { productId: { in: ["product-a"] } } }));
+});
