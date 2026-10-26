@@ -31,7 +31,7 @@ afterEach(() => {
 });
 
 it("keeps the photos clickable while the signed links are valid", () => {
-  render(<ReturnPhotoLinks title="Fotos do cliente" photos={photos} expiresAt={Date.now() + 60_000} />);
+  render(<ReturnPhotoLinks title="Fotos do cliente" photos={photos} validForMs={60_000} />);
 
   expect(screen.getByRole("link", { name: "Abrir foto 1 em tamanho real" })).toHaveAttribute(
     "href",
@@ -41,7 +41,7 @@ it("keeps the photos clickable while the signed links are valid", () => {
 });
 
 it("says the links expired when their time is up, and asks the server for fresh ones", () => {
-  render(<ReturnPhotoLinks title="Fotos do cliente" photos={photos} expiresAt={Date.now() + 60_000} />);
+  render(<ReturnPhotoLinks title="Fotos do cliente" photos={photos} validForMs={60_000} />);
 
   act(() => {
     vi.advanceTimersByTime(60_000);
@@ -53,7 +53,7 @@ it("says the links expired when their time is up, and asks the server for fresh 
 });
 
 it("renews the links instead of opening an expired photo", () => {
-  render(<ReturnPhotoLinks title="Fotos do cliente" photos={photos} expiresAt={Date.now() - 1} />);
+  render(<ReturnPhotoLinks title="Fotos do cliente" photos={photos} validForMs={0} />);
   act(() => {
     vi.advanceTimersByTime(0);
   });
@@ -65,9 +65,20 @@ it("renews the links instead of opening an expired photo", () => {
 });
 
 it("treats a thumbnail that fails to load as an expired link", () => {
-  render(<ReturnPhotoLinks title="Fotos do cliente" photos={photos} expiresAt={Date.now() + 60_000} />);
+  render(<ReturnPhotoLinks title="Fotos do cliente" photos={photos} validForMs={60_000} />);
 
   fireEvent.error(screen.getByRole("img", { name: "Foto 1 da devolução" }));
 
   expect(screen.getByText("Os links das fotos expiraram.")).toBeInTheDocument();
+});
+
+it("ignores the device clock: a phone set ten minutes ahead still shows the fresh photos", () => {
+  vi.setSystemTime(Date.now() + 10 * 60_000);
+  render(<ReturnPhotoLinks title="Fotos do cliente" photos={photos} validForMs={60_000} />);
+
+  act(() => {
+    vi.advanceTimersByTime(59_000);
+  });
+
+  expect(screen.queryByText("Os links das fotos expiraram.")).not.toBeInTheDocument();
 });

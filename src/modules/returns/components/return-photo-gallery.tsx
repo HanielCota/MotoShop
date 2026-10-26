@@ -44,9 +44,9 @@ export function ReturnPhotoGallery({ photos, title }: { photos: readonly ReturnP
   if (signed == null)
     return <p className="text-muted-foreground text-xs">As fotos da devolução estão indisponíveis agora.</p>;
 
-  const expiresAt =
-    signedAt + (RETURN_PHOTO_LINK_TTL_IN_SECONDS - LINK_EXPIRY_MARGIN_IN_SECONDS) * MILLISECONDS_PER_SECOND;
+  // A duration, not a time of day: the viewer's device clock may be off from the server's.
+  const validForMs = (RETURN_PHOTO_LINK_TTL_IN_SECONDS - LINK_EXPIRY_MARGIN_IN_SECONDS) * MILLISECONDS_PER_SECOND;
 
   // key: fresh links (after "Mostrar as fotos de novo") start a new countdown.
-  return <ReturnPhotoLinks key={expiresAt} title={title} photos={signed} expiresAt={expiresAt} />;
+  return <ReturnPhotoLinks key={signedAt} title={title} photos={signed} validForMs={validForMs} />;
 }

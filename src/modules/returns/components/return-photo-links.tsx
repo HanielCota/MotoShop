@@ -11,28 +11,29 @@ import { RETURN_PHOTO_THUMBNAIL_WIDTH } from "../domain/return-photos";
 export type SignedReturnPhoto = { id: string; thumbnailUrl: string; fullUrl: string };
 
 /**
- * Thumbnails of the private return photos. The signed links stop working at `expiresAt`; from then on
+ * Thumbnails of the private return photos. The signed links stop working `validForMs` after they arrive
+ * (counted from here, so a wrong device clock does not matter); from then on
  * (or as soon as a thumbnail fails to load) the gallery says so and asks the server for fresh links,
  * instead of opening ImageKit's error page.
  */
 export function ReturnPhotoLinks({
   title,
   photos,
-  expiresAt,
+  validForMs,
 }: {
   title: string;
   photos: readonly SignedReturnPhoto[];
-  expiresAt: number;
+  validForMs: number;
 }) {
   const router = useRouter();
   const [expired, setExpired] = useState(false);
   const [renewing, startRenewing] = useTransition();
 
   useEffect(() => {
-    const timer = setTimeout(() => setExpired(true), Math.max(0, expiresAt - Date.now()));
+    const timer = setTimeout(() => setExpired(true), Math.max(0, validForMs));
 
     return () => clearTimeout(timer);
-  }, [expiresAt]);
+  }, [validForMs]);
 
   function renewLinks() {
     startRenewing(() => router.refresh());
