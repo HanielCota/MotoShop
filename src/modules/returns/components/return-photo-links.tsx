@@ -53,7 +53,7 @@ export function ReturnPhotoLinks({
               className="border-border bg-card focus-visible:ring-ring/50 block size-20 overflow-hidden rounded-md border focus-visible:ring-3 focus-visible:outline-none"
               aria-label={`Abrir foto ${index + 1} em tamanho real`}
               onClick={(event) => {
-                if (!expired) return;
+                if (expired === false) return;
 
                 event.preventDefault();
                 renewLinks();

@@ -10,6 +10,7 @@ export type ReturnPhotoSummary = { id: string; storageKey: string };
 
 // The page says the links expired a little before ImageKit refuses them, so no click lands on an error.
 const LINK_EXPIRY_MARGIN_IN_SECONDS = 30;
+const MILLISECONDS_PER_SECOND = 1000;
 
 /** Links assinados de 10 minutos; quem renderiza já passou pela checagem de acesso da página. */
 function signPhotos(photos: readonly ReturnPhotoSummary[]): SignedReturnPhoto[] | null {
@@ -43,7 +44,8 @@ export function ReturnPhotoGallery({ photos, title }: { photos: readonly ReturnP
   if (signed == null)
     return <p className="text-muted-foreground text-xs">As fotos da devolução estão indisponíveis agora.</p>;
 
-  const expiresAt = signedAt + (RETURN_PHOTO_LINK_TTL_IN_SECONDS - LINK_EXPIRY_MARGIN_IN_SECONDS) * 1000;
+  const expiresAt =
+    signedAt + (RETURN_PHOTO_LINK_TTL_IN_SECONDS - LINK_EXPIRY_MARGIN_IN_SECONDS) * MILLISECONDS_PER_SECOND;
 
   // key: fresh links (after "Mostrar as fotos de novo") start a new countdown.
   return <ReturnPhotoLinks key={expiresAt} title={title} photos={signed} expiresAt={expiresAt} />;
