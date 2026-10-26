@@ -77,7 +77,7 @@ export function SellerOrderAfterSales({
 
   if (total === 0) return null;
 
-  const orderItems = <ItemLines items={order.items} thumbnails={thumbnails} />;
+  const orderItems = describeItemLines(order.items, thumbnails);
 
   return (
     <section aria-label="Pós-venda" className="flex flex-col gap-2">
@@ -123,7 +123,7 @@ function ReturnBlock({ request, thumbnails }: { request: ReturnSummary; thumbnai
       domain="return"
       status={request.status}
       details={[
-        ["Itens", <ItemLines key="items" items={items} thumbnails={thumbnails} />],
+        ["Itens", describeItemLines(items, thumbnails)],
         ["Motivo", returnReasonLabels[request.reason] ?? request.reason],
         ["Mensagem do cliente", request.customerMessage],
         ["Valor estimado", formatMoneyInCents(request.amountInCents)],
@@ -197,6 +197,13 @@ function AfterSalesBlock({
 }
 
 type ItemLine = { id: string; quantity: number; productNameSnapshot: string; skuSnapshot: string };
+
+/** The item lines, or nothing without items, so the "Itens" row is left out as an empty text was. */
+function describeItemLines(items: readonly ItemLine[], thumbnails: Thumbnails): ReactNode {
+  if (items.length === 0) return null;
+
+  return <ItemLines items={items} thumbnails={thumbnails} />;
+}
 
 /** The item lines as before ("1 × Name · SKU X; ..."), each with the product photo at its start. */
 function ItemLines({ items, thumbnails }: { items: readonly ItemLine[]; thumbnails: Thumbnails }) {

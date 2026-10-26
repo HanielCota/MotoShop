@@ -196,4 +196,25 @@ describe("SellerOrderAfterSales", () => {
     expect(withoutPhoto?.querySelector("img")).toBeNull();
     expect(items).toHaveTextContent("Itens: 1 × Botas Terra Trail · SKU SKU-BOTA; 2 × Vela · SKU SKU-VELA");
   });
+
+  it("leaves the items row out when the request has no item of this store", () => {
+    const order = buildOrder({
+      returnRequests: [
+        {
+          id: "r1",
+          status: "REQUESTED",
+          reason: "NOT_AS_DESCRIBED",
+          customerMessage: null,
+          amountInCents: 0,
+          createdAt,
+          photos: [],
+          items: [],
+        },
+      ],
+    });
+
+    render(<SellerOrderAfterSales order={order} thumbnails={noThumbnails} />);
+
+    expect(blockFor("Devolução").queryByText("Itens:")).not.toBeInTheDocument();
+  });
 });
