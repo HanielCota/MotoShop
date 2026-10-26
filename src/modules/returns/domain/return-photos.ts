@@ -5,6 +5,8 @@ export const MAX_RETURN_PHOTOS = 3;
 export const MAX_RETURN_PHOTO_SIZE_IN_BYTES = 5 * 1024 * 1024;
 /** Validade do link assinado que abre a foto privada. */
 export const RETURN_PHOTO_LINK_TTL_IN_SECONDS = 10 * 60;
+/** Largura da miniatura assinada (tr:w-N), a mesma desenhada na galeria. */
+export const RETURN_PHOTO_THUMBNAIL_WIDTH = 160;
 
 export const returnPhotoExtensions = {
   "image/jpeg": "jpg",

@@ -1,20 +1,19 @@
 import "server-only";
 
-import Image from "next/image";
-
 import { ImageKitStorageProvider } from "@/lib/storage/imagekit-storage-provider";
 import { logger } from "@/lib/logger";
 
-import { RETURN_PHOTO_LINK_TTL_IN_SECONDS } from "../domain/return-photos";
+import { RETURN_PHOTO_LINK_TTL_IN_SECONDS, RETURN_PHOTO_THUMBNAIL_WIDTH } from "../domain/return-photos";
+import { ReturnPhotoLinks, type SignedReturnPhoto } from "./return-photo-links";
 
 export type ReturnPhotoSummary = { id: string; storageKey: string };
 
-const THUMBNAIL_WIDTH = 160;
-
-type SignedPhoto = { id: string; thumbnailUrl: string; fullUrl: string };
+// The page says the links expired a little before ImageKit refuses them, so no click lands on an error.
+const LINK_EXPIRY_MARGIN_IN_SECONDS = 30;
+const MILLISECONDS_PER_SECOND = 1000;
 
 /** Links assinados de 10 minutos; quem renderiza já passou pela checagem de acesso da página. */
-function signPhotos(photos: readonly ReturnPhotoSummary[]): SignedPhoto[] | null {
+function signPhotos(photos: readonly ReturnPhotoSummary[]): SignedReturnPhoto[] | null {
   try {
     const provider = new ImageKitStorageProvider();
     const sign = (key: string, width?: number) =>
@@ -26,7 +25,7 @@ function signPhotos(photos: readonly ReturnPhotoSummary[]): SignedPhoto[] | null
 
     return photos.map((photo) => ({
       id: photo.id,
-      thumbnailUrl: sign(photo.storageKey, THUMBNAIL_WIDTH),
+      thumbnailUrl: sign(photo.storageKey, RETURN_PHOTO_THUMBNAIL_WIDTH),
       fullUrl: sign(photo.storageKey),
     }));
   } catch (error) {
@@ -39,39 +38,15 @@ function signPhotos(photos: readonly ReturnPhotoSummary[]): SignedPhoto[] | null
 export function ReturnPhotoGallery({ photos, title }: { photos: readonly ReturnPhotoSummary[]; title: string }) {
   if (photos.length === 0) return null;
 
+  // oxlint-disable-next-line react/purity -- Server Component: the links are signed once per request, here.
+  const signedAt = Date.now();
   const signed = signPhotos(photos);
   if (signed == null)
     return <p className="text-muted-foreground text-xs">As fotos da devolução estão indisponíveis agora.</p>;
 
-  return (
-    <div className="mt-1">
-      <p className="text-foreground text-sm font-medium">
-        {title} ({signed.length})
-      </p>
-      <ul className="mt-1 flex flex-wrap gap-2">
-        {signed.map((photo, index) => (
-          <li key={photo.id}>
-            <a
-              href={photo.fullUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="border-border bg-card focus-visible:ring-ring/50 block size-20 overflow-hidden rounded-md border focus-visible:ring-3 focus-visible:outline-none"
-              aria-label={`Abrir foto ${index + 1} em tamanho real`}
-            >
-              {/* unoptimized: a foto é privada e não pode ficar no cache de imagens do Next. */}
-              <Image
-                src={photo.thumbnailUrl}
-                alt={`Foto ${index + 1} da devolução`}
-                width={THUMBNAIL_WIDTH}
-                height={THUMBNAIL_WIDTH}
-                unoptimized
-                className="size-full object-cover"
-              />
-            </a>
-          </li>
-        ))}
-      </ul>
-      <p className="text-muted-foreground mt-1 text-xs">Toque na foto para abrir em tamanho real.</p>
-    </div>
-  );
+  // A duration, not a time of day: the viewer's device clock may be off from the server's.
+  const validForMs = (RETURN_PHOTO_LINK_TTL_IN_SECONDS - LINK_EXPIRY_MARGIN_IN_SECONDS) * MILLISECONDS_PER_SECOND;
+
+  // key: fresh links (after "Mostrar as fotos de novo") start a new countdown.
+  return <ReturnPhotoLinks key={signedAt} title={title} photos={signed} validForMs={validForMs} />;
 }
