@@ -33,6 +33,7 @@ import { join } from "node:path";
 
 import { PrismaClient, type Prisma } from "../src/generated/prisma/client";
 import type { ReviewStoreCode } from "./review-seed-content";
+import { NATIONWIDE_REVIEW_METHOD, WHOLE_COUNTRY } from "./review-shipping";
 import { ensureReviewCouponsAndCampaign, ensureReviewVariantColumns } from "./review-seed-catalog-extras";
 import { renderStoreBanner, renderStoreLogo, seedExpandedData } from "./review-seed-expanded";
 import { must, requireEnv } from "./must";
@@ -926,6 +927,16 @@ async function ensureStores(userIds: Record<UserKey, string>) {
       days: 8,
       active: true,
     },
+    // Demo stores deliver to the whole country, so no demo order is refused by its CEP.
+    ...(["garagem", "box77", "racing", "areia"] as const).map((store) => ({
+      store,
+      name: NATIONWIDE_REVIEW_METHOD.name,
+      start: WHOLE_COUNTRY.postalCodeStart,
+      end: WHOLE_COUNTRY.postalCodeEnd,
+      price: NATIONWIDE_REVIEW_METHOD.priceInCents,
+      days: NATIONWIDE_REVIEW_METHOD.estimatedDeliveryDays,
+      active: true,
+    })),
   ];
   for (const method of methods) {
     const sellerId = result[method.store].sellerId;
