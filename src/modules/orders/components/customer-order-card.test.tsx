@@ -2,9 +2,6 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 
-vi.mock("@/shared/storage/public-storage-url", () => ({
-  getPublicStorageImageUrl: (key: string) => `/images/${key}`,
-}));
 vi.mock("next/image", () => ({
   // oxlint-disable-next-line nextjs/no-img-element
   default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
@@ -27,8 +24,8 @@ const order = {
       status: "PENDING_PAYMENT",
       storeNameSnapshot: "Garagem MX",
       items: [
-        { id: "i-1", productNameSnapshot: "Filtro de ar", product: { images: [{ storageKey: "demo/filtro.webp" }] } },
-        { id: "i-2", productNameSnapshot: "Vela", product: null },
+        { id: "i-1", productNameSnapshot: "Filtro de ar", productId: "p-1", variantId: "v-1" },
+        { id: "i-2", productNameSnapshot: "Vela", productId: null, variantId: null },
       ],
       shipment: null,
     },
@@ -36,7 +33,7 @@ const order = {
 } as unknown as ComponentProps<typeof CustomerOrderCard>["order"];
 
 it("shows one customer-facing status, the first product and links the whole card", () => {
-  render(<CustomerOrderCard order={order} />);
+  render(<CustomerOrderCard order={order} thumbnailUrl="/images/demo/filtro.webp" />);
 
   expect(screen.getByText("Pague para confirmar")).toBeInTheDocument();
   expect(screen.queryByText(/Pagamento:/)).not.toBeInTheDocument();
@@ -49,9 +46,14 @@ it("shows one customer-facing status, the first product and links the whole card
 it("shows the same placeholder as the cart when the first product has no photo", () => {
   const withoutPhoto = {
     ...order,
-    sellerOrders: [{ ...order.sellerOrders[0], items: [{ id: "i-2", productNameSnapshot: "Vela", product: null }] }],
+    sellerOrders: [
+      {
+        ...order.sellerOrders[0],
+        items: [{ id: "i-2", productNameSnapshot: "Vela", productId: null, variantId: null }],
+      },
+    ],
   } as unknown as ComponentProps<typeof CustomerOrderCard>["order"];
-  render(<CustomerOrderCard order={withoutPhoto} />);
+  render(<CustomerOrderCard order={withoutPhoto} thumbnailUrl={undefined} />);
 
   const thumbnail = screen.getByTestId("cart-item-thumbnail");
   expect(thumbnail).toHaveAttribute("aria-hidden", "true");
