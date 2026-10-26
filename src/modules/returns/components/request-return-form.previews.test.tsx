@@ -61,9 +61,8 @@ it("frees the preview memory when a photo is removed", () => {
   fireEvent.click(screen.getByRole("button", { name: "Remover risco.jpg" }));
 
   expect(previewSources()).toEqual(["blob:preview/caixa.jpg"]);
-  expect(revokeObjectURL).toHaveBeenCalledWith("blob:preview/risco.jpg");
-  // Every preview URL ever created is either still on screen or already freed.
-  expect(createObjectURL.mock.calls.length - revokeObjectURL.mock.calls.length).toBe(previewSources().length);
+  expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith("blob:preview/risco.jpg");
+  expect(createObjectURL).toHaveBeenCalledTimes(2);
 });
 
 it("frees every preview once the return is sent", async () => {

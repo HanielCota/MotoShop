@@ -56,6 +56,20 @@ export async function discardReturnPhotos(target: ReturnPhotoTarget, photos: rea
   await Promise.allSettled(photos.map((photo) => removeReturnPhotoUploadAction({ ...target, key: photo.key })));
 }
 
+// Stable list key per chosen file: removing one photo must not remount (and reload) the others.
+const fileKeys = new WeakMap<File, number>();
+let lastFileKey = 0;
+
+function keyOf(file: File): number {
+  const existing = fileKeys.get(file);
+  if (existing != null) return existing;
+
+  lastFileKey += 1;
+  fileKeys.set(file, lastFileKey);
+
+  return lastFileKey;
+}
+
 /**
  * Miniatura local da foto escolhida, sem enviar nada: a URL temporária existe enquanto a foto está na
  * lista e é liberada quando ela sai (removida, ou a lista esvaziada depois do envio).
@@ -142,10 +156,7 @@ export function ReturnPhotoPicker({
       {files.length > 0 ? (
         <ul className="space-y-1 text-sm" aria-label="Fotos anexadas">
           {files.map((file, index) => (
-            <li
-              key={`${file.name}-${file.lastModified}-${index}`}
-              className="border-border bg-card flex items-center gap-3 rounded-md border p-1"
-            >
+            <li key={keyOf(file)} className="border-border bg-card flex items-center gap-3 rounded-md border p-1">
               <ReturnPhotoPreview file={file} />
               <span className="min-w-0 flex-1 truncate">{file.name}</span>
               <button
