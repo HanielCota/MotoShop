@@ -68,7 +68,7 @@ export function RequestReturnForm({ orderNumber, orderItemId, maxQuantity, idemp
       const uploaded = await uploadPhotosOrError(target, photos);
       if ("error" in uploaded) return { error: uploaded.error };
 
-      return submitReturnWithoutOrphanPhotos({
+      const result = await submitReturnWithoutOrphanPhotos({
         target,
         photos: uploaded.photos,
         submit: async () =>
@@ -81,6 +81,10 @@ export function RequestReturnForm({ orderNumber, orderItemId, maxQuantity, idemp
             photos: uploaded.photos,
           }),
       });
+      // Sent: the photos are on the server now, so the local previews go away and free their memory.
+      if (result.result != null) setPhotos([]);
+
+      return result;
     },
     initialState,
   );
