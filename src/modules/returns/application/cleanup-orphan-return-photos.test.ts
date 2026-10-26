@@ -73,6 +73,35 @@ describe("orphan return photo cleanup", () => {
     expect(summary).toMatchObject({ orphans: 1, deleted: 1, apiCalls: 2 });
   });
 
+  it("moves the next page back by the files it deleted, so no file is skipped", async () => {
+    const page = (offset: number, length: number) =>
+      Array.from({ length }, (_, index) =>
+        file(`0b8a8f0e-6c38-4f8e-9f3c-${String(offset + index).padStart(12, "0")}.jpg`),
+      );
+    const firstPage = page(0, 100);
+    const secondPage = page(100, 30);
+    const attachedKeys = new Set(firstPage.slice(0, 60).map((photo) => photo.filePath.slice(1)));
+    const listFiles = vi.fn(async ({ skip }: { skip: number }) => (skip === 0 ? firstPage : secondPage));
+    const deps = dependencies({
+      deletesFiles: true,
+      listFiles,
+      findAttachedStorageKeys: vi.fn(async () => attachedKeys),
+    });
+
+    const summary = await cleanupOrphanReturnPhotos(deps);
+
+    expect(listFiles.mock.calls.map(([input]) => input.skip)).toEqual([0, 60]);
+    expect(deps.deleteFiles).toHaveBeenNthCalledWith(
+      1,
+      firstPage.slice(60).map((photo) => photo.fileId),
+    );
+    expect(deps.deleteFiles).toHaveBeenNthCalledWith(
+      2,
+      secondPage.map((photo) => photo.fileId),
+    );
+    expect(summary).toMatchObject({ scanned: 130, orphans: 70, deleted: 70, apiCalls: 4 });
+  });
+
   it("stops after ten pages, so a run makes at most ten listing calls", async () => {
     const fullPage = Array.from({ length: 100 }, (_, index) =>
       file(`0b8a8f0e-6c38-4f8e-9f3c-${String(index).padStart(12, "0")}.jpg`),
