@@ -29,6 +29,7 @@ import { requestDisputeAction } from "@/modules/disputes/actions/dispute-actions
 
 import { requestCancellationAction } from "./cancellation-actions";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
+import { ApplicationError } from "@/shared/errors/application-error";
 
 import { createReturnPhotoUpload } from "../application/return-photo-uploads";
 import { createReturnPhotoUploadAction, requestReturnAction } from "./return-actions";
@@ -136,11 +137,12 @@ describe("return photo upload authorization", () => {
   });
 
   it("does not let another customer spend the daily quota of an item that is not theirs", async () => {
+    const dailyUploadLimit = 15;
     const counts = new Map<string, number>();
     vi.mocked(assertRateLimit).mockImplementation(async ({ key, max }) => {
       const count = (counts.get(key) ?? 0) + 1;
       counts.set(key, count);
-      if (count > max) throw new Error("rate limited");
+      if (count > max) throw new ApplicationError({ code: "CONFLICT", statusCode: 429, message: "Muitas tentativas." });
     });
     vi.mocked(createReturnPhotoUpload).mockImplementation(async (target) => {
       if (target.orderNumber !== "MS-OWNER") throw new Error("Item do pedido não encontrado.");
@@ -153,7 +155,7 @@ describe("return photo upload authorization", () => {
       createReturnPhotoUploadAction({ orderNumber, orderItemId: cuid, contentType: "image/jpeg", sizeInBytes: 1024 });
 
     // An attacker with an order of their own sends the victim's item id 15 times.
-    for (let attempt = 0; attempt < 15; attempt += 1) await upload("MS-ATTACKER");
+    for (let attempt = 0; attempt < dailyUploadLimit; attempt += 1) await upload("MS-ATTACKER");
 
     await expect(upload("MS-OWNER")).resolves.toHaveProperty("url");
   });
