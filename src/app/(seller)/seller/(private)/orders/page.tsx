@@ -70,8 +70,14 @@ export default async function SellerOrdersPage({
     listSellerOrders(context.seller.id, params),
     countSellerOrdersByStatus(context.seller.id),
   ]);
-  // The items come from this seller's orders only (listSellerOrders filters by sellerId).
-  const thumbnails = await getOrderItemThumbnails(result.orders.flatMap((order) => order.items));
+  // The items come from this seller's orders only (listSellerOrders filters by sellerId). Only the
+  // own-delivery and after-sales blocks list items, so only those orders need photos.
+  const ordersWithItemLists = result.orders.filter(
+    (order) =>
+      order.shipment?.provider === "OWN" ||
+      order.cancellationRequests.length + order.returnRequests.length + order.disputes.length > 0,
+  );
+  const thumbnails = await getOrderItemThumbnails(ordersWithItemLists.flatMap((order) => order.items));
   const queue = resolveSellerOrderQueue(params.queue, params.status);
   const queueCounts = {
     TO_PREPARE: countSellerOrdersInQueue("TO_PREPARE", countsByStatus),
