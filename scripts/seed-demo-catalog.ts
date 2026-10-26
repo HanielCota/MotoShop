@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 import { PrismaClient } from "../src/generated/prisma/client";
 import { must } from "./must";
+import { demoCatalogProductDescription, demoStoreDescription, isSameDemoName } from "./review-texts";
 
 config({ path: ".env.local", quiet: true });
 
@@ -16,22 +17,31 @@ const database = new PrismaClient({ adapter: new PrismaNeon({ connectionString: 
 const stores = [
   {
     slug: "demo-pista-norte",
-    name: "Pista Norte · demonstração",
-    description: "Loja fictícia criada para apresentar a experiência do Moto Shop.",
+    name: "Pista Norte",
+    description: demoStoreDescription("demo-pista-norte"),
   },
   {
     slug: "demo-trilha-sul",
-    name: "Trilha Sul · demonstração",
-    description: "Loja fictícia de equipamentos e peças para testes visuais do marketplace.",
+    name: "Trilha Sul",
+    description: demoStoreDescription("demo-trilha-sul"),
   },
 ] as const;
+
+/** True when a stored demo store keeps this seed's name, with or without the old "· demonstração". */
+function isSeededStoreName(slug: string, storedName: string): boolean {
+  const definition = must(
+    stores.find((store) => store.slug === slug),
+    `demo store ${slug}`,
+  );
+
+  return isSameDemoName(storedName, definition.name);
+}
 
 const products = [
   {
     slug: "demo-capacete-off-road-apex",
     name: "Capacete off-road Apex preto e laranja",
-    description:
-      "Capacete off-road demonstrativo com pala alongada, queixeira ventilada e acabamento preto fosco com detalhes laranja. Imagem, preço e disponibilidade são ilustrativos; não há produto físico à venda. Confira sempre certificação e tabela de medidas antes de escolher um capacete real.",
+    description: demoCatalogProductDescription("demo-capacete-off-road-apex"),
     storeSlug: stores[0].slug,
     categorySlug: "equipment-helmets",
     brandSlug: "apex-demo",
@@ -68,8 +78,7 @@ const products = [
   {
     slug: "demo-botas-off-road-terra",
     name: "Botas off-road Terra pretas e laranja",
-    description:
-      "Par de botas off-road demonstrativas com cano alto, fivelas ajustáveis, reforço frontal e sola tratorada. Fotografia gerada para testes do catálogo; numeração, preço e estoque são ilustrativos. Não há produto físico à venda.",
+    description: demoCatalogProductDescription("demo-botas-off-road-terra"),
     storeSlug: stores[0].slug,
     categorySlug: "equipment-boots",
     brandSlug: "terra-demo",
@@ -106,8 +115,7 @@ const products = [
   {
     slug: "demo-oculos-off-road-vista",
     name: "Óculos off-road Vista com lente transparente",
-    description:
-      "Óculos de motocross demonstrativos com armação preta, cinta elástica laranja e lente transparente. A foto representa apenas o visual do item; não especifica certificação, tratamento da lente ou produto real. Preço e estoque são ilustrativos.",
+    description: demoCatalogProductDescription("demo-oculos-off-road-vista"),
     storeSlug: stores[1].slug,
     categorySlug: "equipment-goggles",
     brandSlug: "apex-demo",
@@ -128,8 +136,7 @@ const products = [
   {
     slug: "demo-disco-de-freio-onda",
     name: "Disco de freio dianteiro Onda",
-    description:
-      "Disco de freio dianteiro ondulado demonstrativo em aço, fotografado isoladamente. Medidas, aplicação e compatibilidade não foram verificadas e não devem orientar a compra de uma peça real. Imagem, preço e estoque são apenas para apresentação.",
+    description: demoCatalogProductDescription("demo-disco-de-freio-onda"),
     storeSlug: stores[1].slug,
     categorySlug: "parts-brakes",
     brandSlug: "terra-demo",
@@ -219,9 +226,7 @@ async function main() {
       if (
         demoStores.length !== stores.length ||
         demoStores.some(
-          (store) =>
-            store.name !== stores.find((definition) => definition.slug === store.slug)?.name ||
-            store.seller.status !== "PENDING",
+          (store) => isSeededStoreName(store.slug, store.name) === false || store.seller.status !== "PENDING",
         )
       ) {
         throw new Error("Demo stores are missing or not pending; refusing to publish.");
@@ -279,7 +284,7 @@ async function main() {
     select: { slug: true, name: true },
   });
   for (const store of storeCollisions) {
-    if (store.name !== stores.find((item) => item.slug === store.slug)?.name) {
+    if (isSeededStoreName(store.slug, store.name) === false) {
       throw new Error(`Refusing to modify unrelated store: ${store.slug}`);
     }
   }
