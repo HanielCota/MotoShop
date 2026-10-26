@@ -137,7 +137,8 @@ export class MercadoPagoProvider implements PaymentProvider {
 
   private isSingleAccountTestMode(): boolean {
     return isSingleAccountTestModeActive({
-      enabled: env.MERCADO_PAGO_SINGLE_ACCOUNT_TEST_MODE,
+      testDatabaseHost: env.MERCADO_PAGO_TEST_MODE_DATABASE_HOST,
+      databaseUrl: env.DATABASE_URL,
       accessToken: env.MERCADO_PAGO_ACCESS_TOKEN,
       publicKey: env.MERCADO_PAGO_PUBLIC_KEY,
       deploymentEnvironment: env.VERCEL_ENV,

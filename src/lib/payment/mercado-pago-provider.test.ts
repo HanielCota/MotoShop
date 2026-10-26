@@ -7,7 +7,8 @@ const paymentEnv = vi.hoisted(() => ({
   MERCADO_PAGO_NOTIFICATION_URL: undefined as string | undefined,
   MERCADO_PAGO_WEBHOOK_SECRET: undefined as string | undefined,
   MERCADO_PAGO_PUBLIC_KEY: undefined as string | undefined,
-  MERCADO_PAGO_SINGLE_ACCOUNT_TEST_MODE: undefined as boolean | undefined,
+  MERCADO_PAGO_TEST_MODE_DATABASE_HOST: undefined as string | undefined,
+  DATABASE_URL: "postgresql://user:password@test-branch.example.test/neondb",
   VERCEL_ENV: undefined as string | undefined,
 }));
 
@@ -29,7 +30,7 @@ afterEach(() => {
   paymentEnv.MERCADO_PAGO_NOTIFICATION_URL = undefined;
   paymentEnv.MERCADO_PAGO_WEBHOOK_SECRET = undefined;
   paymentEnv.MERCADO_PAGO_ACCESS_TOKEN = "TEST_TOKEN";
-  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_TEST_MODE = undefined;
+  paymentEnv.MERCADO_PAGO_TEST_MODE_DATABASE_HOST = undefined;
   paymentEnv.VERCEL_ENV = undefined;
 });
 
@@ -276,7 +277,7 @@ it("blocks marketplace charges until seller-linked Mercado Pago OAuth is availab
 
 it("charges a one-store order on the platform test account without a marketplace fee in test mode", async () => {
   paymentEnv.MERCADO_PAGO_ACCESS_TOKEN = "TEST-1234567890";
-  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_TEST_MODE = true;
+  paymentEnv.MERCADO_PAGO_TEST_MODE_DATABASE_HOST = "test-branch.example.test";
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 789, status: "approved" }) });
   vi.stubGlobal("fetch", fetchMock);
   const provider = new MercadoPagoProvider();
@@ -299,9 +300,9 @@ it("charges a one-store order on the platform test account without a marketplace
   expect(body).not.toHaveProperty("application_fee");
 });
 
-it("keeps blocking charges in the Vercel production deployment even with the test mode flag", async () => {
+it("keeps blocking charges in the Vercel production deployment even with the test database", async () => {
   paymentEnv.MERCADO_PAGO_ACCESS_TOKEN = "TEST-1234567890";
-  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_TEST_MODE = true;
+  paymentEnv.MERCADO_PAGO_TEST_MODE_DATABASE_HOST = "test-branch.example.test";
   paymentEnv.VERCEL_ENV = "production";
   const fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);
