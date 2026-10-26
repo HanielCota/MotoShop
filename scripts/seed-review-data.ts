@@ -726,7 +726,7 @@ async function findOrCreateReviewStore(key: StoreKey, definition: (typeof storeD
     where: { slug: definition.slug },
     include: { seller: { select: { status: true } } },
   });
-  if (store && !isSameDemoName(store.name, definition.name))
+  if (store != null && isSameDemoName(store.name, definition.name) === false)
     throw new Error(`Refusing to touch unrelated store ${definition.slug}`);
   if (store) {
     track("Seller", false);
@@ -984,7 +984,7 @@ async function ensureProducts(stores: Awaited<ReturnType<typeof ensureStores>>, 
   const productIds = new Map<string, string>();
 
   for (const definition of products) {
-    if (!definition.slug.startsWith("review-")) throw new Error("Unsafe product");
+    if (definition.slug.startsWith("review-") === false) throw new Error(`Unsafe product ${definition.slug}`);
     const store = stores[definition.store];
     const categoryId = categories.get(definition.categorySlug);
     const brandId = brands.get(definition.brandSlug);

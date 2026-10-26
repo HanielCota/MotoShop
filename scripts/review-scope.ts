@@ -25,7 +25,7 @@ export function reviewBrandId(label: string): string {
 }
 
 /** Demo brands: one of the deterministic fallback IDs with a "review-marca-*" slug, used by no other product. */
-export function reviewBrandWhere(reviewProductIds: string[]) {
+export function reviewBrandWhere(reviewProductIds: string[]): Prisma.BrandWhereInput {
   return {
     id: { in: REVIEW_FALLBACK_BRAND_LABELS.map(reviewBrandId) },
     slug: { startsWith: "review-marca-" },

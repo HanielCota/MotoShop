@@ -341,7 +341,7 @@ async function seedCatalog(input: ExpandedSeedInput) {
   for (const [index, template] of productTemplates.entries()) {
     const slug = `review-${template.key}`;
     const name = template.name;
-    if (!/^review-[a-z0-9-]+$/.test(slug)) throw new Error(`Unsafe product ${slug}`);
+    if (/^review-[a-z0-9-]+$/.test(slug) === false) throw new Error(`Unsafe product ${slug}`);
     const categoryId = categories.get(template.categorySlug);
     if (!categoryId) {
       console.warn(`Categoria ativa ${template.categorySlug} não encontrada; produto ${slug} ignorado.`);

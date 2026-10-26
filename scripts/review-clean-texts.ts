@@ -56,7 +56,8 @@ async function loadStores(tx: Transaction): Promise<StoreScope> {
 
   // The catalog seed creates its sellers without members; a member means the slug was reused.
   const unexpected = stores.find((store) => store.slug.startsWith("demo-") && store.seller._count.members > 0);
-  if (unexpected) throw new Error(`Store ${unexpected.slug} has members; it is not the catalog seed's. Aborting.`);
+  if (unexpected != null)
+    throw new Error(`Store ${unexpected.slug} has members; it is not the catalog seed's. Aborting.`);
 
   const rows = stores.map((store) => ({
     table: "Store",
@@ -87,7 +88,7 @@ async function loadProducts(tx: Transaction, scope: StoreScope) {
   });
 
   const unexpected = products.find((product) => !product.isDemo);
-  if (unexpected) throw new Error(`Product ${unexpected.slug} is not a demo product. Aborting.`);
+  if (unexpected != null) throw new Error(`Product ${unexpected.slug} is not a demo product. Aborting.`);
 
   const productRows = products.map((product) => ({
     table: "Product",
@@ -183,23 +184,32 @@ async function loadOrderSnapshots(tx: Transaction, sellerIds: string[]): Promise
 async function assertBrandNamesFree(tx: Transaction, rows: TextRowPlan[]) {
   const renamed = rows.filter((row) => row.table === "Brand" && changedFields(row).length > 0);
   for (const row of renamed) {
-    const name = row.fields[0]?.next ?? "";
+    const name = row.fields.find((field) => field.field === "name")?.next;
+    if (name == null) throw new Error(`Brand ${row.label} has no new name`);
+
     const taken = await tx.brand.findFirst({ where: { name, id: { not: row.id } }, select: { slug: true } });
-    if (taken) throw new Error(`Brand name "${name}" is already used by ${taken.slug}. Aborting.`);
+    if (taken != null) throw new Error(`Brand name "${name}" is already used by ${taken.slug}. Aborting.`);
   }
 }
 
-async function writeRow(tx: Transaction, row: TextRowPlan, data: Record<string, string | null>) {
-  const where = { id: row.id };
-  if (row.table === "Store") return tx.store.update({ where, data });
-  if (row.table === "Product") return tx.product.update({ where, data });
-  if (row.table === "ProductImage") return tx.productImage.update({ where, data });
-  if (row.table === "Brand") return tx.brand.update({ where, data });
-  if (row.table === "SellerOrder") return tx.sellerOrder.update({ where, data });
-  if (row.table === "OrderItem") return tx.orderItem.update({ where, data });
-  if (row.table === "Shipment") return tx.shipment.update({ where, data });
+type TextData = Record<string, string | null>;
+type RowWriter = (tx: Transaction, id: string, data: TextData) => Promise<unknown>;
 
-  throw new Error(`Unknown table ${row.table}`);
+const ROW_WRITERS: Readonly<Record<string, RowWriter>> = {
+  Store: (tx, id, data) => tx.store.update({ where: { id }, data }),
+  Product: (tx, id, data) => tx.product.update({ where: { id }, data }),
+  ProductImage: (tx, id, data) => tx.productImage.update({ where: { id }, data }),
+  Brand: (tx, id, data) => tx.brand.update({ where: { id }, data }),
+  SellerOrder: (tx, id, data) => tx.sellerOrder.update({ where: { id }, data }),
+  OrderItem: (tx, id, data) => tx.orderItem.update({ where: { id }, data }),
+  Shipment: (tx, id, data) => tx.shipment.update({ where: { id }, data }),
+};
+
+async function writeRow(tx: Transaction, row: TextRowPlan, data: TextData) {
+  const write = ROW_WRITERS[row.table];
+  if (write == null) throw new Error(`Unknown table ${row.table}`);
+
+  await write(tx, row.id, data);
 }
 
 function describeChange(row: TextRowPlan) {

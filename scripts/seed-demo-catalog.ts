@@ -27,6 +27,16 @@ const stores = [
   },
 ] as const;
 
+/** True when a stored demo store keeps this seed's name, with or without the old "· demonstração". */
+function isSeededStoreName(slug: string, storedName: string): boolean {
+  const definition = must(
+    stores.find((store) => store.slug === slug),
+    `demo store ${slug}`,
+  );
+
+  return isSameDemoName(storedName, definition.name);
+}
+
 const products = [
   {
     slug: "demo-capacete-off-road-apex",
@@ -216,9 +226,7 @@ async function main() {
       if (
         demoStores.length !== stores.length ||
         demoStores.some(
-          (store) =>
-            !isSameDemoName(store.name, stores.find((definition) => definition.slug === store.slug)?.name ?? "") ||
-            store.seller.status !== "PENDING",
+          (store) => isSeededStoreName(store.slug, store.name) === false || store.seller.status !== "PENDING",
         )
       ) {
         throw new Error("Demo stores are missing or not pending; refusing to publish.");
@@ -276,7 +284,7 @@ async function main() {
     select: { slug: true, name: true },
   });
   for (const store of storeCollisions) {
-    if (!isSameDemoName(store.name, stores.find((item) => item.slug === store.slug)?.name ?? "")) {
+    if (isSeededStoreName(store.slug, store.name) === false) {
       throw new Error(`Refusing to modify unrelated store: ${store.slug}`);
     }
   }
