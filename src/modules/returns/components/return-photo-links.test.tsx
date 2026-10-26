@@ -3,11 +3,10 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const refresh = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
+type ImageMockProps = { src: string; alt: string; onError?: () => void };
 vi.mock("next/image", () => ({
-  // eslint-disable-next-line @next/next/no-img-element
-  default: ({ src, alt, onError }: { src: string; alt: string; onError?: () => void }) => (
-    <img src={src} alt={alt} onError={onError} />
-  ),
+  // oxlint-disable-next-line nextjs/no-img-element
+  default: ({ src, alt, onError }: ImageMockProps) => <img src={src} alt={alt} onError={onError} />,
 }));
 
 import { ReturnPhotoLinks } from "./return-photo-links";
