@@ -22,6 +22,15 @@ describe("seller login proxy", () => {
     expect(getRedirectUrl(proxy(request))).toBeNull();
   });
 
+  it("lets a Server Function POST through, for the action's own session check to answer", () => {
+    const request = new NextRequest(`${origin}/seller/settings`, {
+      method: "POST",
+      headers: { "next-action": "abc123" },
+    });
+
+    expect(getRedirectUrl(proxy(request))).toBeNull();
+  });
+
   it("runs only on the internal seller pages, not on /seller itself nor on other areas", () => {
     const runsOn = (url: string) => unstable_doesMiddlewareMatch({ config, url });
 
