@@ -45,3 +45,15 @@ it("shows one customer-facing status, the first product and links the whole card
   expect(screen.getByText("Ver pedido e pagar")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "MS-1" })).toHaveAttribute("href", "/orders/MS-1");
 });
+
+it("shows the same placeholder as the cart when the first product has no photo", () => {
+  const withoutPhoto = {
+    ...order,
+    sellerOrders: [{ ...order.sellerOrders[0], items: [{ id: "i-2", productNameSnapshot: "Vela", product: null }] }],
+  } as unknown as ComponentProps<typeof CustomerOrderCard>["order"];
+  render(<CustomerOrderCard order={withoutPhoto} />);
+
+  const thumbnail = screen.getByTestId("cart-item-thumbnail");
+  expect(thumbnail).toHaveAttribute("aria-hidden", "true");
+  expect(thumbnail.querySelector("img")).toBeNull();
+});

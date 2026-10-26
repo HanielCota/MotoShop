@@ -1,11 +1,11 @@
 import { ArrowRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, formatMoneyInCents } from "@/lib/format";
+import { CartItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
 import { getPublicStorageImageUrl } from "@/shared/storage/public-storage-url";
 
 import { customerOrderHeadline } from "../domain/customer-order-headline";
@@ -55,11 +55,7 @@ export function CustomerOrderCard({ order }: { order: CustomerOrder }) {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center gap-3">
-          <span className="bg-surface-sunken relative size-14 shrink-0 overflow-hidden rounded-md">
-            {item.imageUrl ? (
-              <Image src={item.imageUrl} alt="" fill sizes="56px" unoptimized className="object-cover" />
-            ) : null}
-          </span>
+          <CartItemThumbnail url={item.imageUrl} sizes="56px" className="size-14" />
           <span className="min-w-0 flex-1">
             <span className="text-foreground line-clamp-2 block text-sm font-medium">{item.name}</span>
             <span className="text-muted-foreground block truncate text-xs">
