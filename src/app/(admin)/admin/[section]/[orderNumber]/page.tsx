@@ -6,6 +6,7 @@ import { PageHeader, SectionHeader } from "@/components/ui/page-header";
 import { adminHref } from "@/modules/admin/admin-href";
 import { AdminSellerOrderCard } from "@/modules/admin/components/order-detail/admin-seller-order-card";
 import { getAdminOrderDetail } from "@/modules/admin/queries/order-detail";
+import { getOrderItemThumbnails } from "@/modules/orders/queries/order-item-thumbnails";
 import { requireAdminAccess } from "@/modules/auth/application/authorization";
 import { formatCep } from "@/modules/customers/domain/brazilian-address";
 import { formatPhone } from "@/modules/customers/domain/tax-id";
@@ -31,6 +32,7 @@ export default async function AdminOrderDetailPage({
   if (!order) notFound();
 
   const address = order.shippingAddress;
+  const thumbnails = await getOrderItemThumbnails(order.sellerOrders.flatMap((sellerOrder) => sellerOrder.items));
 
   return (
     <div className="space-y-6">
@@ -62,7 +64,12 @@ export default async function AdminOrderDetailPage({
       <section className="space-y-4">
         <SectionHeader title="Lojas" description="Cada loja tem envio, cancelamento, devolução e disputa próprios." />
         {order.sellerOrders.map((sellerOrder) => (
-          <AdminSellerOrderCard key={sellerOrder.id} orderNumber={order.orderNumber} sellerOrder={sellerOrder} />
+          <AdminSellerOrderCard
+            key={sellerOrder.id}
+            orderNumber={order.orderNumber}
+            sellerOrder={sellerOrder}
+            thumbnails={thumbnails}
+          />
         ))}
       </section>
 

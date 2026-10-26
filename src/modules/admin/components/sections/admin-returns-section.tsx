@@ -5,6 +5,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateTime, formatMoneyInCents } from "@/lib/format";
+import { InlineItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
+import { getOrderItemThumbnails } from "@/modules/orders/queries/order-item-thumbnails";
 import { ReturnStatusActions } from "@/modules/returns/components/return-status-actions";
 import { listReturnRequestsForAdmin } from "@/modules/returns/queries/admin-returns";
 import { listSellerOptionsForAdmin } from "@/modules/sellers/queries/sellers";
@@ -43,6 +45,9 @@ export async function AdminReturnsSection({ searchParams }: AdminSectionProps) {
     }),
     listSellerOptionsForAdmin(),
   ]);
+  const thumbnails = await getOrderItemThumbnails(
+    result.requests.flatMap((request) => request.items.map((item) => item.orderItem)),
+  );
   const pageHref = (page: number) => adminHref("returns", { ...params, returnPage: page }, { returnSort: "oldest" });
 
   return (
@@ -102,6 +107,7 @@ export async function AdminReturnsSection({ searchParams }: AdminSectionProps) {
                     {request.order.customerEmail}
                   </p>
                   <p className="text-muted-foreground mt-1 text-sm">
+                    <InlineItemThumbnail url={item ? thumbnails.get(item.orderItem.id)?.url : null} />
                     {item?.orderItem.productNameSnapshot ?? "Item"} · quantidade {item?.quantity ?? 0} · valor estimado{" "}
                     {formatMoneyInCents(request.amountInCents)}
                   </p>
