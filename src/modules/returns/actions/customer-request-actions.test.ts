@@ -21,15 +21,12 @@ vi.mock("../application/return-photo-uploads", () => ({
   createReturnPhotoUpload: vi.fn(),
   removeReturnPhotoUpload: vi.fn(),
 }));
-vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
 vi.mock("../application/request-cancellation", () => ({ requestCancellation: mocks.requestCancellation }));
 vi.mock("@/modules/disputes/application/request-dispute", () => ({ requestDispute: mocks.requestDispute }));
 
 import { requestDisputeAction } from "@/modules/disputes/actions/dispute-actions";
 
 import { requestCancellationAction } from "./cancellation-actions";
-import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
-import { ApplicationError } from "@/shared/errors/application-error";
 
 import { createReturnPhotoUpload } from "../application/return-photo-uploads";
 import { createReturnPhotoUploadAction, requestReturnAction } from "./return-actions";
@@ -113,7 +110,7 @@ describe.each(cases)("$name action order access", ({ run, service }) => {
 });
 
 describe("return photo upload authorization", () => {
-  it("caps the uploads of an item per minute and per day, so unattached files cannot pile up", async () => {
+  it("asks the upload service with the identity that owns the order, which then checks the item and the limits", async () => {
     mocks.session.mockResolvedValue({ user: { id: "user-1" } });
     mocks.resolve.mockResolvedValue({ userId: "user-1" });
     vi.mocked(createReturnPhotoUpload).mockResolvedValue({
@@ -123,40 +120,17 @@ describe("return photo upload authorization", () => {
       fields: {},
     });
 
-    await createReturnPhotoUploadAction({
+    const result = await createReturnPhotoUploadAction({
       orderNumber: "MS-1",
       orderItemId: cuid,
       contentType: "image/jpeg",
       sizeInBytes: 1024,
     });
 
-    expect(vi.mocked(assertRateLimit).mock.calls.map(([limit]) => limit)).toEqual([
-      { key: `return-photo-upload:MS-1:${cuid}`, windowSeconds: 60, max: 10 },
-      { key: `return-photo-upload-day:MS-1:${cuid}`, windowSeconds: 86_400, max: 15 },
-    ]);
-  });
-
-  it("does not let another customer spend the daily quota of an item that is not theirs", async () => {
-    const dailyUploadLimit = 15;
-    const counts = new Map<string, number>();
-    vi.mocked(assertRateLimit).mockImplementation(async ({ key, max }) => {
-      const count = (counts.get(key) ?? 0) + 1;
-      counts.set(key, count);
-      if (count > max) throw new ApplicationError({ code: "CONFLICT", statusCode: 429, message: "Muitas tentativas." });
-    });
-    vi.mocked(createReturnPhotoUpload).mockImplementation(async (target) => {
-      if (target.orderNumber !== "MS-OWNER") throw new Error("Item do pedido não encontrado.");
-
-      return { url: "https://upload.example", key: "returns/item/photo.jpg", expiresAt: new Date(), fields: {} };
-    });
-    mocks.session.mockResolvedValue({ user: { id: "someone" } });
-    mocks.resolve.mockImplementation(async ({ orderNumber }: { orderNumber: string }) => ({ userId: orderNumber }));
-    const upload = (orderNumber: string) =>
-      createReturnPhotoUploadAction({ orderNumber, orderItemId: cuid, contentType: "image/jpeg", sizeInBytes: 1024 });
-
-    // An attacker with an order of their own sends the victim's item id 15 times.
-    for (let attempt = 0; attempt < dailyUploadLimit; attempt += 1) await upload("MS-ATTACKER");
-
-    await expect(upload("MS-OWNER")).resolves.toHaveProperty("url");
+    expect(result).toHaveProperty("url", "https://upload.example");
+    expect(createReturnPhotoUpload).toHaveBeenCalledWith(
+      { orderNumber: "MS-1", orderItemId: cuid, identity: { userId: "user-1" } },
+      { contentType: "image/jpeg", sizeInBytes: 1024 },
+    );
   });
 });
