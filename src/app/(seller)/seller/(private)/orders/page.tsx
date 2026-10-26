@@ -17,6 +17,7 @@ import { hasSellerPermission } from "@/modules/auth/domain/seller-permissions";
 import { SellerOrderAfterSales } from "@/modules/returns/components/seller-order-after-sales";
 import { canAdvanceOwnShipment } from "@/modules/shipping/domain/own-shipping";
 import { SellerOrderDelivery } from "@/modules/shipping/components/seller-order-delivery";
+import { getOrderItemThumbnails } from "@/modules/orders/queries/order-item-thumbnails";
 import { SellerOrderQueueTabs } from "@/modules/shipping/components/seller-order-queue-tabs";
 import {
   countSellerOrdersInQueue,
@@ -69,6 +70,8 @@ export default async function SellerOrdersPage({
     listSellerOrders(context.seller.id, params),
     countSellerOrdersByStatus(context.seller.id),
   ]);
+  // The items come from this seller's orders only (listSellerOrders filters by sellerId).
+  const thumbnails = await getOrderItemThumbnails(result.orders.flatMap((order) => order.items));
   const queue = resolveSellerOrderQueue(params.queue, params.status);
   const queueCounts = {
     TO_PREPARE: countSellerOrdersInQueue("TO_PREPARE", countsByStatus),
@@ -169,8 +172,8 @@ export default async function SellerOrdersPage({
                       ) : null}
                     </div>
 
-                    <SellerOrderAfterSales order={order} />
-                    <SellerOrderDelivery order={order} />
+                    <SellerOrderAfterSales order={order} thumbnails={thumbnails} />
+                    <SellerOrderDelivery order={order} thumbnails={thumbnails} />
                     {hasSellerPermission(context.membership.role, "ORDER_UPDATE") &&
                       (shipment?.provider === "OWN" ? (
                         <OwnShipmentActions

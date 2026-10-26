@@ -1,4 +1,6 @@
 import { InlineNotice } from "@/components/ui/inline-notice";
+import { CartItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
+import type { CartThumbnail } from "@/modules/cart/queries/cart-thumbnails";
 import { formatCep } from "@/modules/customers/domain/brazilian-address";
 import { formatPhone } from "@/modules/customers/domain/tax-id";
 
@@ -8,7 +10,14 @@ import type { listSellerOrders } from "../queries/seller-orders";
 type SellerOrderListItem = Awaited<ReturnType<typeof listSellerOrders>>["orders"][number];
 
 /** Itens e endereço da entrega própria; antes do pagamento, só o aviso para não preparar. */
-export function SellerOrderDelivery({ order }: { order: SellerOrderListItem }) {
+export function SellerOrderDelivery({
+  order,
+  thumbnails,
+}: {
+  order: SellerOrderListItem;
+  /** Foto de cada item, pelo id do item; sem foto, aparece o substituto. */
+  thumbnails: ReadonlyMap<string, CartThumbnail>;
+}) {
   if (order.status === "PENDING_PAYMENT") {
     return (
       <InlineNotice tone="warning">
@@ -27,6 +36,11 @@ export function SellerOrderDelivery({ order }: { order: SellerOrderListItem }) {
       <ul className="list-inside list-disc">
         {order.items.map((item) => (
           <li key={item.id}>
+            <CartItemThumbnail
+              url={thumbnails.get(item.id)?.url}
+              sizes="28px"
+              className="mr-1.5 inline-grid size-7 align-middle [&>svg]:size-4"
+            />
             {item.quantity} × {item.productNameSnapshot} · {item.variantDescriptionSnapshot} · SKU {item.skuSnapshot}
           </li>
         ))}

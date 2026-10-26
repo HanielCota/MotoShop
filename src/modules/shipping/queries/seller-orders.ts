@@ -80,7 +80,7 @@ export function buildSellerOrderAfterSalesInclude(sellerId: string) {
           select: {
             id: true,
             quantity: true,
-            orderItem: { select: { productNameSnapshot: true, skuSnapshot: true } },
+            orderItem: { select: { id: true, productNameSnapshot: true, skuSnapshot: true } },
           },
         },
         photos: {
