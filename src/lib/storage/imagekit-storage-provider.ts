@@ -275,7 +275,7 @@ export class ImageKitStorageProvider implements StorageProvider {
       limit: String(input.limit),
     });
     const response = await this.managementRequest(`${managementEndpoint}?${query}`);
-    if (!response.ok) throw new Error(`ImageKit file listing failed with status ${response.status}`);
+    if (response.ok === false) throw new Error(`ImageKit file listing failed with status ${response.status}`);
 
     const items = z.array(z.unknown()).parse(await response.json());
 
@@ -295,7 +295,7 @@ export class ImageKitStorageProvider implements StorageProvider {
       method: "POST",
       body: JSON.stringify({ fileIds: ids }),
     });
-    if (!response.ok) throw new Error(`ImageKit bulk deletion failed with status ${response.status}`);
+    if (response.ok === false) throw new Error(`ImageKit bulk deletion failed with status ${response.status}`);
   }
 
   async deleteObject(input: DeleteObjectInput): Promise<void> {

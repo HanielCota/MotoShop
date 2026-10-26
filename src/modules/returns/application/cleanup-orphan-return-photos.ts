@@ -39,16 +39,22 @@ export type OrphanCleanupSummary = {
 /** Finds the return photo uploads that never joined a return and, when switched on, deletes them. */
 export async function cleanupOrphanReturnPhotos(deps: OrphanCleanupDependencies): Promise<OrphanCleanupSummary> {
   const createdBefore = new Date(deps.now.getTime() - ORPHAN_AGE_IN_MS);
-  const summary: OrphanCleanupSummary = { scanned: 0, orphans: 0, deleted: 0, apiCalls: 0, orphanPaths: [] };
+  let summary: OrphanCleanupSummary = { scanned: 0, orphans: 0, deleted: 0, apiCalls: 0, orphanPaths: [] };
 
   for (let page = 0; page < MAX_PAGES_PER_RUN; page += 1) {
     // Deleted files leave the listing, so the next page starts that many files earlier.
     const skip = page * PAGE_SIZE - summary.deleted;
     const files = await deps.listFiles({ folder: RETURN_PHOTO_FOLDER, createdBefore, skip, limit: PAGE_SIZE });
-    summary.apiCalls += 1;
-    summary.scanned += files.length;
+    const orphans = await findOrphans(files, deps);
+    const deleted = await deleteOrphans(orphans, deps);
 
-    await handleOrphans(await findOrphans(files, deps), deps, summary);
+    summary = {
+      scanned: summary.scanned + files.length,
+      orphans: summary.orphans + orphans.length,
+      deleted: summary.deleted + deleted,
+      apiCalls: summary.apiCalls + 1 + (deleted > 0 ? 1 : 0),
+      orphanPaths: [...summary.orphanPaths, ...orphans.map((file) => file.filePath)],
+    };
 
     if (files.length < PAGE_SIZE) break;
   }
@@ -62,21 +68,16 @@ async function findOrphans(files: readonly StoredFile[], deps: OrphanCleanupDepe
 
   const attached = await deps.findAttachedStorageKeys(candidates.map((file) => storageKeyOf(file)));
 
-  return candidates.filter((file) => !attached.has(storageKeyOf(file)));
+  return candidates.filter((file) => attached.has(storageKeyOf(file)) === false);
 }
 
-async function handleOrphans(
-  orphans: readonly StoredFile[],
-  deps: OrphanCleanupDependencies,
-  summary: OrphanCleanupSummary,
-) {
-  summary.orphans += orphans.length;
-  summary.orphanPaths.push(...orphans.map((file) => file.filePath));
-  if (!deps.deletesFiles || orphans.length === 0) return;
+/** Deletes the orphans when the switch is on; returns how many were deleted. */
+async function deleteOrphans(orphans: readonly StoredFile[], deps: OrphanCleanupDependencies): Promise<number> {
+  if (deps.deletesFiles === false || orphans.length === 0) return 0;
 
   await deps.deleteFiles(orphans.map((file) => file.fileId));
-  summary.apiCalls += 1;
-  summary.deleted += orphans.length;
+
+  return orphans.length;
 }
 
 function storageKeyOf(file: StoredFile): string {
