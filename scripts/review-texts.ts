@@ -5,10 +5,13 @@
  */
 
 /** Markers the seeds used to append: " · demonstração" on stores, " (demonstração)" on products and brands. */
-const NAME_MARKERS = [/ · demonstração/gu, / \(demonstração\)/gu, / Demonstração$/u] as const;
+const NAME_MARKERS = [/ · demonstração/gu, / \(demonstração\)/gu] as const;
 
-/** Sentence the seeds appended to every demo product description. */
-const PRODUCT_NOTICE = /\s*Produto fictício criado para revisão visual[\s\S]*$/u;
+/** Only the Garagem MX shipping origin name ended in " Demonstração". */
+const ORIGIN_NAME_MARKER = / Demonstração$/u;
+
+/** Sentence the seeds appended to every demo product description; any text after it is kept. */
+const PRODUCT_NOTICE = /\s*Produto fictício criado para revisão visual[^.]*\./u;
 
 /** What still reads as a demo marker after the cleanup; the cleanup reports any row that keeps one. */
 export const DEMO_MARKER = /demonstra|fictíci|ilustrativ/iu;
@@ -66,18 +69,34 @@ export function demoCatalogProductDescription(slug: string): string {
   return description;
 }
 
-/** New description of a demo product: the catalog seed's fixed text, or the stored one without the notice. */
+/**
+ * New description of a demo product: the catalog seed's fixed text while the stored one still shows a
+ * demo marker (an edited text is kept), or the stored one without the notice.
+ */
 export function cleanProductDescription(slug: string, description: string): string {
   const fixed = DEMO_CATALOG_PRODUCT_DESCRIPTIONS[slug];
-  if (fixed !== undefined) return fixed;
+  if (fixed !== undefined && DEMO_MARKER.test(description)) return fixed;
 
   return withoutProductNotice(description);
+}
+
+/** New description of a demo store: the seed's text while the stored one is empty or shows a demo marker. */
+export function cleanStoreDescription(slug: string, description: string | null): string {
+  if (description !== null && DEMO_MARKER.test(description) === false) return description;
+
+  return demoStoreDescription(slug);
 }
 
 export function cleanOptionalText(text: string | null): string | null {
   if (text === null) return null;
 
   return withoutDemoMarkers(text);
+}
+
+export function cleanOriginName(originName: string | null): string | null {
+  if (originName === null) return null;
+
+  return withoutDemoMarkers(originName).replace(ORIGIN_NAME_MARKER, "");
 }
 
 /** One text column of one row: what it holds now and what the cleanup writes. */

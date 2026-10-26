@@ -6,7 +6,9 @@ import {
   DEMO_STORE_DESCRIPTIONS,
   changedFields,
   cleanOptionalText,
+  cleanOriginName,
   cleanProductDescription,
+  cleanStoreDescription,
   demoStoreDescription,
   isSameDemoName,
   stillMarkedFields,
@@ -18,7 +20,6 @@ describe("withoutDemoMarkers", () => {
     expect(withoutDemoMarkers("Garagem MX · demonstração")).toBe("Garagem MX");
     expect(withoutDemoMarkers("Capacete off-road Apex Pro (demonstração)")).toBe("Capacete off-road Apex Pro");
     expect(withoutDemoMarkers("Marca Pista (demonstração)")).toBe("Marca Pista");
-    expect(withoutDemoMarkers("Garagem MX Demonstração")).toBe("Garagem MX");
     expect(withoutDemoMarkers("Capacete Apex Pro (demonstração) · Vista lateral")).toBe(
       "Capacete Apex Pro · Vista lateral",
     );
@@ -29,6 +30,24 @@ describe("withoutDemoMarkers", () => {
       "Conjunto infantil Mini MX (camisa + calça)",
     );
     expect(cleanOptionalText(null)).toBeNull();
+  });
+
+  // Regression: the " Demonstração" ending of one shipping origin name was stripped from every text.
+  it("drops a trailing word Demonstração only from the shipping origin name", () => {
+    expect(withoutDemoMarkers("Kit Demonstração")).toBe("Kit Demonstração");
+    expect(cleanOriginName("Garagem MX Demonstração")).toBe("Garagem MX");
+    expect(cleanOriginName(null)).toBeNull();
+  });
+});
+
+describe("cleanStoreDescription", () => {
+  // Regression: the cleanup replaced every demo store description, including one edited after the seed.
+  it("replaces a description with a demo marker and keeps an edited one", () => {
+    expect(cleanStoreDescription("review-box-77", "Loja fictícia de freios. Dados ilustrativos.")).toBe(
+      DEMO_STORE_DESCRIPTIONS["review-box-77"],
+    );
+    expect(cleanStoreDescription("review-box-77", null)).toBe(DEMO_STORE_DESCRIPTIONS["review-box-77"]);
+    expect(cleanStoreDescription("review-box-77", "Freios e luvas, desde 1998.")).toBe("Freios e luvas, desde 1998.");
   });
 });
 
@@ -55,6 +74,19 @@ describe("cleanProductDescription", () => {
     expect(
       cleanProductDescription("demo-disco-de-freio-onda", "Disco demonstrativo. Não há produto físico à venda."),
     ).toBe(DEMO_CATALOG_PRODUCT_DESCRIPTIONS["demo-disco-de-freio-onda"]);
+    expect(cleanProductDescription("demo-disco-de-freio-onda", "Disco ondulado, aço inox.")).toBe(
+      "Disco ondulado, aço inox.",
+    );
+  });
+
+  // Regression: the notice pattern also removed any sentence written after the notice.
+  it("keeps the text written after the notice", () => {
+    expect(
+      cleanProductDescription(
+        "review-capacete-apex-pro",
+        "Capacete leve. Produto fictício criado para revisão visual do Moto Shop; preço e estoque são ilustrativos. Agora com viseira.",
+      ),
+    ).toBe("Capacete leve. Agora com viseira.");
   });
 });
 

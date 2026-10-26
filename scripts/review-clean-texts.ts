@@ -20,8 +20,9 @@ import {
   DEMO_STORE_DESCRIPTIONS,
   changedFields,
   cleanOptionalText,
+  cleanOriginName,
   cleanProductDescription,
-  demoStoreDescription,
+  cleanStoreDescription,
   stillMarkedFields,
   withoutDemoMarkers,
   type TextRowPlan,
@@ -65,8 +66,8 @@ async function loadStores(tx: Transaction): Promise<StoreScope> {
     label: store.slug,
     fields: [
       { field: "name", current: store.name, next: withoutDemoMarkers(store.name) },
-      { field: "description", current: store.description, next: demoStoreDescription(store.slug) },
-      { field: "originName", current: store.originName, next: cleanOptionalText(store.originName) },
+      { field: "description", current: store.description, next: cleanStoreDescription(store.slug, store.description) },
+      { field: "originName", current: store.originName, next: cleanOriginName(store.originName) },
     ],
   }));
 
@@ -87,7 +88,7 @@ async function loadProducts(tx: Transaction, scope: StoreScope) {
     orderBy: { slug: "asc" },
   });
 
-  const unexpected = products.find((product) => !product.isDemo);
+  const unexpected = products.find((product) => product.isDemo === false);
   if (unexpected != null) throw new Error(`Product ${unexpected.slug} is not a demo product. Aborting.`);
 
   const productRows = products.map((product) => ({
