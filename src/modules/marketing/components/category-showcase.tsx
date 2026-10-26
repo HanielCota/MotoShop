@@ -31,8 +31,13 @@ const titleClassName = "mt-2.5 text-3xl leading-none uppercase sm:text-4xl";
 const equipmentLinkClassName =
   "inline-flex min-h-11 items-center gap-1 text-sm underline underline-offset-4 lg:min-h-7";
 
+// Photo width at each breakpoint: 40% of the card on phones, 58% from sm up, at most 260px on desktop.
+// The two small cards are half the row between sm and lg; the equipment card is the full row there.
+const halfRowPhotoSizes = "(min-width: 1024px) 260px, (min-width: 640px) 29vw, 40vw";
+const fullRowPhotoSizes = "(min-width: 1024px) 260px, (min-width: 640px) 58vw, 40vw";
+
 /** Product cutout, more to the center and bleeding off the bottom edge, seen through a light frosted glass. */
-function CardPhoto({ src }: { src: string }) {
+function CardPhoto({ src, sizes }: { src: string; sizes: string }) {
   return (
     <>
       <Image
@@ -41,8 +46,9 @@ function CardPhoto({ src }: { src: string }) {
         aria-hidden="true"
         width={640}
         height={640}
-        sizes="(min-width: 1024px) 260px, (min-width: 640px) 58vw, 40vw"
-        // Phones: smaller and further right, so the long eyebrow and title stay over the plain glass.
+        sizes={sizes}
+        // Phones: smaller and further right, so most of the text sits over the plain glass. The text that
+        // still crosses the photo stays readable because the photos are darkened (see home-content).
         className="pointer-events-none absolute -right-[6%] -bottom-8 z-0 h-auto w-[40%] max-w-[260px] select-none sm:right-[4%] sm:-bottom-6 sm:w-[58%]"
       />
       <span
@@ -82,7 +88,7 @@ export function CategoryShowcase({ categories }: { categories: MarketingCategory
       <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-[1.1fr_0.9fr_1.3fr]">
         {cards.map(({ title, description, eyebrow, href, icon: Icon, image }, index) => (
           <Link className={cn(cardClassName, index === 0 ? firstCardColor : otherCardColor)} href={href} key={title}>
-            <CardPhoto src={image} />
+            <CardPhoto src={image} sizes={halfRowPhotoSizes} />
             <div className="relative z-20 w-full pr-8">
               <CardHeading
                 icon={<Icon aria-hidden="true" className={cn(iconClassName, "text-moto-brand")} />}
@@ -102,7 +108,7 @@ export function CategoryShowcase({ categories }: { categories: MarketingCategory
             // Full width on tablets so its links fit in one line and the cards above need no extra height.
             className={cn(cardClassName, equipmentCardColor, "sm:col-span-2 lg:col-span-1")}
           >
-            <CardPhoto src={equipmentCardImage} />
+            <CardPhoto src={equipmentCardImage} sizes={fullRowPhotoSizes} />
             <div className="relative z-20 w-full">
               <CardHeading
                 icon={<Gauge aria-hidden="true" className={cn(iconClassName, "text-moto-brand-surface")} />}

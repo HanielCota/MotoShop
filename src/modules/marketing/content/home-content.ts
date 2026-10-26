@@ -2,6 +2,9 @@ import type { Route } from "next";
 import { BadgeCheck, Shield, Truck, UserRoundCheck, Wrench, type LucideIcon } from "lucide-react";
 
 // Product cutouts (transparent background) shown behind a frosted glass on each card; decorative only.
+// The white text needs at least 4.5:1 over them, so light photos are darkened when exported: pecas.webp
+// at 50% and equipamentos.webp at 85% of the source brightness. Darken any new photo the same way and
+// re-check the contrast on phone and desktop.
 export const categoryCards: {
   title: string;
   description: string;
