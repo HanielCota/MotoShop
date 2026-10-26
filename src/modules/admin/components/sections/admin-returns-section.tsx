@@ -107,7 +107,7 @@ export async function AdminReturnsSection({ searchParams }: AdminSectionProps) {
                     {request.order.customerEmail}
                   </p>
                   <p className="text-muted-foreground mt-1 text-sm">
-                    <InlineItemThumbnail url={item ? thumbnails.get(item.orderItem.id)?.url : null} />
+                    <InlineItemThumbnail url={item == null ? null : thumbnails.get(item.orderItem.id)?.url} />
                     {item?.orderItem.productNameSnapshot ?? "Item"} · quantidade {item?.quantity ?? 0} · valor estimado{" "}
                     {formatMoneyInCents(request.amountInCents)}
                   </p>

@@ -1,7 +1,8 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-const mocks = vi.hoisted(() => ({ findMany: vi.fn() }));
+vi.mock("@/lib/logger", () => ({ logger: { warn: mocks.warn } }));
+const mocks = vi.hoisted(() => ({ findMany: vi.fn(), warn: vi.fn() }));
 vi.mock("@/lib/database", () => ({ db: { productImage: { findMany: mocks.findMany } } }));
 vi.mock("@/shared/storage/public-storage-url", () => ({
   getPublicStorageUrl: (storageKey: string) => `https://ik.example/${storageKey}`,

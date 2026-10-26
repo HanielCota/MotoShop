@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db } from "@/lib/database";
+import { logger } from "@/lib/logger";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 
 export type CartThumbnail = { url: string; alt: string };
@@ -23,11 +24,20 @@ export async function getProductThumbnails(lines: readonly ThumbnailLine[]): Pro
     for (const line of lines) {
       const productImages = images.filter((image) => image.productId === line.productId);
       const image = productImages.find((entry) => entry.variantId === line.variantId) ?? productImages[0];
-      const url = image ? getPublicStorageUrl(image.storageKey) : null;
-      if (image && url) thumbnails.set(line.key, { url, alt: image.altText ?? "" });
+      if (image == null) continue;
+
+      const url = getPublicStorageUrl(image.storageKey);
+      if (url == null) continue;
+
+      thumbnails.set(line.key, { url, alt: image.altText ?? "" });
     }
-  } catch {
-    // Miniaturas são decorativas: a tela continua funcionando sem elas.
+  } catch (error) {
+    // Miniaturas são decorativas: a tela continua funcionando sem elas, e a falha fica no log.
+    logger.warn({
+      event: "catalog.thumbnails_unavailable",
+      lineCount: lines.length,
+      errorType: error instanceof Error ? error.name : "UnknownError",
+    });
   }
   return thumbnails;
 }
