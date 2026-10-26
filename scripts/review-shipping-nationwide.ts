@@ -9,6 +9,7 @@ import { config } from "dotenv";
 import { PrismaNeon } from "@prisma/adapter-neon";
 
 import { PrismaClient } from "../src/generated/prisma/client";
+import { formatMoneyInCents } from "../src/lib/format";
 import { requireScriptDatabaseUrl } from "./database-guard";
 import { NATIONWIDE_REVIEW_METHOD, WHOLE_COUNTRY, storesMissingNationwideShipping } from "./review-shipping";
 
@@ -29,11 +30,12 @@ async function loadReviewStores() {
     orderBy: { id: "asc" },
   });
 
-  return sellers.map((seller) => ({
-    sellerId: seller.id,
-    storeSlug: seller.store?.slug ?? "(sem loja)",
-    methods: seller.shippingMethods,
-  }));
+  return sellers.map((seller) => {
+    // The query only matches sellers with a "review-*" store, so a missing store is a bug.
+    if (seller.store == null) throw new Error(`Seller ${seller.id} matched without a store`);
+
+    return { sellerId: seller.id, storeSlug: seller.store.slug, methods: seller.shippingMethods };
+  });
 }
 
 try {
@@ -45,7 +47,7 @@ try {
     console.log(
       `${dryRun ? "[dry-run] would create" : "creating"} "${NATIONWIDE_REVIEW_METHOD.name}" ` +
         `(${WHOLE_COUNTRY.postalCodeStart}-${WHOLE_COUNTRY.postalCodeEnd}, ` +
-        `R$ ${(NATIONWIDE_REVIEW_METHOD.priceInCents / 100).toFixed(2)}, ${NATIONWIDE_REVIEW_METHOD.estimatedDeliveryDays} dias) ` +
+        `${formatMoneyInCents(NATIONWIDE_REVIEW_METHOD.priceInCents)}, ${NATIONWIDE_REVIEW_METHOD.estimatedDeliveryDays} dias) ` +
         `for ${store.storeSlug}`,
     );
     if (dryRun) continue;

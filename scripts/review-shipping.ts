@@ -24,12 +24,12 @@ export type ReviewStoreShipping = {
 
 /** An active method whose range starts at or before 01000000 and ends at or after 99999999. */
 export function coversWholeCountry(method: ShippingRange): boolean {
-  if (!method.active) return false;
+  if (method.active === false) return false;
 
   return method.postalCodeStart <= WHOLE_COUNTRY.postalCodeStart && method.postalCodeEnd >= WHOLE_COUNTRY.postalCodeEnd;
 }
 
 /** The demo stores that still need the nationwide method; the others already deliver everywhere. */
 export function storesMissingNationwideShipping(stores: readonly ReviewStoreShipping[]): ReviewStoreShipping[] {
-  return stores.filter((store) => !store.methods.some(coversWholeCountry));
+  return stores.filter((store) => store.methods.some(coversWholeCountry) === false);
 }
