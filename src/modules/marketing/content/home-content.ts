@@ -1,13 +1,22 @@
 import type { Route } from "next";
 import { BadgeCheck, Shield, Truck, UserRoundCheck, Wrench, type LucideIcon } from "lucide-react";
 
-export const categoryCards: { title: string; description: string; eyebrow: string; href: Route; icon: LucideIcon }[] = [
+// Product cutouts (transparent background) shown behind a frosted glass on each card; decorative only.
+export const categoryCards: {
+  title: string;
+  description: string;
+  eyebrow: string;
+  href: Route;
+  icon: LucideIcon;
+  image: string;
+}[] = [
   {
     title: "Peças para sua moto",
     description: "Motor, transmissão, freios e suspensão",
     eyebrow: "Manutenção & performance",
     href: "/products",
     icon: Wrench,
+    image: "/images/home/categories/pecas.webp",
   },
   {
     title: "Capacetes",
@@ -15,8 +24,11 @@ export const categoryCards: { title: string; description: string; eyebrow: strin
     eyebrow: "Segurança",
     href: "/categoria/equipment-helmets" as Route,
     icon: Shield,
+    image: "/images/home/categories/capacetes.webp",
   },
 ];
+
+export const equipmentCardImage = "/images/home/categories/equipamentos.webp";
 
 export const equipmentCategoryLabels: Record<string, string> = {
   "equipment-helmets": "Capacetes",

@@ -12,8 +12,14 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("next/link", () => ({ default: (props: ComponentProps<"a">) => <a {...props} /> }));
 vi.mock("next/image", () => ({
   // Image optimization is covered by Next.js; these tests exercise the page UI.
-  default: ({ src, alt, loading }: { src: string; alt: string; loading?: "eager" | "lazy" }) => (
-    <div role="img" aria-label={alt} data-src={src} data-loading={loading} />
+  default: (props: { src: string; alt: string; loading?: "eager" | "lazy"; "aria-hidden"?: "true" }) => (
+    <div
+      role="img"
+      aria-label={props.alt}
+      aria-hidden={props["aria-hidden"]}
+      data-src={props.src}
+      data-loading={props.loading}
+    />
   ),
 }));
 
@@ -188,6 +194,23 @@ describe("marketing homepage", () => {
     expect(within(nav).getByRole("link", { name: "Botas" })).toHaveAttribute("href", "/categoria/equipment-boots");
     expect(within(nav).queryByRole("link", { name: "Óculos de proteção" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Freios Pastilhas/ })).not.toBeInTheDocument();
+  });
+
+  it("shows each category card's product photo as decoration, hidden from screen readers", () => {
+    renderHome();
+    const grid = document.getElementById("categorias");
+    const photos = [...(grid?.querySelectorAll("[data-src^='/images/home/categories/']") ?? [])];
+
+    expect(photos.map((photo) => photo.getAttribute("data-src"))).toEqual([
+      "/images/home/categories/pecas.webp",
+      "/images/home/categories/capacetes.webp",
+      "/images/home/categories/equipamentos.webp",
+    ]);
+    for (const photo of photos) {
+      expect(photo).toHaveAttribute("aria-label", "");
+      expect(photo).toHaveAttribute("aria-hidden", "true");
+    }
+    expect(screen.getByRole("link", { name: /Peças para sua moto/i })).toHaveAccessibleName(/^Manutenção/);
   });
 
   it("does not promise pickup or unfiltered universal equipment", () => {
