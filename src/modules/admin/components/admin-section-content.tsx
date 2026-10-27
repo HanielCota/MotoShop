@@ -12,6 +12,7 @@ import { AdminIntegrationsSection } from "./sections/admin-integrations-section"
 import { AdminOrdersSection } from "./sections/admin-orders-section";
 import { AdminProductsSection } from "./sections/admin-products-section";
 import { AdminReturnsSection } from "./sections/admin-returns-section";
+import { AdminSalesSection } from "./sections/admin-sales-section";
 import { AdminSellersSection } from "./sections/admin-sellers-section";
 import { AdminVipSection } from "./sections/admin-vip-section";
 import { AdminWebhooksSection } from "./sections/admin-webhooks-section";
@@ -21,6 +22,7 @@ type AdminWorkspaceSection = (typeof adminWorkspaceSections)[number];
 
 /** Cada seção é um server component independente que carrega os próprios filtros e dados. */
 const sectionComponents: Record<AdminWorkspaceSection, ComponentType<AdminSectionProps>> = {
+  sales: AdminSalesSection,
   sellers: AdminSellersSection,
   products: AdminProductsSection,
   catalog: AdminCatalogSection,
