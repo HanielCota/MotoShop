@@ -24,3 +24,13 @@ export const BRAND_ABOUT_PARAGRAPHS = [
 /** Versão curta da descrição oficial, para blurbs e textos de apoio. */
 export const BRAND_SHORT_DESCRIPTION =
   "Marketplace de motopeças, acessórios e equipamentos, com destaque para o off-road, conectando clientes a lojistas parceiros.";
+
+/** Linhas legais do rodapé, iguais no site e nos e-mails. */
+export const BRAND_COPYRIGHT = "© 2026 MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE. Todos os direitos reservados.";
+export const BRAND_CNPJ_LINE = "CNPJ: 69.663.409/0001-94";
+
+/** Redes sociais oficiais, no rodapé do site e dos e-mails. */
+export const BRAND_SOCIAL_LINKS = [
+  { name: "Instagram", href: "https://www.instagram.com/motoshopbrasil.com.br/" },
+  { name: "YouTube", href: "https://www.youtube.com/@motoshopbrasilcombr" },
+] as const;
