@@ -113,6 +113,48 @@ export async function countProtectedAccountRows(
   };
 }
 
+export type RunMode = "dry-run" | "rehearse" | "apply";
+
+/**
+ * `--dry-run` only counts; `--rehearse` deletes inside the transaction and then rolls it back, so a
+ * foreign key the counts cannot see shows up before the real run; no flag deletes for real.
+ */
+export function readRunMode(argv: readonly string[]): RunMode {
+  if (argv.includes("--dry-run")) return "dry-run";
+  if (argv.includes("--rehearse")) return "rehearse";
+
+  return "apply";
+}
+
+/** Thrown at the end of a rehearsal so the transaction rolls back after every deletion ran. */
+export class RehearsalRollback extends Error {
+  override name = "RehearsalRollback";
+}
+
+/**
+ * Runs the removal transaction. The callback returns its report through `finish`: in a rehearsal,
+ * `finish` throws so the transaction rolls back, and the report it was given is returned instead.
+ */
+export async function runRemoval<T>(
+  mode: RunMode,
+  transaction: (finish: <R>(report: R) => R) => Promise<T>,
+): Promise<T> {
+  let rehearsed: { report: unknown } | undefined;
+  const finish = <R>(report: R): R => {
+    if (mode !== "rehearse") return report;
+
+    rehearsed = { report };
+    throw new RehearsalRollback("rehearsal finished, rolling back");
+  };
+
+  try {
+    return await transaction(finish);
+  } catch (error) {
+    if (error instanceof RehearsalRollback && rehearsed !== undefined) return rehearsed.report as T;
+    throw error;
+  }
+}
+
 /** The masked view of a store for the dry-run report; flags a protected member, since the mask hides who it is. */
 export function describeStore(
   protection: DemoRemovalProtection,

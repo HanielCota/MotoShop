@@ -16,6 +16,8 @@ import {
   maskEmail,
   parseConfirmedStores,
   readDemoRemovalProtection,
+  readRunMode,
+  runRemoval,
   storesNeedingConfirmation,
 } from "../../scripts/demo-removal-protection";
 
@@ -112,5 +114,46 @@ describe("leftover scope", () => {
     expect(listed.some((slug) => PROTECTED_STORE_SLUGS.includes(slug))).toBe(false);
     expect(PROTECTED_STORE_SLUGS.some((slug) => slug.startsWith(INTEGRATION_RUN_STORE_PREFIX))).toBe(false);
     expect(DEMO_BRAND_SLUGS).toEqual(["apex-demo", "terra-demo"]);
+  });
+});
+
+describe("run modes", () => {
+  it("reads the mode from the command line, deleting for real only without a flag", () => {
+    expect(readRunMode(["--dry-run"])).toBe("dry-run");
+    expect(readRunMode(["--rehearse", "--confirm-stores=a"])).toBe("rehearse");
+    expect(readRunMode([])).toBe("apply");
+  });
+
+  it("rolls a rehearsal back after every step ran and still returns the report", async () => {
+    const steps: string[] = [];
+    const transaction = async <T>(run: () => T): Promise<T> => {
+      try {
+        const result = run();
+        steps.push("commit");
+        return result;
+      } catch (error) {
+        steps.push("rollback");
+        throw error;
+      }
+    };
+
+    const report = await runRemoval("rehearse", (finish) =>
+      transaction(() => {
+        steps.push("delete");
+        return finish({ removed: 3 });
+      }),
+    );
+
+    expect(report).toEqual({ removed: 3 });
+    expect(steps).toEqual(["delete", "rollback"]);
+  });
+
+  it("commits a real run and lets other errors through", async () => {
+    await expect(runRemoval("apply", async (finish) => finish({ removed: 1 }))).resolves.toEqual({ removed: 1 });
+    await expect(
+      runRemoval("rehearse", async () => {
+        throw new Error("coupons_sellerId_fkey");
+      }),
+    ).rejects.toThrow("coupons_sellerId_fkey");
   });
 });
