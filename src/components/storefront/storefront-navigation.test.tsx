@@ -65,6 +65,16 @@ it("stays out of the seller and admin areas", () => {
   }
 });
 
+it("does not ask for area access on the Admin and Central do Lojista pages, where the header is hidden", () => {
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "store-owner", name: "Luiz" } } });
+  navigation.pathname = "/seller/orders";
+
+  render(<StorefrontNavigation />);
+
+  expect(fetch).not.toHaveBeenCalled();
+  authMocks.useSession.mockReset();
+});
+
 it("uses both horizontal logo variants for the hover transition", () => {
   authMocks.useSession.mockReturnValue({ data: null });
   render(<StorefrontNavigation />);

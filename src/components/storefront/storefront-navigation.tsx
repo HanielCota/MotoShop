@@ -35,13 +35,18 @@ const iconButtonClassName =
 
 export function StorefrontNavigation() {
   const pathname = usePathname();
+
+  if (!isStorefrontPath(pathname)) return null;
+
+  return <StorefrontHeader pathname={pathname} />;
+}
+
+/** Mounted only on storefront pages, so the Admin and the Central do Lojista never ask for area access here. */
+function StorefrontHeader({ pathname }: { pathname: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const { data: session } = authClient.useSession();
   const shortcuts = accountAreaShortcuts(useAccountAreaAccess(session?.user.id));
-
-  if (!isStorefrontPath(pathname)) return null;
-
   const catalogActive = pathname === "/products" || pathname.startsWith("/products/");
 
   return (
