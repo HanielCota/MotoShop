@@ -22,8 +22,9 @@ import { requireScriptDatabaseUrl } from "./database-guard";
 import {
   assertNothingProtected,
   assertStoresConfirmed,
+  countProtectedAccountRows,
   describeStore,
-  isProtectedEmail,
+  findProtectedUserIds,
   parseConfirmedStores,
   readDemoRemovalProtection,
   storesNeedingConfirmation,
@@ -83,26 +84,6 @@ async function loadOrders(tx: Transaction, sellerIds: string[]) {
   return orders;
 }
 
-/** Rows of protected accounts that point at the scope: they leave with the demo items, so the report shows them. */
-async function countProtectedAccountRows(tx: Transaction, productIds: string[], sellerIds: string[]) {
-  const users = await tx.user.findMany({ select: { id: true, email: true } });
-  const protectedUserIds = users.filter((user) => isProtectedEmail(protection, user.email)).map((user) => user.id);
-  const owned = { in: protectedUserIds };
-
-  return {
-    cartItems: await tx.cartItem.count({
-      where: { cart: { userId: owned }, variant: { sellerId: { in: sellerIds } } },
-    }),
-    favorites: await tx.favorite.count({ where: { userId: owned, productId: { in: productIds } } }),
-    questions: await tx.productQuestion.count({ where: { askedByUserId: owned, sellerId: { in: sellerIds } } }),
-    productReviews: await tx.productReview.count({ where: { userId: owned, sellerId: { in: sellerIds } } }),
-    sellerReviews: await tx.sellerReview.count({ where: { userId: owned, sellerId: { in: sellerIds } } }),
-    orders: await tx.order.count({
-      where: { userId: owned, sellerOrders: { some: { sellerId: { in: sellerIds } } } },
-    }),
-  };
-}
-
 async function main() {
   const report = await db.$transaction(
     async (tx) => {
@@ -125,7 +106,12 @@ async function main() {
       const orderIds = orders.map((order) => order.id);
       const coupons = await tx.coupon.findMany({ where: { sellerId: { in: sellerIds } }, select: { id: true } });
       const couponIds = coupons.map((coupon) => coupon.id);
-      const protectedAccountRows = await countProtectedAccountRows(tx, productIds, sellerIds);
+      const protectedAccountRows = await countProtectedAccountRows(tx, {
+        protectedUserIds: await findProtectedUserIds(tx, protection),
+        sellerIds,
+        productIds,
+        orderIds,
+      });
 
       const orderScope = { OR: [{ orderId: { in: orderIds } }, { sellerId: { in: sellerIds } }] };
       const productReviewWhere = { OR: [...orderScope.OR, { productId: { in: productIds } }] };

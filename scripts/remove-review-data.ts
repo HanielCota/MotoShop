@@ -28,8 +28,9 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import {
   assertNothingProtected,
   assertStoresConfirmed,
+  countProtectedAccountRows,
   describeStore,
-  isProtectedEmail,
+  findProtectedUserIds,
   parseConfirmedStores,
   readDemoRemovalProtection,
   storesNeedingConfirmation,
@@ -55,7 +56,7 @@ const db = new PrismaClient({ adapter: new PrismaNeon({ connectionString: databa
 const isReviewEmail = (email: string) => email.startsWith("review.") && email.endsWith("@example.test");
 
 async function main() {
-  const counts = await db.$transaction(
+  const report = await db.$transaction(
     async (tx) => {
       const result: Record<string, number> = {};
       const apply = async (name: string, count: () => Promise<number>, remove: () => Promise<{ count: number }>) => {
@@ -82,12 +83,10 @@ async function main() {
         memberEmails: store.seller.members.map((member) => member.user.email.toLowerCase()),
       }));
       assertNothingProtected(protection, { stores, deletedUserEmails: reviewEmails });
-      if (!dryRun) assertStoresConfirmed(stores, confirmedStores);
+      if (dryRun === false) assertStoresConfirmed(stores, confirmedStores);
       const sellerIds = stores.map((store) => store.sellerId);
       // The seed's rows in protected accounts (address, saved motorcycle, cart) stay.
-      const protectedUserIds = (await tx.user.findMany({ select: { id: true, email: true } }))
-        .filter((user) => isProtectedEmail(protection, user.email))
-        .map((user) => user.id);
+      const protectedUserIds = await findProtectedUserIds(tx, protection);
 
       const products = await tx.product.findMany({
         where: { OR: [{ sellerId: { in: sellerIds } }, { slug: { startsWith: "review-" }, isDemo: true }] },
@@ -153,20 +152,12 @@ async function main() {
             cart.items.every((item) => sellerIds.includes(item.variant.sellerId)),
         );
 
-      const protectedOwned = { in: protectedUserIds };
-      const protectedAccountRows = {
-        cartItems: await tx.cartItem.count({
-          where: { cart: { userId: protectedOwned }, variant: { sellerId: { in: sellerIds } } },
-        }),
-        favorites: await tx.favorite.count({ where: { userId: protectedOwned, productId: { in: productIds } } }),
-        questions: await tx.productQuestion.count({
-          where: { askedByUserId: protectedOwned, sellerId: { in: sellerIds } },
-        }),
-        productReviews: await tx.productReview.count({
-          where: { userId: protectedOwned, sellerId: { in: sellerIds } },
-        }),
-        orders: await tx.order.count({ where: { userId: protectedOwned, id: { in: orderIds } } }),
-      };
+      const protectedAccountRows = await countProtectedAccountRows(tx, {
+        protectedUserIds,
+        sellerIds,
+        productIds,
+        orderIds,
+      });
 
       // AuditLog.actor é onDelete: Restrict — remover primeiro.
       const auditWhere = { actorUserId: { in: userIds } };
@@ -462,7 +453,7 @@ async function main() {
     }
 
   console.log(dryRun ? "DRY RUN: nada foi removido. Contagem do que seria removido:" : "Removido:");
-  console.log(JSON.stringify({ ...counts, counts: { ...counts.counts, localImageFiles: files } }, null, 2));
+  console.log(JSON.stringify({ ...report, counts: { ...report.counts, localImageFiles: files } }, null, 2));
   // The generated images are versioned while the site is a demo: deleting them locally is not enough.
   if (!dryRun && files > 0)
     console.log(

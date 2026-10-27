@@ -1,3 +1,4 @@
+import type { Prisma } from "../src/generated/prisma/client";
 import { parseEmailList } from "./review-seed-ids";
 
 /**
@@ -83,6 +84,33 @@ export function parseConfirmedStores(argv: readonly string[]): string[] {
     .split(",")
     .map((slug) => slug.trim())
     .filter((slug) => slug.length > 0);
+}
+
+export async function findProtectedUserIds(
+  tx: Prisma.TransactionClient,
+  protection: DemoRemovalProtection,
+): Promise<string[]> {
+  const users = await tx.user.findMany({ select: { id: true, email: true } });
+
+  return users.filter((user) => isProtectedEmail(protection, user.email)).map((user) => user.id);
+}
+
+/** Rows of protected accounts that point at the scope: they leave with the demo items, so the report shows them. */
+export async function countProtectedAccountRows(
+  tx: Prisma.TransactionClient,
+  scope: { protectedUserIds: string[]; sellerIds: string[]; productIds: string[]; orderIds: string[] },
+): Promise<Record<string, number>> {
+  const owned = { in: scope.protectedUserIds };
+  const sellers = { in: scope.sellerIds };
+
+  return {
+    cartItems: await tx.cartItem.count({ where: { cart: { userId: owned }, variant: { sellerId: sellers } } }),
+    favorites: await tx.favorite.count({ where: { userId: owned, productId: { in: scope.productIds } } }),
+    questions: await tx.productQuestion.count({ where: { askedByUserId: owned, sellerId: sellers } }),
+    productReviews: await tx.productReview.count({ where: { userId: owned, sellerId: sellers } }),
+    sellerReviews: await tx.sellerReview.count({ where: { userId: owned, sellerId: sellers } }),
+    orders: await tx.order.count({ where: { userId: owned, id: { in: scope.orderIds } } }),
+  };
 }
 
 /** The masked view of a store for the dry-run report. */
