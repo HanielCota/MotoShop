@@ -90,6 +90,7 @@ export async function createCheckoutAction(
 export type CouponPreviewState = { discountInCents?: number; error?: string };
 
 const COUPON_PREVIEW_LIMIT = { windowSeconds: 600, max: 20 } as const;
+const CPF_DIGITS = 11;
 
 /**
  * Shows the coupon discount before the purchase. Limited per cart and per IP, so the button cannot
@@ -101,16 +102,16 @@ export async function previewCheckoutCouponAction(input: {
   customerTaxId: string;
 }): Promise<CouponPreviewState> {
   const parsed = couponPreviewSchema.safeParse(input);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Confira o cupom." };
+  if (parsed.success === false) return { error: parsed.error.issues[0]?.message ?? "Confira o cupom." };
 
   try {
     const identity = await getCartIdentity();
-    if (!identity) throw new ApplicationError({ code: "NOT_FOUND", message: "Seu carrinho expirou." });
+    if (identity == null) throw new ApplicationError({ code: "NOT_FOUND", message: "Seu carrinho expirou." });
     const cartKey = "userId" in identity ? `user:${identity.userId}` : `guest:${identity.guestAccessTokenHash}`;
     await assertRateLimit({ key: `coupon-preview:${cartKey}`, ...COUPON_PREVIEW_LIMIT });
     await assertRateLimit({ key: `coupon-preview:ip:${getClientIp(await headers())}`, ...COUPON_PREVIEW_LIMIT });
     const session = await getCurrentSession();
-    const taxId = parsed.data.customerTaxId?.length === 11 ? parsed.data.customerTaxId : undefined;
+    const taxId = parsed.data.customerTaxId?.length === CPF_DIGITS ? parsed.data.customerTaxId : undefined;
 
     return await previewCheckoutCoupon({
       identity,
