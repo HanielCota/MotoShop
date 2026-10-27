@@ -167,6 +167,19 @@ it("names the Central do Lojista in the header and at the top of the phone menu 
   authMocks.useSession.mockReset();
 });
 
+it("hides the area link while the access is still loading, so the wrong label never flashes", () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => new Promise<Response>(() => undefined)),
+  );
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "store-owner", name: "Luiz" } } });
+  render(<StorefrontNavigation />);
+
+  const mainNavigation = screen.getByRole("navigation", { name: "Navegação principal" });
+  expect(within(mainNavigation).getByRole("link", { name: "Venda no Moto Shop" })).toHaveClass("invisible");
+  authMocks.useSession.mockReset();
+});
+
 it("shows only the Central do Lojista to a store member", async () => {
   areaAccess.seller = true;
   authMocks.useSession.mockReturnValue({ data: { user: { id: "member", name: "Juliana" } } });

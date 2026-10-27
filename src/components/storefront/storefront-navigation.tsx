@@ -22,7 +22,11 @@ import { cn } from "@/lib/utils";
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
 import { SignOutButton } from "@/modules/auth/components/sign-out-button";
 import { useAccountAreaAccess } from "@/modules/auth/components/use-account-area-access";
-import { accountAreaShortcuts, type AccountAreaShortcut } from "@/modules/auth/domain/account-area-shortcuts";
+import {
+  accountAreaShortcuts,
+  noAccountAreaAccess,
+  type AccountAreaShortcut,
+} from "@/modules/auth/domain/account-area-shortcuts";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
 import { CartPreview } from "@/modules/cart/components/cart-preview";
 import { customerAccountLinks } from "@/modules/customers/account-links";
@@ -45,8 +49,12 @@ export function StorefrontNavigation() {
 function StorefrontHeader({ pathname }: { pathname: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
-  const { data: session } = authClient.useSession();
-  const shortcuts = accountAreaShortcuts(useAccountAreaAccess(session?.user.id));
+  const { data: session, isPending: sessionPending } = authClient.useSession();
+  const access = useAccountAreaAccess(session?.user.id);
+  const shortcuts = accountAreaShortcuts(access ?? noAccountAreaAccess);
+  // Until the session and the area access are known, the link keeps its place but shows nothing,
+  // so a store owner never sees "Venda no Moto Shop" flash before "Central do Lojista".
+  const areaLinkClassName = sessionPending === true || access == null ? "invisible" : "";
   const catalogActive = pathname === "/products" || pathname.startsWith("/products/");
 
   return (
@@ -75,7 +83,7 @@ function StorefrontHeader({ pathname }: { pathname: string }) {
           <AreaLinks
             shortcuts={shortcuts}
             onNavigate={() => setMenuOpen(false)}
-            className="inline-flex min-h-11 items-center transition-colors hover:text-white"
+            className={`inline-flex min-h-11 items-center transition-colors hover:text-white ${areaLinkClassName}`}
           />
         </nav>
 
