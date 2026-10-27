@@ -171,6 +171,8 @@ function RankingCard({
 }
 
 const numberCellClassName = `${cellClassName} text-right tabular-nums`;
+/** Number columns line up on the right, header included, as in the approved board. */
+const rankingTableClassName = "[&_th:not(:first-child)]:text-right";
 
 function TopStores({ stores }: { stores: AdminSalesSummary["topStores"] }) {
   return (
@@ -181,7 +183,12 @@ function TopStores({ stores }: { stores: AdminSalesSummary["topStores"] }) {
       emptyDescription="Quando houver pedidos pagos, o ranking das lojas aparece aqui."
       isEmpty={stores.length === 0}
     >
-      <AdminTable caption="Lojas que mais venderam" columns={["Loja", "Pedidos", "Vendas"]} minWidth="min-w-0">
+      <AdminTable
+        caption="Lojas que mais venderam"
+        columns={["Loja", "Pedidos", "Vendas"]}
+        minWidth="min-w-0"
+        className={rankingTableClassName}
+      >
         {stores.map((store) => (
           <tr key={store.sellerId}>
             <td className={cellClassName}>{store.storeName}</td>
@@ -203,7 +210,12 @@ function TopProducts({ products }: { products: AdminSalesSummary["topProducts"] 
       emptyDescription="Os produtos mais vendidos, com o SKU da variação, aparecem aqui."
       isEmpty={products.length === 0}
     >
-      <AdminTable caption="Produtos mais vendidos" columns={["Produto", "Qtd.", "Vendas"]} minWidth="min-w-0">
+      <AdminTable
+        caption="Produtos mais vendidos"
+        columns={["Produto", "Qtd.", "Vendas"]}
+        minWidth="min-w-0"
+        className={rankingTableClassName}
+      >
         {products.map((product) => (
           <tr key={`${product.sellerId}:${product.sku}`}>
             <td className={cellClassName}>
