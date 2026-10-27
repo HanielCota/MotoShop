@@ -105,6 +105,13 @@ export function clearCatalogFiltersHref(query: CatalogQuery): Route {
   });
 }
 
+/** The filters under "Mais filtros", named in the order they appear; the variant ones only exist with options. */
+export function secondaryFilterNames(hasAttributeFilters: boolean) {
+  const attributeNames = hasAttributeFilters ? ["gênero", "cor", "tamanho"] : [];
+
+  return [...attributeNames, "preço", "disponibilidade", "oferta"];
+}
+
 /** The filters kept under "Mais filtros" open that section when one of them is in use. */
 export function hasSecondaryCatalogFilter(query: CatalogQuery) {
   const attributeInUse = [query.gender, query.color, query.size].some((value) => value != null && value !== "");

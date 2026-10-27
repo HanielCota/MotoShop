@@ -41,6 +41,7 @@ import {
   clearCatalogFiltersHref,
   countActiveCatalogFilters,
   hasSecondaryCatalogFilter,
+  secondaryFilterNames,
   normalizeCatalogPrice,
   removeCatalogFilterHref,
   type CatalogFilterKey,
@@ -387,10 +388,14 @@ function CatalogFilterForm({
         summary={
           <>
             Mais filtros{" "}
-            <span className="text-muted-foreground font-normal">(gênero, cor, tamanho, preço, oferta)</span>
+            <span className="text-muted-foreground font-normal">
+              ({secondaryFilterNames(options.attributes != null).join(", ")})
+            </span>
           </>
         }
-        className="rounded-none border-x-0 border-b-0 bg-transparent [&>div]:grid [&>div]:gap-4 [&>div]:px-0 [&>summary]:px-0"
+        className="rounded-none border-x-0 border-b-0 bg-transparent"
+        summaryClassName="px-0"
+        contentClassName="grid gap-4 px-0"
       >
         {options.attributes ? (
           <VariantAttributeFilterFields

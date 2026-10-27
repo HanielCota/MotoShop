@@ -6,6 +6,7 @@ import {
   clearCatalogFiltersHref,
   countActiveCatalogFilters,
   hasSecondaryCatalogFilter,
+  secondaryFilterNames,
   normalizeCatalogPrice,
   removeCatalogFilterHref,
   type CatalogQuery,
@@ -98,5 +99,15 @@ describe("hasSecondaryCatalogFilter", () => {
     ["offer", { promotion: "ON_SALE" as const }],
   ])('opens "Mais filtros" when the %s filter is in use', (_name, filter) => {
     expect(hasSecondaryCatalogFilter({ ...base, ...filter })).toBe(true);
+  });
+});
+
+describe("secondaryFilterNames", () => {
+  it('names every filter under "Mais filtros", availability included', () => {
+    expect(secondaryFilterNames(true)).toEqual(["gênero", "cor", "tamanho", "preço", "disponibilidade", "oferta"]);
+  });
+
+  it("leaves out gender, color and size when the catalog has no options for them", () => {
+    expect(secondaryFilterNames(false)).toEqual(["preço", "disponibilidade", "oferta"]);
   });
 });
