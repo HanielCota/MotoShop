@@ -27,6 +27,7 @@
     "db:studio": "prisma studio",
     "db:seed:review": "tsx scripts/seed-review-data.ts",
     "db:remove:review": "tsx scripts/remove-review-data.ts",
+    "db:remove:leftovers": "tsx scripts/remove-demo-leftovers.ts",
     "db:review:clean-texts": "tsx scripts/review-clean-texts.ts",
     "db:hide:review": "tsx scripts/hide-review-stores.ts",
     "db:review:shipping": "tsx scripts/review-shipping-nationwide.ts",

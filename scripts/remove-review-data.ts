@@ -9,9 +9,13 @@
  * dados fictícios ligados a elas (vínculo com loja de revisão, pedidos `MS-REVIEW-V*`, favoritos e
  * itens de carrinho de produtos de revisão, endereços/motos/carrinho com ID determinístico do seed).
  *
+ * Nada de `demo-removal-protection.ts` sai: lojas e contas protegidas abortam a execução, e as linhas
+ * do seed nas contas protegidas (endereços, motos salvas, carrinho) ficam. Loja com membro de e-mail
+ * real só sai com `--confirm-stores=<identificador>`.
+ *
  * Executa tudo em uma transação; qualquer referência inesperada aborta sem apagar nada.
  *
- * Uso: node node_modules/tsx/dist/cli.mjs scripts/remove-review-data.ts [--dry-run]
+ * Uso: node node_modules/tsx/dist/cli.mjs scripts/remove-review-data.ts [--dry-run] [--confirm-stores=a,b]
  *   --dry-run  apenas conta o que seria removido (nenhuma escrita no banco nem nos arquivos).
  */
 import { config } from "dotenv";
@@ -21,6 +25,15 @@ import { existsSync, readdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 
 import { PrismaClient } from "../src/generated/prisma/client";
+import {
+  assertNothingProtected,
+  assertStoresConfirmed,
+  describeStore,
+  isProtectedEmail,
+  parseConfirmedStores,
+  readDemoRemovalProtection,
+  storesNeedingConfirmation,
+} from "./demo-removal-protection";
 import { REVIEW_STORE_WHERE, REVIEW_USER_WHERE, reviewBrandWhere } from "./review-scope";
 import {
   parseEmailList,
@@ -33,6 +46,8 @@ import {
 config({ path: ".env.local", quiet: true });
 
 const databaseUrl = requireScriptDatabaseUrl(process.env, "db:remove:review");
+const protection = readDemoRemovalProtection(process.env);
+const confirmedStores = parseConfirmedStores(process.argv);
 
 const dryRun = process.argv.includes("--dry-run");
 const db = new PrismaClient({ adapter: new PrismaNeon({ connectionString: databaseUrl }) });
@@ -51,11 +66,28 @@ async function main() {
       const userIds = users.map((user) => user.id);
       const reviewEmails = users.map((user) => user.email);
 
-      const stores = await tx.store.findMany({
-        where: REVIEW_STORE_WHERE,
-        select: { sellerId: true },
-      });
+      const stores = (
+        await tx.store.findMany({
+          where: REVIEW_STORE_WHERE,
+          select: {
+            slug: true,
+            sellerId: true,
+            seller: { select: { members: { select: { user: { select: { email: true } } } } } },
+          },
+          orderBy: { slug: "asc" },
+        })
+      ).map((store) => ({
+        slug: store.slug,
+        sellerId: store.sellerId,
+        memberEmails: store.seller.members.map((member) => member.user.email.toLowerCase()),
+      }));
+      assertNothingProtected(protection, { stores, deletedUserEmails: reviewEmails });
+      if (!dryRun) assertStoresConfirmed(stores, confirmedStores);
       const sellerIds = stores.map((store) => store.sellerId);
+      // The seed's rows in protected accounts (address, saved motorcycle, cart) stay.
+      const protectedUserIds = (await tx.user.findMany({ select: { id: true, email: true } }))
+        .filter((user) => isProtectedEmail(protection, user.email))
+        .map((user) => user.id);
 
       const products = await tx.product.findMany({
         where: { OR: [{ sellerId: { in: sellerIds } }, { slug: { startsWith: "review-" }, isDemo: true }] },
@@ -96,20 +128,20 @@ async function main() {
         await tx.customerAddress.findMany({
           where: {
             id: { startsWith: REVIEW_ID_PREFIX },
-            userId: { notIn: userIds },
+            userId: { notIn: [...userIds, ...protectedUserIds] },
           },
           select: { id: true, userId: true },
         })
       ).filter((address) => [1, 2].some((index) => address.id === viewerAddressId(address.userId, index)));
       const viewerMotorcycles = (
         await tx.savedMotorcycle.findMany({
-          where: { id: { startsWith: REVIEW_ID_PREFIX }, userId: { notIn: userIds } },
+          where: { id: { startsWith: REVIEW_ID_PREFIX }, userId: { notIn: [...userIds, ...protectedUserIds] } },
           select: { id: true, userId: true, motorcycleFitmentId: true },
         })
       ).filter((saved) => saved.id === viewerSavedMotorcycleId(saved.userId, saved.motorcycleFitmentId));
       const viewerCarts = (
         await tx.cart.findMany({
-          where: { id: { startsWith: REVIEW_ID_PREFIX }, userId: { notIn: userIds } },
+          where: { id: { startsWith: REVIEW_ID_PREFIX }, userId: { notIn: [...userIds, ...protectedUserIds] } },
           select: { id: true, userId: true, items: { select: { variant: { select: { sellerId: true } } } } },
         })
       )
@@ -120,6 +152,21 @@ async function main() {
             cart.id === viewerCartId(cart.userId) &&
             cart.items.every((item) => sellerIds.includes(item.variant.sellerId)),
         );
+
+      const protectedOwned = { in: protectedUserIds };
+      const protectedAccountRows = {
+        cartItems: await tx.cartItem.count({
+          where: { cart: { userId: protectedOwned }, variant: { sellerId: { in: sellerIds } } },
+        }),
+        favorites: await tx.favorite.count({ where: { userId: protectedOwned, productId: { in: productIds } } }),
+        questions: await tx.productQuestion.count({
+          where: { askedByUserId: protectedOwned, sellerId: { in: sellerIds } },
+        }),
+        productReviews: await tx.productReview.count({
+          where: { userId: protectedOwned, sellerId: { in: sellerIds } },
+        }),
+        orders: await tx.order.count({ where: { userId: protectedOwned, id: { in: orderIds } } }),
+      };
 
       // AuditLog.actor é onDelete: Restrict — remover primeiro.
       const auditWhere = { actorUserId: { in: userIds } };
@@ -394,7 +441,13 @@ async function main() {
       result["ViewerUsersInDeleteScope"] = users.filter((user) =>
         viewerEmails.includes(user.email.toLowerCase()),
       ).length;
-      return result;
+      return {
+        counts: result,
+        stores: stores.map(describeStore),
+        storesNeedingConfirmation: storesNeedingConfirmation(stores).map(describeStore),
+        accounts: reviewEmails.toSorted(),
+        protectedAccountRows,
+      };
     },
     { timeout: 120_000 },
   );
@@ -409,7 +462,7 @@ async function main() {
     }
 
   console.log(dryRun ? "DRY RUN: nada foi removido. Contagem do que seria removido:" : "Removido:");
-  console.log(JSON.stringify({ ...counts, localImageFiles: files }, null, 2));
+  console.log(JSON.stringify({ ...counts, counts: { ...counts.counts, localImageFiles: files } }, null, 2));
   // The generated images are versioned while the site is a demo: deleting them locally is not enough.
   if (!dryRun && files > 0)
     console.log(
