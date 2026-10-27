@@ -13,6 +13,7 @@ import { notifyCartUpdated } from "@/modules/cart/components/cart-events";
 import type { SecureCardHandle } from "@/modules/payments/components/secure-card-fields";
 import { highlightControl, highlightInvalidField } from "@/shared/forms/field-error-focus";
 
+import { previewCheckoutCouponAction } from "../actions/checkout-actions";
 import { CheckoutAddressFields } from "./checkout-address-fields";
 import { CheckoutCustomerFields } from "./checkout-customer-fields";
 import {
@@ -234,6 +235,13 @@ export function CheckoutForm({
           isQuoting={shipping.isQuoting}
           couponCode={form.couponCode}
           onCouponChange={(value) => updateField("couponCode", value)}
+          onApplyCoupon={(code) =>
+            previewCheckoutCouponAction({
+              couponCode: code,
+              customerEmail: form.customerEmail,
+              customerTaxId: form.customerTaxId,
+            })
+          }
         >
           {formError ? (
             <div ref={errorRef} tabIndex={-1} className="mt-4 outline-none">

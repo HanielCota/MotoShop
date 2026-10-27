@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 
-import { calculateSellerCharges } from "./seller-charges";
+import { calculateCartCouponDiscount, calculateSellerCharges } from "./seller-charges";
 
 const promotionEndsAt = new Date("2026-10-07T12:00:00.000Z");
 const item = (sellerId: string, overrides: Partial<{ priceInCents: number; quantity: number }> = {}) => ({
@@ -225,4 +225,38 @@ it("keeps the Moto Shop-paid coupon valid in every store, with the discount on t
 
   expect(charges.map((charge) => charge.marketplaceDiscountInCents)).toEqual([1_000, 2_000]);
   expect(charges.map((charge) => charge.sellerDiscountInCents)).toEqual([0, 0]);
+});
+
+it("previews exactly the coupon discount the order charges, split across sellers and promotions", () => {
+  const items = [item("s1", { quantity: 3 }), item("s2", { priceInCents: 7_990 })];
+  const coupon = percentCoupon(
+    { ownerType: "MARKETPLACE", sellerId: null, participatingSellerIds: ["s1", "s2"] },
+    1_000,
+  );
+  const now = new Date("2026-10-06T00:00:00.000Z");
+
+  const charges = calculateSellerCharges({ items, quoteGroups, selections, coupon, defaultCommissionBps: 1_200, now });
+  const chargedDiscount = charges.reduce((sum, charge) => sum + charge.totals.discountAmountInCents, 0);
+
+  expect(calculateCartCouponDiscount({ items, coupon, now })).toBe(chargedDiscount);
+  expect(chargedDiscount).toBeGreaterThan(0);
+});
+
+it("refuses a store coupon on another store's items with the same message as the order", () => {
+  const coupon = percentCoupon({ ownerType: "SELLER", sellerId: "s2" }, 1_000);
+  const now = new Date("2026-10-08T00:00:00.000Z");
+
+  expect(() =>
+    calculateSellerCharges({
+      items: [item("s1")],
+      quoteGroups,
+      selections,
+      coupon,
+      defaultCommissionBps: 1_200,
+      now,
+    }),
+  ).toThrow("O cupom não gera desconto válido.");
+  expect(() => calculateCartCouponDiscount({ items: [item("s1")], coupon, now })).toThrow(
+    "O cupom não gera desconto válido.",
+  );
 });

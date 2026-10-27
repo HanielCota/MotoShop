@@ -16,6 +16,7 @@ const baseProps = {
   isQuoting: false,
   couponCode: "",
   onCouponChange: () => undefined,
+  onApplyCoupon: async () => ({}),
 };
 
 it("shows each item's product photo, with the cart placeholder for an item without one", () => {

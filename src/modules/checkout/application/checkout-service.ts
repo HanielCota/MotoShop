@@ -30,6 +30,8 @@ import type { PaymentProvider } from "@/shared/payment/payment-provider";
 import { PaymentProviderError } from "@/shared/payment/payment-provider-error";
 
 import { createOrderNumber } from "../domain/order-number";
+import type { CouponCustomer } from "@/modules/coupons/domain/coupon-customer-key";
+
 import { couponCustomerOf } from "../domain/coupon-customer";
 import { calculateSellerCharges } from "../domain/seller-charges";
 import { shippingSelectionsSchema, type CheckoutInput } from "../schemas/checkout";
@@ -131,7 +133,11 @@ export async function priceCheckoutCart(
   now: Date,
   selections: Record<string, string> = parseShippingSelections(input.data.shippingSelections),
 ) {
-  const coupon = await loadCheckoutCoupon(input, now);
+  const coupon = await loadCheckoutCoupon(
+    input.data.couponCode,
+    couponCustomerOf(input.data, input.session?.user.id),
+    now,
+  );
   const quoteGroups = await quoteShippingForCart(cart, input.data.postalCode);
   const defaultCommissionBps = await loadDefaultCommissionBps();
   const sellerCharges = calculateSellerCharges({
@@ -146,12 +152,8 @@ export async function priceCheckoutCart(
 }
 
 /** The active coupon, plus the sellers joined to it when it is a seller-funded campaign. */
-async function loadCheckoutCoupon(input: CheckoutRequest, now: Date) {
-  const coupon = await findActiveCoupon(
-    input.data.couponCode,
-    couponCustomerOf(input.data, input.session?.user.id),
-    now,
-  );
+export async function loadCheckoutCoupon(couponCode: string | undefined, customer: CouponCustomer, now: Date) {
+  const coupon = await findActiveCoupon(couponCode, customer, now);
   if (!coupon || !isSellerFundedCampaign(coupon)) return coupon;
 
   return { ...coupon, participatingSellerIds: await listActiveCouponParticipantSellerIds(coupon.id) };

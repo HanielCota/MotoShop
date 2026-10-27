@@ -22,6 +22,7 @@ vi.mock("../application/submit-checkout", () => ({
     return { kind: "order", result: await mocks.execute(...args) };
   },
 }));
+vi.mock("../application/preview-checkout-coupon", () => ({ previewCheckoutCoupon: vi.fn() }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers({ "x-vercel-forwarded-for": "203.0.113.7" }) }));
 vi.mock("../schemas/checkout", () => ({
   checkoutSchema: {
