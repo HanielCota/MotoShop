@@ -1,17 +1,31 @@
 const ALLOWED_IMAGE_TYPES: readonly string[] = ["image/jpeg", "image/png", "image/webp"];
 const MAX_IMAGE_SIZE_IN_BYTES = 5 * 1024 * 1024;
 
-export const IMAGE_FILE_RULES_MESSAGE = "A imagem precisa ser JPG, PNG ou WebP e ter até 5 MB.";
-/** The file already passed the type and size check, so a refusal here is not the person's fault. */
+/** The file already passed the type and size check, so a refusal here does not blame it. */
 export const IMAGE_SERVICE_REFUSED_MESSAGE =
-  "O serviço de imagens não aceitou o envio agora. Tente de novo em alguns minutos.";
+  "O serviço de imagens não aceitou o envio. Tente de novo; se o erro continuar, tente com outra imagem.";
+export const IMAGE_SERVICE_UNREACHABLE_MESSAGE =
+  "Não foi possível conectar ao serviço de imagens. Confira sua internet e tente de novo.";
+
+/** Names the file, so a selection of several photos shows which one breaks the rule. */
+export function imageFileRulesMessage(fileName: string): string {
+  return `A imagem "${fileName}" precisa ser JPG, PNG ou WebP e ter até 5 MB.`;
+}
 
 /** Checked in the browser before asking the server for an upload authorization. */
 export function findImageFileProblem(file: File): string | null {
-  if (ALLOWED_IMAGE_TYPES.includes(file.type) === false) return IMAGE_FILE_RULES_MESSAGE;
-  if (file.size > MAX_IMAGE_SIZE_IN_BYTES) return IMAGE_FILE_RULES_MESSAGE;
+  const isAllowed = ALLOWED_IMAGE_TYPES.includes(file.type) && file.size <= MAX_IMAGE_SIZE_IN_BYTES;
+  if (isAllowed) return null;
 
-  return null;
+  return imageFileRulesMessage(file.name);
+}
+
+async function postToImageKit(url: string, body: FormData): Promise<Response> {
+  try {
+    return await fetch(url, { method: "POST", body });
+  } catch (error) {
+    throw new Error(IMAGE_SERVICE_UNREACHABLE_MESSAGE, { cause: error });
+  }
 }
 
 export async function uploadFileToImageKit(input: {
@@ -23,7 +37,7 @@ export async function uploadFileToImageKit(input: {
   for (const [key, value] of Object.entries(input.fields)) formData.append(key, value);
   formData.append("file", input.file);
 
-  const response = await fetch(input.url, { method: "POST", body: formData });
+  const response = await postToImageKit(input.url, formData);
   if (response.ok === false) throw new Error(IMAGE_SERVICE_REFUSED_MESSAGE);
   const result: unknown = await response.json();
   if (!result || typeof result !== "object" || !("fileId" in result) || typeof result.fileId !== "string") {

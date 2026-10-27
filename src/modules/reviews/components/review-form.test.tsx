@@ -40,5 +40,7 @@ it("refuses videos, which are out of scope for reviews", async () => {
   expect(screen.queryByRole("radiogroup", { name: "Nota da loja" })).not.toBeInTheDocument();
   const fileInput = screen.getByLabelText("Fotos (opcional, até 3 imagens)");
   fireEvent.change(fileInput, { target: { files: [new File(["video"], "video.mp4", { type: "video/mp4" })] } });
-  expect(await screen.findByText("A imagem precisa ser JPG, PNG ou WebP e ter até 5 MB.")).toBeInTheDocument();
+  expect(
+    await screen.findByText('A imagem "video.mp4" precisa ser JPG, PNG ou WebP e ter até 5 MB.'),
+  ).toBeInTheDocument();
 });
