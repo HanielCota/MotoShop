@@ -20,6 +20,9 @@ import { runAuthTaskAfterResponse } from "@/modules/auth/infrastructure/backgrou
 import { TRUSTED_CLIENT_IP_HEADER } from "@/shared/request/client-ip";
 import { consumeRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
+/** The same page "Esqueci minha senha" sends people to. */
+const PASSWORD_RESET_PAGE = "/reset-password";
+
 export const authEmailConfigured = Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
 export const authEmailVerificationRequired = authEmailConfigured && env.AUTH_REQUIRE_EMAIL_VERIFICATION === true;
 
@@ -67,9 +70,11 @@ export const auth = betterAuth({
             url: string;
             token: string;
           }) => sendAuthEmail({ kind: "verify", to: user.email, url, token }),
-          // A verified admin e-mail must set its password through reset (L-19).
-          afterEmailVerification: async (user: { id: string; email: string }) =>
-            secureAdminAccountAfterVerification(user),
+          // A verified admin e-mail must set its password through reset (L-19); Better Auth sends that link.
+          afterEmailVerification: async (user: { id: string; email: string }): Promise<void> =>
+            secureAdminAccountAfterVerification(user, (email) =>
+              auth.api.requestPasswordReset({ body: { email, redirectTo: PASSWORD_RESET_PAGE } }),
+            ),
         },
       }
     : {}),
