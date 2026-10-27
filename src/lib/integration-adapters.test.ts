@@ -84,15 +84,15 @@ it("signs a direct ImageKit upload without exposing the private key", async () =
   expect(claims).toMatchObject({
     folder: result.fields.folder,
     fileName: result.fields.fileName,
-    overwriteFile: false,
-    useUniqueFileName: false,
+    overwriteFile: "false",
+    useUniqueFileName: "false",
     checks: '"file.mime" IN ["image/webp"] AND "file.size" <= 5242880',
   });
   expect(result.fields.checks).toBe(claims.checks);
   expect(claims.exp - claims.iat).toBe(300);
   expect(signature).toBe(createHmac("sha256", "private_test").update(`${header}.${payload}`).digest("base64url"));
   const modified = Buffer.from(
-    JSON.stringify({ ...claims, folder: "/products/another-seller", overwriteFile: true }),
+    JSON.stringify({ ...claims, folder: "/products/another-seller", overwriteFile: "true" }),
   ).toString("base64url");
   expect(signature).not.toBe(createHmac("sha256", "private_test").update(`${header}.${modified}`).digest("base64url"));
   expect(JSON.stringify(result)).not.toContain("private_test");
@@ -306,8 +306,26 @@ it("signs a private ImageKit upload so the browser cannot turn it public", async
   const [, payload] = defined(result.fields.token).split(".");
   const claims = JSON.parse(Buffer.from(defined(payload), "base64url").toString());
 
-  expect(claims.isPrivateFile).toBe(true);
+  expect(claims.isPrivateFile).toBe("true");
   expect(result.fields.isPrivateFile).toBe("true");
+});
+
+// Regression: ImageKit answered 400 because the token held booleans and a jti the form never sent.
+it.each([false, true])("signs exactly the ImageKit form fields as strings (private: %s)", async (isPrivate) => {
+  const result = await new ImageKitStorageProvider().createUploadUrl({
+    key: "stores/store-1/logo.png",
+    contentType: "image/png",
+    maxSizeInBytes: 5 * 1024 * 1024,
+    isPrivate,
+  });
+  const { token, ...formFields } = result.fields;
+  const [, payload] = defined(token).split(".");
+  const { iat, exp, ...signedFields } = JSON.parse(Buffer.from(defined(payload), "base64url").toString());
+
+  expect(signedFields).toStrictEqual(formFields);
+  expect(Object.values(signedFields).every((value) => typeof value === "string")).toBe(true);
+  expect(Number.isInteger(iat)).toBe(true);
+  expect(Number.isInteger(exp)).toBe(true);
 });
 
 it("refuses a return photo that ImageKit did not store as private", async () => {
