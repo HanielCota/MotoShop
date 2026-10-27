@@ -17,6 +17,16 @@ export const REVIEW_STORE_WHERE = {
   seller: { members: { some: { role: "OWNER", user: REVIEW_USER_WHERE } } },
 } satisfies Prisma.StoreWhereInput;
 
+/**
+ * Demo coupons: the seed's REVIEW-* codes plus any coupon a demo store created by hand during the
+ * review. Leaving the latter behind blocks the removal of the store (coupons_sellerId_fkey).
+ */
+export function reviewCouponWhere(reviewSellerIds: string[]): Prisma.CouponWhereInput {
+  return {
+    OR: [{ code: { startsWith: "REVIEW-" } }, { sellerId: { in: reviewSellerIds } }],
+  } satisfies Prisma.CouponWhereInput;
+}
+
 /** Fallback brands the expanded seed creates when the database has fewer than five active brands. */
 export const REVIEW_FALLBACK_BRAND_LABELS = ["Pista", "Trilha", "Areia", "Box", "Largada"] as const;
 

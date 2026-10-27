@@ -35,7 +35,7 @@ import {
   readDemoRemovalProtection,
   storesNeedingConfirmation,
 } from "./demo-removal-protection";
-import { REVIEW_STORE_WHERE, REVIEW_USER_WHERE, reviewBrandWhere } from "./review-scope";
+import { REVIEW_STORE_WHERE, REVIEW_USER_WHERE, reviewBrandWhere, reviewCouponWhere } from "./review-scope";
 import {
   parseEmailList,
   REVIEW_ID_PREFIX,
@@ -115,7 +115,7 @@ async function main() {
       const orderIds = orders.map((order) => order.id);
 
       const coupons = await tx.coupon.findMany({
-        where: { code: { startsWith: "REVIEW-" } },
+        where: reviewCouponWhere(sellerIds),
         select: { id: true, sellerId: true },
       });
       if (coupons.some((coupon) => coupon.sellerId && !sellerIds.includes(coupon.sellerId)))
