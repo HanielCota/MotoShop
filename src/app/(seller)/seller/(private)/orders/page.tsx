@@ -149,7 +149,12 @@ export default async function SellerOrdersPage({
                           · {order.items.length} {order.items.length === 1 ? "item" : "itens"}
                         </p>
                       </div>
-                      {shipment ? <StatusBadge domain="shipment" status={shipment.status} /> : null}
+                      {shipment ? (
+                        <StatusBadge
+                          domain={shipment.provider === "OWN" ? "ownShipment" : "shipment"}
+                          status={shipment.status}
+                        />
+                      ) : null}
                     </div>
 
                     <div className="text-muted-foreground grid gap-1 text-sm sm:grid-cols-2">

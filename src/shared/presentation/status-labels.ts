@@ -38,6 +38,12 @@ const shipment: StatusMap = {
   CANCELLED: { label: "Envio cancelado", tone: "danger", meaning: "failed" },
 };
 
+/** The store's own delivery has no label to buy, so "ready" means ready to send. */
+const ownShipment: StatusMap = {
+  ...shipment,
+  READY_TO_SHIP: { label: "Pronto para envio", tone: "info", meaning: "done" },
+};
+
 const payment: StatusMap = {
   PENDING: { label: "Pendente", tone: "warning", meaning: "waiting" },
   PROCESSING: { label: "Processando", tone: "info", meaning: "waiting" },
@@ -121,6 +127,7 @@ const statusMaps = {
   order,
   sellerOrder: order,
   shipment,
+  ownShipment,
   payment,
   return: returnRequest,
   cancellation,
