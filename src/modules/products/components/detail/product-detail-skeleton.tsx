@@ -1,12 +1,16 @@
 import { pageContainerClassName } from "@/components/ui/page-container";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, storefrontSkeletonHeightClassName } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 export function ProductDetailSkeleton() {
   return (
     <div
       role="status"
       aria-label="Carregando produto"
-      className={pageContainerClassName("default", "flex flex-col gap-8 py-8 sm:py-12")}
+      className={pageContainerClassName(
+        "default",
+        cn("flex flex-col gap-8 py-8 sm:py-12", storefrontSkeletonHeightClassName),
+      )}
     >
       <Skeleton className="h-4 w-64 max-w-full" />
       <div className="grid gap-5 md:grid-cols-2 lg:gap-8">
