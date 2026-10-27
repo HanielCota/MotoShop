@@ -268,7 +268,7 @@ function AccountMenu() {
  * True once the first session check of the page has answered. The session is checked again whenever
  * the tab regains focus, and a visitor is "pending" during each of those checks: they keep the icon.
  */
-function useFirstSessionCheckDone(isPending: boolean | undefined): boolean {
+function useFirstSessionCheckDone(isPending: boolean): boolean {
   const [done, setDone] = useState(isPending !== true);
   if (done === false && isPending !== true) setDone(true);
 
