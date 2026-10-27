@@ -79,3 +79,19 @@ it("shows the three steps and keeps the page address closed while it follows the
   );
   expect(screen.getByLabelText(/^Endereço da página/).closest("details")).not.toHaveAttribute("open");
 });
+
+it("keeps the page address open while the seller fixes an address error", async () => {
+  render(<ProductForm {...options} />);
+
+  fireEvent.submit(screen.getByRole("button", { name: "Criar rascunho" }).closest("form") as HTMLFormElement);
+  const slug = screen.getByLabelText(/^Endereço da página/);
+  await waitFor(() => expect(slug.closest("details")).toHaveAttribute("open"));
+
+  fireEvent.change(slug, { target: { value: "capacete-novo" } });
+  fireEvent.blur(slug);
+
+  await waitFor(() =>
+    expect(screen.queryByText(/endereço/i, { selector: "[role=alert], .text-destructive" })).toBeNull(),
+  );
+  expect(slug.closest("details")).toHaveAttribute("open");
+});

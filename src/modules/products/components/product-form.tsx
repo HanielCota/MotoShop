@@ -101,6 +101,9 @@ export function ProductFormFields({
     mode: "onTouched",
   });
   const [slugEdited, setSlugEdited] = useState(slugLocked || Boolean(defaultValues.slug));
+  // Once open (by "Alterar" or by an error), the address stays open while the seller fixes it.
+  const [slugSectionOpened, setSlugSectionOpened] = useState(false);
+  if (errors.slug != null && slugSectionOpened === false) setSlugSectionOpened(true);
 
   const nameField = register("name", {
     onChange: (event: { target: { value: string } }) => {
@@ -148,7 +151,11 @@ export function ProductFormFields({
         slugFormField
       ) : (
         // A new product's address comes from the name; the field only opens to change it or to show its error.
-        <details className="group -mt-2 text-sm sm:col-span-2" open={errors.slug != null}>
+        <details
+          className="group -mt-2 text-sm sm:col-span-2"
+          open={slugSectionOpened}
+          onToggle={(event) => setSlugSectionOpened(event.currentTarget.open)}
+        >
           <summary className="text-muted-foreground cursor-pointer list-none [&::-webkit-details-marker]:hidden">
             Endereço da página: criado a partir do nome.{" "}
             <span className="text-brand-strong underline underline-offset-4 group-open:hidden">Alterar</span>
