@@ -136,6 +136,26 @@ it("shows the shortcuts on browsers without AbortSignal.any (Safari before 17.4)
   }
 });
 
+it("names the Central do Lojista in the header and at the top of the phone menu for a store owner", async () => {
+  areaAccess.seller = true;
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "store-owner", name: "Luiz" } } });
+  render(<StorefrontNavigation />);
+
+  const mainNavigation = screen.getByRole("navigation", { name: "Navegação principal" });
+  expect(await within(mainNavigation).findByRole("link", { name: "Central do Lojista" })).toHaveAttribute(
+    "href",
+    "/seller",
+  );
+  expect(within(mainNavigation).queryByRole("link", { name: "Venda no Moto Shop" })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Abrir menu" }));
+  const phoneMenu = screen.getByRole("navigation", { name: "Navegação mobile" });
+  const phoneLinks = within(phoneMenu).getAllByRole("link");
+  expect(phoneLinks[0]).toHaveTextContent("Central do Lojista");
+  expect(within(phoneMenu).queryByRole("link", { name: "Venda no Moto Shop" })).not.toBeInTheDocument();
+  authMocks.useSession.mockReset();
+});
+
 it("shows only the Central do Lojista to a store member", async () => {
   areaAccess.seller = true;
   authMocks.useSession.mockReturnValue({ data: { user: { id: "member", name: "Juliana" } } });

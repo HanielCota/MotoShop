@@ -37,6 +37,8 @@ export function StorefrontNavigation() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
+  const { data: session } = authClient.useSession();
+  const shortcuts = accountAreaShortcuts(useAccountAreaAccess(session?.user.id));
 
   if (!isStorefrontPath(pathname)) return null;
 
@@ -65,15 +67,17 @@ export function StorefrontNavigation() {
           >
             Catálogo
           </Link>
-          <Link href="/seller" className="inline-flex min-h-11 items-center transition-colors hover:text-white">
-            {sellerLinkLabel}
-          </Link>
+          <AreaLinks
+            shortcuts={shortcuts}
+            onNavigate={() => setMenuOpen(false)}
+            className="inline-flex min-h-11 items-center transition-colors hover:text-white"
+          />
         </nav>
 
         <CatalogAwareHeaderSearch id="storefront-search" className="ml-auto hidden max-w-xs flex-1 md:flex" />
 
         <div className="ml-auto flex items-center gap-1 md:ml-0">
-          <AccountMenu />
+          <AccountMenu signedInName={session?.user ? (session.user.name ?? "") : null} shortcuts={shortcuts} />
           <CartPreview />
           <button
             ref={menuButton}
@@ -96,6 +100,13 @@ export function StorefrontNavigation() {
         hidden={!menuOpen}
       >
         <CatalogAwareHeaderSearch id="storefront-mobile-search" className="my-2 flex" />
+        {shortcuts.length > 0 ? (
+          <AreaLinks
+            shortcuts={shortcuts}
+            onNavigate={() => setMenuOpen(false)}
+            className="text-moto-brand flex min-h-11 items-center border-b border-white/10 text-sm font-semibold"
+          />
+        ) : null}
         <Link
           href="/products"
           onClick={() => setMenuOpen(false)}
@@ -117,13 +128,13 @@ export function StorefrontNavigation() {
         >
           Categorias
         </Link>
-        <Link
-          href="/seller"
-          onClick={() => setMenuOpen(false)}
-          className="flex min-h-11 items-center text-sm font-medium"
-        >
-          {sellerLinkLabel}
-        </Link>
+        {shortcuts.length === 0 ? (
+          <AreaLinks
+            shortcuts={shortcuts}
+            onNavigate={() => setMenuOpen(false)}
+            className="flex min-h-11 items-center text-sm font-medium"
+          />
+        ) : null}
       </nav>
     </header>
   );
@@ -193,12 +204,45 @@ function HeaderSearch({
 const accountMenuItemClassName =
   "data-[highlighted]:bg-muted flex min-h-10 w-full items-center rounded-md px-3 text-sm font-medium outline-none";
 
-function AccountMenu() {
-  const { data: session } = authClient.useSession();
-  const [open, setOpen] = useState(false);
-  const shortcuts = accountAreaShortcuts(useAccountAreaAccess(session?.user.id));
+/**
+ * Whoever can open the Central do Lojista or the Admin sees those areas by name; everyone else is
+ * invited to sell. "Venda no Moto Shop" alone made store owners think it was the sign-up page.
+ */
+function AreaLinks({
+  shortcuts,
+  className,
+  onNavigate,
+}: {
+  shortcuts: readonly AccountAreaShortcut[];
+  className: string;
+  onNavigate: () => void;
+}) {
+  if (shortcuts.length === 0) {
+    return (
+      <Link href="/seller" onClick={onNavigate} className={className}>
+        {sellerLinkLabel}
+      </Link>
+    );
+  }
 
-  if (!session?.user) {
+  return shortcuts.map((shortcut) => (
+    <Link key={shortcut.href} href={shortcut.href} onClick={onNavigate} className={className}>
+      {shortcut.label}
+    </Link>
+  ));
+}
+
+/** `signedInName` is null for visitors and "" for a signed-in account without a name. */
+function AccountMenu({
+  signedInName,
+  shortcuts,
+}: {
+  signedInName: string | null;
+  shortcuts: readonly AccountAreaShortcut[];
+}) {
+  const [open, setOpen] = useState(false);
+
+  if (signedInName == null) {
     return (
       <Link href="/login" aria-label="Entrar na minha conta" className={iconButtonClassName}>
         <UserRound aria-hidden="true" className="size-5" />
@@ -216,7 +260,7 @@ function AccountMenu() {
         <BaseMenu.Positioner side="bottom" align="end" sideOffset={8} className="z-popover">
           <BaseMenu.Popup className={cn(popoverSurfaceClassName, "w-56 p-1.5 outline-none")}>
             <p className="text-muted-foreground truncate px-3 pt-1.5 pb-2 text-xs">
-              {session.user.name ? `Olá, ${session.user.name}` : "Minha conta"}
+              {signedInName === "" ? "Minha conta" : `Olá, ${signedInName}`}
             </p>
             {shortcuts.length > 0 ? (
               <>
