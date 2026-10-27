@@ -24,20 +24,23 @@ export function PageSkeleton({
   rows = 4,
   label = "Carregando",
   size = "default",
-  storefront = false,
+  withSiteFooter = true,
 }: {
   rows?: number;
   label?: string;
   /** Same width as the page being loaded, so the layout does not jump when content arrives. */
   size?: PageWidth;
-  /** Pages under the site footer; the seller and admin areas have none. */
-  storefront?: boolean;
+  /** False in the seller and admin areas, which have no site footer to keep below the fold. */
+  withSiteFooter?: boolean;
 }) {
   return (
     <div
       role="status"
       aria-label={label}
-      className={pageContainerClassName(size, cn("space-y-6 py-8", storefront && storefrontSkeletonHeightClassName))}
+      className={pageContainerClassName(
+        size,
+        cn("space-y-6 py-8", withSiteFooter && storefrontSkeletonHeightClassName),
+      )}
     >
       <div className="space-y-3">
         <Skeleton className="h-3 w-24" />
