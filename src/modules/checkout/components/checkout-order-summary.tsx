@@ -159,8 +159,8 @@ export function CheckoutOrderSummary({
         </div>
         {discountInCents == null ? null : (
           <div className="text-success-foreground flex items-center justify-between gap-3">
-            <dt>Desconto do cupom ({typedCode})</dt>
-            <dd className="tabular-nums">− {formatMoneyInCents(discountInCents)}</dd>
+            <dt>Desconto do cupom</dt>
+            <dd className="whitespace-nowrap tabular-nums">− {formatMoneyInCents(discountInCents)}</dd>
           </div>
         )}
         <div className="border-border flex items-center justify-between gap-3 border-t pt-2 text-base font-semibold">
