@@ -3,12 +3,14 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { RetryAfterError } from "inngest";
 
+import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { db } from "@/lib/database";
 import { ResendEmailProvider } from "@/lib/email/resend-email-provider";
 import { logger } from "@/lib/logger";
 import type { ReactNode } from "react";
 
 import { NOTIFICATION_PROCESSING_LEASE_MS, notificationLeaseCutoff } from "../domain/notification-delivery-lease";
+import { EMAIL_LOGO_PATH, EmailLayout } from "../emails/email-layout";
 
 const resendEmailProvider = new ResendEmailProvider();
 
@@ -33,7 +35,12 @@ export async function sendNotificationEmail(input: {
     const result = await resendEmailProvider.send({
       to: input.to,
       subject: input.subject,
-      react: input.react,
+      // Every e-mail gets the same frame (logo, footer); the subject doubles as the inbox preview text.
+      react: (
+        <EmailLayout logoUrl={`${getApplicationBaseUrl()}${EMAIL_LOGO_PATH}`} preview={input.subject}>
+          {input.react}
+        </EmailLayout>
+      ),
       idempotencyKey: createHash("sha256").update(input.eventKey).digest("hex"),
     });
     await db.notificationDelivery.update({
