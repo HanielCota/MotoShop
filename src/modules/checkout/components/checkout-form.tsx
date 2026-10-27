@@ -235,6 +235,7 @@ export function CheckoutForm({
           isQuoting={shipping.isQuoting}
           couponCode={form.couponCode}
           onCouponChange={(value) => updateField("couponCode", value)}
+          couponCustomerKey={`${form.customerEmail.trim().toLowerCase()}|${form.customerTaxId.replace(/\D/g, "")}`}
           onApplyCoupon={(code) =>
             previewCheckoutCouponAction({
               couponCode: code,

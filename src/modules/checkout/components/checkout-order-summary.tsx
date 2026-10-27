@@ -13,7 +13,9 @@ import { CartItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail
 import type { CouponPreviewState } from "../actions/checkout-actions";
 import type { CheckoutSummaryItem } from "./checkout-form-model";
 
-type AppliedCoupon = { code: string; discountInCents: number };
+/** Both are tied to the code and to the customer they were checked for (the per-customer limit). */
+type AppliedCoupon = { code: string; customerKey: string; discountInCents: number };
+type CouponError = { code: string; message: string };
 
 export function CheckoutOrderSummary({
   cartSummary,
@@ -24,6 +26,7 @@ export function CheckoutOrderSummary({
   couponCode,
   onCouponChange,
   onApplyCoupon,
+  couponCustomerKey,
   children,
 }: {
   cartSummary: { itemCount: number; itemsSubtotalInCents: number };
@@ -35,6 +38,8 @@ export function CheckoutOrderSummary({
   onCouponChange: (value: string) => void;
   /** Asks the server for the discount; the purchase validates the coupon again. */
   onApplyCoupon: (code: string) => Promise<CouponPreviewState>;
+  /** E-mail and CPF typed in the form: changing them drops a discount checked for someone else. */
+  couponCustomerKey: string;
   /** Ações finais (alerta de erro e botão de envio), sempre visíveis. */
   children?: ReactNode | undefined;
 }) {
@@ -43,26 +48,31 @@ export function CheckoutOrderSummary({
   const couponId = useId();
   const couponHintId = useId();
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
-  const [couponError, setCouponError] = useState<string | null>(null);
+  const [couponError, setCouponError] = useState<CouponError | null>(null);
   const [isApplying, startApplying] = useTransition();
   const typedCode = couponCode.trim();
   // A discount only counts for the code it was calculated for; editing the code drops it.
-  const discountInCents = appliedCoupon?.code === typedCode ? appliedCoupon.discountInCents : null;
+  const discountInCents =
+    appliedCoupon?.code === typedCode && appliedCoupon.customerKey === couponCustomerKey
+      ? appliedCoupon.discountInCents
+      : null;
+  const couponErrorMessage = couponError?.code === typedCode ? couponError.message : null;
   const totalInCents = cartSummary.itemsSubtotalInCents + shippingTotalInCents - (discountInCents ?? 0);
 
   const applyCoupon = () => {
     if (typedCode === "") return;
 
+    const request = { code: typedCode, customerKey: couponCustomerKey };
     startApplying(async () => {
-      const result = await onApplyCoupon(typedCode);
+      const result = await onApplyCoupon(request.code);
       if (result.discountInCents == null) {
         setAppliedCoupon(null);
-        setCouponError(result.error ?? "Não foi possível aplicar o cupom.");
+        setCouponError({ code: request.code, message: result.error ?? "Não foi possível aplicar o cupom." });
         return;
       }
 
       setCouponError(null);
-      setAppliedCoupon({ code: typedCode, discountInCents: result.discountInCents });
+      setAppliedCoupon({ ...request, discountInCents: result.discountInCents });
     });
   };
   const itemLabel = `${cartSummary.itemCount} ${cartSummary.itemCount === 1 ? "item" : "itens"}`;
@@ -120,7 +130,7 @@ export function CheckoutOrderSummary({
               autoComplete="off"
               maxLength={40}
               aria-describedby={couponHintId}
-              aria-invalid={couponError != null || undefined}
+              aria-invalid={couponErrorMessage != null || undefined}
               onChange={(event) => onCouponChange(event.target.value.toUpperCase())}
               onKeyDown={(event) => {
                 // Enter applies the coupon instead of submitting the whole order.
@@ -142,7 +152,7 @@ export function CheckoutOrderSummary({
               Aplicar
             </Button>
           </div>
-          <CouponHint id={couponHintId} error={couponError} applied={discountInCents != null} />
+          <CouponHint id={couponHintId} error={couponErrorMessage} applied={discountInCents != null} />
         </div>
       </div>
 
