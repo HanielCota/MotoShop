@@ -87,6 +87,7 @@ it("gives signed-in customers an account menu with their shortcuts", async () =>
   const items = within(menu).getAllByRole("menuitem");
   expect(items.map((item) => [item.textContent, item.getAttribute("href")])).toEqual([
     ["Meus pedidos", "/orders"],
+    ["Minhas motos", "/account/motorcycles"],
     ["Favoritos", "/favorites"],
     ["Dados cadastrais", "/account/profile"],
     ["Alterar senha", "/account/password"],
