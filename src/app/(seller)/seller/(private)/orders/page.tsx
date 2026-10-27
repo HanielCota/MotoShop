@@ -42,7 +42,8 @@ const basePath = "/seller/orders";
 const orderStatusOptions = getStatusOptions("sellerOrder").filter(({ value }) =>
   (sellerOrderStatusValues as readonly string[]).includes(value),
 );
-const shipmentStatusOptions = getStatusOptions("shipment").filter(({ value }) =>
+// The filter covers both delivery kinds, so READY_TO_SHIP reads "Pronto para envio", true for either.
+const shipmentStatusOptions = getStatusOptions("ownShipment").filter(({ value }) =>
   (shipmentStatusValues as readonly string[]).includes(value),
 );
 const orderStatusFilterOptions = [{ value: "ALL", label: "Todos" }, ...orderStatusOptions];
