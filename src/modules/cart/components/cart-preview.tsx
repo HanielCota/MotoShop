@@ -12,6 +12,7 @@ import { QuantityStepper } from "@/components/ui/quantity-stepper";
 import { popoverSurfaceClassName } from "@/components/ui/popover-surface";
 import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { authClient } from "@/modules/auth/infrastructure/auth-client";
 
 import { clearCartAction, getCartPreviewAction, updateCartItemAction } from "../actions/cart-actions";
 import { CART_UPDATED_EVENT } from "./cart-events";
@@ -49,6 +50,28 @@ export function CartPreview() {
       setPending(false);
     }
   }
+
+  const { data: session } = authClient.useSession();
+  const userId = session?.user.id;
+
+  // The badge shows the count as soon as the page opens, and again after signing in or out, when the
+  // cart changes owner. The server reads the cart from the cookies, so it does not wait for the session.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const result = await getCartPreviewAction();
+        if (cancelled === false) setData(result);
+      } catch (error) {
+        Sentry.captureException(error);
+      }
+    };
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   // Mantém o contador atualizado quando um produto é adicionado em outra parte da página.
   useEffect(() => {
