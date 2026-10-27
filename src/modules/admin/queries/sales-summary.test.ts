@@ -57,7 +57,7 @@ it("counts only confirmed seller orders of the period in sales, paid orders and 
   );
 });
 
-it("counts every order of the period by status and only the refunds that went through", async () => {
+it("counts every order of the period by status and the refunds completed in it, whenever they were requested", async () => {
   await getAdminSalesSummary(range);
 
   expect(db.order.groupBy).toHaveBeenCalledWith(
@@ -65,7 +65,7 @@ it("counts every order of the period by status and only the refunds that went th
   );
   expect(db.paymentTransaction.aggregate).toHaveBeenCalledWith(
     expect.objectContaining({
-      where: { type: "REFUND", status: "SUCCEEDED", createdAt: { gte: range.start, lt: range.end } },
+      where: { type: "REFUND", status: "SUCCEEDED", processedAt: { gte: range.start, lt: range.end } },
     }),
   );
 });

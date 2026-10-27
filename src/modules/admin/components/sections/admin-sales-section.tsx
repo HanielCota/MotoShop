@@ -36,11 +36,7 @@ export async function AdminSalesSection({ searchParams }: AdminSectionProps) {
     <div className="space-y-4">
       <PeriodFilter selected={params.salesPeriod} />
       {params.salesPeriod === "custom" ? <CustomRangeForm from={params.salesFrom} to={params.salesTo} /> : null}
-      {range == null ? (
-        <p className="text-muted-foreground text-sm">Escolha a data inicial e a final para ver as vendas.</p>
-      ) : (
-        <SalesPanel range={range} />
-      )}
+      {range == null ? <MissingRangeHint from={params.salesFrom} to={params.salesTo} /> : <SalesPanel range={range} />}
     </div>
   );
 }
@@ -69,6 +65,13 @@ function CustomRangeForm({ from, to }: { from: string | null; to: string | null 
       <FilterDateRange fromName="salesFrom" toName="salesTo" from={from} to={to} />
     </AdminFilterForm>
   );
+}
+
+/** Invalid or inverted dates are already explained under the date fields; only a missing date needs this hint. */
+function MissingRangeHint({ from, to }: { from: string | null; to: string | null }) {
+  if (from != null && to != null) return null;
+
+  return <p className="text-muted-foreground text-sm">Escolha a data inicial e a final para ver as vendas.</p>;
 }
 
 function describeRange(range: SalesDateRange) {

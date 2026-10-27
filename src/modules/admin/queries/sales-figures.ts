@@ -1,6 +1,3 @@
-/** Confirmed sales: the same statuses the Central do Lojista counts as sold. */
-export const confirmedSellerOrderStatuses = ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"] as const;
-
 export const SALES_RANKING_SIZE = 5;
 
 /** Sums of the confirmed seller orders of one store, as the database groups them. */

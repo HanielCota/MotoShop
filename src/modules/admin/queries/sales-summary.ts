@@ -2,12 +2,12 @@ import "server-only";
 
 import type { OrderStatus } from "@/generated/prisma/enums";
 import { db } from "@/lib/database";
+import { confirmedSellerOrderStatuses } from "@/modules/orders/domain/confirmed-sales";
 import { ApplicationError } from "@/shared/errors/application-error";
 
 import type { SalesDateRange } from "./sales-period";
 import {
   averageTicketInCents,
-  confirmedSellerOrderStatuses,
   rankStoresByGrossSales,
   SALES_RANKING_SIZE,
   sumSalesTotals,
@@ -123,7 +123,7 @@ async function countOrdersByStatus(range: SalesDateRange): Promise<{ status: Ord
 
 async function sumRefunds(range: SalesDateRange) {
   const refunds = await db.paymentTransaction.aggregate({
-    where: { type: "REFUND", status: "SUCCEEDED", createdAt: { gte: range.start, lt: range.end } },
+    where: { type: "REFUND", status: "SUCCEEDED", processedAt: { gte: range.start, lt: range.end } },
     _count: { _all: true },
     _sum: { amountInCents: true },
   });
@@ -131,10 +131,17 @@ async function sumRefunds(range: SalesDateRange) {
   return { count: refunds._count._all, amountInCents: refunds._sum.amountInCents ?? 0 };
 }
 
+/** The store names are looked up as soon as the totals arrive, while the other aggregates still run. */
+async function loadStoreSales(range: SalesDateRange) {
+  const stores = await listStoreSalesTotals(range);
+
+  return { stores, topStores: await listTopStores(stores) };
+}
+
 /** Marketplace-wide sales in the range, aggregated in the database without loading the orders. */
 export async function getAdminSalesSummary(range: SalesDateRange) {
-  const [stores, paidOrderCount, topProducts, ordersByStatus, refunds] = await Promise.all([
-    listStoreSalesTotals(range),
+  const [{ stores, topStores }, paidOrderCount, topProducts, ordersByStatus, refunds] = await Promise.all([
+    loadStoreSales(range),
     db.order.count({ where: { sellerOrders: { some: confirmedSellerOrdersIn(range) } } }),
     listTopProducts(range),
     countOrdersByStatus(range),
@@ -148,7 +155,7 @@ export async function getAdminSalesSummary(range: SalesDateRange) {
     sellingStoreCount: stores.length,
     averageTicketInCents: averageTicketInCents(totals.grossSalesInCents, paidOrderCount),
     refunds,
-    topStores: await listTopStores(stores),
+    topStores,
     topProducts,
     ordersByStatus,
   };
