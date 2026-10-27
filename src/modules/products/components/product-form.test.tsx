@@ -72,7 +72,7 @@ it("does not use native number fields that change with the mouse wheel (DN-07)",
 });
 
 it("shows the three steps and keeps the page address closed while it follows the name", () => {
-  render(<ProductForm {...options} intro />);
+  render(<ProductForm {...options} />);
 
   expect(screen.getByRole("list", { name: "Etapas do cadastro" })).toHaveTextContent(
     "1Dados e variações2Fotos3Enviar para aprovação",
