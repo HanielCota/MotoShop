@@ -160,6 +160,31 @@ it("links visitors to the login page", () => {
   expect(screen.getByRole("link", { name: "Entrar na minha conta" })).toHaveAttribute("href", "/login");
 });
 
+it("shows neither the login link nor the account menu until the page knows who is signed in", () => {
+  authMocks.useSession.mockReturnValue({ data: null, isPending: true });
+  const { rerender } = render(<StorefrontNavigation />);
+
+  expect(screen.queryByRole("link", { name: "Entrar na minha conta" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Minha conta" })).not.toBeInTheDocument();
+
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "buyer", name: "Comprador" } }, isPending: false });
+  rerender(<StorefrontNavigation />);
+
+  expect(screen.getByRole("button", { name: "Minha conta" })).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Entrar na minha conta" })).not.toBeInTheDocument();
+});
+
+it("keeps the visitor's login link while the session is checked again on returning to the tab", () => {
+  authMocks.useSession.mockReturnValue({ data: null, isPending: false });
+  const { rerender } = render(<StorefrontNavigation />);
+  expect(screen.getByRole("link", { name: "Entrar na minha conta" })).toBeInTheDocument();
+
+  authMocks.useSession.mockReturnValue({ data: null, isPending: true });
+  rerender(<StorefrontNavigation />);
+
+  expect(screen.getByRole("link", { name: "Entrar na minha conta" })).toBeInTheDocument();
+});
+
 it("closes the mobile navigation with Escape and restores trigger focus", () => {
   authMocks.useSession.mockReturnValue({ data: null });
   render(<StorefrontNavigation />);

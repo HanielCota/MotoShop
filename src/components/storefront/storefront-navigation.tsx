@@ -194,9 +194,14 @@ const accountMenuItemClassName =
   "data-[highlighted]:bg-muted flex min-h-10 w-full items-center rounded-md px-3 text-sm font-medium outline-none";
 
 function AccountMenu() {
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending } = authClient.useSession();
+  const sessionKnown = useFirstSessionCheckDone(isPending);
   const [open, setOpen] = useState(false);
   const shortcuts = accountAreaShortcuts(useAccountAreaAccess(session?.user.id));
+
+  // An empty slot of the same size until the page knows who is signed in: no "Entrar" that turns into
+  // the account menu a moment later.
+  if (sessionKnown === false) return <span aria-hidden="true" className="inline-flex size-11" />;
 
   if (!session?.user) {
     return (
@@ -257,6 +262,17 @@ function AccountMenu() {
       </BaseMenu.Portal>
     </BaseMenu.Root>
   );
+}
+
+/**
+ * True once the first session check of the page has answered. The session is checked again whenever
+ * the tab regains focus, and a visitor is "pending" during each of those checks: they keep the icon.
+ */
+function useFirstSessionCheckDone(isPending: boolean | undefined): boolean {
+  const [done, setDone] = useState(isPending !== true);
+  if (done === false && isPending !== true) setDone(true);
+
+  return done;
 }
 
 const areaShortcutIcons: Readonly<Record<AccountAreaShortcut["area"], LucideIcon>> = {
