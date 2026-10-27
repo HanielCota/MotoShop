@@ -77,7 +77,7 @@ export function StorefrontNavigation() {
         <CatalogAwareHeaderSearch id="storefront-search" className="ml-auto hidden max-w-xs flex-1 md:flex" />
 
         <div className="ml-auto flex items-center gap-1 md:ml-0">
-          <AccountMenu signedInName={session?.user ? (session.user.name ?? "") : null} shortcuts={shortcuts} />
+          <AccountMenu signedInName={signedInNameOf(session)} shortcuts={shortcuts} />
           <CartPreview />
           <button
             ref={menuButton}
@@ -230,6 +230,13 @@ function AreaLinks({
       {shortcut.label}
     </Link>
   ));
+}
+
+/** Null for visitors; "" for a signed-in account without a name. */
+function signedInNameOf(session: { user: { name?: string | null } } | null | undefined): string | null {
+  if (session?.user == null) return null;
+
+  return session.user.name ?? "";
 }
 
 /** `signedInName` is null for visitors and "" for a signed-in account without a name. */
