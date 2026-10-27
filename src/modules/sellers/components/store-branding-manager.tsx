@@ -11,16 +11,13 @@ import {
   type StoreBrandingImageType,
   type StoreBrandingResult,
 } from "../actions/store-branding-actions";
-import { uploadImageToImageKit } from "@/shared/storage/upload-image";
+import { imageFileProblem, uploadImageToImageKit } from "@/shared/storage/upload-image";
 import { buttonVariants } from "@/components/ui/button";
 
 type StoreBrandingImages = {
   logoUrl: string | null;
   bannerUrl: string | null;
 };
-
-const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const maxImageSizeInBytes = 5 * 1024 * 1024;
 
 type AttachedStoreBranding = Exclude<StoreBrandingResult, { error: string }>;
 
@@ -64,8 +61,8 @@ export function StoreBrandingManager({ initialImages }: { initialImages: StoreBr
     setUploading(imageType);
 
     try {
-      if (!allowedTypes.has(file.type)) throw new Error("Use imagens JPG, PNG ou WebP.");
-      if (file.size > maxImageSizeInBytes) throw new Error("A imagem deve ter no máximo 5 MB.");
+      const problem = imageFileProblem(file);
+      if (problem != null) throw new Error(problem);
 
       const upload = await createStoreBrandingUploadUrlAction({
         imageType,

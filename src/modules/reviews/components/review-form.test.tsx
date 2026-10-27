@@ -6,7 +6,10 @@ vi.mock("@/modules/reviews/actions/review-actions", () => ({
   createReviewUploadUrlAction: vi.fn(),
   removeReviewUploadAction: vi.fn(),
 }));
-vi.mock("@/shared/storage/upload-image", () => ({ uploadFileToImageKit: vi.fn() }));
+vi.mock("@/shared/storage/upload-image", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/storage/upload-image")>()),
+  uploadFileToImageKit: vi.fn(),
+}));
 
 import { ReviewForm } from "./review-form";
 import { uploadFileToImageKit } from "@/shared/storage/upload-image";
@@ -37,5 +40,5 @@ it("refuses videos, which are out of scope for reviews", async () => {
   expect(screen.queryByRole("radiogroup", { name: "Nota da loja" })).not.toBeInTheDocument();
   const fileInput = screen.getByLabelText("Fotos (opcional, até 3 imagens)");
   fireEvent.change(fileInput, { target: { files: [new File(["video"], "video.mp4", { type: "video/mp4" })] } });
-  expect(await screen.findByText("Use imagens JPG, PNG ou WebP.")).toBeInTheDocument();
+  expect(await screen.findByText("A imagem precisa ser JPG, PNG ou WebP e ter até 5 MB.")).toBeInTheDocument();
 });

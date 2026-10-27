@@ -17,17 +17,14 @@ import {
   reorderProductImagesAction,
   type ProductImageResult,
 } from "@/modules/products/actions/product-image-actions";
-import { uploadImageToImageKit } from "@/shared/storage/upload-image";
+import { imageFileProblem, uploadImageToImageKit } from "@/shared/storage/upload-image";
 import { formatCount } from "@/lib/format";
 
 type ProductImage = { id: string; storageKey: string; altText: string | null; url: string | null };
 
-const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const maxImageSizeInBytes = 5 * 1024 * 1024;
-
 function assertValidImageFile(file: File) {
-  if (!allowedTypes.has(file.type)) throw new Error("Use imagens JPG, PNG ou WebP.");
-  if (file.size > maxImageSizeInBytes) throw new Error("Cada imagem deve ter no máximo 5 MB.");
+  const problem = imageFileProblem(file);
+  if (problem != null) throw new Error(problem);
 }
 
 /** Removes the orphan upload, then rethrows the original error (with the cleanup error, if any). */
