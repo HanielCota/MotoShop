@@ -22,11 +22,6 @@ import { formatCount } from "@/lib/format";
 
 type ProductImage = { id: string; storageKey: string; altText: string | null; url: string | null };
 
-function assertValidImageFile(file: File) {
-  const problem = findImageFileProblem(file);
-  if (problem != null) throw new Error(problem);
-}
-
 /** Removes the orphan upload, then rethrows the original error (with the cleanup error, if any). */
 async function discardUploadAndRethrow(
   productId: string,
@@ -53,8 +48,6 @@ async function sendFileToStorage(
 }
 
 async function uploadProductImage(productId: string, file: File): Promise<ProductImage> {
-  assertValidImageFile(file);
-
   const upload = await createProductImageUploadUrlAction({
     productId,
     contentType: file.type,
@@ -103,6 +96,14 @@ export function ProductImageManager({
       setError(
         `Você pode adicionar mais ${formatCount(Math.max(0, 8 - images.length), "imagem", "imagens")} a este produto.`,
       );
+      return;
+    }
+    // Every file is checked before the first upload, so a bad file never leaves the others half sent.
+    const fileProblem = Array.from(files)
+      .map(findImageFileProblem)
+      .find((problem) => problem != null);
+    if (fileProblem != null) {
+      setError(fileProblem);
       return;
     }
     setUploading(true);
