@@ -32,17 +32,20 @@ export async function secureAdminAccountAfterVerification(
     }),
     db.session.deleteMany({ where: { userId: user.id } }),
   ]);
-  logger.info({ event: "auth.admin_password_reset_required", userId: user.id });
   if (discarded.count === 0) return;
 
+  logger.info({ event: "auth.admin_password_reset_required", userId: user.id });
   await sendAdminPasswordReset(user, requestPasswordReset);
 }
 
-/** A failed send must not fail the verification: the admin can still use "Esqueci minha senha". */
+/**
+ * A failed request must not fail the verification: the admin can still use "Esqueci minha senha".
+ * Better Auth sends the e-mail after the response, so a failed delivery shows up as notification.email.failed.
+ */
 async function sendAdminPasswordReset(user: VerifiedUser, requestPasswordReset: RequestPasswordReset): Promise<void> {
   try {
     await requestPasswordReset(user.email);
-    logger.info({ event: "auth.admin_password_reset_sent", userId: user.id });
+    logger.info({ event: "auth.admin_password_reset_requested", userId: user.id });
   } catch (error) {
     logger.error({ event: "auth.admin_password_reset_failed", userId: user.id, error });
   }

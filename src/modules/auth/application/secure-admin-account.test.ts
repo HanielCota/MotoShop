@@ -75,3 +75,12 @@ it("keeps the verification working when the reset e-mail fails, and logs no e-ma
   expect(mocks.error).toHaveBeenCalledWith(expect.objectContaining({ event: "auth.admin_password_reset_failed" }));
   expect(JSON.stringify(mocks.error.mock.calls)).not.toContain("admin2@motoshop.test");
 });
+
+it("logs the reset only when a password was discarded, and calls it a request rather than a delivery", async () => {
+  await secureAdminAccountAfterVerification({ id: "user-1", email: "admin2@motoshop.test" }, requestPasswordReset);
+  mocks.discardedPasswords = 0;
+  await secureAdminAccountAfterVerification({ id: "user-1", email: "admin2@motoshop.test" }, requestPasswordReset);
+
+  const events = mocks.info.mock.calls.map(([entry]) => (entry as { event: string }).event);
+  expect(events).toEqual(["auth.admin_password_reset_required", "auth.admin_password_reset_requested"]);
+});
