@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
 import { SignOutButton } from "@/modules/auth/components/sign-out-button";
 import { useAccountAreaAccess } from "@/modules/auth/components/use-account-area-access";
+import { useFirstSessionCheckDone } from "@/modules/auth/components/use-first-session-check-done";
 import { accountAreaShortcuts, type AccountAreaShortcut } from "@/modules/auth/domain/account-area-shortcuts";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
 import { CartPreview } from "@/modules/cart/components/cart-preview";
@@ -262,17 +263,6 @@ function AccountMenu() {
       </BaseMenu.Portal>
     </BaseMenu.Root>
   );
-}
-
-/**
- * True once the first session check of the page has answered. The session is checked again whenever
- * the tab regains focus, and a visitor is "pending" during each of those checks: they keep the icon.
- */
-function useFirstSessionCheckDone(isPending: boolean): boolean {
-  const [done, setDone] = useState(isPending !== true);
-  if (done === false && isPending !== true) setDone(true);
-
-  return done;
 }
 
 const areaShortcutIcons: Readonly<Record<AccountAreaShortcut["area"], LucideIcon>> = {

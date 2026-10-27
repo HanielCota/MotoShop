@@ -57,6 +57,19 @@ it("reads the count again when the customer signs in, since the cart changes own
   expect(actions.preview).toHaveBeenCalledTimes(2);
 });
 
+it("reads the cart once per page for a signed-in customer, after the session answers", async () => {
+  actions.preview.mockResolvedValue({ items: [], itemCount: 2, subtotalInCents: 30000 });
+  authMocks.useSession.mockReturnValue({ data: null, isPending: true });
+  const { rerender } = render(<CartPreview />);
+  expect(actions.preview).not.toHaveBeenCalled();
+
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "buyer" } }, isPending: false });
+  rerender(<CartPreview />);
+
+  expect(await screen.findByRole("button", { name: "Carrinho, 2 itens" })).toBeInTheDocument();
+  expect(actions.preview).toHaveBeenCalledOnce();
+});
+
 it("opens a cart summary and links to the full cart", async () => {
   actions.preview.mockResolvedValue({
     items: [

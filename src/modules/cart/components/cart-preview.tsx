@@ -12,6 +12,7 @@ import { QuantityStepper } from "@/components/ui/quantity-stepper";
 import { popoverSurfaceClassName } from "@/components/ui/popover-surface";
 import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useFirstSessionCheckDone } from "@/modules/auth/components/use-first-session-check-done";
 import { authClient } from "@/modules/auth/infrastructure/auth-client";
 
 import { clearCartAction, getCartPreviewAction, updateCartItemAction } from "../actions/cart-actions";
@@ -51,12 +52,15 @@ export function CartPreview() {
     }
   }
 
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending: sessionPending } = authClient.useSession();
+  const sessionKnown = useFirstSessionCheckDone(sessionPending);
   const userId = session?.user.id;
 
-  // The badge shows the count as soon as the page opens, and again after signing in or out, when the
-  // cart changes owner. The server reads the cart from the cookies, so it does not wait for the session.
+  // The badge shows the count once the page knows who is there, and again after signing in or out,
+  // when the cart changes owner. Waiting for that first answer reads the cart once per page.
   useEffect(() => {
+    if (sessionKnown === false) return;
+
     let cancelled = false;
     const load = async () => {
       try {
@@ -71,7 +75,7 @@ export function CartPreview() {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [sessionKnown, userId]);
 
   // Mantém o contador atualizado quando um produto é adicionado em outra parte da página.
   useEffect(() => {
