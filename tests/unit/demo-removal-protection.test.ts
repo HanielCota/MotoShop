@@ -12,6 +12,7 @@ import {
   ProtectedDataError,
   assertNothingProtected,
   assertStoresConfirmed,
+  describeStore,
   maskEmail,
   parseConfirmedStores,
   readDemoRemovalProtection,
@@ -83,6 +84,17 @@ describe("stores with real members", () => {
 
   it("masks e-mails for the report", () => {
     expect(maskEmail("pessoa@gmail.com")).toBe("pe***@gmail.com");
+  });
+
+  it("flags a protected member, which the mask alone would hide", () => {
+    const store = { slug: "qa-freitas-admin-seller", memberEmails: ["dono.real@empresa.test.br"] };
+
+    expect(describeStore(protection, store)).toEqual({
+      slug: "qa-freitas-admin-seller",
+      members: ["do***@empresa.test.br"],
+      hasProtectedMember: true,
+    });
+    expect(describeStore(protection, storeWithRealMember).hasProtectedMember).toBe(false);
   });
 });
 

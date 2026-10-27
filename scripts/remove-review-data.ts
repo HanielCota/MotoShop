@@ -434,8 +434,8 @@ async function main() {
       ).length;
       return {
         counts: result,
-        stores: stores.map(describeStore),
-        storesNeedingConfirmation: storesNeedingConfirmation(stores).map(describeStore),
+        stores: stores.map((store) => describeStore(protection, store)),
+        storesNeedingConfirmation: storesNeedingConfirmation(stores).map((store) => describeStore(protection, store)),
         accounts: reviewEmails.toSorted(),
         protectedAccountRows,
       };

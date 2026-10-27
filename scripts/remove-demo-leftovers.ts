@@ -300,13 +300,13 @@ async function main() {
 
       return {
         stores: stores.map((store) => ({
-          ...describeStore(store),
+          ...describeStore(protection, store),
           name: store.name,
           sellerStatus: store.sellerStatus,
           products: products.filter((product) => product.sellerId === store.sellerId).length,
           orders: orders.filter((order) => order.sellerOrders.some((part) => part.sellerId === store.sellerId)).length,
         })),
-        storesNeedingConfirmation: storesNeedingConfirmation(stores).map(describeStore),
+        storesNeedingConfirmation: storesNeedingConfirmation(stores).map((store) => describeStore(protection, store)),
         orders: orders.map((order) => ({
           orderNumber: order.orderNumber,
           status: order.status,

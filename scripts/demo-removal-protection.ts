@@ -113,7 +113,14 @@ export async function countProtectedAccountRows(
   };
 }
 
-/** The masked view of a store for the dry-run report. */
-export function describeStore(store: StoreInScope): { slug: string; members: string[] } {
-  return { slug: store.slug, members: store.memberEmails.map(maskEmail) };
+/** The masked view of a store for the dry-run report; flags a protected member, since the mask hides who it is. */
+export function describeStore(
+  protection: DemoRemovalProtection,
+  store: StoreInScope,
+): { slug: string; members: string[]; hasProtectedMember: boolean } {
+  return {
+    slug: store.slug,
+    members: store.memberEmails.map(maskEmail),
+    hasProtectedMember: store.memberEmails.some((email) => isProtectedEmail(protection, email)),
+  };
 }
