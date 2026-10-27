@@ -4,13 +4,14 @@ import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
 import {
-  Bike,
+  ChartColumn,
   Crown,
   FileX2,
   History,
   LayoutDashboard,
   Mail,
   MessageSquareWarning,
+  Motorbike,
   PackageSearch,
   Percent,
   Plug,
@@ -32,11 +33,16 @@ import { adminSections, type AdminSection } from "../admin-sections";
 
 const groups = ["Marketplace", "Operação", "Sistema"] as const;
 
-/** Each area uses the icon of its card on the Admin overview, so the same symbol means the same thing. */
-const sectionIcons: Readonly<Record<AdminSection, LucideIcon>> = {
+/**
+ * Each area uses the icon of its card on the Admin overview, so the same symbol means the same thing.
+ * Keyed by slug rather than typed over every section, so a section added by another change (Vendas,
+ * PR #83) keeps the build green; the navigation test fails if a section is left without an icon.
+ */
+const sectionIcons: Readonly<Partial<Record<AdminSection | "sales", LucideIcon>>> = {
+  sales: ChartColumn,
   sellers: Store,
   products: PackageSearch,
-  catalog: Bike,
+  catalog: Motorbike,
   coupons: TicketPercent,
   vip: Crown,
   commission: Percent,
@@ -85,7 +91,7 @@ function AdminLinks() {
                     aria-current={pathname === href ? "page" : undefined}
                     className={`${linkClassName} font-medium`}
                   >
-                    <Icon aria-hidden="true" className="size-4 shrink-0" />
+                    {Icon ? <Icon aria-hidden="true" className="size-4 shrink-0" /> : null}
                     {section.title}
                   </Link>
                 );
