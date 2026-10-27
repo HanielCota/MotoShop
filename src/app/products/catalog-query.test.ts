@@ -5,6 +5,7 @@ import {
   catalogFormEntries,
   clearCatalogFiltersHref,
   countActiveCatalogFilters,
+  hasSecondaryCatalogFilter,
   normalizeCatalogPrice,
   removeCatalogFilterHref,
   type CatalogQuery,
@@ -79,5 +80,23 @@ describe("normalizeCatalogPrice", () => {
     expect(normalizeCatalogPrice(-100)).toBeNull();
     expect(normalizeCatalogPrice(1e20)).toBeNull();
     expect(normalizeCatalogPrice(null)).toBeNull();
+  });
+});
+
+describe("hasSecondaryCatalogFilter", () => {
+  it('keeps "Mais filtros" closed when only the main filters are in use', () => {
+    expect(hasSecondaryCatalogFilter({ ...base, category: "helmets", brand: "fox", seller: "seller-1" })).toBe(false);
+  });
+
+  it.each([
+    ["gender", { gender: "MALE" as const }],
+    ["color", { color: "Preto" }],
+    ["size", { size: "M" }],
+    ["minimum price", { minPrice: 0 }],
+    ["maximum price", { maxPrice: 50_000 }],
+    ["availability", { availability: "IN_STOCK" as const }],
+    ["offer", { promotion: "ON_SALE" as const }],
+  ])('opens "Mais filtros" when the %s filter is in use', (_name, filter) => {
+    expect(hasSecondaryCatalogFilter({ ...base, ...filter })).toBe(true);
   });
 });
