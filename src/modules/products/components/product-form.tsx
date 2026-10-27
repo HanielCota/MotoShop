@@ -111,6 +111,22 @@ export function ProductFormFields({
     onChange: (event: { target: { value: string } }) => setSlugEdited(event.target.value.trim() !== ""),
   });
 
+  const slugFormField = (
+    <FormField
+      id="product-slug"
+      label="Endereço da página"
+      required
+      error={errors.slug?.message}
+      hint={
+        slugLocked
+          ? "Mudar o endereço muda o link público do produto."
+          : "Aparece no link do produto, como /products/capacete-fox-v1. Preenchido a partir do nome; você pode editar."
+      }
+    >
+      {(field) => <Input {...field} {...slugField} placeholder="Ex.: capacete-fox-v1" autoComplete="off" />}
+    </FormField>
+  );
+
   return (
     <form
       noValidate
@@ -123,28 +139,23 @@ export function ProductFormFields({
       {Object.entries(hiddenFields).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} readOnly />
       ))}
-      {intro ? (
-        <p className="text-muted-foreground bg-muted/50 rounded-lg p-3 text-sm leading-6 sm:col-span-2">
-          Campos com * são obrigatórios. Salve o rascunho para adicionar fotos e enviar para aprovação do Moto Shop.
-        </p>
-      ) : null}
+      {intro ? <NewProductSteps /> : null}
       <h2 className="border-b pb-2 text-base font-semibold sm:col-span-2">Informações básicas</h2>
       <FormField id="product-name" label="Nome" required error={errors.name?.message} className="sm:col-span-2">
         {(field) => <Input {...field} {...nameField} autoComplete="off" />}
       </FormField>
-      <FormField
-        id="product-slug"
-        label="Endereço da página"
-        required
-        error={errors.slug?.message}
-        hint={
-          slugLocked
-            ? "Mudar o endereço muda o link público do produto."
-            : "Aparece no link do produto, como /products/capacete-fox-v1. Preenchido a partir do nome; você pode editar."
-        }
-      >
-        {(field) => <Input {...field} {...slugField} placeholder="capacete-fox-v1" autoComplete="off" />}
-      </FormField>
+      {slugLocked ? (
+        slugFormField
+      ) : (
+        // A new product's address comes from the name; the field only opens to change it or to show its error.
+        <details className="group -mt-2 text-sm sm:col-span-2" open={errors.slug != null}>
+          <summary className="text-muted-foreground cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            Endereço da página: criado a partir do nome.{" "}
+            <span className="text-brand-strong underline underline-offset-4 group-open:hidden">Alterar</span>
+          </summary>
+          <div className="mt-3 max-w-md">{slugFormField}</div>
+        </details>
+      )}
       <FormField
         id="product-description"
         label="Descrição"
@@ -271,7 +282,7 @@ function VariantsEditor({
             <input type="hidden" {...register(`variants.${index}.id`)} />
             <FormField id={fieldId("title")} label="Nome da variação" required error={variantErrors?.title?.message}>
               {(control) => (
-                <Input {...control} {...register(`variants.${index}.title`)} placeholder="Tamanho M / Preto" />
+                <Input {...control} {...register(`variants.${index}.title`)} placeholder="Ex.: Tamanho M / Preto" />
               )}
             </FormField>
             <FormField id={fieldId("sku")} label="SKU" required error={variantErrors?.sku?.message}>
@@ -288,7 +299,7 @@ function VariantsEditor({
                   {...control}
                   {...register(`variants.${index}.priceInCents`)}
                   inputMode="decimal"
-                  placeholder="899,90"
+                  placeholder="Ex.: 899,90"
                 />
               )}
             </FormField>
@@ -454,7 +465,7 @@ function VariantAttributeFields({
             {...field}
             {...register(`variants.${index}.color`)}
             maxLength={VARIANT_ATTRIBUTE_MAX_LENGTH}
-            placeholder="Preto/laranja"
+            placeholder="Ex.: Preto/laranja"
           />
         )}
       </FormField>
@@ -464,10 +475,52 @@ function VariantAttributeFields({
             {...field}
             {...register(`variants.${index}.size`)}
             maxLength={VARIANT_ATTRIBUTE_MAX_LENGTH}
-            placeholder="M ou 40"
+            placeholder="Ex.: M ou 40"
           />
         )}
       </FormField>
+    </div>
+  );
+}
+
+const newProductSteps = ["Dados e variações", "Fotos", "Enviar para aprovação"] as const;
+
+/** Photos can only be added once the draft exists, so the steps say so before the seller starts. */
+function NewProductSteps() {
+  return (
+    <div className="bg-muted/50 grid gap-2 rounded-lg p-3 sm:col-span-2">
+      <ol className="flex flex-wrap gap-x-6 gap-y-2" aria-label="Etapas do cadastro">
+        {newProductSteps.map((step, index) => {
+          const current = index === 0;
+          return (
+            <li
+              key={step}
+              aria-current={current ? "step" : undefined}
+              className={
+                current
+                  ? "flex items-center gap-2 text-sm font-semibold"
+                  : "text-muted-foreground flex items-center gap-2 text-sm"
+              }
+            >
+              <span
+                aria-hidden="true"
+                className={
+                  current
+                    ? "bg-moto-brand text-moto-brand-foreground grid size-6 place-items-center rounded-full text-xs font-bold"
+                    : "bg-muted grid size-6 place-items-center rounded-full text-xs font-bold"
+                }
+              >
+                {index + 1}
+              </span>
+              {step}
+            </li>
+          );
+        })}
+      </ol>
+      <p className="text-muted-foreground text-sm">
+        Campos com * são obrigatórios. Depois de criar o rascunho, você adiciona as fotos e envia para aprovação do Moto
+        Shop.
+      </p>
     </div>
   );
 }
