@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Textarea } from "@/components/ui/textarea";
-import { imageFileProblem, uploadFileToImageKit } from "@/shared/storage/upload-image";
+import { findImageFileProblem, uploadFileToImageKit } from "@/shared/storage/upload-image";
 import {
   createReviewAction,
   createReviewUploadUrlAction,
@@ -52,7 +52,7 @@ export function ReviewForm({
     try {
       const selected = Array.from(selectedFiles);
       if (files.length + selected.length > 3) throw new Error("Anexe no máximo 3 arquivos por avaliação.");
-      const problem = selected.map(imageFileProblem).find((message) => message != null);
+      const problem = selected.map(findImageFileProblem).find((message) => message != null);
       if (problem != null) throw new Error(problem);
       setFiles((current) => [...current, ...selected]);
     } catch (error) {

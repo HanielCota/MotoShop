@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import {
   IMAGE_FILE_RULES_MESSAGE,
   IMAGE_SERVICE_REFUSED_MESSAGE,
-  imageFileProblem,
+  findImageFileProblem,
   uploadFileToImageKit,
 } from "./upload-image";
 
@@ -16,12 +16,12 @@ function image(type: string, size: number) {
 afterEach(() => vi.unstubAllGlobals());
 
 it.each(["image/jpeg", "image/png", "image/webp"])("accepts a %s image of up to 5 MB", (type) => {
-  expect(imageFileProblem(image(type, FIVE_MEGABYTES))).toBeNull();
+  expect(findImageFileProblem(image(type, FIVE_MEGABYTES))).toBeNull();
 });
 
 it("explains the rules for another type or a file over 5 MB", () => {
-  expect(imageFileProblem(image("image/gif", 1024))).toBe(IMAGE_FILE_RULES_MESSAGE);
-  expect(imageFileProblem(image("image/png", FIVE_MEGABYTES + 1))).toBe(IMAGE_FILE_RULES_MESSAGE);
+  expect(findImageFileProblem(image("image/gif", 1024))).toBe(IMAGE_FILE_RULES_MESSAGE);
+  expect(findImageFileProblem(image("image/png", FIVE_MEGABYTES + 1))).toBe(IMAGE_FILE_RULES_MESSAGE);
 });
 
 it("does not blame the file when the image service refuses the upload", async () => {

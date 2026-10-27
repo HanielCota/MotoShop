@@ -17,13 +17,13 @@ import {
   reorderProductImagesAction,
   type ProductImageResult,
 } from "@/modules/products/actions/product-image-actions";
-import { imageFileProblem, uploadImageToImageKit } from "@/shared/storage/upload-image";
+import { findImageFileProblem, uploadImageToImageKit } from "@/shared/storage/upload-image";
 import { formatCount } from "@/lib/format";
 
 type ProductImage = { id: string; storageKey: string; altText: string | null; url: string | null };
 
 function assertValidImageFile(file: File) {
-  const problem = imageFileProblem(file);
+  const problem = findImageFileProblem(file);
   if (problem != null) throw new Error(problem);
 }
 

@@ -11,7 +11,7 @@ import {
   type StoreBrandingImageType,
   type StoreBrandingResult,
 } from "../actions/store-branding-actions";
-import { imageFileProblem, uploadImageToImageKit } from "@/shared/storage/upload-image";
+import { findImageFileProblem, uploadImageToImageKit } from "@/shared/storage/upload-image";
 import { buttonVariants } from "@/components/ui/button";
 
 type StoreBrandingImages = {
@@ -61,7 +61,7 @@ export function StoreBrandingManager({ initialImages }: { initialImages: StoreBr
     setUploading(imageType);
 
     try {
-      const problem = imageFileProblem(file);
+      const problem = findImageFileProblem(file);
       if (problem != null) throw new Error(problem);
 
       const upload = await createStoreBrandingUploadUrlAction({
