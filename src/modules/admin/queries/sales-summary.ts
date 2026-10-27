@@ -2,6 +2,7 @@ import "server-only";
 
 import type { OrderStatus } from "@/generated/prisma/enums";
 import { db } from "@/lib/database";
+import { ApplicationError } from "@/shared/errors/application-error";
 
 import type { SalesDateRange } from "./sales-period";
 import {
@@ -57,10 +58,23 @@ async function listTopStores(stores: readonly StoreSalesTotals[]) {
   });
   const storeNames = new Map(sellers.map((seller) => [seller.id, seller.store?.name ?? "Loja sem nome"]));
 
-  return ranked.map((store) => ({ ...store, storeName: storeNames.get(store.sellerId) ?? "Loja sem nome" }));
+  return ranked.map((store) => ({ ...store, storeName: storeNameOf(storeNames, store.sellerId) }));
 }
 
-/** The product name is read from the latest sale of each SKU, so a renamed product shows its current name. */
+/** Seller orders keep their seller (the relation restricts deletion), so a missing one is a bug. */
+function storeNameOf(storeNames: ReadonlyMap<string, string>, sellerId: string) {
+  const storeName = storeNames.get(sellerId);
+  if (storeName === undefined) {
+    throw new ApplicationError({
+      code: "INTERNAL_ERROR",
+      message: `Seller ${sellerId} of a confirmed order not found`,
+    });
+  }
+
+  return storeName;
+}
+
+/** The product name comes from the latest sale of each SKU, so a renamed product shows the name it last sold under. */
 async function listTopProducts(range: SalesDateRange) {
   const sellerOrder = confirmedSellerOrdersIn(range);
   const groups = await db.orderItem.groupBy({
@@ -78,11 +92,17 @@ async function listTopProducts(range: SalesDateRange) {
         orderBy: { createdAt: "desc" },
         select: { productNameSnapshot: true },
       });
+      if (latestSale == null) {
+        throw new ApplicationError({
+          code: "INTERNAL_ERROR",
+          message: `No sale found for grouped SKU ${group.skuSnapshot}`,
+        });
+      }
 
       return {
         sellerId: group.sellerId,
         sku: group.skuSnapshot,
-        productName: latestSale?.productNameSnapshot ?? group.skuSnapshot,
+        productName: latestSale.productNameSnapshot,
         quantity: group._sum.quantity ?? 0,
         salesInCents: group._sum.totalAmountInCents ?? 0,
       };

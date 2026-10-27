@@ -1,11 +1,13 @@
 import { isInvertedDateRange, parseDateFilter } from "@/lib/date-filter";
 import { MARKETPLACE_TIME_ZONE } from "@/lib/format";
+import { ApplicationError } from "@/shared/errors/application-error";
 
 export const salesPeriodValues = ["today", "7d", "30d", "month", "custom"] as const;
 export type SalesPeriod = (typeof salesPeriodValues)[number];
 
 /** São Paulo has had no daylight saving time since 2019, so its midnight is always 03:00 UTC. */
 const MARKETPLACE_UTC_OFFSET_HOURS = 3;
+const MILLISECONDS_PER_HOUR = 60 * 60 * 1000;
 const DAYS_BEFORE_TODAY: Record<"today" | "7d" | "30d", number> = { today: 0, "7d": 6, "30d": 29 };
 
 /** `start` is inclusive and `end` exclusive, both at a São Paulo midnight. */
@@ -20,7 +22,16 @@ function marketplaceCalendarDay(now: Date): CalendarDay {
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(now);
-  const read = (type: "year" | "month" | "day") => Number(parts.find((part) => part.type === type)?.value);
+  const read = (type: "year" | "month" | "day") => {
+    const value = Number(parts.find((part) => part.type === type)?.value);
+    if (Number.isFinite(value) === false)
+      throw new ApplicationError({
+        code: "INTERNAL_ERROR",
+        message: `Missing ${type} for ${now.toISOString()} in ${MARKETPLACE_TIME_ZONE}`,
+      });
+
+    return value;
+  };
 
   return { year: read("year"), month: read("month"), day: read("day") };
 }
@@ -34,7 +45,7 @@ function typedDayStart(value: string | null, endOfDay: boolean) {
   const date = parseDateFilter(value, endOfDay);
   if (date == null) return undefined;
 
-  return new Date(date.getTime() + MARKETPLACE_UTC_OFFSET_HOURS * 60 * 60 * 1000);
+  return new Date(date.getTime() + MARKETPLACE_UTC_OFFSET_HOURS * MILLISECONDS_PER_HOUR);
 }
 
 function customRange(from: string | null, to: string | null): SalesDateRange | null {
