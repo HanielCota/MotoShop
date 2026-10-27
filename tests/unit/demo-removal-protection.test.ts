@@ -124,36 +124,45 @@ describe("run modes", () => {
     expect(readRunMode([])).toBe("apply");
   });
 
-  it("rolls a rehearsal back after every step ran and still returns the report", async () => {
-    const steps: string[] = [];
-    const transaction = async <T>(run: () => T): Promise<T> => {
-      try {
-        const result = run();
-        steps.push("commit");
-        return result;
-      } catch (error) {
-        steps.push("rollback");
-        throw error;
-      }
+  /** Stands in for Prisma: commits when the callback returns, rolls back when it throws. */
+  function fakeDatabase(steps: string[]) {
+    return {
+      $transaction: async <T>(run: (tx: never) => Promise<T>): Promise<T> => {
+        try {
+          const result = await run({} as never);
+          steps.push("commit");
+          return result;
+        } catch (error) {
+          steps.push("rollback");
+          throw error;
+        }
+      },
     };
+  }
 
-    const report = await runRemoval("rehearse", (finish) =>
-      transaction(() => {
-        steps.push("delete");
-        return finish({ removed: 3 });
-      }),
-    );
+  it("always rolls a rehearsal back after the deletions ran, and still returns the report", async () => {
+    const steps: string[] = [];
+
+    const report = await runRemoval(fakeDatabase(steps) as never, "rehearse", async () => {
+      steps.push("delete");
+      return { removed: 3 };
+    });
 
     expect(report).toEqual({ removed: 3 });
     expect(steps).toEqual(["delete", "rollback"]);
   });
 
   it("commits a real run and lets other errors through", async () => {
-    await expect(runRemoval("apply", async (finish) => finish({ removed: 1 }))).resolves.toEqual({ removed: 1 });
+    const steps: string[] = [];
+
+    await expect(runRemoval(fakeDatabase(steps) as never, "apply", async () => ({ removed: 1 }))).resolves.toEqual({
+      removed: 1,
+    });
     await expect(
-      runRemoval("rehearse", async () => {
+      runRemoval(fakeDatabase(steps) as never, "rehearse", async () => {
         throw new Error("coupons_sellerId_fkey");
       }),
     ).rejects.toThrow("coupons_sellerId_fkey");
+    expect(steps).toEqual(["commit", "rollback"]);
   });
 });

@@ -1,4 +1,4 @@
-import type { Prisma } from "../src/generated/prisma/client";
+import type { Prisma, PrismaClient } from "../src/generated/prisma/client";
 import { parseEmailList } from "./review-seed-ids";
 
 /**
@@ -131,26 +131,32 @@ export class RehearsalRollback extends Error {
   override name = "RehearsalRollback";
 }
 
+const REMOVAL_TRANSACTION_TIMEOUT_MS = 120_000;
+
 /**
- * Runs the removal transaction. The callback returns its report through `finish`: in a rehearsal,
- * `finish` throws so the transaction rolls back, and the report it was given is returned instead.
+ * Runs the removal in one transaction. In a rehearsal the transaction always rolls back after the
+ * body returns, whatever the body does, and the body's report is returned instead.
  */
 export async function runRemoval<T>(
+  db: Pick<PrismaClient, "$transaction">,
   mode: RunMode,
-  transaction: (finish: <R>(report: R) => R) => Promise<T>,
+  body: (tx: Prisma.TransactionClient) => Promise<T>,
 ): Promise<T> {
-  let rehearsed: { report: unknown } | undefined;
-  const finish = <R>(report: R): R => {
-    if (mode !== "rehearse") return report;
-
-    rehearsed = { report };
-    throw new RehearsalRollback("rehearsal finished, rolling back");
-  };
+  let rehearsed: { report: T } | undefined;
 
   try {
-    return await transaction(finish);
+    return await db.$transaction(
+      async (tx) => {
+        const report = await body(tx);
+        if (mode !== "rehearse") return report;
+
+        rehearsed = { report };
+        throw new RehearsalRollback("rehearsal finished, rolling back");
+      },
+      { timeout: REMOVAL_TRANSACTION_TIMEOUT_MS },
+    );
   } catch (error) {
-    if (error instanceof RehearsalRollback && rehearsed !== undefined) return rehearsed.report as T;
+    if (error instanceof RehearsalRollback && rehearsed !== undefined) return rehearsed.report;
     throw error;
   }
 }
