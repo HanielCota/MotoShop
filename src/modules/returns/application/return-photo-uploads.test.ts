@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   createUploadUrl: vi.fn(),
   verifyAsset: vi.fn(),
   deleteObject: vi.fn(),
+  assertRateLimit: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/database", () => ({
@@ -14,6 +15,7 @@ vi.mock("@/lib/database", () => ({
 vi.mock("@/modules/orders/application/resolve-customer-order-access", () => ({
   customerOrderIdentityWhere: (identity: { userId: string }) => ({ userId: identity.userId }),
 }));
+vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: mocks.assertRateLimit }));
 vi.mock("@/lib/storage/imagekit-storage-provider", () => ({
   ImageKitStorageProvider: class {
     createUploadUrl = mocks.createUploadUrl;
@@ -21,6 +23,8 @@ vi.mock("@/lib/storage/imagekit-storage-provider", () => ({
     deleteObject = mocks.deleteObject;
   },
 }));
+
+import { ApplicationError } from "@/shared/errors/application-error";
 
 import { createReturnPhotoUpload, removeReturnPhotoUpload, verifyReturnPhotos } from "./return-photo-uploads";
 
@@ -72,6 +76,52 @@ describe("createReturnPhotoUpload", () => {
     await expect(
       createReturnPhotoUpload(target, { contentType: "image/png", sizeInBytes: 5 * 1024 * 1024 + 1 }),
     ).rejects.toThrow("até 5 MB");
+    expect(mocks.createUploadUrl).not.toHaveBeenCalled();
+  });
+});
+
+describe("createReturnPhotoUpload limits", () => {
+  const photo = { contentType: "image/jpeg" as const, sizeInBytes: 1024 };
+
+  it("caps the uploads of an item per minute and per day, so unattached files cannot pile up", async () => {
+    await createReturnPhotoUpload(target, photo);
+
+    expect(mocks.assertRateLimit.mock.calls.map(([limit]) => limit)).toEqual([
+      { key: "return-photo-upload:item-1", windowSeconds: 60, max: 10 },
+      { key: "return-photo-upload-day:item-1", windowSeconds: 86_400, max: 15 },
+    ]);
+  });
+
+  it("does not let another customer spend the quota of an item that is not theirs", async () => {
+    const dailyUploadLimit = 15;
+    const counts = new Map<string, number>();
+    mocks.assertRateLimit.mockImplementation(async ({ key, max }: { key: string; max: number }) => {
+      const count = (counts.get(key) ?? 0) + 1;
+      counts.set(key, count);
+      if (count > max) throw new ApplicationError({ code: "CONFLICT", statusCode: 429, message: "Muitas tentativas." });
+    });
+    const attacker = { ...target, orderNumber: "MS-ATTACKER", identity: { userId: "attacker" } };
+    mocks.findItem.mockImplementation(async ({ where }: { where: { sellerOrder: { order: { userId: string } } } }) =>
+      where.sellerOrder.order.userId === "buyer-1" ? { id: "item-1", sellerOrder: { status: "DELIVERED" } } : null,
+    );
+
+    // An attacker with an order of their own sends the victim's item id more times than the daily limit.
+    for (let attempt = 0; attempt <= dailyUploadLimit; attempt += 1) {
+      await expect(createReturnPhotoUpload(attacker, photo)).rejects.toThrow("Item do pedido não encontrado");
+    }
+
+    expect(counts.size).toBe(0);
+    await expect(createReturnPhotoUpload(target, photo)).resolves.toHaveProperty("url");
+  });
+
+  it("still blocks the owner once the item's limit is reached", async () => {
+    mocks.assertRateLimit
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(
+        new ApplicationError({ code: "CONFLICT", statusCode: 429, message: "Muitas tentativas." }),
+      );
+
+    await expect(createReturnPhotoUpload(target, photo)).rejects.toThrow("Muitas tentativas");
     expect(mocks.createUploadUrl).not.toHaveBeenCalled();
   });
 });
