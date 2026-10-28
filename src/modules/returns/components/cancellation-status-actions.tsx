@@ -19,7 +19,7 @@ export function CancellationStatusActions({
   summary,
 }: {
   cancellationRequestId: string;
-  status: string;
+  status: "REQUESTED" | "APPROVED";
   summary: AfterSalesSummary;
 }) {
   const [pending, startTransition] = useTransition();
