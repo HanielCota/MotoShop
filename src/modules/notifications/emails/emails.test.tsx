@@ -59,7 +59,7 @@ describe("order e-mails", () => {
   });
 
   it("keeps the tracking link identical in the button and writes it out below", () => {
-    const trackingUrl = "https://rastreio.example.test/track?code=BR123&lang=pt";
+    const trackingUrl = "https://rastreio.example.test/track?code=BR123&lang=pt&source=email";
     const html = renderEmail(
       <FulfillmentStatusEmail
         customerName="Carla"
@@ -73,7 +73,7 @@ describe("order e-mails", () => {
 
     expect(html).toContain("Pedido enviado");
     expect(hrefs(html).filter((href) => href === trackingUrl)).toHaveLength(2);
-    expect(html).toContain(trackingUrl.replace("&", "&amp;"));
+    expect(html).toContain(trackingUrl.replaceAll("&", "&amp;"));
   });
 
   it("leaves the button out of a fulfillment e-mail without a tracking link", () => {
