@@ -44,8 +44,8 @@ export function EmailLayout({ logoUrl, preview, children }: { logoUrl: string; p
   return (
     <Html lang="pt-BR">
       <Head />
-      <Preview>{preview}</Preview>
       <Body style={{ backgroundColor: colors.page, margin: 0, padding: "24px 0", fontFamily }}>
+        <Preview>{preview}</Preview>
         <Container style={{ maxWidth: 600, width: "100%", backgroundColor: colors.card, borderRadius: 12 }}>
           <Section style={{ backgroundColor: colors.header, borderRadius: "12px 12px 0 0", padding: "20px 32px" }}>
             <Img src={logoUrl} alt="Moto Shop" width={LOGO_WIDTH} height={LOGO_HEIGHT} style={{ display: "block" }} />

@@ -36,6 +36,9 @@ describe("e-mail layout", () => {
       ]),
     );
     expect(html).not.toMatch(/<style|<link[^>]+stylesheet|class="/);
+    const bodyStart = html.indexOf("<body");
+    expect(bodyStart).toBeGreaterThan(0);
+    expect(html.indexOf("data-skip-in-text")).toBeGreaterThan(bodyStart);
   });
 });
 
