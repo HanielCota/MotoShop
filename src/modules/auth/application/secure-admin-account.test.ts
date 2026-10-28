@@ -66,14 +66,20 @@ it("leaves customer and seller accounts alone and sends them no reset e-mail", a
 });
 
 it("keeps the verification working when the reset e-mail fails, and logs no e-mail address", async () => {
-  requestPasswordReset.mockRejectedValueOnce(new Error("provider down"));
+  requestPasswordReset.mockRejectedValueOnce(
+    new Error("Reset failed for admin2@motoshop.test with token private-reset-token"),
+  );
 
   await expect(
     secureAdminAccountAfterVerification({ id: "user-1", email: "admin2@motoshop.test" }, requestPasswordReset),
   ).resolves.toBeUndefined();
 
   expect(mocks.error).toHaveBeenCalledWith(expect.objectContaining({ event: "auth.admin_password_reset_failed" }));
-  expect(JSON.stringify(mocks.error.mock.calls)).not.toContain("admin2@motoshop.test");
+  const serialized = JSON.stringify(mocks.error.mock.calls, (_key, value: unknown) =>
+    value instanceof Error ? { message: value.message } : value,
+  );
+  expect(serialized).not.toContain("admin2@motoshop.test");
+  expect(serialized).not.toContain("private-reset-token");
 });
 
 it("logs the reset only when a password was discarded, and calls it a request rather than a delivery", async () => {

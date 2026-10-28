@@ -47,6 +47,10 @@ async function sendAdminPasswordReset(user: VerifiedUser, requestPasswordReset: 
     await requestPasswordReset(user.email);
     logger.info({ event: "auth.admin_password_reset_requested", userId: user.id });
   } catch (error) {
-    logger.error({ event: "auth.admin_password_reset_failed", userId: user.id, error });
+    logger.error({
+      event: "auth.admin_password_reset_failed",
+      userId: user.id,
+      errorType: error instanceof Error ? error.name : "UnknownError",
+    });
   }
 }
