@@ -54,15 +54,18 @@ export function CancellationStatusActions({
             return { error: result.error ?? null };
           }}
         />
-        <Button
-          variant="outline"
-          size="sm"
-          type="button"
-          onClick={() => startTransition(async () => setFeedback(await submit("REJECT")))}
-          disabled={pending}
-        >
-          Recusar
-        </Button>
+        {/* Só uma solicitação ainda sem decisão pode ser recusada; aprovada, o servidor recusa com conflito. */}
+        {status === "REQUESTED" ? (
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            onClick={() => startTransition(async () => setFeedback(await submit("REJECT")))}
+            disabled={pending}
+          >
+            Recusar
+          </Button>
+        ) : null}
       </div>
       <FormMessage error={feedback.error ?? null} success={feedback.success ?? null} className="text-xs" />
     </div>
