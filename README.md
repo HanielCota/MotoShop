@@ -72,6 +72,7 @@ Cloudflare R2.
 | `pnpm db:deploy`                                | Aplica migrations versionadas (`prisma migrate deploy`)            |
 | `pnpm db:seed` / `pnpm db:studio`               | Seed base / Prisma Studio                                          |
 | `pnpm db:seed:review` / `pnpm db:remove:review` | Cria / remove os dados de demonstração para revisão                |
+| `pnpm db:remove:leftovers`                      | Remove o catálogo demo antigo e as lojas de testes de QA           |
 | `pnpm db:hide:review`                           | Volta as lojas de demonstração para `PENDING`                      |
 | `pnpm inngest:dev`                              | Servidor local do Inngest                                          |
 

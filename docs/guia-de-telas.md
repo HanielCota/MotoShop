@@ -53,6 +53,10 @@ Roteiro para revisar todas as telas com dados de demonstração. Tudo o que apar
 
    A remoção apaga as contas `review.*@example.test`, as lojas/produtos/pedidos de demonstração e as imagens `public/images/demo/review-*.webp`. Das contas de visualização, saem apenas o vínculo com a loja de demonstração, os pedidos `MS-REVIEW-V*`, favoritos e itens de carrinho de produtos de demonstração e os endereços/motos/carrinho criados pelo seed; as contas em si continuam intactas.
 
+   As lojas que o `db:remove:review` não alcança (o catálogo antigo `demo-*` e as lojas deixadas por testes de QA e de integração, listadas em `scripts/demo-leftovers-scope.ts`) saem com o `pnpm db:remove:leftovers`, que segue a mesma ordem: `-- --dry-run` antes. Ele nunca apaga contas, só o vínculo delas com a loja.
+
+   Os dois scripts exigem `DEMO_REMOVAL_PROTECTED_EMAILS` no `.env.local` e nunca apagam as lojas `luiz-parts` e `loja-teste` nem as contas dessa lista: se alguma cair no filtro, nada é removido. Loja com um membro de e-mail real (fora de `@example.test`) só sai com `-- --confirm-stores=<identificador>`; o dry-run lista essas lojas com o e-mail mascarado.
+
 ## 2. Contas de demonstração
 
 Todas usam a mesma senha: o valor da variável `REVIEW_ACCOUNTS_PASSWORD` no `.env.local` de quem rodou o seed (peça a quem administra a demonstração; a senha não fica no código nem nesta documentação). O seed falha se a variável faltar e regrava a senha de todas as contas `review.*` a cada execução. Entre em **/login**. Para trocar de conta, use **Sair** no menu do ícone de usuário (loja) ou no topo da Central do Lojista/Admin.
