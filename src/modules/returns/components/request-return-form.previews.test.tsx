@@ -12,7 +12,10 @@ vi.mock("../actions/return-actions", () => ({
   createReturnPhotoUploadAction: mocks.createReturnPhotoUploadAction,
   removeReturnPhotoUploadAction: mocks.removeReturnPhotoUploadAction,
 }));
-vi.mock("@/shared/storage/upload-image", () => ({ uploadFileToImageKit: mocks.uploadFileToImageKit }));
+vi.mock("@/shared/storage/upload-image", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/shared/storage/upload-image")>()),
+  uploadFileToImageKit: mocks.uploadFileToImageKit,
+}));
 
 import { RequestReturnForm } from "./request-return-form";
 
