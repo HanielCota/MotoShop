@@ -130,7 +130,8 @@ export function EmailButton({ href, children }: { href: string; children: ReactN
         style={{
           backgroundColor: colors.brand,
           borderRadius: 8,
-          color: "#ffffff",
+          color: colors.header,
+          boxSizing: "border-box",
           display: "inline-block",
           fontSize: 17,
           fontWeight: 700,
