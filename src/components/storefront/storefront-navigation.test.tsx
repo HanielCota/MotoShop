@@ -65,6 +65,16 @@ it("stays out of the seller and admin areas", () => {
   }
 });
 
+it("does not ask for area access on the Admin and Central do Lojista pages, where the header is hidden", () => {
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "store-owner", name: "Luiz" } } });
+  navigation.pathname = "/seller/orders";
+
+  render(<StorefrontNavigation />);
+
+  expect(fetch).not.toHaveBeenCalled();
+  authMocks.useSession.mockReset();
+});
+
 it("uses both horizontal logo variants for the hover transition", () => {
   authMocks.useSession.mockReturnValue({ data: null });
   render(<StorefrontNavigation />);
@@ -87,6 +97,7 @@ it("gives signed-in customers an account menu with their shortcuts", async () =>
   const items = within(menu).getAllByRole("menuitem");
   expect(items.map((item) => [item.textContent, item.getAttribute("href")])).toEqual([
     ["Meus pedidos", "/orders"],
+    ["Minhas motos", "/account/motorcycles"],
     ["Favoritos", "/favorites"],
     ["Dados cadastrais", "/account/profile"],
     ["Alterar senha", "/account/password"],
@@ -134,6 +145,39 @@ it("shows the shortcuts on browsers without AbortSignal.any (Safari before 17.4)
     AbortSignal.any = originalAny;
     authMocks.useSession.mockReset();
   }
+});
+
+it("names the Central do Lojista in the header and at the top of the phone menu for a store owner", async () => {
+  areaAccess.seller = true;
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "store-owner", name: "Luiz" } } });
+  render(<StorefrontNavigation />);
+
+  const mainNavigation = screen.getByRole("navigation", { name: "Navegação principal" });
+  expect(await within(mainNavigation).findByRole("link", { name: "Central do Lojista" })).toHaveAttribute(
+    "href",
+    "/seller",
+  );
+  expect(within(mainNavigation).queryByRole("link", { name: "Venda no Moto Shop" })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Abrir menu" }));
+  const phoneMenu = screen.getByRole("navigation", { name: "Navegação mobile" });
+  const phoneLinks = within(phoneMenu).getAllByRole("link");
+  expect(phoneLinks[0]).toHaveTextContent("Central do Lojista");
+  expect(within(phoneMenu).queryByRole("link", { name: "Venda no Moto Shop" })).not.toBeInTheDocument();
+  authMocks.useSession.mockReset();
+});
+
+it("hides the area link while the access is still loading, so the wrong label never flashes", () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => new Promise<Response>(() => undefined)),
+  );
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "store-owner", name: "Luiz" } } });
+  render(<StorefrontNavigation />);
+
+  const mainNavigation = screen.getByRole("navigation", { name: "Navegação principal" });
+  expect(within(mainNavigation).getByRole("link", { name: "Venda no Moto Shop" })).toHaveClass("invisible");
+  authMocks.useSession.mockReset();
 });
 
 it("shows only the Central do Lojista to a store member", async () => {
@@ -239,4 +283,20 @@ it("starts the header search empty outside the catalog", () => {
 
   const fields = screen.getAllByRole("combobox", { name: "Buscar produtos", hidden: true });
   expect(fields.every((field) => (field as HTMLInputElement).value === "")).toBe(true);
+});
+
+it("keeps a store owner's area link visible during a session recheck", async () => {
+  areaAccess.seller = true;
+  const data = { user: { id: "owner-recheck", name: "Owner" } };
+  authMocks.useSession.mockReturnValue({ data, isPending: false });
+  const { rerender } = render(<StorefrontNavigation />);
+  const mainNavigation = screen.getByRole("navigation", { name: "Navegação principal" });
+  const link = await within(mainNavigation).findByRole("link", { name: "Central do Lojista" });
+  expect(link).not.toHaveClass("invisible");
+
+  authMocks.useSession.mockReturnValue({ data, isPending: true });
+  rerender(<StorefrontNavigation />);
+
+  expect(link).not.toHaveClass("invisible");
+  expect(screen.getByRole("button", { name: "Minha conta" })).toBeInTheDocument();
 });
