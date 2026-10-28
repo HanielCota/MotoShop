@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   ChevronDown,
   ChevronRight,
@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Menu as BaseMenu } from "@base-ui/react/menu";
-import { Suspense, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { pageContainerClassName } from "@/components/ui/page-container";
 import { popoverSurfaceClassName } from "@/components/ui/popover-surface";
@@ -58,6 +58,8 @@ function StorefrontHeader({ pathname }: { pathname: string }) {
   // so a store owner never sees "Venda no Moto Shop" flash before "Central do Lojista".
   const areaLinkClassName = sessionKnown === false || access == null ? "invisible" : "";
   const catalogActive = pathname === "/products" || pathname.startsWith("/products/");
+  // The catalog has its own large search above the results; a second one in the header confused people.
+  const showHeaderSearch = pathname !== "/products";
 
   return (
     <header
@@ -89,9 +91,11 @@ function StorefrontHeader({ pathname }: { pathname: string }) {
           />
         </nav>
 
-        <CatalogAwareHeaderSearch id="storefront-search" className="ml-auto hidden max-w-xs flex-1 md:flex" />
+        {showHeaderSearch ? (
+          <HeaderSearch id="storefront-search" className="ml-auto hidden max-w-xs flex-1 md:flex" />
+        ) : null}
 
-        <div className="ml-auto flex items-center gap-1 md:ml-0">
+        <div className={cn("ml-auto flex items-center gap-1", showHeaderSearch && "md:ml-0")}>
           <AccountMenu signedInName={signedInNameOf(session)} shortcuts={shortcuts} sessionKnown={sessionKnown} />
           <CartPreview />
           <button
@@ -114,7 +118,7 @@ function StorefrontHeader({ pathname }: { pathname: string }) {
         className="bg-moto-brand-foreground border-t border-white/10 px-4 py-2 md:hidden"
         hidden={!menuOpen}
       >
-        <CatalogAwareHeaderSearch id="storefront-mobile-search" className="my-2 flex" />
+        {showHeaderSearch ? <HeaderSearch id="storefront-mobile-search" className="my-2 flex" /> : null}
         {shortcuts.length > 0 ? (
           <AreaLinks
             shortcuts={shortcuts}
@@ -155,51 +159,15 @@ function StorefrontHeader({ pathname }: { pathname: string }) {
   );
 }
 
-type HeaderSearchProps = { id: string; className?: string };
-
-/**
- * The header search stays on the catalog too, filled with the term searched there and keeping the
- * filters already applied, like the catalog search band. Reading the URL needs a Suspense boundary.
- */
-function CatalogAwareHeaderSearch(props: HeaderSearchProps) {
-  return (
-    <Suspense fallback={<HeaderSearch {...props} />}>
-      <HeaderSearchWithCatalogQuery {...props} />
-    </Suspense>
-  );
-}
-
-function HeaderSearchWithCatalogQuery(props: HeaderSearchProps) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  if (pathname !== "/products") return <HeaderSearch {...props} />;
-
-  const catalogQuery = searchParams.get("q")?.trim() ?? "";
-  // A new search starts on the first page; the term itself comes from the field.
-  const preservedEntries = [...searchParams.entries()].filter(([name]) => name !== "q" && name !== "page");
-
-  // key: a new search remounts the field with the new term instead of keeping the old text.
-  return <HeaderSearch key={catalogQuery} {...props} defaultValue={catalogQuery} preservedEntries={preservedEntries} />;
-}
-
-function HeaderSearch({
-  id,
-  className,
-  defaultValue = "",
-  preservedEntries = [],
-}: HeaderSearchProps & { defaultValue?: string; preservedEntries?: readonly [string, string][] }) {
+function HeaderSearch({ id, className }: { id: string; className?: string }) {
   return (
     <form action="/products" method="get" role="search" className={`relative items-center ${className ?? ""}`}>
-      {preservedEntries.map(([name, value]) => (
-        <input key={`${name}=${value}`} type="hidden" name={name} value={value} />
-      ))}
       <label htmlFor={id} className="sr-only">
         Buscar produtos
       </label>
       <ProductSearchCombobox
         id={id}
         variant="plain"
-        defaultValue={defaultValue}
         className="w-full"
         listClassName="sm:w-80"
         placeholder="Buscar peças, marcas ou lojas"
