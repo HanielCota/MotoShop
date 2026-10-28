@@ -7,7 +7,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, formatMoneyInCents } from "@/lib/format";
 import { CartItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
 
-import { customerOrderHeadline } from "../domain/customer-order-headline";
+import { customerOrderBadgeStatus, customerOrderHeadline } from "../domain/customer-order-headline";
 import type { listCustomerOrders } from "../queries/customer-orders";
 
 type CustomerOrder = Awaited<ReturnType<typeof listCustomerOrders>>["orders"][number];
@@ -56,7 +56,11 @@ export function CustomerOrderCard({
             </CardTitle>
             <CardDescription>{formatDate(order.createdAt)}</CardDescription>
           </div>
-          <StatusBadge domain="order" status={order.status} label={customerOrderHeadline(order.status)} />
+          <StatusBadge
+            domain="order"
+            status={customerOrderBadgeStatus(order.status)}
+            label={customerOrderHeadline(order.status)}
+          />
         </div>
       </CardHeader>
       <CardContent className="space-y-3">

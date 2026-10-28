@@ -16,3 +16,13 @@ const headlineByStatus: Record<string, string> = {
 export function customerOrderHeadline(status: string) {
   return headlineByStatus[status] ?? "Em andamento";
 }
+
+/** Statuses the customer reads with the same words also get the same badge color and icon. */
+const badgeStatusByStatus: Record<string, string> = {
+  PAID: "PROCESSING",
+  PARTIALLY_SHIPPED: "SHIPPED",
+};
+
+export function customerOrderBadgeStatus(status: string) {
+  return badgeStatusByStatus[status] ?? status;
+}
