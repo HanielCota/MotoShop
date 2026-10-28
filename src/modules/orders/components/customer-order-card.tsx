@@ -1,27 +1,26 @@
 import { ArrowRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, formatMoneyInCents } from "@/lib/format";
-import { getPublicStorageImageUrl } from "@/shared/storage/public-storage-url";
+import { CartItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
 
-import { customerOrderHeadline } from "../domain/customer-order-headline";
+import { customerOrderBadgeStatus, customerOrderHeadline } from "../domain/customer-order-headline";
 import type { listCustomerOrders } from "../queries/customer-orders";
 
 type CustomerOrder = Awaited<ReturnType<typeof listCustomerOrders>>["orders"][number];
 
-const THUMBNAIL_WIDTH = 112;
+/** The item the card shows: the first one bought, which is also the one whose photo the list looks up. */
+export function firstOrderItem(order: CustomerOrder) {
+  return order.sellerOrders.flatMap((sellerOrder) => sellerOrder.items)[0];
+}
 
 function firstItem(order: CustomerOrder) {
   const items = order.sellerOrders.flatMap((sellerOrder) => sellerOrder.items);
-  const first = items[0];
-  const storageKey = first?.product?.images[0]?.storageKey;
   return {
-    name: first?.productNameSnapshot ?? "Pedido",
-    imageUrl: storageKey ? getPublicStorageImageUrl(storageKey, THUMBNAIL_WIDTH) : null,
+    name: items[0]?.productNameSnapshot ?? "Pedido",
     otherItems: Math.max(items.length - 1, 0),
   };
 }
@@ -30,7 +29,14 @@ function firstItem(order: CustomerOrder) {
  * One order in the customer's list: a single status in plain words, the first product to recognize
  * the purchase, and the whole card as the link to the order.
  */
-export function CustomerOrderCard({ order }: { order: CustomerOrder }) {
+export function CustomerOrderCard({
+  order,
+  thumbnailUrl,
+}: {
+  order: CustomerOrder;
+  /** Photo of the first item, with the cart's rule (variant photo first); without it, the placeholder. */
+  thumbnailUrl: string | undefined;
+}) {
   const href = `/orders/${order.orderNumber}` as Route;
   const item = firstItem(order);
   const stores = order.sellerOrders.map((sellerOrder) => sellerOrder.storeNameSnapshot).join(", ");
@@ -50,16 +56,16 @@ export function CustomerOrderCard({ order }: { order: CustomerOrder }) {
             </CardTitle>
             <CardDescription>{formatDate(order.createdAt)}</CardDescription>
           </div>
-          <StatusBadge domain="order" status={order.status} label={customerOrderHeadline(order.status)} />
+          <StatusBadge
+            domain="order"
+            status={customerOrderBadgeStatus(order.status)}
+            label={customerOrderHeadline(order.status)}
+          />
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center gap-3">
-          <span className="bg-surface-sunken relative size-14 shrink-0 overflow-hidden rounded-md">
-            {item.imageUrl ? (
-              <Image src={item.imageUrl} alt="" fill sizes="56px" unoptimized className="object-cover" />
-            ) : null}
-          </span>
+          <CartItemThumbnail url={thumbnailUrl} sizes="56px" className="size-14" />
           <span className="min-w-0 flex-1">
             <span className="text-foreground line-clamp-2 block text-sm font-medium">{item.name}</span>
             <span className="text-muted-foreground block truncate text-xs">

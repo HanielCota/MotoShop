@@ -23,9 +23,11 @@ describe("validateReturnPhotoSelection", () => {
   });
 
   it("refuses other file types and photos over 5 MB", () => {
-    expect(validateReturnPhotoSelection([], [photo("a.gif", "image/gif")])).toBe("Use imagens JPG, PNG ou WebP.");
-    expect(validateReturnPhotoSelection([], [photo("big.jpg", "image/jpeg", 5 * 1024 * 1024 + 1)])).toMatch(
-      /passa de 5 MB/,
+    expect(validateReturnPhotoSelection([], [photo("a.gif", "image/gif")])).toBe(
+      'A imagem "a.gif" precisa ser JPG, PNG ou WebP e ter até 5 MB.',
+    );
+    expect(validateReturnPhotoSelection([], [photo("big.jpg", "image/jpeg", 5 * 1024 * 1024 + 1)])).toBe(
+      'A imagem "big.jpg" precisa ser JPG, PNG ou WebP e ter até 5 MB.',
     );
   });
 });

@@ -23,6 +23,11 @@ type Field = "name" | "email" | "password";
 type FieldErrors = Partial<Record<Field, string>>;
 
 /** `?modo=cadastro` torna o cadastro linkável; ausência do parâmetro = entrar. */
+// The same text for everyone: an admin's password is discarded on verification (L-19) and a reset link
+// is e-mailed, but the page must not reveal which addresses are admins.
+const VERIFIED_EMAIL_MESSAGE =
+  "E-mail confirmado. Entre com sua senha. Se ela não funcionar, use 'Esqueci minha senha'.";
+
 const MODE_PARAM = "modo";
 const SIGN_UP_VALUE = "cadastro";
 
@@ -202,7 +207,7 @@ export function AuthForm({
       {searchParams.has("error") ? (
         <FormMessage error="Não foi possível confirmar o e-mail. Entre com seu e-mail e senha para receber outro link." />
       ) : searchParams.get("verified") === "1" ? (
-        <FormMessage success="E-mail confirmado. Entre com sua senha." />
+        <FormMessage success={VERIFIED_EMAIL_MESSAGE} />
       ) : null}
       <FormMessage error={error ?? null} success={notice ?? null} />
       <Button type="submit" size="lg" className="font-bold tracking-wide uppercase" disabled={pending}>

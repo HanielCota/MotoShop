@@ -34,6 +34,15 @@ describe("stored key (L-15)", () => {
 });
 
 describe("atomic rate limit", () => {
+  it("preserves the full daily upload quota window in the persisted counter", async () => {
+    mocks.queryRaw.mockResolvedValue([{ count: 1, resetAt: new Date(Date.now() + 86_400_000) }]);
+
+    await consumeRateLimit({ key: "return-photo-upload-day:item-1", windowSeconds: 86_400, max: 15 });
+
+    const query = mocks.queryRaw.mock.calls[0]?.[0] as { values: unknown[] };
+    expect(query.values.slice(1)).toEqual([86_400, 86_400]);
+  });
+
   it("allows requests below the limit", async () => {
     mocks.queryRaw.mockResolvedValue([{ count: 2, resetAt: new Date(Date.now() + 60_000) }]);
     await expect(consumeRateLimit({ key: "auth:user-a", windowSeconds: 60, max: 3 })).resolves.toMatchObject({

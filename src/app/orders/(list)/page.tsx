@@ -20,7 +20,9 @@ import { getStatusLabel, type StatusDomain } from "@/shared/presentation/status-
 import { parseMoneyFilterToCents } from "@/modules/orders/domain/money-filter";
 import { CustomerAccountShell } from "@/modules/customers/components/customer-account-shell";
 import { domainIcons } from "@/shared/presentation/domain-icons";
-import { CustomerOrderCard } from "@/modules/orders/components/customer-order-card";
+import { CustomerOrderCard, firstOrderItem } from "@/modules/orders/components/customer-order-card";
+import { getOrderItemThumbnails } from "@/modules/orders/queries/order-item-thumbnails";
+import type { CartThumbnail } from "@/modules/cart/queries/cart-thumbnails";
 
 export const metadata: Metadata = {
   title: "Meus pedidos",
@@ -63,6 +65,13 @@ export default async function CustomerOrdersPage({
     params.orderMaxTotal,
   );
   const hasInvertedPeriod = isInvertedDateRange(params.orderFrom, params.orderTo);
+  // Each card shows its first item, so only those need a photo.
+  const thumbnails = await getOrderItemThumbnails(
+    result.orders.flatMap((order) => {
+      const item = firstOrderItem(order);
+      return item == null ? [] : [item];
+    }),
+  );
   const allOrders = hasFilters ? await listCustomerOrders(session.user.id, { pageSize: 1 }) : result;
 
   function pageHref(page: number): Route {
@@ -211,7 +220,11 @@ export default async function CustomerOrdersPage({
       ) : (
         <div className="space-y-4">
           {result.orders.map((order) => (
-            <CustomerOrderCard key={order.orderNumber} order={order} />
+            <CustomerOrderCard
+              key={order.orderNumber}
+              order={order}
+              thumbnailUrl={firstItemThumbnailUrl(order, thumbnails)}
+            />
           ))}
         </div>
       )}
@@ -231,4 +244,14 @@ export default async function CustomerOrdersPage({
       ) : null}
     </CustomerAccountShell>
   );
+}
+
+function firstItemThumbnailUrl(
+  order: Parameters<typeof firstOrderItem>[0],
+  thumbnails: ReadonlyMap<string, CartThumbnail>,
+): string | undefined {
+  const item = firstOrderItem(order);
+  if (item == null) return undefined;
+
+  return thumbnails.get(item.id)?.url;
 }

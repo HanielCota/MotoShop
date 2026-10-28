@@ -2,10 +2,9 @@ import "server-only";
 
 import { db } from "@/lib/database";
 import { MARKETPLACE_TIME_ZONE } from "@/lib/format";
+import { confirmedSellerOrderStatuses } from "@/modules/orders/domain/confirmed-sales";
 
 export const LOW_STOCK_THRESHOLD = 5;
-
-const confirmedSellerOrderStatuses = ["PAID", "PROCESSING", "SHIPPED", "DELIVERED"] as const;
 
 /** Início do mês corrente no fuso do marketplace (São Paulo, UTC-3 sem horário de verão). */
 function startOfCurrentMonth(now = new Date()) {

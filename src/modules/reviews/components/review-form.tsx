@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Textarea } from "@/components/ui/textarea";
-import { uploadFileToImageKit } from "@/shared/storage/upload-image";
+import { findImageFileProblem, uploadFileToImageKit } from "@/shared/storage/upload-image";
 import {
   createReviewAction,
   createReviewUploadUrlAction,
@@ -18,11 +18,6 @@ import { useServerActionState } from "@/shared/forms/server-action-submit";
 import { StarRatingInput } from "./star-rating-input";
 
 const initialState: ReviewActionState = {};
-const allowedTypes: Record<string, number> = {
-  "image/jpeg": 5 * 1024 * 1024,
-  "image/png": 5 * 1024 * 1024,
-  "image/webp": 5 * 1024 * 1024,
-};
 type UploadedMedia = { key: string; fileId: string; contentType: string };
 
 export function ReviewForm({
@@ -57,12 +52,8 @@ export function ReviewForm({
     try {
       const selected = Array.from(selectedFiles);
       if (files.length + selected.length > 3) throw new Error("Anexe no máximo 3 arquivos por avaliação.");
-      for (const file of selected) {
-        const maxSize = allowedTypes[file.type];
-        if (!maxSize) throw new Error("Use imagens JPG, PNG ou WebP.");
-        if (file.size > maxSize)
-          throw new Error(`O arquivo ${file.name} excede o limite de ${maxSize / 1024 / 1024} MB.`);
-      }
+      const problem = selected.map(findImageFileProblem).find((message) => message != null);
+      if (problem != null) throw new Error(problem);
       setFiles((current) => [...current, ...selected]);
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Não foi possível selecionar o arquivo.");

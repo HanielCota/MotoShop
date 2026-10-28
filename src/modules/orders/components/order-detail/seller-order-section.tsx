@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { InlineNotice } from "@/components/ui/inline-notice";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatMoneyInCents } from "@/lib/format";
+import { CartItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
+import type { CartThumbnail } from "@/modules/cart/queries/cart-thumbnails";
 import { canOpenDispute } from "@/modules/disputes/domain/dispute-eligibility";
 import { RequestDisputeForm } from "@/modules/disputes/components/request-dispute-form";
 import { RequestCancellationForm } from "@/modules/returns/components/request-cancellation-form";
@@ -20,6 +22,8 @@ import { Disclosure } from "@/components/ui/disclosure";
 type SellerOrderSectionProps = {
   orderNumber: string;
   sellerOrder: CustomerSellerOrder;
+  /** Foto de cada item, pelo id do item; sem foto, aparece o substituto. */
+  thumbnails: ReadonlyMap<string, CartThumbnail>;
   /** Avaliações exigem conta: só aparecem para o cliente logado dono do pedido. */
   canReview: boolean;
   sellerAlreadyReviewed: boolean;
@@ -28,6 +32,7 @@ type SellerOrderSectionProps = {
 export function SellerOrderSection({
   orderNumber,
   sellerOrder,
+  thumbnails,
   canReview,
   sellerAlreadyReviewed,
 }: SellerOrderSectionProps) {
@@ -88,6 +93,7 @@ export function SellerOrderSection({
               <OrderItemRow
                 key={item.id}
                 item={item}
+                thumbnailUrl={thumbnails.get(item.id)?.url}
                 orderNumber={orderNumber}
                 sellerOrderStatus={sellerOrder.status}
                 showReview={reviewableItems.includes(item)}
@@ -128,12 +134,14 @@ function isReviewable(item: CustomerOrderItem): boolean {
 
 function OrderItemRow({
   item,
+  thumbnailUrl,
   orderNumber,
   sellerOrderStatus,
   showReview,
   sellerAlreadyReviewed,
 }: {
   item: CustomerOrderItem;
+  thumbnailUrl: string | undefined;
   orderNumber: string;
   sellerOrderStatus: string;
   showReview: boolean;
@@ -145,11 +153,14 @@ function OrderItemRow({
   return (
     <li className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0">
       <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-        <div className="min-w-0">
-          <p className="text-foreground font-medium">{item.productNameSnapshot}</p>
-          <p className="text-muted-foreground text-sm">
-            {item.variantDescriptionSnapshot} · SKU {item.skuSnapshot} · Qtd. {item.quantity}
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          <CartItemThumbnail url={thumbnailUrl} sizes="56px" className="size-14" />
+          <div className="min-w-0">
+            <p className="text-foreground font-medium">{item.productNameSnapshot}</p>
+            <p className="text-muted-foreground text-sm">
+              {item.variantDescriptionSnapshot} · SKU {item.skuSnapshot} · Qtd. {item.quantity}
+            </p>
+          </div>
         </div>
         <div className="flex flex-col items-start gap-1 sm:items-end">
           <span className="text-foreground font-medium">{formatMoneyInCents(item.totalAmountInCents)}</span>
