@@ -3,10 +3,10 @@
 import { useCallback, useId, useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { uploadFileToImageKit } from "@/shared/storage/upload-image";
+import { findImageFileProblem, uploadFileToImageKit } from "@/shared/storage/upload-image";
 
 import { createReturnPhotoUploadAction, removeReturnPhotoUploadAction } from "../actions/return-actions";
-import { MAX_RETURN_PHOTO_SIZE_IN_BYTES, MAX_RETURN_PHOTOS, returnPhotoContentTypes } from "../domain/return-photos";
+import { MAX_RETURN_PHOTOS, returnPhotoContentTypes } from "../domain/return-photos";
 
 type ReturnPhotoTarget = { orderNumber: string; orderItemId: string };
 type UploadedPhoto = { key: string; fileId: string };
@@ -15,12 +15,7 @@ type UploadedPhoto = { key: string; fileId: string };
 export function validateReturnPhotoSelection(current: readonly File[], selected: readonly File[]): string | null {
   if (current.length + selected.length > MAX_RETURN_PHOTOS) return `Anexe no máximo ${MAX_RETURN_PHOTOS} fotos.`;
 
-  for (const file of selected) {
-    if (!(returnPhotoContentTypes as readonly string[]).includes(file.type)) return "Use imagens JPG, PNG ou WebP.";
-    if (file.size > MAX_RETURN_PHOTO_SIZE_IN_BYTES) return `A foto ${file.name} passa de 5 MB.`;
-  }
-
-  return null;
+  return selected.map(findImageFileProblem).find((problem) => problem != null) ?? null;
 }
 
 /**
