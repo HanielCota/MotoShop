@@ -12,6 +12,7 @@ import { ClaimGuestOrderForm } from "@/modules/orders/components/claim-guest-ord
 import { OrderSummary } from "@/modules/orders/components/order-detail/order-summary";
 import { PaymentSection } from "@/modules/orders/components/order-detail/payment-section";
 import { SellerOrderSection } from "@/modules/orders/components/order-detail/seller-order-section";
+import { getOrderItemThumbnails } from "@/modules/orders/queries/order-item-thumbnails";
 import { getCustomerOrder } from "@/modules/returns/queries/customer-orders";
 import { optionalTextSearchParam, parseSearchParams, type RawSearchParams } from "@/shared/validation/search-params";
 
@@ -45,6 +46,8 @@ export default async function CustomerOrderPage({
 
   const order = await getCustomerOrder(orderNumber, identity);
   if (!order) notFound();
+
+  const thumbnails = await getOrderItemThumbnails(order.sellerOrders.flatMap((sellerOrder) => sellerOrder.items));
 
   const pendingPayment = order.status === "PENDING_PAYMENT";
   const isOwner = Boolean(session && order.userId === session.user.id);
@@ -80,6 +83,7 @@ export default async function CustomerOrderPage({
                 key={sellerOrder.id}
                 orderNumber={order.orderNumber}
                 sellerOrder={sellerOrder}
+                thumbnails={thumbnails}
                 canReview={isOwner}
                 sellerAlreadyReviewed={order.sellerReviews.some((review) => review.sellerId === sellerOrder.sellerId)}
               />

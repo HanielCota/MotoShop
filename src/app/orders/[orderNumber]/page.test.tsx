@@ -29,6 +29,9 @@ vi.mock("@/modules/orders/components/claim-guest-order-form", () => ({ ClaimGues
 vi.mock("@/modules/orders/components/order-detail/order-summary", () => ({ OrderSummary: () => null }));
 vi.mock("@/modules/orders/components/order-detail/payment-section", () => ({ PaymentSection: () => null }));
 vi.mock("@/modules/orders/components/order-detail/seller-order-section", () => ({ SellerOrderSection: () => null }));
+vi.mock("@/modules/orders/queries/order-item-thumbnails", () => ({
+  getOrderItemThumbnails: vi.fn(async () => new Map()),
+}));
 
 import CustomerOrderPage from "./page";
 

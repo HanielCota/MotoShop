@@ -14,6 +14,9 @@ vi.mock("@/modules/admin/components/order-detail/admin-seller-order-card", () =>
   AdminSellerOrderCard: () => null,
 }));
 vi.mock("@/modules/orders/components/order-detail/payment-section", () => ({ PaymentSection: () => null }));
+vi.mock("@/modules/orders/queries/order-item-thumbnails", () => ({
+  getOrderItemThumbnails: vi.fn(async () => new Map()),
+}));
 
 import AdminOrderDetailPage from "./page";
 

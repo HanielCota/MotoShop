@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useCallback, useId, useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { uploadFileToImageKit } from "@/shared/storage/upload-image";
@@ -54,6 +54,46 @@ export async function uploadReturnPhotos(target: ReturnPhotoTarget, files: reado
  */
 export async function discardReturnPhotos(target: ReturnPhotoTarget, photos: readonly UploadedPhoto[]): Promise<void> {
   await Promise.allSettled(photos.map((photo) => removeReturnPhotoUploadAction({ ...target, key: photo.key })));
+}
+
+// Stable list key per chosen file: removing one photo must not remount (and reload) the others.
+const fileKeys = new WeakMap<File, number>();
+let lastFileKey = 0;
+
+function keyOf(file: File): number {
+  const existing = fileKeys.get(file);
+  if (existing != null) return existing;
+
+  lastFileKey += 1;
+  fileKeys.set(file, lastFileKey);
+
+  return lastFileKey;
+}
+
+/**
+ * Miniatura local da foto escolhida, sem enviar nada: a URL temporária existe enquanto a foto está na
+ * lista e é liberada quando ela sai (removida, ou a lista esvaziada depois do envio).
+ */
+function ReturnPhotoPreview({ file }: { file: File }) {
+  // The image ref owns the URL: created when the image mounts, freed when it unmounts or the file changes.
+  const showFile = useCallback(
+    (image: HTMLImageElement | null) => {
+      if (image == null) return;
+
+      const objectUrl = URL.createObjectURL(file);
+      image.src = objectUrl;
+
+      return () => URL.revokeObjectURL(objectUrl);
+    },
+    [file],
+  );
+
+  return (
+    <span aria-hidden="true" className="bg-surface-sunken size-12 shrink-0 overflow-hidden rounded-md">
+      {/* oxlint-disable-next-line nextjs/no-img-element -- a local blob URL; next/image has nothing to optimize. */}
+      <img ref={showFile} alt="" className="size-full object-cover" />
+    </span>
+  );
 }
 
 /** Seleção de até 3 fotos opcionais para a devolução; o envio acontece só ao confirmar o formulário. */
@@ -116,11 +156,9 @@ export function ReturnPhotoPicker({
       {files.length > 0 ? (
         <ul className="space-y-1 text-sm" aria-label="Fotos anexadas">
           {files.map((file, index) => (
-            <li
-              key={`${file.name}-${file.lastModified}-${index}`}
-              className="border-border bg-card flex items-center justify-between gap-2 rounded-md border py-1 pr-1 pl-3"
-            >
-              <span className="min-w-0 truncate">{file.name}</span>
+            <li key={keyOf(file)} className="border-border bg-card flex items-center gap-3 rounded-md border p-1">
+              <ReturnPhotoPreview file={file} />
+              <span className="min-w-0 flex-1 truncate">{file.name}</span>
               <button
                 type="button"
                 disabled={disabled}

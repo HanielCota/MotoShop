@@ -49,7 +49,8 @@ const customerOrderSelect = {
         select: {
           id: true,
           productNameSnapshot: true,
-          product: { select: { images: { select: { storageKey: true }, orderBy: { sortOrder: "asc" }, take: 1 } } },
+          productId: true,
+          variantId: true,
         },
         orderBy: { createdAt: "asc" },
       },
