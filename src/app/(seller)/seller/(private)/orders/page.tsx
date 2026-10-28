@@ -43,7 +43,8 @@ const basePath = "/seller/orders";
 const orderStatusOptions = getStatusOptions("sellerOrder").filter(({ value }) =>
   (sellerOrderStatusValues as readonly string[]).includes(value),
 );
-const shipmentStatusOptions = getStatusOptions("shipment").filter(({ value }) =>
+// The filter covers both delivery kinds, so READY_TO_SHIP reads "Pronto para envio", true for either.
+const shipmentStatusOptions = getStatusOptions("ownShipment").filter(({ value }) =>
   (shipmentStatusValues as readonly string[]).includes(value),
 );
 const orderStatusFilterOptions = [{ value: "ALL", label: "Todos" }, ...orderStatusOptions];
@@ -158,7 +159,12 @@ export default async function SellerOrdersPage({
                           · {order.items.length} {order.items.length === 1 ? "item" : "itens"}
                         </p>
                       </div>
-                      {shipment ? <StatusBadge domain="shipment" status={shipment.status} /> : null}
+                      {shipment ? (
+                        <StatusBadge
+                          domain={shipment.provider === "OWN" ? "ownShipment" : "shipment"}
+                          status={shipment.status}
+                        />
+                      ) : null}
                     </div>
 
                     <div className="text-muted-foreground grid gap-1 text-sm sm:grid-cols-2">
