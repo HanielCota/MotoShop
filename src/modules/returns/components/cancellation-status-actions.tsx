@@ -54,7 +54,7 @@ export function CancellationStatusActions({
             return { error: result.error ?? null };
           }}
         />
-        {/* Só uma solicitação ainda sem decisão pode ser recusada; aprovada, o servidor recusa com conflito. */}
+        {/* Only a request still waiting for a decision can be rejected; once approved, the server answers with a conflict. */}
         {status === "REQUESTED" ? (
           <Button
             variant="outline"
