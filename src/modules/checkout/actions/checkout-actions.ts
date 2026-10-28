@@ -11,9 +11,10 @@ import { toActionError } from "@/shared/errors/action-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 import { getClientIp } from "@/shared/request/client-ip";
 
+import { previewCheckoutCoupon } from "../application/preview-checkout-coupon";
 import { submitCheckout } from "../application/submit-checkout";
 import type { SimulatedPurchase } from "../domain/simulated-purchase";
-import { checkoutSchema } from "../schemas/checkout";
+import { checkoutSchema, couponPreviewSchema } from "../schemas/checkout";
 
 /**
  * `paymentDeclined: true` comes with `error`: the provider refused the payment, the order
@@ -83,5 +84,42 @@ export async function createCheckoutAction(
     return { orderNumber: result.orderNumber };
   } catch (error) {
     return { error: toActionError(error, "createCheckoutAction").message };
+  }
+}
+
+export type CouponPreviewState = { discountInCents?: number; error?: string };
+
+const COUPON_PREVIEW_LIMIT = { windowSeconds: 600, max: 20 } as const;
+const CPF_DIGITS = 11;
+
+/**
+ * Shows the coupon discount before the purchase. Limited per cart and per IP, so the button cannot
+ * be used to try codes one after another.
+ */
+export async function previewCheckoutCouponAction(input: {
+  couponCode: string;
+  customerEmail: string;
+  customerTaxId: string;
+}): Promise<CouponPreviewState> {
+  const parsed = couponPreviewSchema.safeParse(input);
+  if (parsed.success === false) return { error: parsed.error.issues[0]?.message ?? "Confira o cupom." };
+
+  try {
+    const identity = await getCartIdentity();
+    if (identity == null) throw new ApplicationError({ code: "NOT_FOUND", message: "Seu carrinho expirou." });
+    const cartKey = "userId" in identity ? `user:${identity.userId}` : `guest:${identity.guestAccessTokenHash}`;
+    await assertRateLimit({ key: `coupon-preview:${cartKey}`, ...COUPON_PREVIEW_LIMIT });
+    await assertRateLimit({ key: `coupon-preview:ip:${getClientIp(await headers())}`, ...COUPON_PREVIEW_LIMIT });
+    const session = await getCurrentSession();
+    const taxId = parsed.data.customerTaxId?.length === CPF_DIGITS ? parsed.data.customerTaxId : undefined;
+
+    return await previewCheckoutCoupon({
+      identity,
+      couponCode: parsed.data.couponCode,
+      customer: { email: parsed.data.customerEmail, userId: session?.user.id, taxId },
+      now: new Date(),
+    });
+  } catch (error) {
+    return { error: toActionError(error, "previewCheckoutCouponAction").message };
   }
 }
