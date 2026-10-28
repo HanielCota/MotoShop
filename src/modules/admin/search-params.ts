@@ -3,6 +3,8 @@ import { createLoader, createParser, parseAsInteger, parseAsString, parseAsStrin
 import { NotificationDeliveryStatus, WebhookEventStatus } from "@/generated/prisma/enums";
 import { sellerOrderSortValues, shipmentStatusValues } from "@/modules/shipping/search-params";
 
+import { salesPeriodValues } from "./queries/sales-period";
+
 /**
  * Limite de página aceito na URL. `?page=99999999999999999999` vira 1e20 e o `skip` calculado
  * estoura o inteiro de 64 bits aceito pelo Prisma, derrubando a seção inteira.
@@ -161,7 +163,14 @@ export const adminDisputeSearchParams = {
   disputePage: parseAsAdminPage,
 };
 
+export const adminSalesSearchParams = {
+  salesPeriod: parseAsStringLiteral(salesPeriodValues).withDefault("30d"),
+  salesFrom: parseAsAdminText,
+  salesTo: parseAsAdminText,
+};
+
 /** Cada seção do Admin carrega somente os próprios parâmetros. */
+export const loadAdminSalesSearchParams = createLoader(adminSalesSearchParams);
 export const loadAdminSellerSearchParams = createLoader(adminSellerSearchParams);
 export const loadAdminProductReviewSearchParams = createLoader(adminProductReviewSearchParams);
 export const loadAdminOrderSearchParams = createLoader(adminOrderSearchParams);
@@ -173,6 +182,7 @@ export const loadAdminCancellationSearchParams = createLoader(adminCancellationS
 export const loadAdminDisputeSearchParams = createLoader(adminDisputeSearchParams);
 
 export const adminSearchParams = {
+  ...adminSalesSearchParams,
   ...adminSellerSearchParams,
   ...adminProductReviewSearchParams,
   ...adminOrderSearchParams,

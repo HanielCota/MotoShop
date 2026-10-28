@@ -1,4 +1,10 @@
 export const adminSections = [
+  {
+    slug: "sales",
+    title: "Vendas",
+    description: "Vendas confirmadas de todas as lojas no período.",
+    group: "Marketplace",
+  },
   { slug: "sellers", title: "Lojistas", description: "Cadastro, aprovação e equipe das lojas.", group: "Marketplace" },
   {
     slug: "products",
@@ -41,6 +47,7 @@ export const adminSections = [
 export type AdminSection = (typeof adminSections)[number]["slug"];
 
 export const adminWorkspaceSections = [
+  "sales",
   "sellers",
   "products",
   "catalog",
