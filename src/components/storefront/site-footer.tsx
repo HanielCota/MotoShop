@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { pageContainerClassName } from "@/components/ui/page-container";
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
-import { BRAND_ABOUT_PARAGRAPHS } from "@/config/brand";
+import { BRAND_ABOUT_PARAGRAPHS, BRAND_CNPJ_LINE, BRAND_COPYRIGHT, BRAND_SOCIAL_LINKS } from "@/config/brand";
 
 import { FooterAccountLink } from "./footer-account-link";
 import { PaymentMethodIcons } from "./payment-method-icons";
@@ -25,10 +25,15 @@ const serviceHours = [
 
 // Official marks from Simple Icons (CC0), tinted with the link color through a CSS mask. WhatsApp joins
 // when the store has a business number.
-const socialLinks = [
-  { label: "Instagram do Moto Shop", href: "https://www.instagram.com/motoshopbrasil.com.br/", icon: "instagram.svg" },
-  { label: "YouTube do Moto Shop", href: "https://www.youtube.com/@motoshopbrasilcombr", icon: "youtube.svg" },
-] as const;
+const socialIcons: Record<(typeof BRAND_SOCIAL_LINKS)[number]["name"], string> = {
+  Instagram: "instagram.svg",
+  YouTube: "youtube.svg",
+};
+const socialLinks = BRAND_SOCIAL_LINKS.map((link) => ({
+  label: `${link.name} do Moto Shop`,
+  href: link.href,
+  icon: socialIcons[link.name],
+}));
 
 // 44px touch target on phones; about 30% tighter from the tablet up, where a mouse is used.
 const footerLinkClassName =
@@ -129,8 +134,8 @@ export function SiteFooter() {
         </section>
 
         <p className="border-t border-white/15 pt-4 text-xs leading-5 text-white/55 lg:order-5 lg:col-span-4 lg:text-right">
-          <span className="block">© 2026 MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE. Todos os direitos reservados.</span>
-          <span className="block">CNPJ: 69.663.409/0001-94</span>
+          <span className="block">{BRAND_COPYRIGHT}</span>
+          <span className="block">{BRAND_CNPJ_LINE}</span>
         </p>
       </div>
     </footer>

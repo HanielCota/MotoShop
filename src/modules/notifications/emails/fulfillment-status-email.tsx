@@ -1,3 +1,5 @@
+import { EmailButton, EmailText, EmailTitle } from "./email-layout";
+
 type FulfillmentStatusEmailProps = {
   customerName: string;
   orderNumber: string;
@@ -33,24 +35,20 @@ export function FulfillmentStatusEmail({
   const copy = statusCopy[status];
 
   return (
-    <div style={{ color: "#172033", fontFamily: "Arial, sans-serif", lineHeight: 1.5 }}>
-      <h1>{copy.title}</h1>
-      <p>Olá, {customerName}.</p>
-      <p>
+    <>
+      <EmailTitle>{copy.title}</EmailTitle>
+      <EmailText>Olá, {customerName}.</EmailText>
+      <EmailText>
         {copy.description} Loja: <strong>{storeName}</strong>.
-      </p>
-      <p>Pedido: {orderNumber}</p>
+      </EmailText>
+      <EmailText>Pedido: {orderNumber}</EmailText>
       {trackingCode ? (
-        <p>
+        <EmailText>
           <strong>Código de rastreio:</strong> {trackingCode}
-        </p>
+        </EmailText>
       ) : null}
-      {trackingUrl ? (
-        <p>
-          <a href={trackingUrl}>Acompanhar entrega</a>
-        </p>
-      ) : null}
-      <p>Você também pode acompanhar todos os detalhes acessando o pedido no Moto Shop.</p>
-    </div>
+      {trackingUrl ? <EmailButton href={trackingUrl}>Acompanhar entrega</EmailButton> : null}
+      <EmailText>Você também pode acompanhar todos os detalhes acessando o pedido no Moto Shop.</EmailText>
+    </>
   );
 }
