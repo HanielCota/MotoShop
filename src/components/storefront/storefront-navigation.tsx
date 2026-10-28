@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
 import { SignOutButton } from "@/modules/auth/components/sign-out-button";
 import { useAccountAreaAccess } from "@/modules/auth/components/use-account-area-access";
+import { useFirstSessionCheckDone } from "@/modules/auth/components/use-first-session-check-done";
 import {
   accountAreaShortcuts,
   noAccountAreaAccess,
@@ -50,11 +51,12 @@ function StorefrontHeader({ pathname }: { pathname: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const { data: session, isPending: sessionPending } = authClient.useSession();
+  const sessionKnown = useFirstSessionCheckDone(sessionPending);
   const access = useAccountAreaAccess(session?.user.id);
   const shortcuts = accountAreaShortcuts(access ?? noAccountAreaAccess);
   // Until the session and the area access are known, the link keeps its place but shows nothing,
   // so a store owner never sees "Venda no Moto Shop" flash before "Central do Lojista".
-  const areaLinkClassName = sessionPending === true || access == null ? "invisible" : "";
+  const areaLinkClassName = sessionKnown === false || access == null ? "invisible" : "";
   const catalogActive = pathname === "/products" || pathname.startsWith("/products/");
 
   return (
@@ -90,7 +92,7 @@ function StorefrontHeader({ pathname }: { pathname: string }) {
         <CatalogAwareHeaderSearch id="storefront-search" className="ml-auto hidden max-w-xs flex-1 md:flex" />
 
         <div className="ml-auto flex items-center gap-1 md:ml-0">
-          <AccountMenu signedInName={signedInNameOf(session)} shortcuts={shortcuts} />
+          <AccountMenu signedInName={signedInNameOf(session)} shortcuts={shortcuts} sessionKnown={sessionKnown} />
           <CartPreview />
           <button
             ref={menuButton}
@@ -256,11 +258,16 @@ function signedInNameOf(session: { user: { name?: string | null } } | null | und
 function AccountMenu({
   signedInName,
   shortcuts,
+  sessionKnown,
 }: {
   signedInName: string | null;
   shortcuts: readonly AccountAreaShortcut[];
+  sessionKnown: boolean;
 }) {
   const [open, setOpen] = useState(false);
+
+  // Keep the account slot stable until the initial session check finishes.
+  if (sessionKnown === false) return <span aria-hidden="true" className="inline-flex size-11" />;
 
   if (signedInName == null) {
     return (

@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const actions = vi.hoisted(() => ({
   clear: vi.fn(),
@@ -12,6 +12,10 @@ vi.mock("../actions/cart-actions", () => ({
   getCartPreviewAction: actions.preview,
   updateCartItemAction: actions.update,
 }));
+const authMocks = vi.hoisted(() => ({ useSession: vi.fn() }));
+vi.mock("@/modules/auth/infrastructure/auth-client", () => ({
+  authClient: { useSession: authMocks.useSession },
+}));
 vi.mock("next/image", () => ({
   // eslint-disable-next-line @next/next/no-img-element
   default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
@@ -22,9 +26,48 @@ vi.mock("next/link", () => ({
 
 import { CartPreview, cartTriggerLabel } from "./cart-preview";
 
+beforeEach(() => {
+  authMocks.useSession.mockReturnValue({ data: null });
+});
+
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
+});
+
+it("shows the item count on the cart button as soon as the page opens, without opening the summary", async () => {
+  actions.preview.mockResolvedValue({ items: [], itemCount: 8, subtotalInCents: 120000 });
+
+  render(<CartPreview />);
+
+  expect(await screen.findByRole("button", { name: "Carrinho, 8 itens" })).toHaveTextContent("8");
+  expect(actions.preview).toHaveBeenCalledOnce();
+});
+
+it("reads the count again when the customer signs in, since the cart changes owner", async () => {
+  actions.preview.mockResolvedValueOnce({ items: [], itemCount: 1, subtotalInCents: 15000 });
+  actions.preview.mockResolvedValueOnce({ items: [], itemCount: 3, subtotalInCents: 45000 });
+  const { rerender } = render(<CartPreview />);
+  expect(await screen.findByRole("button", { name: "Carrinho, 1 item" })).toBeInTheDocument();
+
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "buyer" } } });
+  rerender(<CartPreview />);
+
+  expect(await screen.findByRole("button", { name: "Carrinho, 3 itens" })).toBeInTheDocument();
+  expect(actions.preview).toHaveBeenCalledTimes(2);
+});
+
+it("reads the cart once per page for a signed-in customer, after the session answers", async () => {
+  actions.preview.mockResolvedValue({ items: [], itemCount: 2, subtotalInCents: 30000 });
+  authMocks.useSession.mockReturnValue({ data: null, isPending: true });
+  const { rerender } = render(<CartPreview />);
+  expect(actions.preview).not.toHaveBeenCalled();
+
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "buyer" } }, isPending: false });
+  rerender(<CartPreview />);
+
+  expect(await screen.findByRole("button", { name: "Carrinho, 2 itens" })).toBeInTheDocument();
+  expect(actions.preview).toHaveBeenCalledOnce();
 });
 
 it("opens a cart summary and links to the full cart", async () => {
@@ -62,6 +105,8 @@ it("lets the customer remove an item from the preview", async () => {
     availableQuantity: 5,
     unitPriceInCents: 15000,
   };
+  // The first read is the badge count on page load; the second, opening the summary.
+  actions.preview.mockResolvedValueOnce({ items: [item], itemCount: 1, subtotalInCents: 15000 });
   actions.preview.mockResolvedValueOnce({ items: [item], itemCount: 1, subtotalInCents: 15000 });
   actions.preview.mockResolvedValueOnce({ items: [], itemCount: 0, subtotalInCents: 0 });
   actions.update.mockResolvedValue({ success: "Carrinho atualizado." });
@@ -121,6 +166,7 @@ it("updates quantity from the preview and prevents exceeding available stock", a
     unitPriceInCents: 15000,
   };
   actions.preview.mockResolvedValueOnce({ items: [item], itemCount: 2, subtotalInCents: 30000 });
+  actions.preview.mockResolvedValueOnce({ items: [item], itemCount: 2, subtotalInCents: 30000 });
   actions.preview.mockResolvedValueOnce({ items: [{ ...item, quantity: 1 }], itemCount: 1, subtotalInCents: 15000 });
   actions.update.mockResolvedValue({ success: "Carrinho atualizado." });
   render(<CartPreview />);
@@ -133,11 +179,14 @@ it("updates quantity from the preview and prevents exceeding available stock", a
 });
 
 it("shows a retry instead of an endless loading message when the cart cannot be read", async () => {
-  actions.preview.mockRejectedValueOnce(new Error("offline")).mockResolvedValue({
-    items: [],
-    itemCount: 0,
-    subtotalInCents: 0,
-  });
+  actions.preview
+    .mockResolvedValueOnce({ items: [], itemCount: 0, subtotalInCents: 0 })
+    .mockRejectedValueOnce(new Error("offline"))
+    .mockResolvedValue({
+      items: [],
+      itemCount: 0,
+      subtotalInCents: 0,
+    });
   render(<CartPreview />);
 
   fireEvent.click(screen.getByRole("button", { name: /^Carrinho,/ }));

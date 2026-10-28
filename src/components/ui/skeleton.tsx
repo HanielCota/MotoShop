@@ -14,18 +14,34 @@ export function Skeleton({ className, ...props }: ComponentProps<"div">) {
   );
 }
 
+/**
+ * Storefront loading screens are at least one screen tall: the site footer starts below the fold
+ * instead of flashing mid-screen and jumping down when the page arrives.
+ */
+export const storefrontSkeletonHeightClassName = "min-h-dvh";
+
 export function PageSkeleton({
   rows = 4,
   label = "Carregando",
   size = "default",
+  withSiteFooter = true,
 }: {
   rows?: number;
   label?: string;
   /** Same width as the page being loaded, so the layout does not jump when content arrives. */
   size?: PageWidth;
+  /** False in the seller and admin areas, which have no site footer to keep below the fold. */
+  withSiteFooter?: boolean;
 }) {
   return (
-    <div role="status" aria-label={label} className={pageContainerClassName(size, "space-y-6 py-8")}>
+    <div
+      role="status"
+      aria-label={label}
+      className={pageContainerClassName(
+        size,
+        cn("space-y-6 py-8", withSiteFooter && storefrontSkeletonHeightClassName),
+      )}
+    >
       <div className="space-y-3">
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-9 w-72 max-w-full" />
