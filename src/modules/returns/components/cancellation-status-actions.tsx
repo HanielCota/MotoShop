@@ -19,7 +19,7 @@ export function CancellationStatusActions({
   summary,
 }: {
   cancellationRequestId: string;
-  status: string;
+  status: "REQUESTED" | "APPROVED";
   summary: AfterSalesSummary;
 }) {
   const [pending, startTransition] = useTransition();
@@ -54,15 +54,18 @@ export function CancellationStatusActions({
             return { error: result.error ?? null };
           }}
         />
-        <Button
-          variant="outline"
-          size="sm"
-          type="button"
-          onClick={() => startTransition(async () => setFeedback(await submit("REJECT")))}
-          disabled={pending}
-        >
-          Recusar
-        </Button>
+        {/* Only a request still waiting for a decision can be rejected; once approved, the server answers with a conflict. */}
+        {status === "REQUESTED" ? (
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            onClick={() => startTransition(async () => setFeedback(await submit("REJECT")))}
+            disabled={pending}
+          >
+            Recusar
+          </Button>
+        ) : null}
       </div>
       <FormMessage error={feedback.error ?? null} success={feedback.success ?? null} className="text-xs" />
     </div>
