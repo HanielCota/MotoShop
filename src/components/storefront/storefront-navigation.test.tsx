@@ -2,10 +2,9 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-const navigation = vi.hoisted(() => ({ pathname: "/products", search: "" }));
+const navigation = vi.hoisted(() => ({ pathname: "/products" }));
 vi.mock("next/navigation", () => ({
   usePathname: () => navigation.pathname,
-  useSearchParams: () => new URLSearchParams(navigation.search),
   useRouter: () => ({ push: vi.fn() }),
 }));
 const authMocks = vi.hoisted(() => ({ useSession: vi.fn() }));
@@ -40,7 +39,6 @@ afterEach(() => {
   areaAccess.admin = false;
   areaAccess.seller = false;
   navigation.pathname = "/products";
-  navigation.search = "";
 });
 
 it("renders the same header on the homepage with a single seller link label", () => {
@@ -244,44 +242,23 @@ it("closes the mobile navigation with Escape and restores trigger focus", () => 
   expect(menu).toHaveAttribute("hidden");
 });
 
-it("keeps the header search on the catalog, filled with the current search", () => {
+it("leaves the search to the catalog's own large field on the catalog page", () => {
   authMocks.useSession.mockReturnValue({ data: null });
   navigation.pathname = "/products";
-  navigation.search = "q=capacete";
 
   render(<StorefrontNavigation />);
 
-  const fields = screen.getAllByRole("combobox", { name: "Buscar produtos", hidden: true });
-  expect(fields.length).toBeGreaterThan(0);
-  expect(fields.every((field) => (field as HTMLInputElement).value === "capacete")).toBe(true);
+  expect(screen.queryAllByRole("search", { hidden: true })).toHaveLength(0);
 });
 
-it("keeps the filters applied on the catalog when a new search is sent from the header", () => {
-  authMocks.useSession.mockReturnValue({ data: null });
-  navigation.pathname = "/products";
-  navigation.search = "category=capacetes&q=fox&page=3";
-
-  render(<StorefrontNavigation />);
-
-  const forms = screen.getAllByRole("search", { hidden: true });
-  for (const form of forms) {
-    const hidden = [...form.querySelectorAll<HTMLInputElement>("input[type=hidden]")].map((input) => [
-      input.name,
-      input.value,
-    ]);
-
-    expect(hidden).toEqual([["category", "capacetes"]]);
-  }
-});
-
-it("starts the header search empty outside the catalog", () => {
+it("shows the header search on desktop and in the phone menu outside the catalog", () => {
   authMocks.useSession.mockReturnValue({ data: null });
   navigation.pathname = "/products/capacete";
-  navigation.search = "q=capacete";
 
   render(<StorefrontNavigation />);
 
   const fields = screen.getAllByRole("combobox", { name: "Buscar produtos", hidden: true });
+  expect(fields.map((field) => field.id)).toEqual(["storefront-search", "storefront-mobile-search"]);
   expect(fields.every((field) => (field as HTMLInputElement).value === "")).toBe(true);
 });
 
