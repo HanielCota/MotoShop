@@ -10,6 +10,8 @@ vi.mock("next/font/google", () => ({
 vi.mock("@/config/env", () => ({ env: { BETTER_AUTH_URL: "http://localhost:3000" } }));
 vi.mock("@/config/get-application-base-url", () => ({ getApplicationBaseUrl: () => "http://localhost:3000" }));
 vi.mock("@/components/storefront/storefront-navigation", () => ({ StorefrontNavigation: () => <nav>Menu</nav> }));
+// The live footer is an async Server Component that reads the database; this test is about hydration.
+vi.mock("@/components/storefront/live-site-footer", () => ({ LiveSiteFooter: () => <footer>Rodapé</footer> }));
 
 import RootLayout from "./layout";
 
