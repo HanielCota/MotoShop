@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { formatCount, formatPercentFromBps } from "./format";
+import { currentMarketplaceYear, formatCount, formatPercentFromBps } from "./format";
 
 describe("formatCount", () => {
   it("uses the singular only for exactly one", () => {
@@ -19,5 +19,29 @@ describe("formatPercentFromBps", () => {
     expect(formatPercentFromBps(1200)).toBe("12%");
     expect(formatPercentFromBps(1050)).toBe("10,5%");
     expect(formatPercentFromBps(1)).toBe("0,01%");
+  });
+});
+
+describe("currentMarketplaceYear", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("keeps the old year until midnight in São Paulo, not in UTC", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2027-01-01T02:00:00Z"));
+
+    const year = currentMarketplaceYear();
+
+    expect(year).toBe("2026");
+  });
+
+  it("turns the year at midnight in São Paulo", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2027-01-01T03:00:00Z"));
+
+    const year = currentMarketplaceYear();
+
+    expect(year).toBe("2027");
   });
 });

@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 
+import { emptyStoredCompanyContact, resolveCompanyContact } from "@/modules/admin/domain/company-contact";
+
 import { EmailLayout } from "./email-layout";
 import { FulfillmentStatusEmail } from "./fulfillment-status-email";
 import { GuestOrderConfirmationEmail } from "./guest-order-confirmation-email";
@@ -9,9 +11,9 @@ import { PaymentStatusEmail } from "./payment-status-email";
 
 const logoUrl = "https://motoshopbrasil.com.br/brand/email-logo.png";
 
-function renderEmail(content: ReactNode) {
+function renderEmail(content: ReactNode, contact = resolveCompanyContact(null)) {
   return renderToStaticMarkup(
-    <EmailLayout logoUrl={logoUrl} preview="Prévia">
+    <EmailLayout logoUrl={logoUrl} preview="Prévia" contact={contact} copyrightYear="2026">
       {content}
     </EmailLayout>,
   );
@@ -39,6 +41,26 @@ describe("e-mail layout", () => {
     const bodyStart = html.indexOf("<body");
     expect(bodyStart).toBeGreaterThan(0);
     expect(html.indexOf("data-skip-in-text")).toBeGreaterThan(bodyStart);
+  });
+
+  it("uses the company and links saved in Admin › Configurações in the footer", () => {
+    const contact = resolveCompanyContact({
+      ...emptyStoredCompanyContact,
+      companyLegalName: "MOTO SHOP COMERCIO LTDA",
+      companyCnpj: "11222333000181",
+      instagramUrl: "https://www.instagram.com/motoshop.novo/",
+    });
+
+    const html = renderEmail(<p>Conteúdo</p>, contact);
+
+    expect(html).toContain("© 2026 MOTO SHOP COMERCIO LTDA. Todos os direitos reservados.");
+    expect(html).toContain("CNPJ: 11.222.333/0001-81");
+    expect(hrefs(html)).toEqual(
+      expect.arrayContaining([
+        "https://www.instagram.com/motoshop.novo/",
+        "https://www.youtube.com/@motoshopbrasilcombr",
+      ]),
+    );
   });
 });
 

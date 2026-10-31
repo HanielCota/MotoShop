@@ -20,6 +20,7 @@ export const auditActionLabels: Record<string, string> = {
   DISPUTE_RESOLVED: "Disputa resolvida",
   DISPUTE_UNDER_REVIEW: "Disputa em análise",
   MARKETPLACE_COMMISSION_UPDATED: "Comissão padrão alterada",
+  MARKETPLACE_COMPANY_CONTACT_UPDATED: "Empresa e contato alterados",
   MARKETPLACE_COUPON_ACTIVATED: "Cupom do Moto Shop ativado",
   MARKETPLACE_COUPON_DEACTIVATED: "Cupom do Moto Shop desativado",
   MOTORCYCLE_FITMENT_CREATED: "Ano de moto criado",
@@ -150,6 +151,15 @@ const metadataKeyLabels: Record<string, string> = {
   ownerType: "Dono",
   answer: "Resposta",
   error: "Erro",
+  companyLegalName: "Razão social",
+  companyCnpj: "CNPJ",
+  supportEmail: "E-mail de atendimento",
+  supportPhone: "Telefone ou WhatsApp",
+  instagramUrl: "Instagram",
+  youtubeUrl: "YouTube",
+  weekdayHours: "Segunda a sexta",
+  saturdayHours: "Sábado",
+  sundayHolidayHours: "Domingos e feriados",
 };
 
 export type AuditMetadataLine = Readonly<{ label: string; value: string }>;

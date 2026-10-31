@@ -6,7 +6,9 @@ import { RetryAfterError } from "inngest";
 import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { db } from "@/lib/database";
 import { ResendEmailProvider } from "@/lib/email/resend-email-provider";
+import { currentMarketplaceYear } from "@/lib/format";
 import { logger } from "@/lib/logger";
+import { getCompanyContact } from "@/modules/admin/application/company-contact";
 import type { ReactNode } from "react";
 
 import { NOTIFICATION_PROCESSING_LEASE_MS, notificationLeaseCutoff } from "../domain/notification-delivery-lease";
@@ -32,12 +34,19 @@ export async function sendNotificationEmail(input: {
   const delivery = claim.delivery;
 
   try {
+    // Read at send time, so the footer follows what Admin › Configurações has now.
+    const contact = await getCompanyContact();
     const result = await resendEmailProvider.send({
       to: input.to,
       subject: input.subject,
       // Every e-mail gets the same frame (logo, footer); the subject doubles as the inbox preview text.
       react: (
-        <EmailLayout logoUrl={`${getApplicationBaseUrl()}${EMAIL_LOGO_PATH}`} preview={input.subject}>
+        <EmailLayout
+          logoUrl={`${getApplicationBaseUrl()}${EMAIL_LOGO_PATH}`}
+          preview={input.subject}
+          contact={contact}
+          copyrightYear={currentMarketplaceYear()}
+        >
           {input.react}
         </EmailLayout>
       ),
