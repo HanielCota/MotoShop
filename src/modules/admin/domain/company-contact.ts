@@ -27,6 +27,7 @@ export type CompanyContact = {
   sundayHolidayHours: string;
 };
 
+/** Stored fields in a fixed order, used to compare saves for the audit log. */
 export const companyContactFields = [
   "companyLegalName",
   "companyCnpj",
@@ -39,6 +40,7 @@ export const companyContactFields = [
   "sundayHolidayHours",
 ] as const satisfies readonly (keyof StoredCompanyContact)[];
 
+/** A configuration with nothing filled in: every field shows the code default. */
 export const emptyStoredCompanyContact: StoredCompanyContact = {
   companyLegalName: null,
   companyCnpj: null,
@@ -78,6 +80,7 @@ export function formatCopyrightLine(legalName: string, year: string): string {
   return `© ${year} ${legalName}. Todos os direitos reservados.`;
 }
 
+/** CNPJ line of both footers; the CNPJ comes as 14 digits and is shown masked. */
 export function formatCnpjLine(cnpj: string): string {
   return `CNPJ: ${formatTaxId(cnpj)}`;
 }
@@ -87,6 +90,7 @@ export function whatsAppHref(phone: string): string {
   return `https://wa.me/55${phone}`;
 }
 
+/** Instagram and YouTube links for both footers, in this order. */
 export function companySocialLinks(contact: CompanyContact) {
   return [
     { name: "Instagram", href: contact.instagramUrl },

@@ -62,6 +62,12 @@ export async function updateMarketplaceCommissionAction(
 
 export type CompanyContactActionState = { error?: string; success?: string };
 
+/**
+ * Saves Admin › Configurações › Empresa e contato for the signed-in admin.
+ *
+ * @param input - The raw form fields; validated again here, never trusted from the browser.
+ * @returns A message in Portuguese for the form: the first validation problem, or the result.
+ */
 export async function updateCompanyContactAction(input: unknown): Promise<CompanyContactActionState> {
   const session = await requireAdminAccess();
   const parsed = companyContactSchema.safeParse(input);

@@ -10,10 +10,18 @@ import {
 
 import type { CompanyContact, StoredCompanyContact } from "../domain/company-contact";
 
-const MAX_LEGAL_NAME_LENGTH = 120;
-const MAX_EMAIL_LENGTH = 254;
-const MAX_URL_LENGTH = 300;
-const MAX_HOURS_LENGTH = 60;
+/** Field limits shared by the server validation and the form inputs. */
+export const COMPANY_CONTACT_LIMITS = {
+  legalName: 120,
+  email: 254,
+  url: 300,
+  hours: 60,
+  maskedCnpj: 18,
+  maskedPhone: 15,
+} as const;
+
+// Raw CNPJ and phone are cut down to digits; this only stops oversized input before that.
+const MAX_RAW_DIGITS_INPUT_LENGTH = 30;
 
 const instagramHosts = new Set(["instagram.com", "www.instagram.com"]);
 const youtubeHosts = new Set(["youtube.com", "www.youtube.com", "m.youtube.com"]);
@@ -36,36 +44,41 @@ function isHttpsUrlOnHost(value: string, hosts: ReadonlySet<string>): boolean {
 }
 
 function optionalProfileUrl(hosts: ReadonlySet<string>, message: string) {
-  return optionalText(MAX_URL_LENGTH, message).refine(
+  return optionalText(COMPANY_CONTACT_LIMITS.url, message).refine(
     (value) => value == null || isHttpsUrlOnHost(value, hosts),
     message,
   );
 }
+
+const hoursMessage = `Use até ${COMPANY_CONTACT_LIMITS.hours} caracteres no horário.`;
 
 /**
  * Admin › Configurações › Empresa e contato. Every field is optional: blank means "use today's text",
  * and blank e-mail or phone means "do not show". CNPJ and phone are stored as digits.
  */
 export const companyContactSchema = z.object({
-  companyLegalName: optionalText(MAX_LEGAL_NAME_LENGTH, `Use até ${MAX_LEGAL_NAME_LENGTH} caracteres na razão social.`),
+  companyLegalName: optionalText(
+    COMPANY_CONTACT_LIMITS.legalName,
+    `Use até ${COMPANY_CONTACT_LIMITS.legalName} caracteres na razão social.`,
+  ),
   companyCnpj: z
     .string()
-    .max(30, "Informe um CNPJ válido.")
+    .max(MAX_RAW_DIGITS_INPUT_LENGTH, "Informe um CNPJ válido.")
     .transform((value) => blankToNull(onlyDigits(value)))
     .refine((value) => value == null || isValidCnpj(value), "Informe um CNPJ válido."),
-  supportEmail: optionalText(MAX_EMAIL_LENGTH, "Informe um e-mail válido.")
+  supportEmail: optionalText(COMPANY_CONTACT_LIMITS.email, "Informe um e-mail válido.")
     .transform((value) => value?.toLowerCase() ?? null)
     .refine((value) => value == null || z.email().safeParse(value).success, "Informe um e-mail válido."),
   supportPhone: z
     .string()
-    .max(30, "Informe o telefone com DDD.")
+    .max(MAX_RAW_DIGITS_INPUT_LENGTH, "Informe o telefone com DDD.")
     .transform((value) => blankToNull(onlyDigits(value)))
     .refine((value) => value == null || isValidBrazilianPhone(value), "Informe o telefone com DDD."),
   instagramUrl: optionalProfileUrl(instagramHosts, "Informe o endereço do Instagram, começando com https://."),
   youtubeUrl: optionalProfileUrl(youtubeHosts, "Informe o endereço do YouTube, começando com https://."),
-  weekdayHours: optionalText(MAX_HOURS_LENGTH, `Use até ${MAX_HOURS_LENGTH} caracteres no horário.`),
-  saturdayHours: optionalText(MAX_HOURS_LENGTH, `Use até ${MAX_HOURS_LENGTH} caracteres no horário.`),
-  sundayHolidayHours: optionalText(MAX_HOURS_LENGTH, `Use até ${MAX_HOURS_LENGTH} caracteres no horário.`),
+  weekdayHours: optionalText(COMPANY_CONTACT_LIMITS.hours, hoursMessage),
+  saturdayHours: optionalText(COMPANY_CONTACT_LIMITS.hours, hoursMessage),
+  sundayHolidayHours: optionalText(COMPANY_CONTACT_LIMITS.hours, hoursMessage),
 }) satisfies z.ZodType<StoredCompanyContact, CompanyContactFormInput>;
 
 /** What the form fields hold: plain strings, masked CNPJ and phone included. */

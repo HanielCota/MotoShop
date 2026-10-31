@@ -17,7 +17,7 @@ import {
   type CompanyContactActionState,
 } from "../actions/marketplace-configuration-actions";
 import type { StoredCompanyContact } from "../domain/company-contact";
-import { companyContactSchema, type CompanyContactFormInput } from "../schemas/company-contact";
+import { COMPANY_CONTACT_LIMITS, companyContactSchema, type CompanyContactFormInput } from "../schemas/company-contact";
 
 type TextField = {
   name: keyof CompanyContactFormInput;
@@ -33,13 +33,18 @@ type TextField = {
 };
 
 const fields: readonly TextField[] = [
-  { name: "companyLegalName", label: "Razão social", maxLength: 120, autoComplete: "organization" },
+  {
+    name: "companyLegalName",
+    label: "Razão social",
+    maxLength: COMPANY_CONTACT_LIMITS.legalName,
+    autoComplete: "organization",
+  },
   {
     name: "companyCnpj",
     label: "CNPJ",
     inputMode: "numeric",
     placeholder: "00.000.000/0000-00",
-    maxLength: 18,
+    maxLength: COMPANY_CONTACT_LIMITS.maskedCnpj,
     mask: formatTaxId,
   },
   {
@@ -50,7 +55,7 @@ const fields: readonly TextField[] = [
     type: "email",
     inputMode: "email",
     autoComplete: "off",
-    maxLength: 254,
+    maxLength: COMPANY_CONTACT_LIMITS.email,
   },
   {
     name: "supportPhone",
@@ -60,14 +65,14 @@ const fields: readonly TextField[] = [
     type: "tel",
     inputMode: "tel",
     autoComplete: "off",
-    maxLength: 15,
+    maxLength: COMPANY_CONTACT_LIMITS.maskedPhone,
     mask: formatPhone,
   },
-  { name: "instagramUrl", label: "Instagram", type: "url", inputMode: "url", maxLength: 300 },
-  { name: "youtubeUrl", label: "YouTube", type: "url", inputMode: "url", maxLength: 300 },
-  { name: "weekdayHours", label: "Segunda a sexta", maxLength: 60 },
-  { name: "saturdayHours", label: "Sábado", maxLength: 60 },
-  { name: "sundayHolidayHours", label: "Domingos e feriados", maxLength: 60, wide: true },
+  { name: "instagramUrl", label: "Instagram", type: "url", inputMode: "url", maxLength: COMPANY_CONTACT_LIMITS.url },
+  { name: "youtubeUrl", label: "YouTube", type: "url", inputMode: "url", maxLength: COMPANY_CONTACT_LIMITS.url },
+  { name: "weekdayHours", label: "Segunda a sexta", maxLength: COMPANY_CONTACT_LIMITS.hours },
+  { name: "saturdayHours", label: "Sábado", maxLength: COMPANY_CONTACT_LIMITS.hours },
+  { name: "sundayHolidayHours", label: "Domingos e feriados", maxLength: COMPANY_CONTACT_LIMITS.hours, wide: true },
 ];
 
 /** Company and contact for the footers; every field may be left blank to keep today's text. */

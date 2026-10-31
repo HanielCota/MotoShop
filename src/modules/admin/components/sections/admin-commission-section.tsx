@@ -18,7 +18,7 @@ export async function AdminCommissionSection() {
         title="Comissão do marketplace"
         description="Defina a comissão padrão em percentual, com até duas casas decimais. Comissões individuais de lojistas continuam valendo."
       >
-        {!configuration ? (
+        {configuration == null ? (
           <InlineNotice tone="warning" role="status">
             A comissão padrão ainda não foi configurada. O checkout depende desta definição.
           </InlineNotice>
