@@ -7,6 +7,7 @@ import {
   formatCopyrightLine,
   resolveCompanyContact,
   whatsAppHref,
+  withoutCodeDefaults,
 } from "./company-contact";
 
 describe("resolveCompanyContact", () => {
@@ -37,6 +38,26 @@ describe("resolveCompanyContact", () => {
     expect(contact.supportPhone).toBe("11912345678");
     expect(contact.cnpj).toBe("69663409000194");
     expect(contact.supportEmail).toBeNull();
+  });
+});
+
+describe("withoutCodeDefaults", () => {
+  it("stores the texts the form opened with as blank, keeping only what the admin typed", () => {
+    const formAsOpened = {
+      companyLegalName: "MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE",
+      companyCnpj: "69663409000194",
+      supportEmail: null,
+      supportPhone: "11912345678",
+      instagramUrl: "https://www.instagram.com/motoshopbrasil.com.br/",
+      youtubeUrl: "https://www.youtube.com/@motoshopbrasilcombr",
+      weekdayHours: "08h30 às 18h30",
+      saturdayHours: "Fechado",
+      sundayHolidayHours: "Retorna no próximo dia útil!",
+    };
+
+    const stored = withoutCodeDefaults(formAsOpened);
+
+    expect(stored).toEqual({ ...emptyStoredCompanyContact, supportPhone: "11912345678", saturdayHours: "Fechado" });
   });
 });
 

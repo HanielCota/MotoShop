@@ -75,6 +75,31 @@ export function resolveCompanyContact(stored: StoredCompanyContact | null): Comp
   };
 }
 
+const storedFieldDefaults = {
+  companyLegalName: BRAND_COMPANY_DEFAULTS.legalName,
+  companyCnpj: BRAND_COMPANY_DEFAULTS.cnpj,
+  instagramUrl: BRAND_COMPANY_DEFAULTS.instagramUrl,
+  youtubeUrl: BRAND_COMPANY_DEFAULTS.youtubeUrl,
+  weekdayHours: BRAND_COMPANY_DEFAULTS.weekdayHours,
+  saturdayHours: BRAND_COMPANY_DEFAULTS.saturdayHours,
+  sundayHolidayHours: BRAND_COMPANY_DEFAULTS.sundayHolidayHours,
+} as const satisfies Partial<Record<keyof StoredCompanyContact, string>>;
+
+/**
+ * Turns every value equal to the code default back into null before saving.
+ *
+ * @remarks The form opens with today's texts filled in, so saving only the phone would otherwise store
+ * (and audit) every other field too, and pin texts the code may still change.
+ */
+export function withoutCodeDefaults(contact: StoredCompanyContact): StoredCompanyContact {
+  const result = { ...contact };
+  for (const [field, defaultValue] of Object.entries(storedFieldDefaults)) {
+    const key = field as keyof typeof storedFieldDefaults;
+    if (result[key] === defaultValue) result[key] = null;
+  }
+  return result;
+}
+
 /** Rights line of both footers, e.g. "© 2026 MOTO SHOP BRASIL …. Todos os direitos reservados." */
 export function formatCopyrightLine(legalName: string, year: string): string {
   return `© ${year} ${legalName}. Todos os direitos reservados.`;

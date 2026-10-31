@@ -68,6 +68,28 @@ describe("updateCompanyContact", () => {
     });
   });
 
+  it("audits only the phone when the admin saves the form as it opened plus a phone", async () => {
+    mocks.txFindUnique.mockResolvedValue({ ...emptyStoredCompanyContact });
+    const formAsOpened = {
+      ...emptyStoredCompanyContact,
+      companyLegalName: "MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE",
+      weekdayHours: "08h30 às 18h30",
+      supportPhone: "11912345678",
+    };
+
+    await updateCompanyContact("admin-a", formAsOpened);
+
+    expect(mocks.update).toHaveBeenCalledWith({
+      where: { key: "default" },
+      data: { ...emptyStoredCompanyContact, supportPhone: "11912345678" },
+    });
+    expect(mocks.audit).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        metadata: { previous: { supportPhone: null }, next: { supportPhone: "11912345678" } },
+      }),
+    });
+  });
+
   it("writes nothing and audits nothing when the admin saves without changes", async () => {
     mocks.txFindUnique.mockResolvedValue({ ...emptyStoredCompanyContact });
 

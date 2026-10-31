@@ -8,6 +8,7 @@ import { ApplicationError } from "@/shared/errors/application-error";
 import {
   diffStoredCompanyContact,
   resolveCompanyContact,
+  withoutCodeDefaults,
   type CompanyContact,
   type StoredCompanyContact,
 } from "../domain/company-contact";
@@ -50,7 +51,8 @@ export async function getCompanyContact(): Promise<CompanyContact> {
  * Saves the company and contact and records what changed in the audit log, in one transaction.
  *
  * @param actorUserId - Admin who saved the form.
- * @param contact - Validated values; null fields fall back to the code default on display.
+ * @param contact - Validated values; null fields, and values equal to the code default, are stored as
+ * null and fall back to the code default on display.
  * @returns Whether any stored value changed (no audit entry when nothing did).
  * @throws {ApplicationError} CONFLICT when the marketplace configuration row does not exist yet: it
  * also holds the default commission, which the admin must set first.
@@ -69,10 +71,11 @@ export async function updateCompanyContact(actorUserId: string, contact: StoredC
           message: "Salve a comissão padrão antes de preencher empresa e contato.",
         });
 
-      const changes = diffStoredCompanyContact(previous, contact);
+      const next = withoutCodeDefaults(contact);
+      const changes = diffStoredCompanyContact(previous, next);
       if (changes.changedFields.length === 0) return { changed: false };
 
-      await tx.marketplaceConfiguration.update({ where: { key: MARKETPLACE_CONFIGURATION_KEY }, data: contact });
+      await tx.marketplaceConfiguration.update({ where: { key: MARKETPLACE_CONFIGURATION_KEY }, data: next });
       await tx.auditLog.create({
         data: {
           action: "MARKETPLACE_COMPANY_CONTACT_UPDATED",
