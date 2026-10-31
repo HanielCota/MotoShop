@@ -58,6 +58,20 @@ function FooterHeading({ id, children }: { id: string; children: string }) {
   );
 }
 
+// The hours column is narrow on desktop: a long address wraps after the "@", not in the middle of the domain.
+function EmailWithBreak({ email }: { email: string }) {
+  const at = email.indexOf("@");
+  if (at === -1) return email;
+
+  return (
+    <>
+      {email.slice(0, at + 1)}
+      <wbr />
+      {email.slice(at + 1)}
+    </>
+  );
+}
+
 /**
  * Public footer, rendered by the root layout on storefront routes. Company, contact and hours come
  * from Admin › Configurações (see `LiveSiteFooter`).
@@ -128,7 +142,11 @@ export function SiteFooter({ contact, copyrightYear }: { contact: CompanyContact
           </dl>
           {contact.supportEmail != null || contact.supportPhone != null ? (
             <p className="mt-3 text-sm leading-6 text-white/70">
-              {contact.supportEmail != null ? <span className="block break-all">{contact.supportEmail}</span> : null}
+              {contact.supportEmail != null ? (
+                <span className="block break-words">
+                  <EmailWithBreak email={contact.supportEmail} />
+                </span>
+              ) : null}
               {contact.supportPhone != null ? <span className="block">{formatPhone(contact.supportPhone)}</span> : null}
             </p>
           ) : null}
