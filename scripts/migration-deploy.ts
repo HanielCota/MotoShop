@@ -12,9 +12,12 @@ const FOUNDATION_MIGRATION = "20260910144000_initial_foundation";
 const NOT_EMPTY_MARKER = "MOTOSHOP_DATABASE_NOT_EMPTY";
 const EMPTY_DATABASE_CHECK = `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public') THEN RAISE EXCEPTION '${NOT_EMPTY_MARKER}'; END IF; END $$;`;
 
+/** Exit code and combined stdout/stderr of one Prisma CLI command. */
 export type PrismaCommandResult = { readonly exitCode: number; readonly output: string };
+/** Runs one Prisma CLI command, with optional text on stdin. */
 export type RunPrisma = (args: readonly string[], input?: string) => Promise<PrismaCommandResult>;
 
+/** A Prisma command of the deploy failed; the message names the step and carries its output. */
 export class MigrationDeployError extends Error {
   constructor(step: string, result: PrismaCommandResult) {
     super(`db:deploy: ${step} failed with exit code ${result.exitCode}.\n${result.output}`);
@@ -25,6 +28,8 @@ export class MigrationDeployError extends Error {
 /**
  * Reads the result of the empty-database check: success means no table exists in the public schema.
  *
+ * @param result - Result of running the check through `prisma db execute`.
+ * @returns Whether the database has no tables yet.
  * @throws {MigrationDeployError} When the check failed for another reason (connection, permission).
  */
 export function isEmptyDatabase(result: PrismaCommandResult): boolean {
