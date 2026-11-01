@@ -28,3 +28,16 @@ it("asks for confirmation with order, store and amount before refunding (BUG-002
   expect(await screen.findByText("Cancelamento aprovado e reembolso solicitado.")).toBeInTheDocument();
   expect(mocks.review.mock.calls[0]?.[1].get("decision")).toBe("APPROVE");
 });
+
+it("offers Recusar while the request still waits for a decision", () => {
+  render(<CancellationStatusActions cancellationRequestId="ccancel0001" status="REQUESTED" summary={summary} />);
+
+  expect(screen.getByRole("button", { name: "Recusar" })).toBeInTheDocument();
+});
+
+it("hides Recusar once the cancellation was approved, since the server no longer accepts it", () => {
+  render(<CancellationStatusActions cancellationRequestId="ccancel0001" status="APPROVED" summary={summary} />);
+
+  expect(screen.getByRole("button", { name: "Continuar processamento" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Recusar" })).not.toBeInTheDocument();
+});
