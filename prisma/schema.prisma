@@ -259,7 +259,7 @@ model Session {
 
 model Account {
   id                    String    @id @default(cuid())
-  accountId             String?
+  accountId             String
   providerId            String
   accessToken           String?
   refreshToken          String?
@@ -966,6 +966,7 @@ model Shipment {
   @@unique([provider, externalShipmentId])
   @@index([trackingCode])
   @@index([status, createdAt])
+  @@index([generationState, updatedAt])
   @@map("shipments")
 }
 
