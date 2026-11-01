@@ -10,23 +10,26 @@
  */
 const FOUNDATION_MIGRATION = "20260910144000_initial_foundation";
 const NOT_EMPTY_MARKER = "MOTOSHOP_DATABASE_NOT_EMPTY";
-const EMPTY_DATABASE_CHECK = `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public') THEN RAISE EXCEPTION '${NOT_EMPTY_MARKER}'; END IF; END $$;`;
+const EMPTY_DATABASE_CHECK = `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = current_schema()) THEN RAISE EXCEPTION '${NOT_EMPTY_MARKER}'; END IF; END $$;`;
+const RECORDING_HINT = ` Its tables already exist: run \`prisma migrate resolve --applied ${FOUNDATION_MIGRATION}\` before retrying, or the deploy will fail on it.`;
 
 /** Exit code and combined stdout/stderr of one Prisma CLI command. */
 export type PrismaCommandResult = { readonly exitCode: number; readonly output: string };
-/** Runs one Prisma CLI command, with optional text on stdin. */
-export type RunPrisma = (args: readonly string[], input?: string) => Promise<PrismaCommandResult>;
+/** Text for stdin, and whether to keep the command's output off the console (it is still returned). */
+export type RunPrismaOptions = { readonly input?: string; readonly quiet?: boolean };
+/** Runs one Prisma CLI command. */
+export type RunPrisma = (args: readonly string[], options?: RunPrismaOptions) => Promise<PrismaCommandResult>;
 
 /** A Prisma command of the deploy failed; the message names the step and carries its output. */
 export class MigrationDeployError extends Error {
-  constructor(step: string, result: PrismaCommandResult) {
-    super(`db:deploy: ${step} failed with exit code ${result.exitCode}.\n${result.output}`);
+  constructor(step: string, result: PrismaCommandResult, hint = "") {
+    super(`db:deploy: ${step} failed with exit code ${result.exitCode}.${hint}\n${result.output}`);
     this.name = "MigrationDeployError";
   }
 }
 
 /**
- * Reads the result of the empty-database check: success means no table exists in the public schema.
+ * Reads the result of the empty-database check: success means no table exists in the schema Prisma targets.
  *
  * @param result - Result of running the check through `prisma db execute`.
  * @returns Whether the database has no tables yet.
@@ -39,11 +42,9 @@ export function isEmptyDatabase(result: PrismaCommandResult): boolean {
   throw new MigrationDeployError("the empty-database check", result);
 }
 
-async function runStep(runPrisma: RunPrisma, step: string, args: readonly string[]): Promise<void> {
+async function runStep(runPrisma: RunPrisma, step: string, args: readonly string[], hint = ""): Promise<void> {
   const result = await runPrisma(args);
-  if (result.exitCode !== 0) throw new MigrationDeployError(step, result);
-
-  console.log(result.output);
+  if (result.exitCode !== 0) throw new MigrationDeployError(step, result, hint);
 }
 
 /**
@@ -53,7 +54,8 @@ async function runStep(runPrisma: RunPrisma, step: string, args: readonly string
  * @throws {MigrationDeployError} When any Prisma command fails; later steps do not run.
  */
 export async function deployMigrations(runPrisma: RunPrisma): Promise<void> {
-  const check = await runPrisma(["db", "execute", "--stdin"], EMPTY_DATABASE_CHECK);
+  // Quiet: on a database with tables the check fails on purpose, and its error would look like a real one.
+  const check = await runPrisma(["db", "execute", "--stdin"], { input: EMPTY_DATABASE_CHECK, quiet: true });
 
   if (isEmptyDatabase(check)) {
     console.log(`Empty database: applying ${FOUNDATION_MIGRATION} first.`);
@@ -63,12 +65,12 @@ export async function deployMigrations(runPrisma: RunPrisma): Promise<void> {
       "--file",
       `prisma/migrations/${FOUNDATION_MIGRATION}/migration.sql`,
     ]);
-    await runStep(runPrisma, `recording ${FOUNDATION_MIGRATION}`, [
-      "migrate",
-      "resolve",
-      "--applied",
-      FOUNDATION_MIGRATION,
-    ]);
+    await runStep(
+      runPrisma,
+      `recording ${FOUNDATION_MIGRATION}`,
+      ["migrate", "resolve", "--applied", FOUNDATION_MIGRATION],
+      RECORDING_HINT,
+    );
   }
 
   await runStep(runPrisma, "migrate deploy", ["migrate", "deploy"]);

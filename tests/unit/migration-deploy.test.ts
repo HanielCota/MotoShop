@@ -5,6 +5,7 @@ import {
   isEmptyDatabase,
   MigrationDeployError,
   type PrismaCommandResult,
+  type RunPrismaOptions,
 } from "../../scripts/migration-deploy";
 
 const ok: PrismaCommandResult = { exitCode: 0, output: "" };
@@ -13,7 +14,7 @@ const unreachable: PrismaCommandResult = { exitCode: 1, output: "Error: P1001: C
 
 function fakePrisma(results: readonly PrismaCommandResult[]) {
   const calls: string[] = [];
-  const runPrisma = vi.fn(async (args: readonly string[]) => {
+  const runPrisma = vi.fn(async (args: readonly string[], _options?: RunPrismaOptions) => {
     calls.push(args.join(" "));
     return results[calls.length - 1] ?? ok;
   });
@@ -81,5 +82,23 @@ describe("deployMigrations", () => {
 
     await expect(deploy).rejects.toThrow(/applying 20260910144000_initial_foundation failed/);
     expect(calls).toHaveLength(2);
+  });
+
+  it("tells how to recover when recording the foundation migration fails after applying it", async () => {
+    const { runPrisma } = fakePrisma([ok, ok, { exitCode: 1, output: "connection reset" }]);
+
+    const deploy = deployMigrations(runPrisma);
+
+    await expect(deploy).rejects.toThrow(/run `prisma migrate resolve --applied 20260910144000_initial_foundation`/);
+  });
+
+  it("runs the empty-database check quietly against the schema Prisma targets", async () => {
+    const { runPrisma } = fakePrisma([notEmpty, ok]);
+
+    await deployMigrations(runPrisma);
+
+    const checkOptions = runPrisma.mock.calls[0]?.[1];
+    expect(checkOptions?.quiet).toBe(true);
+    expect(checkOptions?.input).toContain("schemaname = current_schema()");
   });
 });
