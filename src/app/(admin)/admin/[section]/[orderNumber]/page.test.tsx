@@ -43,10 +43,13 @@ it("answers 404 for any section other than orders", async () => {
 
 it("answers 404 for an unknown order before any loading screen starts", async () => {
   mocks.orderExists.mockResolvedValue(false);
+
   await expect(
     AdminOrderDetailPage({ params: Promise.resolve({ section: "orders", orderNumber: "MS-404" }) }),
   ).rejects.toThrow("NOT_FOUND");
+
   expect(mocks.orderExists).toHaveBeenCalledWith("MS-404");
+  expect(mocks.getOrder).not.toHaveBeenCalled();
 });
 
 // Regression (findings of 27/10/2026): a click on an order in the Admin left the previous page on screen
