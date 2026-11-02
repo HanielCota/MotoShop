@@ -14,6 +14,12 @@ vi.mock("next/image", () => ({
   default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
 }));
 
+import {
+  emptyStoredCompanyContact,
+  resolveCompanyContact,
+  type CompanyContact,
+} from "@/modules/admin/domain/company-contact";
+
 import { SiteFooter } from "./site-footer";
 import { StorefrontOnly } from "./storefront-only";
 
@@ -22,10 +28,10 @@ afterEach(() => {
   auth.session = null;
 });
 
-function renderFooter() {
+function renderFooter(contact: CompanyContact = resolveCompanyContact(null)) {
   return render(
     <StorefrontOnly>
-      <SiteFooter />
+      <SiteFooter contact={contact} copyrightYear="2026" />
     </StorefrontOnly>,
   );
 }
@@ -114,6 +120,36 @@ it("links the store's Instagram and YouTube right below the service hours, each 
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   }
+});
+
+it("shows the support e-mail, phone and a WhatsApp link only when Admin › Configurações has them", () => {
+  navigation.pathname = "/";
+  renderFooter(
+    resolveCompanyContact({
+      ...emptyStoredCompanyContact,
+      supportEmail: "atendimento@motoshopbrasil.com.br",
+      supportPhone: "11912345678",
+      weekdayHours: "09h00 às 18h00",
+    }),
+  );
+  const hours = within(screen.getByRole("region", { name: "Horário de atendimento" }));
+
+  expect(hours.getByText("atendimento@motoshopbrasil.com.br")).toBeInTheDocument();
+  expect(hours.getByText("(11) 91234-5678")).toBeInTheDocument();
+  expect(hours.getByText(/09h00 às 18h00/)).toBeInTheDocument();
+  expect(hours.getByRole("link", { name: "WhatsApp do Moto Shop" })).toHaveAttribute(
+    "href",
+    "https://wa.me/5511912345678",
+  );
+});
+
+it("leaves e-mail, phone and WhatsApp out while they are blank", () => {
+  navigation.pathname = "/";
+  renderFooter();
+  const hours = within(screen.getByRole("region", { name: "Horário de atendimento" }));
+
+  expect(hours.queryByRole("link", { name: "WhatsApp do Moto Shop" })).not.toBeInTheDocument();
+  expect(hours.queryByText(/@/)).not.toBeInTheDocument();
 });
 
 it("uses the stacked main logo in the footer, swapping black and orange plates on hover", () => {

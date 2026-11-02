@@ -163,7 +163,7 @@ Com `review.pendente@example.test`, a Central mostra a loja aguardando aprovaç�
 | Catálogo          | `/admin/catalog`           | Categorias, marcas, fabricantes, modelos e motos   |
 | Cupons            | `/admin/coupons`           | Cupons do marketplace                              |
 | Plano VIP         | `/admin/vip`               | Assinaturas das lojas                              |
-| Comissão          | `/admin/commission`        | Comissão padrão e por loja                         |
+| Configurações     | `/admin/commission`        | Comissão padrão, empresa e contato do rodapé       |
 | Pedidos           | `/admin/orders`            | Monitor de pedidos por loja                        |
 | Cancelamentos     | `/admin/cancellations`     | Solicitação de cancelamento pendente               |
 | Devoluções        | `/admin/returns`           | Devolução pendente                                 |

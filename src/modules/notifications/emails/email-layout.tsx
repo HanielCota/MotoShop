@@ -16,7 +16,12 @@ import {
   Text,
 } from "react-email";
 
-import { BRAND_CNPJ_LINE, BRAND_COPYRIGHT, BRAND_SOCIAL_LINKS } from "@/config/brand";
+import {
+  companySocialLinks,
+  formatCnpjLine,
+  formatCopyrightLine,
+  type CompanyContact,
+} from "@/modules/admin/domain/company-contact";
 
 // E-mail clients ignore stylesheets, so every style is inline and the structure is tables (React Email).
 const colors = {
@@ -40,7 +45,19 @@ const LOGO_HEIGHT = 36;
  * footer with the automatic-message notice, social links and legal lines. The logo has alt text, so
  * nothing depends on the image loading.
  */
-export function EmailLayout({ logoUrl, preview, children }: { logoUrl: string; preview: string; children: ReactNode }) {
+export function EmailLayout({
+  logoUrl,
+  preview,
+  contact,
+  copyrightYear,
+  children,
+}: {
+  logoUrl: string;
+  preview: string;
+  contact: CompanyContact;
+  copyrightYear: string;
+  children: ReactNode;
+}) {
   return (
     <Html lang="pt-BR">
       <Head />
@@ -51,14 +68,14 @@ export function EmailLayout({ logoUrl, preview, children }: { logoUrl: string; p
             <Img src={logoUrl} alt="Moto Shop" width={LOGO_WIDTH} height={LOGO_HEIGHT} style={{ display: "block" }} />
           </Section>
           <Section style={{ padding: "32px 32px 8px" }}>{children}</Section>
-          <EmailFooter />
+          <EmailFooter contact={contact} copyrightYear={copyrightYear} />
         </Container>
       </Body>
     </Html>
   );
 }
 
-function EmailFooter() {
+function EmailFooter({ contact, copyrightYear }: { contact: CompanyContact; copyrightYear: string }) {
   const small = { color: colors.muted, fontSize: 12, lineHeight: "18px", margin: "0 0 8px" };
 
   return (
@@ -66,7 +83,7 @@ function EmailFooter() {
       <Hr style={{ borderColor: colors.border, margin: "8px 0 20px" }} />
       <Text style={small}>Este é um e-mail automático. Não é preciso responder.</Text>
       <Text style={small}>
-        {BRAND_SOCIAL_LINKS.map((link, index) => (
+        {companySocialLinks(contact).map((link, index) => (
           <span key={link.name}>
             {index > 0 ? "  ·  " : null}
             <Link href={link.href} style={{ color: colors.text, fontWeight: 700 }}>
@@ -76,9 +93,9 @@ function EmailFooter() {
         ))}
       </Text>
       <Text style={{ ...small, fontSize: 11, lineHeight: "16px", margin: 0 }}>
-        {BRAND_COPYRIGHT}
+        {formatCopyrightLine(contact.legalName, copyrightYear)}
         <br />
-        {BRAND_CNPJ_LINE}
+        {formatCnpjLine(contact.cnpj)}
       </Text>
     </Section>
   );

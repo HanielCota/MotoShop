@@ -14,6 +14,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
   timeZone: MARKETPLACE_TIME_ZONE,
 });
 const moneyFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const yearFormatter = new Intl.DateTimeFormat("pt-BR", { year: "numeric", timeZone: MARKETPLACE_TIME_ZONE });
 
 type DateInput = Date | string | number;
 
@@ -23,6 +24,11 @@ function toDate(value: DateInput): Date {
 
 export function formatDate(value: DateInput): string {
   return dateFormatter.format(toDate(value));
+}
+
+/** Current year in the marketplace time zone, so the footers' © does not turn at 21h on 31 December. */
+export function currentMarketplaceYear(): string {
+  return yearFormatter.format(new Date());
 }
 
 export function formatLongDate(value: DateInput): string {
