@@ -38,4 +38,8 @@ function runPrismaCli(args: readonly string[], options: RunPrismaOptions = {}): 
   return promise;
 }
 
-await deployMigrations(runPrismaCli);
+// pnpm may pass the "--" separator through; Prisma would reject it as an argument.
+await deployMigrations(
+  runPrismaCli,
+  process.argv.slice(2).filter((arg) => arg !== "--"),
+);

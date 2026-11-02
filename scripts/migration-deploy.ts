@@ -51,9 +51,10 @@ async function runStep(runPrisma: RunPrisma, step: string, args: readonly string
  * Applies the versioned migrations, bootstrapping the foundation migration first on an empty database.
  *
  * @param runPrisma - Runs one Prisma CLI command and returns its exit code and output.
+ * @param deployArgs - Extra arguments for `prisma migrate deploy`, as given to `pnpm db:deploy`.
  * @throws {MigrationDeployError} When any Prisma command fails; later steps do not run.
  */
-export async function deployMigrations(runPrisma: RunPrisma): Promise<void> {
+export async function deployMigrations(runPrisma: RunPrisma, deployArgs: readonly string[] = []): Promise<void> {
   // Quiet: on a database with tables the check fails on purpose, and its error would look like a real one.
   const check = await runPrisma(["db", "execute", "--stdin"], { input: EMPTY_DATABASE_CHECK, quiet: true });
 
@@ -73,5 +74,5 @@ export async function deployMigrations(runPrisma: RunPrisma): Promise<void> {
     );
   }
 
-  await runStep(runPrisma, "migrate deploy", ["migrate", "deploy"]);
+  await runStep(runPrisma, "migrate deploy", ["migrate", "deploy", ...deployArgs]);
 }
