@@ -22,7 +22,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy",
+    "db:deploy": "tsx scripts/deploy-migrations.ts",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "db:seed:review": "tsx scripts/seed-review-data.ts",

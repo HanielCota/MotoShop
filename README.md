@@ -42,7 +42,7 @@ Sentry + Pino · Vitest + Playwright. Detalhes e justificativas em [AGENTS.md §
 
    ```bash
    pnpm db:generate
-   pnpm db:migrate
+   pnpm db:deploy
    pnpm db:seed
    pnpm dev
    ```
@@ -56,25 +56,25 @@ Cloudflare R2.
 
 ## Scripts
 
-| Script                                          | O que faz                                                          |
-| ----------------------------------------------- | ------------------------------------------------------------------ |
-| `pnpm dev`                                      | Servidor de desenvolvimento em `127.0.0.1:3005`                    |
-| `pnpm dev:review`                               | Servidor para revisão com dados de demonstração (`localhost:3001`) |
-| `pnpm build` / `pnpm start`                     | Build e servidor de produção                                       |
-| `pnpm typecheck`                                | Gera os tipos de rota (`next typegen`) e verifica tipos (`tsc`)    |
-| `pnpm lint`                                     | Oxlint, com regras que usam os tipos (`.oxlintrc.json`)            |
-| `pnpm format` / `pnpm format:check`             | Prettier (formatar / verificar)                                    |
-| `pnpm test` / `pnpm test:watch`                 | Testes unitários (Vitest)                                          |
-| `pnpm test:integration`                         | Testes de integração contra banco de teste isolado                 |
-| `pnpm test:e2e`                                 | Testes de navegador (Playwright)                                   |
-| `pnpm db:generate`                              | Gera o Prisma Client                                               |
-| `pnpm db:migrate`                               | Cria/aplica migrations em desenvolvimento (`prisma migrate dev`)   |
-| `pnpm db:deploy`                                | Aplica migrations versionadas (`prisma migrate deploy`)            |
-| `pnpm db:seed` / `pnpm db:studio`               | Seed base / Prisma Studio                                          |
-| `pnpm db:seed:review` / `pnpm db:remove:review` | Cria / remove os dados de demonstração para revisão                |
-| `pnpm db:remove:leftovers`                      | Remove o catálogo demo antigo e as lojas de testes de QA           |
-| `pnpm db:hide:review`                           | Volta as lojas de demonstração para `PENDING`                      |
-| `pnpm inngest:dev`                              | Servidor local do Inngest                                          |
+| Script                                          | O que faz                                                              |
+| ----------------------------------------------- | ---------------------------------------------------------------------- |
+| `pnpm dev`                                      | Servidor de desenvolvimento em `127.0.0.1:3005`                        |
+| `pnpm dev:review`                               | Servidor para revisão com dados de demonstração (`localhost:3001`)     |
+| `pnpm build` / `pnpm start`                     | Build e servidor de produção                                           |
+| `pnpm typecheck`                                | Gera os tipos de rota (`next typegen`) e verifica tipos (`tsc`)        |
+| `pnpm lint`                                     | Oxlint, com regras que usam os tipos (`.oxlintrc.json`)                |
+| `pnpm format` / `pnpm format:check`             | Prettier (formatar / verificar)                                        |
+| `pnpm test` / `pnpm test:watch`                 | Testes unitários (Vitest)                                              |
+| `pnpm test:integration`                         | Testes de integração contra banco de teste isolado                     |
+| `pnpm test:e2e`                                 | Testes de navegador (Playwright)                                       |
+| `pnpm db:generate`                              | Gera o Prisma Client                                                   |
+| `pnpm db:migrate`                               | `prisma migrate dev`; falha num banco vazio (veja `docs/decisions.md`) |
+| `pnpm db:deploy`                                | Aplica migrations versionadas, também num banco vazio                  |
+| `pnpm db:seed` / `pnpm db:studio`               | Seed base / Prisma Studio                                              |
+| `pnpm db:seed:review` / `pnpm db:remove:review` | Cria / remove os dados de demonstração para revisão                    |
+| `pnpm db:remove:leftovers`                      | Remove o catálogo demo antigo e as lojas de testes de QA               |
+| `pnpm db:hide:review`                           | Volta as lojas de demonstração para `PENDING`                          |
+| `pnpm inngest:dev`                              | Servidor local do Inngest                                              |
 
 ## Dados de demonstração e guia de telas
 
