@@ -10,7 +10,10 @@
  */
 const FOUNDATION_MIGRATION = "20260910144000_initial_foundation";
 const NOT_EMPTY_MARKER = "MOTOSHOP_DATABASE_NOT_EMPTY";
-const EMPTY_DATABASE_CHECK = `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = current_schema()) THEN RAISE EXCEPTION '${NOT_EMPTY_MARKER}'; END IF; END $$;`;
+// Any user table in any schema counts: `prisma db execute` does not pin search_path, so current_schema()
+// can be an empty schema named after the role while the real tables live in `public`. Wrongly saying
+// "not empty" only falls back to the plain deploy; wrongly saying "empty" would write to a live database.
+const EMPTY_DATABASE_CHECK = `DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema')) THEN RAISE EXCEPTION '${NOT_EMPTY_MARKER}'; END IF; END $$;`;
 const RECORDING_HINT = ` Its tables already exist: run \`prisma migrate resolve --applied ${FOUNDATION_MIGRATION}\` before retrying, or the deploy will fail on it.`;
 
 /** Exit code and combined stdout/stderr of one Prisma CLI command. */
@@ -29,7 +32,7 @@ export class MigrationDeployError extends Error {
 }
 
 /**
- * Reads the result of the empty-database check: success means no table exists in the schema Prisma targets.
+ * Reads the result of the empty-database check: success means no user table exists in any schema.
  *
  * @param result - Result of running the check through `prisma db execute`.
  * @returns Whether the database has no tables yet.

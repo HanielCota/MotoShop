@@ -98,13 +98,24 @@ describe("deployMigrations", () => {
     await expect(deploy).rejects.toThrow(/run `prisma migrate resolve --applied 20260910144000_initial_foundation`/);
   });
 
-  it("runs the empty-database check quietly against the schema Prisma targets", async () => {
+  it("runs the empty-database check quietly", async () => {
     const { runPrisma } = fakePrisma([notEmpty, ok]);
 
     await deployMigrations(runPrisma);
 
     const checkOptions = runPrisma.mock.calls[0]?.[1];
     expect(checkOptions?.quiet).toBe(true);
-    expect(checkOptions?.input).toContain("schemaname = current_schema()");
+  });
+
+  // Regression: with an empty schema named after the role first in search_path, a check on
+  // current_schema() called a database with tables in `public` empty and wrote the foundation tables into it.
+  it("counts tables in every user schema, not only current_schema()", async () => {
+    const { runPrisma } = fakePrisma([notEmpty, ok]);
+
+    await deployMigrations(runPrisma);
+
+    const checkInput = runPrisma.mock.calls[0]?.[1]?.input;
+    expect(checkInput).not.toContain("current_schema()");
+    expect(checkInput).toContain("schemaname NOT IN ('pg_catalog', 'information_schema')");
   });
 });
