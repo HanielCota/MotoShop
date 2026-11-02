@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import type { Route } from "next";
 import Image from "next/image";
+import { Suspense } from "react";
 
 import { Store } from "lucide-react";
 
@@ -21,9 +22,10 @@ import { formatRating } from "@/modules/reviews/domain/rating";
 import { ReviewStars } from "@/modules/reviews/components/review-stars";
 import { CatalogFiltersPanel } from "@/modules/catalog/components/catalog-filters-panel";
 import { CatalogSortSelect } from "@/modules/catalog/components/catalog-sort-select";
+import { PublicStoreSkeleton } from "@/modules/catalog/components/public-catalog-skeletons";
 import { StoreProductSearch } from "@/modules/catalog/components/store-product-search";
 import { StoreRatingHighlight } from "@/modules/catalog/components/store-rating-highlight";
-import { getPublicStoreBySlug } from "@/modules/catalog/queries/public-catalog";
+import { getPublicStoreBySlug, isPublicStoreSlug } from "@/modules/catalog/queries/public-catalog";
 import { loadPublicStoreSearchParams } from "@/modules/catalog/search-params";
 import { ProductGrid } from "@/modules/products/components/product-grid";
 import { listApprovedProducts } from "@/modules/products/queries/products";
@@ -56,14 +58,27 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
+type StoreSearchParams = Promise<Record<string, string | string[] | undefined>>;
+
 export default async function PublicStorePage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: StoreSearchParams;
 }) {
   const { slug } = await params;
+  // Check existence before any Suspense: once streaming starts, the status has already gone out as 200.
+  if ((await isPublicStoreSlug(slug)) === false) notFound();
+
+  return (
+    <Suspense fallback={<PublicStoreSkeleton />}>
+      <PublicStore slug={slug} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function PublicStore({ slug, searchParams }: { slug: string; searchParams: StoreSearchParams }) {
   const storeParams = await loadPublicStoreSearchParams(searchParams);
   const store = await getPublicStoreBySlug(slug, {
     reviewPage: storeParams.storeReviewPage,

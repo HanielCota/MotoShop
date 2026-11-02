@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { PublicCatalogLanding } from "@/modules/catalog/components/public-catalog-landing";
+import { PublicCatalogLandingSkeleton } from "@/modules/catalog/components/public-catalog-skeletons";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { getPublicCategoryBySlug } from "@/modules/catalog/queries/public-catalog";
 import { loadPublicCatalogSearchParams } from "@/modules/catalog/search-params";
@@ -20,18 +22,36 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
+type CatalogSearchParams = Promise<Record<string, string | string[] | undefined>>;
+type PublicCategory = NonNullable<Awaited<ReturnType<typeof getPublicCategoryBySlug>>>;
+
 export default async function CategoryPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: CatalogSearchParams;
 }) {
   const { slug } = await params;
-  const catalogParams = await loadPublicCatalogSearchParams(searchParams);
+  // Check existence before any Suspense: once streaming starts, the status has already gone out as 200.
   const category = await getPublicCategoryBySlug(slug);
-  if (!category) notFound();
+  if (category == null) notFound();
 
+  return (
+    <Suspense fallback={<PublicCatalogLandingSkeleton />}>
+      <CategoryLanding category={category} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function CategoryLanding({
+  category,
+  searchParams,
+}: {
+  category: PublicCategory;
+  searchParams: CatalogSearchParams;
+}) {
+  const catalogParams = await loadPublicCatalogSearchParams(searchParams);
   const attributes = { gender: catalogParams.gender, color: catalogParams.color, size: catalogParams.size };
   const attributeOptions = await listPublicVariantAttributeOptions();
   const result = await listApprovedProducts({

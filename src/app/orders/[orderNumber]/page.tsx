@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
 import type { Route } from "next";
 import { notFound, redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import { pageContainerClassName } from "@/components/ui/page-container";
 import { PageHeader, SectionHeader } from "@/components/ui/page-header";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { CustomerAccountNavigation } from "@/modules/customers/components/customer-account-navigation";
-import { resolveCustomerOrderIdentity } from "@/modules/orders/application/resolve-customer-order-access";
+import {
+  resolveCustomerOrderIdentity,
+  type CustomerOrderIdentity,
+} from "@/modules/orders/application/resolve-customer-order-access";
 import { guestOrderPath, readGuestOrderCookie } from "@/modules/orders/infrastructure/guest-order-cookie";
 import { ClaimGuestOrderForm } from "@/modules/orders/components/claim-guest-order-form";
+import { CustomerOrderDetailSkeleton } from "@/modules/orders/components/order-detail/customer-order-detail-skeleton";
 import { OrderSummary } from "@/modules/orders/components/order-detail/order-summary";
 import { PaymentSection } from "@/modules/orders/components/order-detail/payment-section";
 import { SellerOrderSection } from "@/modules/orders/components/order-detail/seller-order-section";
@@ -42,10 +47,33 @@ export default async function CustomerOrderPage({
   const identity = await resolveCustomerOrderIdentity({ orderNumber, accessToken, userId: session?.user.id });
   // Signed out (e.g. after leaving in another tab): ask to sign in instead of saying the order does not exist.
   if (!identity && !session) redirect(`/login?next=${encodeURIComponent(guestOrderPath(orderNumber))}` as Route);
-  if (!identity) notFound();
+  // The access check above is the existence check: it runs before any Suspense, so a missing order
+  // answers 404 (once streaming starts, the status has already gone out as 200).
+  if (identity == null) notFound();
 
-  const order = await getCustomerOrder(orderNumber, identity);
-  if (!order) notFound();
+  return (
+    <main className={pageContainerClassName("default", "py-10")}>
+      <div className={session ? "grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]" : "grid grid-cols-1 gap-6"}>
+        {session ? <CustomerAccountNavigation pathname={`/orders/${orderNumber}`} /> : null}
+        <Suspense fallback={<CustomerOrderDetailSkeleton />}>
+          <CustomerOrderDetail orderNumber={orderNumber} identity={identity} accessToken={accessToken} />
+        </Suspense>
+      </div>
+    </main>
+  );
+}
+
+async function CustomerOrderDetail({
+  orderNumber,
+  identity,
+  accessToken,
+}: {
+  orderNumber: string;
+  identity: CustomerOrderIdentity;
+  accessToken: string | undefined;
+}) {
+  const [order, session] = await Promise.all([getCustomerOrder(orderNumber, identity), getCurrentSession()]);
+  if (order == null) notFound();
 
   const thumbnails = await getOrderItemThumbnails(order.sellerOrders.flatMap((sellerOrder) => sellerOrder.items));
 
@@ -55,44 +83,39 @@ export default async function CustomerOrderPage({
     session && accessToken && !order.userId && session.user.email.toLowerCase() === order.customerEmail.toLowerCase();
 
   return (
-    <main className={pageContainerClassName("default", "py-10")}>
-      <div className={session ? "grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]" : "grid grid-cols-1 gap-6"}>
-        {session ? <CustomerAccountNavigation pathname={`/orders/${order.orderNumber}`} /> : null}
-        <div className="flex min-w-0 flex-col gap-8">
-          <PageHeader
-            eyebrow="Pedido"
-            title={order.orderNumber}
-            description="Acompanhe pagamento, envios por loja e solicitações de pós-venda."
-            {...(session ? { back: { href: "/orders", label: "Meus pedidos" } } : {})}
+    <div className="flex min-w-0 flex-col gap-8">
+      <PageHeader
+        eyebrow="Pedido"
+        title={order.orderNumber}
+        description="Acompanhe pagamento, envios por loja e solicitações de pós-venda."
+        {...(session ? { back: { href: "/orders", label: "Meus pedidos" } } : {})}
+      />
+
+      {canClaim ? <ClaimGuestOrderForm orderNumber={order.orderNumber} /> : null}
+
+      <OrderSummary order={order} />
+
+      {/* Paying is the next step of a pending order, so it comes before the deliveries. */}
+      {pendingPayment ? <PaymentSection orderNumber={order.orderNumber} payments={order.payments} /> : null}
+
+      <section className="space-y-4">
+        <SectionHeader
+          title="Entregas por loja"
+          description="Cada loja envia separadamente. Cancelamentos, devoluções e disputas são feitos por loja."
+        />
+        {order.sellerOrders.map((sellerOrder) => (
+          <SellerOrderSection
+            key={sellerOrder.id}
+            orderNumber={order.orderNumber}
+            sellerOrder={sellerOrder}
+            thumbnails={thumbnails}
+            canReview={isOwner}
+            sellerAlreadyReviewed={order.sellerReviews.some((review) => review.sellerId === sellerOrder.sellerId)}
           />
+        ))}
+      </section>
 
-          {canClaim ? <ClaimGuestOrderForm orderNumber={order.orderNumber} /> : null}
-
-          <OrderSummary order={order} />
-
-          {/* Paying is the next step of a pending order, so it comes before the deliveries. */}
-          {pendingPayment ? <PaymentSection orderNumber={order.orderNumber} payments={order.payments} /> : null}
-
-          <section className="space-y-4">
-            <SectionHeader
-              title="Entregas por loja"
-              description="Cada loja envia separadamente. Cancelamentos, devoluções e disputas são feitos por loja."
-            />
-            {order.sellerOrders.map((sellerOrder) => (
-              <SellerOrderSection
-                key={sellerOrder.id}
-                orderNumber={order.orderNumber}
-                sellerOrder={sellerOrder}
-                thumbnails={thumbnails}
-                canReview={isOwner}
-                sellerAlreadyReviewed={order.sellerReviews.some((review) => review.sellerId === sellerOrder.sellerId)}
-              />
-            ))}
-          </section>
-
-          {pendingPayment ? null : <PaymentSection orderNumber={order.orderNumber} payments={order.payments} />}
-        </div>
-      </div>
-    </main>
+      {pendingPayment ? null : <PaymentSection orderNumber={order.orderNumber} payments={order.payments} />}
+    </div>
   );
 }

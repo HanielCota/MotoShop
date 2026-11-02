@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/database";
 import { resolvePage } from "@/modules/products/domain/pagination";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
@@ -15,12 +16,23 @@ export async function getPublicBrandBySlug(slug: string) {
   return db.brand.findFirst({ where: { slug, active: true }, select: { id: true, name: true, slug: true } });
 }
 
+/** A store is public while its seller is approved or active. */
+function publicStoreWhere(slug: string) {
+  return { slug, seller: { status: { in: ["APPROVED", "ACTIVE"] } } } satisfies Prisma.StoreWhereInput;
+}
+
+/** Light check for the store page, run before it starts streaming so a missing store answers 404. */
+export async function isPublicStoreSlug(slug: string) {
+  const store = await db.store.findFirst({ where: publicStoreWhere(slug), select: { id: true } });
+  return store != null;
+}
+
 export async function getPublicStoreBySlug(
   slug: string,
   input: { reviewPage?: number; reviewSort?: "newest" | "oldest" } = {},
 ) {
   const store = await db.store.findFirst({
-    where: { slug, seller: { status: { in: ["APPROVED", "ACTIVE"] } } },
+    where: publicStoreWhere(slug),
     select: {
       id: true,
       name: true,
