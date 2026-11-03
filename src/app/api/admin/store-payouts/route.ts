@@ -18,6 +18,11 @@ function fileNameFor(range: SalesDateRange) {
   return `repasse-lojas-${isoDayFormatter.format(range.start)}-a-${isoDayFormatter.format(lastDayOf(range))}.csv`;
 }
 
+/** The button opens this address, so a failure shows a readable page instead of saving an error file. */
+function plainTextError(message: string, status: number) {
+  return new Response(message, { status, headers: { ...privateHeaders, "Content-Type": "text/plain; charset=utf-8" } });
+}
+
 /** The Admin payout list of the sales period in the URL, as a spreadsheet. Anyone but an admin gets a 404. */
 export async function GET(request: Request): Promise<Response> {
   const session = await getAdminSession();
@@ -26,7 +31,7 @@ export async function GET(request: Request): Promise<Response> {
   const params = loadAdminSalesSearchParams(request);
   const range = resolveSalesDateRange({ period: params.salesPeriod, from: params.salesFrom, to: params.salesTo });
   if (range == null) {
-    return NextResponse.json({ error: "Escolha a data inicial e a final." }, { status: 400, headers: privateHeaders });
+    return plainTextError("Escolha a data inicial e a final do período para baixar a planilha.", 400);
   }
 
   try {
@@ -42,6 +47,6 @@ export async function GET(request: Request): Promise<Response> {
     });
   } catch (error) {
     logger.error({ event: "admin.store_payouts.failed", error });
-    return NextResponse.json({ error: "Não foi possível gerar a planilha." }, { status: 500, headers: privateHeaders });
+    return plainTextError("Não foi possível gerar a planilha agora. Volte ao Admin e tente de novo.", 500);
   }
 }

@@ -18,6 +18,7 @@ const emptyReport = {
     sellerNetAmountInCents: 0,
     customerShippingAmountInCents: 0,
     refundedInCents: 0,
+    refundedOutsidePayoutInCents: 0,
   },
   unattributedRefundInCents: 0,
 };
@@ -75,7 +76,10 @@ describe("GET /api/admin/store-payouts", () => {
     const response = await GET(new Request(customRangeUrl));
 
     expect(response.status).toBe(500);
-    await expect(response.text()).resolves.not.toContain("database down");
+    expect(response.headers.get("Content-Type")).toBe("text/plain; charset=utf-8");
+    await expect(response.text()).resolves.toBe(
+      "Não foi possível gerar a planilha agora. Volte ao Admin e tente de novo.",
+    );
     expect(mocks.logError).toHaveBeenCalledWith(expect.objectContaining({ event: "admin.store_payouts.failed" }));
   });
 });
