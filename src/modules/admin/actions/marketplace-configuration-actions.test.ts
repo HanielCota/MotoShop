@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   upsert: vi.fn(),
   audit: vi.fn(),
   revalidate: vi.fn(),
+  updateCompanyContact: vi.fn(),
 }));
 
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
@@ -21,7 +22,11 @@ vi.mock("@/lib/database", () => ({
   },
 }));
 
-import { updateMarketplaceCommissionAction } from "./marketplace-configuration-actions";
+vi.mock("../application/company-contact", () => ({ updateCompanyContact: mocks.updateCompanyContact }));
+
+import { ApplicationError } from "@/shared/errors/application-error";
+
+import { updateCompanyContactAction, updateMarketplaceCommissionAction } from "./marketplace-configuration-actions";
 
 function form(value?: string) {
   const data = new FormData();
@@ -83,5 +88,61 @@ describe("marketplace default commission", () => {
     mocks.authorize.mockRejectedValueOnce(new Error("FORBIDDEN"));
     await expect(updateMarketplaceCommissionAction({}, form("15"))).rejects.toThrow("FORBIDDEN");
     expect(mocks.find).not.toHaveBeenCalled();
+  });
+});
+
+describe("company and contact", () => {
+  const blankForm = {
+    companyLegalName: "",
+    companyCnpj: "",
+    supportEmail: "",
+    supportPhone: "",
+    instagramUrl: "",
+    youtubeUrl: "",
+    weekdayHours: "",
+    saturdayHours: "",
+    sundayHolidayHours: "",
+  };
+
+  it("validates on the server and saves nothing when a field is wrong", async () => {
+    const result = await updateCompanyContactAction({ ...blankForm, supportPhone: "123" });
+
+    expect(result).toEqual({ error: "Informe o telefone com DDD." });
+    expect(mocks.updateCompanyContact).not.toHaveBeenCalled();
+  });
+
+  it("saves the parsed values for the signed-in admin and refreshes the site footer", async () => {
+    mocks.updateCompanyContact.mockResolvedValue({ changed: true });
+
+    const result = await updateCompanyContactAction({ ...blankForm, supportPhone: "(11) 91234-5678" });
+
+    expect(result.success).toBeTruthy();
+    expect(mocks.updateCompanyContact).toHaveBeenCalledWith(
+      "admin-a",
+      expect.objectContaining({ supportPhone: "11912345678", companyLegalName: null }),
+    );
+    expect(mocks.revalidate).toHaveBeenCalledWith("/", "layout");
+  });
+
+  it("shows the conflict message when the default commission was never saved", async () => {
+    mocks.updateCompanyContact.mockRejectedValue(
+      new ApplicationError({
+        code: "CONFLICT",
+        statusCode: 409,
+        message: "Salve a comissão padrão antes de preencher empresa e contato.",
+      }),
+    );
+
+    const result = await updateCompanyContactAction(blankForm);
+
+    expect(result).toEqual({ error: "Salve a comissão padrão antes de preencher empresa e contato." });
+    expect(mocks.revalidate).not.toHaveBeenCalled();
+  });
+
+  it("requires admin permission before reading the input", async () => {
+    mocks.authorize.mockRejectedValueOnce(new Error("FORBIDDEN"));
+
+    await expect(updateCompanyContactAction(blankForm)).rejects.toThrow("FORBIDDEN");
+    expect(mocks.updateCompanyContact).not.toHaveBeenCalled();
   });
 });

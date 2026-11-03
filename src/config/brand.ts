@@ -24,3 +24,17 @@ export const BRAND_ABOUT_PARAGRAPHS = [
 /** Versão curta da descrição oficial, para blurbs e textos de apoio. */
 export const BRAND_SHORT_DESCRIPTION =
   "Marketplace de motopeças, acessórios e equipamentos, com destaque para o off-road, conectando clientes a lojistas parceiros.";
+
+/**
+ * Company and contact used in the site and e-mail footers while Admin › Configurações leaves a field
+ * blank. The CNPJ is stored as digits and masked on display.
+ */
+export const BRAND_COMPANY_DEFAULTS = {
+  legalName: "MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE",
+  cnpj: "69663409000194",
+  instagramUrl: "https://www.instagram.com/motoshopbrasil.com.br/",
+  youtubeUrl: "https://www.youtube.com/@motoshopbrasilcombr",
+  weekdayHours: "08h30 às 18h30",
+  saturdayHours: "09h00 às 13h00",
+  sundayHolidayHours: "Retorna no próximo dia útil!",
+} as const;

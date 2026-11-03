@@ -21,7 +21,9 @@ export async function SellerFinanceCard({ sellerId }: { sellerId: string }) {
     <Card id="seller-finance" className="scroll-mt-24">
       <CardHeader>
         <CardTitle>Resumo financeiro</CardTitle>
-        <CardDescription>Vendas confirmadas e valores registrados por pedido.</CardDescription>
+        <CardDescription>
+          Desde a abertura da loja: vendas confirmadas e valores registrados por pedido.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <dl className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">

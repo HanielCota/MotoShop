@@ -33,3 +33,8 @@ export function CartItemThumbnail({
     </span>
   );
 }
+
+/** The same thumbnail, small and inline, at the start of an item written as a line of text. */
+export function InlineItemThumbnail({ url }: { url: string | null | undefined }) {
+  return <CartItemThumbnail url={url} sizes="28px" className="mr-1.5 inline-grid size-7 align-middle [&>svg]:size-4" />;
+}

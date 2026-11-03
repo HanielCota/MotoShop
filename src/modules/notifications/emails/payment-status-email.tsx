@@ -1,3 +1,5 @@
+import { EmailItemList, EmailSubtitle, EmailText, EmailTitle } from "./email-layout";
+
 type PaymentStatusEmailProps = {
   customerName: string;
   orderNumber: string;
@@ -20,26 +22,20 @@ export function PaymentStatusEmail({
   const approved = status === "APPROVED";
 
   return (
-    <div style={{ color: "#172033", fontFamily: "Arial, sans-serif", lineHeight: 1.5 }}>
-      <h1>{approved ? "Pagamento confirmado" : "Não foi possível confirmar o pagamento"}</h1>
-      <p>Olá, {customerName}.</p>
-      <p>
+    <>
+      <EmailTitle>{approved ? "Pagamento confirmado" : "Não foi possível confirmar o pagamento"}</EmailTitle>
+      <EmailText>Olá, {customerName}.</EmailText>
+      <EmailText>
         {approved
           ? `Seu pedido ${orderNumber} foi confirmado e seguirá para preparação.`
           : `O pagamento do pedido ${orderNumber} não foi aprovado. Confira o método de pagamento e tente novamente se necessário.`}
-      </p>
-      <p>
+      </EmailText>
+      <EmailText>
         <strong>Total: {formatMoneyInCents(totalAmountInCents)}</strong>
-      </p>
-      <h2>Itens</h2>
-      <ul>
-        {items.map((item, index) => (
-          <li key={`${item.name}-${index}`}>
-            {item.name} · quantidade {item.quantity}
-          </li>
-        ))}
-      </ul>
-      <p>Pedido: {orderNumber}</p>
-    </div>
+      </EmailText>
+      <EmailSubtitle>Itens</EmailSubtitle>
+      <EmailItemList items={items} />
+      <EmailText>Pedido: {orderNumber}</EmailText>
+    </>
   );
 }

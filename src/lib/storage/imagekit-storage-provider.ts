@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHmac, randomUUID } from "node:crypto";
+import { createHmac } from "node:crypto";
 import { z } from "zod";
 
 import { env } from "@/config/env";
@@ -90,15 +90,20 @@ function assertUploadKey(key: string, contentType: UploadContentType) {
   return separator;
 }
 
-function buildUploadPayload(key: string, request: UploadRequest) {
+/**
+ * The upload form fields, which are also the signed claims: ImageKit V2 rejects the upload unless
+ * the token carries exactly the same parameters, with every value as a string (only iat and exp
+ * are numbers). https://imagekit.io/docs/api-reference/upload-file/upload-file-v2
+ */
+function buildUploadFields(key: string, request: UploadRequest): Record<string, string> {
   return {
     fileName: key.slice(request.separator + 1),
     folder: `/${key.slice(0, request.separator)}`,
-    useUniqueFileName: false,
-    overwriteFile: false,
+    useUniqueFileName: "false",
+    overwriteFile: "false",
     checks: `"file.mime" IN ["${request.contentType}"] AND "file.size" <= ${request.maxSizeInBytes}`,
     // Assinado no token V2: o navegador não consegue trocar um upload privado por público.
-    ...(request.isPrivate ? { isPrivateFile: true } : {}),
+    ...(request.isPrivate ? { isPrivateFile: "true" } : {}),
   };
 }
 
@@ -164,22 +169,14 @@ export class ImageKitStorageProvider implements StorageProvider {
     const request = parseUploadRequest(input);
     const issuedAt = Math.floor(Date.now() / 1000);
     const expire = issuedAt + request.expiresInSeconds;
-    const payload = buildUploadPayload(input.key, request);
-    const token = signUploadToken(config, { ...payload, iat: issuedAt, exp: expire, jti: randomUUID() });
+    const fields = buildUploadFields(input.key, request);
+    const token = signUploadToken(config, { ...fields, iat: issuedAt, exp: expire });
 
     return {
       key: input.key,
       url: uploadEndpoint,
       expiresAt: new Date(expire * 1000),
-      fields: {
-        token,
-        fileName: payload.fileName,
-        folder: payload.folder,
-        useUniqueFileName: "false",
-        overwriteFile: "false",
-        checks: payload.checks,
-        ...(payload.isPrivateFile ? { isPrivateFile: "true" } : {}),
-      },
+      fields: { token, ...fields },
     };
   }
 

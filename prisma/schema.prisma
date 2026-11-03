@@ -259,7 +259,7 @@ model Session {
 
 model Account {
   id                    String    @id @default(cuid())
-  accountId             String?
+  accountId             String
   providerId            String
   accessToken           String?
   refreshToken          String?
@@ -966,6 +966,7 @@ model Shipment {
   @@unique([provider, externalShipmentId])
   @@index([trackingCode])
   @@index([status, createdAt])
+  @@index([generationState, updatedAt])
   @@map("shipments")
 }
 
@@ -1270,6 +1271,16 @@ model SellerSubscription {
 model MarketplaceConfiguration {
   key                  String   @id
   defaultCommissionBps Int
+  // Company and contact shown in the site and e-mail footers; null falls back to the code default.
+  companyLegalName     String?
+  companyCnpj          String?
+  supportEmail         String?
+  supportPhone         String?
+  instagramUrl         String?
+  youtubeUrl           String?
+  weekdayHours         String?
+  saturdayHours        String?
+  sundayHolidayHours   String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

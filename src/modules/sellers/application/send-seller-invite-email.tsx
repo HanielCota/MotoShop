@@ -3,6 +3,7 @@ import "server-only";
 import { logger } from "@/lib/logger";
 import { authEmailConfigured } from "@/modules/auth/infrastructure/auth";
 import { sendNotificationEmail } from "@/modules/notifications/application/send-notification-email";
+import { EmailButton, EmailNote, EmailText, EmailTitle } from "@/modules/notifications/emails/email-layout";
 
 import { SELLER_INVITE_TTL_DAYS } from "../domain/member-invite";
 import { hashInviteToken } from "./member-invites";
@@ -28,20 +29,18 @@ export async function sendSellerInviteEmail(input: {
       to: input.to,
       subject: `Convite para a equipe da ${input.storeName} no Moto Shop`,
       react: (
-        <div style={{ color: "#172033", fontFamily: "Arial, sans-serif", lineHeight: 1.5 }}>
-          <h1>Convite para a equipe da {input.storeName}</h1>
-          <p>
+        <>
+          <EmailTitle>Convite para a equipe da {input.storeName}</EmailTitle>
+          <EmailText>
             Você foi convidado para a Central do Lojista da {input.storeName} no Moto Shop com o perfil{" "}
             {input.roleLabel}. Entre com a conta deste e-mail para aceitar ou recusar.
-          </p>
-          <p>
-            <a href={input.url}>Ver convite</a>
-          </p>
-          <p>
+          </EmailText>
+          <EmailButton href={input.url}>Ver convite</EmailButton>
+          <EmailNote>
             O link vale por {SELLER_INVITE_TTL_DAYS} dias e não deve ser compartilhado. Se você não esperava este
             convite, ignore esta mensagem.
-          </p>
-        </div>
+          </EmailNote>
+        </>
       ),
     });
   } catch (error) {

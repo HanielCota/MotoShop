@@ -19,6 +19,7 @@ import { getStatusLabel } from "@/shared/presentation/status-labels";
 import { adminHref } from "../../admin-href";
 import { adminSellerStatusValues, loadAdminSellerSearchParams } from "../../search-params";
 import { AdminCard, AdminFilterForm, AdminList, FilterSelect, FilterText, newestFirstSortOptions } from "../admin-ui";
+import { getMarketplaceConfiguration } from "../../queries/marketplace-configuration";
 import { SellerCommissionForm } from "../seller-commission-form";
 import type { AdminSectionProps } from "./types";
 
@@ -29,12 +30,15 @@ const sellerStatusOptions = adminSellerStatusValues.map((status) => ({
 
 export async function AdminSellersSection({ searchParams }: AdminSectionProps) {
   const params = await loadAdminSellerSearchParams(searchParams);
-  const result = await listSellersForAdmin({
-    status: params.sellerStatus,
-    q: params.sellerQ,
-    sort: params.sellerSort,
-    page: params.sellerPage,
-  });
+  const [result, configuration] = await Promise.all([
+    listSellersForAdmin({
+      status: params.sellerStatus,
+      q: params.sellerQ,
+      sort: params.sellerSort,
+      page: params.sellerPage,
+    }),
+    getMarketplaceConfiguration(),
+  ]);
   const pageHref = (page: number) => adminHref("sellers", { ...params, sellerPage: page }, { sellerSort: "newest" });
 
   return (
@@ -76,7 +80,11 @@ export async function AdminSellersSection({ searchParams }: AdminSectionProps) {
                   {seller.members[0]?.user.email ?? "Sem responsável"} ·{" "}
                   {formatCount(seller._count.products, "produto", "produtos")} · desde {formatDate(seller.createdAt)}
                 </p>
-                <SellerCommissionForm sellerId={seller.id} commissionBpsOverride={seller.commissionBpsOverride} />
+                <SellerCommissionForm
+                  sellerId={seller.id}
+                  commissionBpsOverride={seller.commissionBpsOverride}
+                  defaultCommissionBps={configuration?.defaultCommissionBps ?? null}
+                />
               </div>
               {seller.status === "PENDING" ? (
                 <div className="flex shrink-0 gap-2">

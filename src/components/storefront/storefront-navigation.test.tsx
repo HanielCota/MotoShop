@@ -2,10 +2,9 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-const navigation = vi.hoisted(() => ({ pathname: "/products", search: "" }));
+const navigation = vi.hoisted(() => ({ pathname: "/products" }));
 vi.mock("next/navigation", () => ({
   usePathname: () => navigation.pathname,
-  useSearchParams: () => new URLSearchParams(navigation.search),
   useRouter: () => ({ push: vi.fn() }),
 }));
 const authMocks = vi.hoisted(() => ({ useSession: vi.fn() }));
@@ -40,7 +39,6 @@ afterEach(() => {
   areaAccess.admin = false;
   areaAccess.seller = false;
   navigation.pathname = "/products";
-  navigation.search = "";
 });
 
 it("renders the same header on the homepage with a single seller link label", () => {
@@ -65,6 +63,16 @@ it("stays out of the seller and admin areas", () => {
   }
 });
 
+it("does not ask for area access on the Admin and Central do Lojista pages, where the header is hidden", () => {
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "store-owner", name: "Luiz" } } });
+  navigation.pathname = "/seller/orders";
+
+  render(<StorefrontNavigation />);
+
+  expect(fetch).not.toHaveBeenCalled();
+  authMocks.useSession.mockReset();
+});
+
 it("uses both horizontal logo variants for the hover transition", () => {
   authMocks.useSession.mockReturnValue({ data: null });
   render(<StorefrontNavigation />);
@@ -87,6 +95,7 @@ it("gives signed-in customers an account menu with their shortcuts", async () =>
   const items = within(menu).getAllByRole("menuitem");
   expect(items.map((item) => [item.textContent, item.getAttribute("href")])).toEqual([
     ["Meus pedidos", "/orders"],
+    ["Minhas motos", "/account/motorcycles"],
     ["Favoritos", "/favorites"],
     ["Dados cadastrais", "/account/profile"],
     ["Alterar senha", "/account/password"],
@@ -136,6 +145,39 @@ it("shows the shortcuts on browsers without AbortSignal.any (Safari before 17.4)
   }
 });
 
+it("names the Central do Lojista in the header and at the top of the phone menu for a store owner", async () => {
+  areaAccess.seller = true;
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "store-owner", name: "Luiz" } } });
+  render(<StorefrontNavigation />);
+
+  const mainNavigation = screen.getByRole("navigation", { name: "Navegação principal" });
+  expect(await within(mainNavigation).findByRole("link", { name: "Central do Lojista" })).toHaveAttribute(
+    "href",
+    "/seller",
+  );
+  expect(within(mainNavigation).queryByRole("link", { name: "Venda no Moto Shop" })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Abrir menu" }));
+  const phoneMenu = screen.getByRole("navigation", { name: "Navegação mobile" });
+  const phoneLinks = within(phoneMenu).getAllByRole("link");
+  expect(phoneLinks[0]).toHaveTextContent("Central do Lojista");
+  expect(within(phoneMenu).queryByRole("link", { name: "Venda no Moto Shop" })).not.toBeInTheDocument();
+  authMocks.useSession.mockReset();
+});
+
+it("hides the area link while the access is still loading, so the wrong label never flashes", () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => new Promise<Response>(() => undefined)),
+  );
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "store-owner", name: "Luiz" } } });
+  render(<StorefrontNavigation />);
+
+  const mainNavigation = screen.getByRole("navigation", { name: "Navegação principal" });
+  expect(within(mainNavigation).getByRole("link", { name: "Venda no Moto Shop" })).toHaveClass("invisible");
+  authMocks.useSession.mockReset();
+});
+
 it("shows only the Central do Lojista to a store member", async () => {
   areaAccess.seller = true;
   authMocks.useSession.mockReturnValue({ data: { user: { id: "member", name: "Juliana" } } });
@@ -160,6 +202,31 @@ it("links visitors to the login page", () => {
   expect(screen.getByRole("link", { name: "Entrar na minha conta" })).toHaveAttribute("href", "/login");
 });
 
+it("shows neither the login link nor the account menu until the page knows who is signed in", () => {
+  authMocks.useSession.mockReturnValue({ data: null, isPending: true });
+  const { rerender } = render(<StorefrontNavigation />);
+
+  expect(screen.queryByRole("link", { name: "Entrar na minha conta" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Minha conta" })).not.toBeInTheDocument();
+
+  authMocks.useSession.mockReturnValue({ data: { user: { id: "buyer", name: "Comprador" } }, isPending: false });
+  rerender(<StorefrontNavigation />);
+
+  expect(screen.getByRole("button", { name: "Minha conta" })).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Entrar na minha conta" })).not.toBeInTheDocument();
+});
+
+it("keeps the visitor's login link while the session is checked again on returning to the tab", () => {
+  authMocks.useSession.mockReturnValue({ data: null, isPending: false });
+  const { rerender } = render(<StorefrontNavigation />);
+  expect(screen.getByRole("link", { name: "Entrar na minha conta" })).toBeInTheDocument();
+
+  authMocks.useSession.mockReturnValue({ data: null, isPending: true });
+  rerender(<StorefrontNavigation />);
+
+  expect(screen.getByRole("link", { name: "Entrar na minha conta" })).toBeInTheDocument();
+});
+
 it("closes the mobile navigation with Escape and restores trigger focus", () => {
   authMocks.useSession.mockReturnValue({ data: null });
   render(<StorefrontNavigation />);
@@ -175,43 +242,38 @@ it("closes the mobile navigation with Escape and restores trigger focus", () => 
   expect(menu).toHaveAttribute("hidden");
 });
 
-it("keeps the header search on the catalog, filled with the current search", () => {
+it("leaves the search to the catalog's own large field on the catalog page", () => {
   authMocks.useSession.mockReturnValue({ data: null });
   navigation.pathname = "/products";
-  navigation.search = "q=capacete";
 
   render(<StorefrontNavigation />);
 
-  const fields = screen.getAllByRole("combobox", { name: "Buscar produtos", hidden: true });
-  expect(fields.length).toBeGreaterThan(0);
-  expect(fields.every((field) => (field as HTMLInputElement).value === "capacete")).toBe(true);
+  expect(screen.queryAllByRole("search", { hidden: true })).toHaveLength(0);
 });
 
-it("keeps the filters applied on the catalog when a new search is sent from the header", () => {
-  authMocks.useSession.mockReturnValue({ data: null });
-  navigation.pathname = "/products";
-  navigation.search = "category=capacetes&q=fox&page=3";
-
-  render(<StorefrontNavigation />);
-
-  const forms = screen.getAllByRole("search", { hidden: true });
-  for (const form of forms) {
-    const hidden = [...form.querySelectorAll<HTMLInputElement>("input[type=hidden]")].map((input) => [
-      input.name,
-      input.value,
-    ]);
-
-    expect(hidden).toEqual([["category", "capacetes"]]);
-  }
-});
-
-it("starts the header search empty outside the catalog", () => {
+it("shows the header search on desktop and in the phone menu outside the catalog", () => {
   authMocks.useSession.mockReturnValue({ data: null });
   navigation.pathname = "/products/capacete";
-  navigation.search = "q=capacete";
 
   render(<StorefrontNavigation />);
 
   const fields = screen.getAllByRole("combobox", { name: "Buscar produtos", hidden: true });
+  expect(fields.map((field) => field.id)).toEqual(["storefront-search", "storefront-mobile-search"]);
   expect(fields.every((field) => (field as HTMLInputElement).value === "")).toBe(true);
+});
+
+it("keeps a store owner's area link visible during a session recheck", async () => {
+  areaAccess.seller = true;
+  const data = { user: { id: "owner-recheck", name: "Owner" } };
+  authMocks.useSession.mockReturnValue({ data, isPending: false });
+  const { rerender } = render(<StorefrontNavigation />);
+  const mainNavigation = screen.getByRole("navigation", { name: "Navegação principal" });
+  const link = await within(mainNavigation).findByRole("link", { name: "Central do Lojista" });
+  expect(link).not.toHaveClass("invisible");
+
+  authMocks.useSession.mockReturnValue({ data, isPending: true });
+  rerender(<StorefrontNavigation />);
+
+  expect(link).not.toHaveClass("invisible");
+  expect(screen.getByRole("button", { name: "Minha conta" })).toBeInTheDocument();
 });

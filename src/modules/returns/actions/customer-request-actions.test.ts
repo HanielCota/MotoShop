@@ -21,14 +21,12 @@ vi.mock("../application/return-photo-uploads", () => ({
   createReturnPhotoUpload: vi.fn(),
   removeReturnPhotoUpload: vi.fn(),
 }));
-vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
 vi.mock("../application/request-cancellation", () => ({ requestCancellation: mocks.requestCancellation }));
 vi.mock("@/modules/disputes/application/request-dispute", () => ({ requestDispute: mocks.requestDispute }));
 
 import { requestDisputeAction } from "@/modules/disputes/actions/dispute-actions";
 
 import { requestCancellationAction } from "./cancellation-actions";
-import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 import { createReturnPhotoUpload } from "../application/return-photo-uploads";
 import { createReturnPhotoUploadAction, requestReturnAction } from "./return-actions";
@@ -112,7 +110,7 @@ describe.each(cases)("$name action order access", ({ run, service }) => {
 });
 
 describe("return photo upload authorization", () => {
-  it("caps the uploads of an item per minute and per day, so unattached files cannot pile up", async () => {
+  it("asks the upload service with the identity that owns the order, which then checks the item and the limits", async () => {
     mocks.session.mockResolvedValue({ user: { id: "user-1" } });
     mocks.resolve.mockResolvedValue({ userId: "user-1" });
     vi.mocked(createReturnPhotoUpload).mockResolvedValue({
@@ -122,16 +120,17 @@ describe("return photo upload authorization", () => {
       fields: {},
     });
 
-    await createReturnPhotoUploadAction({
+    const result = await createReturnPhotoUploadAction({
       orderNumber: "MS-1",
       orderItemId: cuid,
       contentType: "image/jpeg",
       sizeInBytes: 1024,
     });
 
-    expect(vi.mocked(assertRateLimit).mock.calls.map(([limit]) => limit)).toEqual([
-      { key: `return-photo-upload:${cuid}`, windowSeconds: 60, max: 10 },
-      { key: `return-photo-upload-day:${cuid}`, windowSeconds: 86_400, max: 15 },
-    ]);
+    expect(result).toHaveProperty("url", "https://upload.example");
+    expect(createReturnPhotoUpload).toHaveBeenCalledWith(
+      { orderNumber: "MS-1", orderItemId: cuid, identity: { userId: "user-1" } },
+      { contentType: "image/jpeg", sizeInBytes: 1024 },
+    );
   });
 });

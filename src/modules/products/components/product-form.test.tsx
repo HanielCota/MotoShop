@@ -36,8 +36,8 @@ it("offers optional gender, color and size for each variant", () => {
   render(<ProductForm {...options} />);
 
   expect(screen.getByLabelText(/^Gênero/)).toHaveTextContent("Não informado");
-  expect(screen.getByLabelText(/^Cor/)).toHaveAttribute("placeholder", "Preto/laranja");
-  expect(screen.getByLabelText(/^Tamanho/)).toHaveAttribute("placeholder", "M ou 40");
+  expect(screen.getByLabelText(/^Cor/)).toHaveAttribute("placeholder", "Ex.: Preto/laranja");
+  expect(screen.getByLabelText(/^Tamanho/)).toHaveAttribute("placeholder", "Ex.: M ou 40");
 });
 
 it("uses text date and time fields for the promotion instead of the native picker (DN-01)", async () => {
@@ -69,4 +69,29 @@ it("does not use native number fields that change with the mouse wheel (DN-07)",
 
   expect(container.querySelector('input[type="number"]')).toBeNull();
   expect(screen.getByLabelText(/^Estoque/)).toHaveAttribute("inputmode", "numeric");
+});
+
+it("shows the three steps and keeps the page address closed while it follows the name", () => {
+  render(<ProductForm {...options} />);
+
+  expect(screen.getByRole("list", { name: "Etapas do cadastro" })).toHaveTextContent(
+    "1Dados e variações2Fotos3Enviar para aprovação",
+  );
+  expect(screen.getByLabelText(/^Endereço da página/).closest("details")).not.toHaveAttribute("open");
+});
+
+it("keeps the page address open while the seller fixes an address error", async () => {
+  render(<ProductForm {...options} />);
+
+  fireEvent.submit(screen.getByRole("button", { name: "Criar rascunho" }).closest("form") as HTMLFormElement);
+  const slug = screen.getByLabelText(/^Endereço da página/);
+  await waitFor(() => expect(slug.closest("details")).toHaveAttribute("open"));
+
+  fireEvent.change(slug, { target: { value: "capacete-novo" } });
+  fireEvent.blur(slug);
+
+  await waitFor(() =>
+    expect(screen.queryByText(/endereço/i, { selector: "[role=alert], .text-destructive" })).toBeNull(),
+  );
+  expect(slug.closest("details")).toHaveAttribute("open");
 });

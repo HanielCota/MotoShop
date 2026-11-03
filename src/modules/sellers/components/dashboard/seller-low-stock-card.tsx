@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { listSellerLowStockVariants } from "@/modules/sellers/queries/seller-dashboard";
-import { countSellerStockAlerts } from "@/modules/sellers/queries/seller-overview-metrics";
+import { countSellerStockAlerts, LOW_STOCK_THRESHOLD } from "@/modules/sellers/queries/seller-overview-metrics";
 import { domainIcons } from "@/shared/presentation/domain-icons";
 
 export async function SellerLowStockCard({ sellerId }: { sellerId: string }) {
@@ -18,8 +18,10 @@ export async function SellerLowStockCard({ sellerId }: { sellerId: string }) {
   return (
     <Card id="seller-stock" className="scroll-mt-24">
       <CardHeader>
-        <CardTitle>Estoque baixo</CardTitle>
-        <CardDescription>Variações com até 5 unidades disponíveis.</CardDescription>
+        <CardTitle>Estoque baixo e esgotado</CardTitle>
+        <CardDescription>
+          Esgotadas primeiro, depois as variações com até {LOW_STOCK_THRESHOLD} unidades.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {variants.length === 0 ? (

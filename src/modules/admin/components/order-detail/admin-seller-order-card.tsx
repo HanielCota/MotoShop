@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateTime, formatMoneyInCents } from "@/lib/format";
+import { CartItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
+import type { CartThumbnail } from "@/modules/cart/queries/cart-thumbnails";
 import { DisputeStatusActions } from "@/modules/disputes/components/dispute-status-actions";
 import { ShipmentTracking } from "@/modules/orders/components/order-detail/shipment-tracking";
 import { CancellationStatusActions } from "@/modules/returns/components/cancellation-status-actions";
@@ -16,9 +18,12 @@ import type { AdminOrderSellerOrder } from "../../queries/order-detail";
 export function AdminSellerOrderCard({
   orderNumber,
   sellerOrder,
+  thumbnails,
 }: {
   orderNumber: string;
   sellerOrder: AdminOrderSellerOrder;
+  /** Foto de cada item, pelo id do item; sem foto, aparece o substituto. */
+  thumbnails: ReadonlyMap<string, CartThumbnail>;
 }) {
   const summary = { orderNumber, storeName: sellerOrder.storeNameSnapshot };
   const hasAfterSales =
@@ -43,9 +48,12 @@ export function AdminSellerOrderCard({
         <ul className="divide-border divide-y text-sm">
           {sellerOrder.items.map((item) => (
             <li key={item.id} className="flex flex-wrap justify-between gap-2 py-2">
-              <span className="min-w-0 break-words">
-                {item.quantity} × {item.productNameSnapshot} · {item.variantDescriptionSnapshot} · SKU{" "}
-                {item.skuSnapshot}
+              <span className="flex min-w-0 items-center gap-2">
+                <CartItemThumbnail url={thumbnails.get(item.id)?.url} sizes="40px" className="size-10" />
+                <span className="min-w-0 break-words">
+                  {item.quantity} × {item.productNameSnapshot} · {item.variantDescriptionSnapshot} · SKU{" "}
+                  {item.skuSnapshot}
+                </span>
               </span>
               <span className="tabular-nums">{formatMoneyInCents(item.totalAmountInCents)}</span>
             </li>

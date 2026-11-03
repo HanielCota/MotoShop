@@ -10,8 +10,12 @@ import {
 // The shortcuts are a convenience: a slow answer is dropped instead of keeping the request open.
 const accountAreaAccessTimeoutMs = 10_000;
 
-/** Restricted areas of the signed-in user, asked again whenever the user changes; none while signed out. */
-export function useAccountAreaAccess(userId: string | undefined): AccountAreaAccess {
+/**
+ * Restricted areas of the signed-in user, asked again whenever the user changes; none while signed
+ * out. Null while the answer for a signed-in user is still on its way, so the header can wait
+ * instead of flashing the wrong link.
+ */
+export function useAccountAreaAccess(userId: string | undefined): AccountAreaAccess | null {
   const [loaded, setLoaded] = useState<{ userId: string; access: AccountAreaAccess } | null>(null);
 
   useEffect(() => {
@@ -21,8 +25,9 @@ export function useAccountAreaAccess(userId: string | undefined): AccountAreaAcc
     // A timer instead of AbortSignal.timeout/any, which Safari only has since 17.4.
     const timeout = setTimeout(() => controller.abort(), accountAreaAccessTimeoutMs);
     const load = async () => {
+      // A failed or slow answer settles as "no restricted area": the links fall back to the visitor's.
       const access = await fetchAccountAreaAccess(controller.signal);
-      if (access) setLoaded({ userId, access });
+      setLoaded({ userId, access: access ?? noAccountAreaAccess });
     };
     void load();
 
@@ -32,8 +37,9 @@ export function useAccountAreaAccess(userId: string | undefined): AccountAreaAcc
     };
   }, [userId]);
 
+  if (!userId) return noAccountAreaAccess;
   // Results from a previous account never leak into the menu of the next one.
-  if (!userId || loaded?.userId !== userId) return noAccountAreaAccess;
+  if (loaded?.userId !== userId) return null;
 
   return loaded.access;
 }

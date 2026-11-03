@@ -3,6 +3,7 @@ import type { Metadata, Route } from "next";
 import { Motorbike, X } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Disclosure } from "@/components/ui/disclosure";
 import { pageContainerClassName } from "@/components/ui/page-container";
 import { DesignSelect } from "@/components/ui/design-select";
 import { InlineNotice } from "@/components/ui/inline-notice";
@@ -39,6 +40,8 @@ import {
   catalogFormEntries,
   clearCatalogFiltersHref,
   countActiveCatalogFilters,
+  hasSecondaryCatalogFilter,
+  secondaryFilterNames,
   normalizeCatalogPrice,
   removeCatalogFilterHref,
   type CatalogFilterKey,
@@ -379,39 +382,56 @@ function CatalogFilterForm({
           ))}
         </DesignSelect>
       </label>
-      {options.attributes ? (
-        <VariantAttributeFilterFields
-          options={options.attributes}
-          values={{ gender: query.gender, color: query.color, size: query.size }}
-          fieldClassName={fieldClassName}
-        />
-      ) : null}
-      <div className="grid min-w-0 grid-cols-2 gap-3 md:grid-cols-1 lg:grid-cols-2">
+      <Disclosure
+        variant="section"
+        defaultOpen={hasSecondaryCatalogFilter(query)}
+        summary={
+          <>
+            Mais filtros{" "}
+            <span className="text-muted-foreground font-normal">
+              ({secondaryFilterNames(options.attributes != null).join(", ")})
+            </span>
+          </>
+        }
+        className="rounded-none border-x-0 border-b-0 bg-transparent"
+        summaryClassName="px-0"
+        contentClassName="grid gap-4 px-0"
+      >
+        {options.attributes ? (
+          <VariantAttributeFilterFields
+            options={options.attributes}
+            values={{ gender: query.gender, color: query.color, size: query.size }}
+            fieldClassName={fieldClassName}
+          />
+        ) : null}
+        <div className="grid min-w-0 grid-cols-2 gap-3 md:grid-cols-1 lg:grid-cols-2">
+          <label className={fieldClassName}>
+            Preço mínimo (R$)
+            <PriceFilterInput name="minPrice" cents={query.minPrice} />
+          </label>
+          <label className={fieldClassName}>
+            Preço máximo (R$)
+            <PriceFilterInput name="maxPrice" cents={query.maxPrice} />
+          </label>
+        </div>
         <label className={fieldClassName}>
-          Preço mínimo (R$)
-          <PriceFilterInput name="minPrice" cents={query.minPrice} />
+          Disponibilidade
+          <DesignSelect aria-label="Disponibilidade" name="availability" defaultValue={query.availability}>
+            <option value="ALL">Todos</option>
+            <option value="IN_STOCK">Em estoque</option>
+            <option value="OUT_OF_STOCK">Esgotados</option>
+          </DesignSelect>
         </label>
         <label className={fieldClassName}>
-          Preço máximo (R$)
-          <PriceFilterInput name="maxPrice" cents={query.maxPrice} />
+          Oferta
+          <DesignSelect aria-label="Oferta" name="promotion" defaultValue={query.promotion}>
+            <option value="ALL">Todos os preços</option>
+            <option value="ON_SALE">Em oferta</option>
+          </DesignSelect>
         </label>
-      </div>
-      <label className={fieldClassName}>
-        Disponibilidade
-        <DesignSelect aria-label="Disponibilidade" name="availability" defaultValue={query.availability}>
-          <option value="ALL">Todos</option>
-          <option value="IN_STOCK">Em estoque</option>
-          <option value="OUT_OF_STOCK">Esgotados</option>
-        </DesignSelect>
-      </label>
-      <label className={fieldClassName}>
-        Oferta
-        <DesignSelect aria-label="Oferta" name="promotion" defaultValue={query.promotion}>
-          <option value="ALL">Todos os preços</option>
-          <option value="ON_SALE">Em oferta</option>
-        </DesignSelect>
-      </label>
-      <div className="flex flex-wrap items-center gap-3 pt-1">
+      </Disclosure>
+      {/* Sticky so the button stays in sight when the panel scrolls on its own. */}
+      <div className="bg-card sticky bottom-0 z-10 flex flex-wrap items-center gap-3 py-3 shadow-[0_-8px_12px_-10px_rgb(0_0_0/0.25)]">
         <Button type="submit" size="lg" className="flex-1 px-4">
           Aplicar filtros
         </Button>

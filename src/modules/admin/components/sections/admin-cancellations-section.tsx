@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { Ban } from "lucide-react";
 
 import { EmptyState } from "@/components/ui/empty-state";
 import { Pagination } from "@/components/ui/pagination";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDateTime, formatMoneyInCents } from "@/lib/format";
+import { InlineItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
+import { getOrderItemThumbnails } from "@/modules/orders/queries/order-item-thumbnails";
 import { CancellationStatusActions } from "@/modules/returns/components/cancellation-status-actions";
 import { listCancellationRequestsForAdmin } from "@/modules/returns/queries/admin-cancellations";
 import { listSellerOptionsForAdmin } from "@/modules/sellers/queries/sellers";
@@ -43,6 +46,7 @@ export async function AdminCancellationsSection({ searchParams }: AdminSectionPr
     }),
     listSellerOptionsForAdmin(),
   ]);
+  const thumbnails = await getOrderItemThumbnails(result.requests.flatMap((request) => request.sellerOrder.items));
   const pageHref = (page: number) =>
     adminHref("cancellations", { ...params, cancellationPage: page }, { cancellationSort: "oldest" });
 
@@ -111,9 +115,13 @@ export async function AdminCancellationsSection({ searchParams }: AdminSectionPr
                   {request.order.customerEmail}
                 </p>
                 <p className="text-muted-foreground mt-1 text-sm">
-                  {request.sellerOrder.items
-                    .map((item) => `${item.productNameSnapshot} (${item.quantity})`)
-                    .join(" · ")}{" "}
+                  {request.sellerOrder.items.map((item, index) => (
+                    <Fragment key={item.id}>
+                      {index > 0 ? " · " : null}
+                      <InlineItemThumbnail url={thumbnails.get(item.id)?.url} />
+                      {`${item.productNameSnapshot} (${item.quantity})`}
+                    </Fragment>
+                  ))}{" "}
                   · {formatMoneyInCents(request.amountInCents)}
                 </p>
                 {request.customerMessage ? (

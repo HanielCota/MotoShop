@@ -23,7 +23,7 @@ function hashRateLimitKey(key: string): string {
 // requests cannot all pass the same limit. Keys are hashed before persistence.
 export async function consumeRateLimit(input: { key: string; windowSeconds: number; max: number }) {
   const key = hashRateLimitKey(input.key);
-  const window = Math.max(1, Math.min(Math.ceil(input.windowSeconds), 3600));
+  const window = Math.max(1, Math.min(Math.ceil(input.windowSeconds), 86_400));
   const max = Math.max(1, Math.min(Math.ceil(input.max), 10000));
   const rows = await db.$queryRaw<CounterResult[]>(Prisma.sql`
     INSERT INTO rate_limit_counters (key, count, "resetAt")

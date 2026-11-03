@@ -96,7 +96,31 @@ describe("DesignSelect", () => {
     expect(positioner).not.toBeNull();
     expect(positioner).not.toHaveAttribute("data-side", "none");
   });
+
+  it("fits the 8 order status options without a scrollbar and still caps the list at the space available", () => {
+    render(
+      <DesignSelect aria-label="Status do pedido" defaultValue="ALL">
+        <option value="ALL">Todos</option>
+      </DesignSelect>,
+    );
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Status do pedido" }));
+
+    const list = defined(document.querySelector<HTMLElement>("[class*='--available-height']"));
+    const cap = /max-h-\[min\(var\(--available-height\),(\d+)rem\)\]/.exec(list.className);
+    const capInPixels = Number(defined(cap)[1]) * PIXELS_PER_REM;
+    expect(capInPixels).toBeGreaterThanOrEqual(
+      ORDER_STATUS_OPTION_COUNT * OPTION_HEIGHT_IN_PIXELS + LIST_PADDING_IN_PIXELS,
+    );
+  });
 });
+
+const PIXELS_PER_REM = 16;
+// Each option is py-2 (16px) plus a text-sm line (20px); the list has p-1 (4px) above and below.
+const OPTION_HEIGHT_IN_PIXELS = 36;
+const LIST_PADDING_IN_PIXELS = 8;
+// "Todos" plus the 7 order statuses of the Admin orders filter.
+const ORDER_STATUS_OPTION_COUNT = 8;
 
 function defined<T>(value: T | null | undefined): T {
   if (value === null || value === undefined) throw new Error("Expected value to be defined");

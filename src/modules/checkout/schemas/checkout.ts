@@ -4,6 +4,23 @@ import { isValidBrazilianPhone, onlyDigits } from "@/modules/customers/domain/ta
 
 import { isValidCpf } from "../domain/cpf";
 
+/** What the checkout sends to preview a coupon: the per-customer limit counts the e-mail and the CPF. */
+export const couponPreviewSchema = z.object({
+  couponCode: z.preprocess(
+    (value) => (typeof value === "string" ? value.trim().toUpperCase() : value),
+    z.string().min(1, "Digite o código do cupom.").max(40),
+  ),
+  customerEmail: z.preprocess(
+    (value) => (typeof value === "string" ? value.trim().toLowerCase() : value),
+    z.email("Preencha o seu e-mail para aplicar o cupom."),
+  ),
+  // An incomplete CPF is ignored here; the purchase still validates it.
+  customerTaxId: z.preprocess(
+    (value) => (typeof value === "string" ? value.replace(/\D/g, "") : undefined),
+    z.string().max(20).optional(),
+  ),
+});
+
 export const checkoutSchema = z
   .object({
     customerName: z.string().trim().min(2, "Informe seu nome.").max(120),

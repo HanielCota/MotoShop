@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { BRAND_DESCRIPTION, BRAND_HOME_TITLE, BRAND_SITE_NAME } from "@/config/brand";
 import { getApplicationBaseUrl } from "@/config/get-application-base-url";
 import { ConnectionStatusNotice } from "@/components/storefront/connection-status-notice";
-import { SiteFooter } from "@/components/storefront/site-footer";
+import { LiveSiteFooter } from "@/components/storefront/live-site-footer";
 import { StorefrontNavigation } from "@/components/storefront/storefront-navigation";
 import { StorefrontOnly } from "@/components/storefront/storefront-only";
 
@@ -62,7 +62,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           {children}
         </div>
         <StorefrontOnly>
-          <SiteFooter />
+          <LiveSiteFooter />
         </StorefrontOnly>
         <ConnectionStatusNotice />
       </body>

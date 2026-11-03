@@ -4,6 +4,14 @@ import Link from "next/link";
 import { pageContainerClassName } from "@/components/ui/page-container";
 import { MotoShopBrand } from "@/components/storefront/moto-shop-brand";
 import { BRAND_ABOUT_PARAGRAPHS } from "@/config/brand";
+import {
+  companySocialLinks,
+  formatCnpjLine,
+  formatCopyrightLine,
+  whatsAppHref,
+  type CompanyContact,
+} from "@/modules/admin/domain/company-contact";
+import { formatPhone } from "@/modules/customers/domain/tax-id";
 
 import { FooterAccountLink } from "./footer-account-link";
 import { PaymentMethodIcons } from "./payment-method-icons";
@@ -17,18 +25,26 @@ const quickLinks: { label: string; href: Route }[] = [
 // Only pages that exist; "Sobre", "Trocas e Devoluções", "Políticas" etc. join when the client sends the text.
 const institutionalLinks: { label: string; href: Route }[] = [{ label: "Venda no Moto Shop", href: "/seller" }];
 
-const serviceHours = [
-  { days: "Segunda a Sexta", hours: "08h30 às 18h30" },
-  { days: "Sábado", hours: "09h00 às 13h00" },
-  { days: "Domingos e Feriados", hours: "Retorna no próximo dia útil!" },
-];
+function serviceHours(contact: CompanyContact) {
+  return [
+    { days: "Segunda a Sexta", hours: contact.weekdayHours },
+    { days: "Sábado", hours: contact.saturdayHours },
+    { days: "Domingos e Feriados", hours: contact.sundayHolidayHours },
+  ];
+}
 
 // Official marks from Simple Icons (CC0), tinted with the link color through a CSS mask. WhatsApp joins
-// when the store has a business number.
-const socialLinks = [
-  { label: "Instagram do Moto Shop", href: "https://www.instagram.com/motoshopbrasil.com.br/", icon: "instagram.svg" },
-  { label: "YouTube do Moto Shop", href: "https://www.youtube.com/@motoshopbrasilcombr", icon: "youtube.svg" },
-] as const;
+// when Admin › Configurações has a phone.
+function socialLinks(contact: CompanyContact) {
+  const links = companySocialLinks(contact).map((link) => ({
+    label: `${link.name} do Moto Shop`,
+    href: link.href,
+    icon: link.name === "Instagram" ? "instagram.svg" : "youtube.svg",
+  }));
+  if (contact.supportPhone == null) return links;
+
+  return [...links, { label: "WhatsApp do Moto Shop", href: whatsAppHref(contact.supportPhone), icon: "whatsapp.svg" }];
+}
 
 // 44px touch target on phones; about 30% tighter from the tablet up, where a mouse is used.
 const footerLinkClassName =
@@ -42,8 +58,25 @@ function FooterHeading({ id, children }: { id: string; children: string }) {
   );
 }
 
-/** Rodapé público compartilhado; renderizado pelo layout raiz nas rotas da loja. */
-export function SiteFooter() {
+// The hours column is narrow on desktop: a long address wraps after the "@", not in the middle of the domain.
+function EmailWithBreak({ email }: { email: string }) {
+  const at = email.indexOf("@");
+  if (at === -1) return email;
+
+  return (
+    <>
+      {email.slice(0, at + 1)}
+      <wbr />
+      {email.slice(at + 1)}
+    </>
+  );
+}
+
+/**
+ * Public footer, rendered by the root layout on storefront routes. Company, contact and hours come
+ * from Admin › Configurações (see `LiveSiteFooter`).
+ */
+export function SiteFooter({ contact, copyrightYear }: { contact: CompanyContact; copyrightYear: string }) {
   return (
     <footer className="bg-moto-brand-foreground text-white">
       <div
@@ -100,15 +133,25 @@ export function SiteFooter() {
         <section aria-labelledby="footer-service-hours">
           <FooterHeading id="footer-service-hours">Horário de atendimento</FooterHeading>
           <dl className="space-y-1.5 text-sm leading-6">
-            {serviceHours.map((entry) => (
+            {serviceHours(contact).map((entry) => (
               <div key={entry.days}>
                 <dt className="inline font-semibold text-white/90">{entry.days}</dt>
                 <dd className="inline text-white/70"> - {entry.hours}</dd>
               </div>
             ))}
           </dl>
+          {contact.supportEmail != null || contact.supportPhone != null ? (
+            <p className="mt-3 text-sm leading-6 text-white/70">
+              {contact.supportEmail != null ? (
+                <span className="block break-words">
+                  <EmailWithBreak email={contact.supportEmail} />
+                </span>
+              ) : null}
+              {contact.supportPhone != null ? <span className="block">{formatPhone(contact.supportPhone)}</span> : null}
+            </p>
+          ) : null}
           <ul aria-label="Redes sociais do Moto Shop" className="mt-4 -ml-3 flex gap-1">
-            {socialLinks.map((link) => (
+            {socialLinks(contact).map((link) => (
               <li key={link.href}>
                 <a
                   href={link.href}
@@ -129,8 +172,8 @@ export function SiteFooter() {
         </section>
 
         <p className="border-t border-white/15 pt-4 text-xs leading-5 text-white/55 lg:order-5 lg:col-span-4 lg:text-right">
-          <span className="block">© 2026 MOTO SHOP BRASIL E-COMMERCE E MARKETPLACE. Todos os direitos reservados.</span>
-          <span className="block">CNPJ: 69.663.409/0001-94</span>
+          <span className="block">{formatCopyrightLine(contact.legalName, copyrightYear)}</span>
+          <span className="block">{formatCnpjLine(contact.cnpj)}</span>
         </p>
       </div>
     </footer>

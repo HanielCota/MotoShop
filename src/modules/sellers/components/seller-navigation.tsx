@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   MessageCircleQuestion,
-  Package,
   Settings,
+  Tag,
   TicketPercent,
   Truck,
   type LucideIcon,
@@ -34,7 +34,7 @@ type NavigationItem = {
 const items: NavigationItem[] = [
   { href: "/seller", label: "Visão geral", icon: LayoutDashboard, visible: () => true },
   { href: "/seller/orders", label: "Pedidos", icon: domainIcons.order, visible: (p) => p.canReadOrders },
-  { href: "/seller/products" as Route, label: "Produtos", icon: Package, visible: (p) => p.canManageCatalog },
+  { href: "/seller/products" as Route, label: "Produtos", icon: Tag, visible: (p) => p.canManageCatalog },
   { href: "/seller/questions", label: "Perguntas", icon: MessageCircleQuestion, visible: (p) => p.canManageCatalog },
   { href: "/seller/shipping" as Route, label: "Frete", icon: Truck, visible: (p) => p.canManageStore },
   { href: "/seller/coupons" as Route, label: "Cupons", icon: TicketPercent, visible: (p) => p.canManageCoupons },

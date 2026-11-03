@@ -67,4 +67,28 @@ describe("authentication email", () => {
     expect(html).toContain("https://motoshopbrasil.com.br/login");
     expect(html).toContain("https://motoshopbrasil.com.br/forgot-password");
   });
+
+  it.each([
+    [
+      "verify",
+      "https://motoshopbrasil.com.br/api/auth/verify-email?token=verify-token&callbackURL=%2Flogin%3Fverified%3D1",
+      "Confirmar e-mail",
+    ],
+    ["reset", "https://motoshopbrasil.com.br/reset-password?token=reset-token", "Criar nova senha"],
+  ] as const)(
+    "keeps the %s link unchanged in the button, writes it out, and shows the token only there",
+    async (kind, url, label) => {
+      const token = new URL(url).searchParams.get("token") ?? "";
+      await sendAuthEmail({ kind, to: "buyer@example.test", url, token });
+
+      const html = renderToStaticMarkup(sendNotificationEmail.mock.calls[0]?.[0].react);
+      const links = [...html.matchAll(/href="([^"]*)"/g)].map((match) => match[1]?.replaceAll("&amp;", "&"));
+
+      expect(links).toEqual([url, url]);
+      expect(html).toContain(label);
+      expect(html).toContain(url.replaceAll("&", "&amp;"));
+      expect(html.split(url.replaceAll("&", "&amp;")).join("")).not.toContain(token);
+      expect(html).not.toContain("buyer@example.test");
+    },
+  );
 });

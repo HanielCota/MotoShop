@@ -39,12 +39,18 @@ it("hides the rating filter and sort while there are only a few reviews", () => 
   expect(screen.queryByRole("button", { name: "Aplicar" })).not.toBeInTheDocument();
 });
 
-it("shows filter and sort without an apply button from five reviews on", () => {
-  renderSection(5);
+it("shows filter and sort without an apply button from eleven reviews on", () => {
+  renderSection(11);
 
   expect(screen.getByText("Nota mínima")).toBeInTheDocument();
   expect(screen.getByText("Ordenar avaliações")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Aplicar" })).not.toBeInTheDocument();
+});
+
+it("hides filter and sort with ten reviews or fewer, where they take more room than the reviews", () => {
+  renderSection(10);
+
+  expect(screen.queryByText("Nota mínima")).not.toBeInTheDocument();
 });
 
 it("keeps the filter visible while one is applied, so it can be removed", () => {

@@ -17,18 +17,10 @@ import {
   reorderProductImagesAction,
   type ProductImageResult,
 } from "@/modules/products/actions/product-image-actions";
-import { uploadImageToImageKit } from "@/shared/storage/upload-image";
+import { findImageFileProblem, uploadImageToImageKit } from "@/shared/storage/upload-image";
 import { formatCount } from "@/lib/format";
 
 type ProductImage = { id: string; storageKey: string; altText: string | null; url: string | null };
-
-const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-const maxImageSizeInBytes = 5 * 1024 * 1024;
-
-function assertValidImageFile(file: File) {
-  if (!allowedTypes.has(file.type)) throw new Error("Use imagens JPG, PNG ou WebP.");
-  if (file.size > maxImageSizeInBytes) throw new Error("Cada imagem deve ter no máximo 5 MB.");
-}
 
 /** Removes the orphan upload, then rethrows the original error (with the cleanup error, if any). */
 async function discardUploadAndRethrow(
@@ -56,8 +48,6 @@ async function sendFileToStorage(
 }
 
 async function uploadProductImage(productId: string, file: File): Promise<ProductImage> {
-  assertValidImageFile(file);
-
   const upload = await createProductImageUploadUrlAction({
     productId,
     contentType: file.type,
@@ -106,6 +96,14 @@ export function ProductImageManager({
       setError(
         `Você pode adicionar mais ${formatCount(Math.max(0, 8 - images.length), "imagem", "imagens")} a este produto.`,
       );
+      return;
+    }
+    // Every file is checked before the first upload, so a bad file never leaves the others half sent.
+    const fileProblem = Array.from(files)
+      .map(findImageFileProblem)
+      .find((problem) => problem != null);
+    if (fileProblem != null) {
+      setError(fileProblem);
       return;
     }
     setUploading(true);

@@ -9,6 +9,7 @@ import {
   type CustomerOrderIdentity,
 } from "@/modules/orders/application/resolve-customer-order-access";
 import { ApplicationError } from "@/shared/errors/application-error";
+import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 import { isSellerOrderEligibleForReturn } from "../domain/return-eligibility";
 import {
@@ -19,6 +20,11 @@ import {
   type ReturnPhotoContentType,
   type UploadedReturnPhoto,
 } from "../domain/return-photos";
+
+const RETURN_PHOTO_UPLOAD_LIMIT = { windowSeconds: 60, max: 10 };
+// A return takes at most 3 photos; 15 a day per item leaves room to retry without letting a script
+// fill the free ImageKit storage.
+const RETURN_PHOTO_DAILY_UPLOAD_LIMIT = { windowSeconds: 24 * 60 * 60, max: 15 };
 
 export type ReturnPhotoTarget = { orderNumber: string; orderItemId: string; identity: CustomerOrderIdentity };
 
@@ -55,6 +61,11 @@ export async function createReturnPhotoUpload(
     throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Cada foto pode ter até 5 MB." });
 
   const item = await findReturnableOrderItem(target);
+
+  // Counted only after the item is confirmed to be the caller's: nobody spends another customer's quota.
+  await assertRateLimit({ key: `return-photo-upload:${item.id}`, ...RETURN_PHOTO_UPLOAD_LIMIT });
+  await assertRateLimit({ key: `return-photo-upload-day:${item.id}`, ...RETURN_PHOTO_DAILY_UPLOAD_LIMIT });
+
   const key = buildReturnPhotoKey(item.id, randomUUID(), file.contentType);
 
   return new ImageKitStorageProvider().createUploadUrl({

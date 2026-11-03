@@ -80,6 +80,29 @@ export function calculateSellerCharges<Item extends SellerChargeItem, Quote exte
   );
 }
 
+/**
+ * The discount a coupon gives these items, split by seller exactly as the order will be. Shipping
+ * never enters a coupon, so the checkout can show it before the shipping options are chosen.
+ */
+export function calculateCartCouponDiscount(input: {
+  items: readonly SellerChargeItem[];
+  coupon: SellerChargeCoupon;
+  now: Date;
+}): number {
+  const subtotals = Array.from(Map.groupBy(input.items, (item) => item.variant.product.sellerId).entries()).map(
+    ([sellerId, sellerItems]) => {
+      const lines = sellerItems.map((item) => ({
+        unitPriceInCents: getCurrentPriceInCents(item.variant, input.now),
+        quantity: item.quantity,
+      }));
+      const totals = calculateOrderTotals({ lines, shippingAmountInCents: 0 });
+      return { sellerId, totals: { itemsSubtotalInCents: totals.itemsSubtotalInCents } };
+    },
+  );
+
+  return sumMoneyInCents(allocateCouponDiscounts(subtotals, input.coupon));
+}
+
 type RawSellerCharge<Item extends SellerChargeItem, Quote extends SellerChargeShippingQuote> = Pick<
   SellerCharge<Item, Quote>,
   "sellerId" | "items" | "storeId" | "storeName" | "shipping" | "totals"

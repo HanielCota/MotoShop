@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ lock: vi.fn(), find: vi.fn(), update: vi.fn(), create: vi.fn(), send: vi.fn() }));
 vi.mock("server-only", () => ({}));
+vi.mock("@/config/get-application-base-url", () => ({ getApplicationBaseUrl: () => "https://motoshopbrasil.com.br" }));
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn() } }));
 vi.mock("@/lib/database", () => ({
   db: {
@@ -18,6 +19,7 @@ vi.mock("@/lib/email/resend-email-provider", () => ({
   },
 }));
 import { RetryAfterError } from "inngest";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import { sendNotificationEmail } from "./send-notification-email";
 const input = { eventKey: "payment:1", kind: "PAYMENT", to: "buyer@example.test", subject: "Teste", react: "Teste" };
@@ -63,3 +65,14 @@ function defined<T>(value: T | null | undefined): T {
   if (value === null || value === undefined) throw new Error("Expected value to be defined");
   return value;
 }
+
+it("wraps every message in the Moto Shop frame, with the logo by absolute URL and the subject as preview", async () => {
+  await sendNotificationEmail({ ...input, subject: "Pedido recebido · MS-1", react: "Corpo da mensagem" });
+
+  const html = renderToStaticMarkup(mocks.send.mock.calls[0]?.[0].react);
+  expect(html).toContain("Corpo da mensagem");
+  expect(html).toContain('src="https://motoshopbrasil.com.br/brand/email-logo.png"');
+  expect(html).toContain("Pedido recebido · MS-1");
+  expect(html).toContain("CNPJ: 69.663.409/0001-94");
+  expect(mocks.send.mock.calls[0]?.[0].subject).toBe("Pedido recebido · MS-1");
+});

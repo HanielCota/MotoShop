@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { InlineNotice } from "@/components/ui/inline-notice";
@@ -9,9 +10,10 @@ import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { listActiveMotorcycleFitmentsForProduct } from "@/modules/catalog/queries/admin-catalog";
 import { ProductImageManager } from "@/modules/products/components/product-image-manager";
 import { ProductEditForm } from "@/modules/products/components/product-edit-form";
+import { ProductEditSkeleton } from "@/modules/products/components/product-edit-skeleton";
 import { ProductSubmissionAction } from "@/modules/products/components/product-submission-action";
 import { listProductBrands, listProductCategories } from "@/modules/products/queries/products";
-import { getSellerProductForEdit } from "@/modules/products/queries/seller-product-for-edit";
+import { getSellerProductForEdit, isSellerProductEditable } from "@/modules/products/queries/seller-product-for-edit";
 import { formatPromotionDate, getMeasurements } from "@/modules/products/domain/product-commercial-fields";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 
@@ -23,13 +25,24 @@ export const metadata: Metadata = {
 export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const context = await requireSellerAccess("PRODUCT_UPDATE");
+  // Check existence before any Suspense: once streaming starts, the status has already gone out as 200.
+  if ((await isSellerProductEditable(context.seller.id, id)) === false) notFound();
+
+  return (
+    <Suspense fallback={<ProductEditSkeleton />}>
+      <EditProduct sellerId={context.seller.id} productId={id} />
+    </Suspense>
+  );
+}
+
+async function EditProduct({ sellerId, productId }: { sellerId: string; productId: string }) {
   const [product, categories, brands, fitments] = await Promise.all([
-    getSellerProductForEdit(context.seller.id, id),
+    getSellerProductForEdit(sellerId, productId),
     listProductCategories(),
     listProductBrands(),
     listActiveMotorcycleFitmentsForProduct(),
   ]);
-  if (!product || product.variants.length === 0) notFound();
+  if (product == null || product.variants.length === 0) notFound();
 
   return (
     <>

@@ -10,7 +10,6 @@ import {
 } from "@/modules/orders/application/resolve-customer-order-access";
 import { readGuestOrderCookie } from "@/modules/orders/infrastructure/guest-order-cookie";
 import { toActionError } from "@/shared/errors/action-error";
-import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 
 import { requestReturn, type ReturnRequestResult } from "../application/request-return";
 import { createReturnPhotoUpload, removeReturnPhotoUpload } from "../application/return-photo-uploads";
@@ -30,11 +29,6 @@ const returnPhotoTargetSchema = z.object({
   orderNumber: z.string().trim().min(1).max(40),
   orderItemId: z.cuid(),
 });
-
-const RETURN_PHOTO_UPLOAD_LIMIT = { windowSeconds: 60, max: 10 };
-// A return takes at most 3 photos; 15 a day per item leaves room to retry without letting a script
-// fill the free ImageKit storage.
-const RETURN_PHOTO_DAILY_UPLOAD_LIMIT = { windowSeconds: 24 * 60 * 60, max: 15 };
 
 export type ReturnActionState = {
   error?: string;
@@ -95,11 +89,6 @@ export async function createReturnPhotoUploadAction(input: unknown): Promise<Ret
   try {
     const identity = await resolveReturnIdentity(parsed.data.orderNumber);
     if ("error" in identity) return identity;
-    await assertRateLimit({ key: `return-photo-upload:${parsed.data.orderItemId}`, ...RETURN_PHOTO_UPLOAD_LIMIT });
-    await assertRateLimit({
-      key: `return-photo-upload-day:${parsed.data.orderItemId}`,
-      ...RETURN_PHOTO_DAILY_UPLOAD_LIMIT,
-    });
 
     const upload = await createReturnPhotoUpload(
       { orderNumber: parsed.data.orderNumber, orderItemId: parsed.data.orderItemId, identity: identity.identity },

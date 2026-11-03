@@ -23,6 +23,8 @@ type ProductQuestion = {
 
 const SECTION_ID = "perguntas";
 
+// With ten questions or fewer, sorting them takes more room than it helps.
+const MIN_QUESTIONS_FOR_SORT = 11;
 export function ProductQuestionsSection({
   slug,
   productId,
@@ -52,7 +54,7 @@ export function ProductQuestionsSection({
         <CardDescription>Perguntas de clientes e respostas da loja.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {questionCount > 1 ? (
+        {questionCount >= MIN_QUESTIONS_FOR_SORT || params.questionSort !== "newest" ? (
           <form
             className="bg-surface-sunken flex flex-wrap items-end gap-3 rounded-lg p-3"
             method="get"

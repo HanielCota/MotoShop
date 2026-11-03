@@ -25,8 +25,8 @@ type ProductReview = {
 };
 
 const SECTION_ID = "avaliacoes";
-// With only a few reviews the filters take more room than the reviews themselves.
-const MIN_REVIEWS_FOR_FILTERS = 5;
+// With ten reviews or fewer the filters take more room than the reviews themselves.
+const MIN_REVIEWS_FOR_FILTERS = 11;
 // "1 estrela ou mais" would equal "Todas as notas", and 5 is the top: no "ou mais".
 const ratingOptions = [
   { value: "", label: "Todas as notas" },

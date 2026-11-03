@@ -102,7 +102,8 @@ export function DesignSelect({
               "origin-[var(--transform-origin)] transition-[opacity,transform] duration-100 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
             )}
           >
-            <Select.List className="max-h-[min(var(--available-height),18rem)] scroll-py-1 overflow-y-auto p-1">
+            {/* 24rem fits 10 options of 36px without a scrollbar; small screens still stop at the space available. */}
+            <Select.List className="max-h-[min(var(--available-height),24rem)] scroll-py-1 overflow-y-auto p-1">
               {items.map((item, index) => (
                 <Select.Item
                   key={`${item.value ?? "empty"}-${index}`}

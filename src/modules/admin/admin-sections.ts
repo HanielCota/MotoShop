@@ -1,4 +1,10 @@
 export const adminSections = [
+  {
+    slug: "sales",
+    title: "Vendas",
+    description: "Vendas confirmadas de todas as lojas no período.",
+    group: "Marketplace",
+  },
   { slug: "sellers", title: "Lojistas", description: "Cadastro, aprovação e equipe das lojas.", group: "Marketplace" },
   {
     slug: "products",
@@ -14,7 +20,12 @@ export const adminSections = [
   },
   { slug: "coupons", title: "Cupons", description: "Campanhas financiadas pelo Moto Shop.", group: "Marketplace" },
   { slug: "vip", title: "Plano VIP", description: "Ativação e exposição das lojas.", group: "Marketplace" },
-  { slug: "commission", title: "Comissão", description: "Percentual padrão do marketplace.", group: "Marketplace" },
+  {
+    slug: "commission",
+    title: "Configurações",
+    description: "O que vale para o site todo. Cada cartão salva sozinho, e cada mudança fica na Auditoria.",
+    group: "Marketplace",
+  },
   { slug: "orders", title: "Pedidos", description: "Acompanhamento de compras e envios.", group: "Operação" },
   {
     slug: "cancellations",
@@ -41,6 +52,7 @@ export const adminSections = [
 export type AdminSection = (typeof adminSections)[number]["slug"];
 
 export const adminWorkspaceSections = [
+  "sales",
   "sellers",
   "products",
   "catalog",

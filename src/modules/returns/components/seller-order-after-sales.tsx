@@ -1,7 +1,9 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatDate, formatMoneyInCents } from "@/lib/format";
+import { InlineItemThumbnail } from "@/modules/cart/components/cart-item-thumbnail";
+import type { CartThumbnail } from "@/modules/cart/queries/cart-thumbnails";
 import {
   cancellationReasonLabels,
   disputeReasonLabels,
@@ -30,7 +32,7 @@ type ReturnSummary = {
   items: readonly {
     id: string;
     quantity: number;
-    orderItem: { productNameSnapshot: string; skuSnapshot: string };
+    orderItem: { id: string; productNameSnapshot: string; skuSnapshot: string };
   }[];
   photos: readonly ReturnPhotoSummary[];
 };
@@ -43,7 +45,8 @@ export type SellerOrderAfterSalesData = {
   disputes: readonly DisputeSummary[];
 };
 
-type Detail = readonly [label: string, value: string | null];
+type Detail = readonly [label: string, value: ReactNode];
+type Thumbnails = ReadonlyMap<string, CartThumbnail>;
 
 // Requested: the Moto Shop is still deciding. Approved: decided, the order is being cancelled.
 const cancellationWarnings: Readonly<Record<string, ReactNode>> = {
@@ -62,12 +65,19 @@ const OPEN_RETURN_STATUSES = new Set(["REQUESTED", "UNDER_REVIEW", "APPROVED", "
 const OPEN_DISPUTE_STATUSES = new Set(["OPEN", "UNDER_REVIEW"]);
 
 /** Cancelamentos, devoluções e disputas da parte do pedido da loja, sem ações: quem decide é o Moto Shop. */
-export function SellerOrderAfterSales({ order }: { order: SellerOrderAfterSalesData }) {
+export function SellerOrderAfterSales({
+  order,
+  thumbnails,
+}: {
+  order: SellerOrderAfterSalesData;
+  /** Foto de cada item, pelo id do item do pedido; sem foto, aparece o substituto. */
+  thumbnails: Thumbnails;
+}) {
   const total = order.cancellationRequests.length + order.returnRequests.length + order.disputes.length;
 
   if (total === 0) return null;
 
-  const orderItems = describeItems(order.items.map(toItemLine));
+  const orderItems = describeItemLines(order.items, thumbnails);
 
   return (
     <section aria-label="Pós-venda" className="flex flex-col gap-2">
@@ -78,7 +88,7 @@ export function SellerOrderAfterSales({ order }: { order: SellerOrderAfterSalesD
         <CancellationBlock key={request.id} request={request} orderItems={orderItems} />
       ))}
       {order.returnRequests.map((request) => (
-        <ReturnBlock key={request.id} request={request} />
+        <ReturnBlock key={request.id} request={request} thumbnails={thumbnails} />
       ))}
       {order.disputes.map((dispute) => (
         <DisputeBlock key={dispute.id} dispute={dispute} orderItems={orderItems} />
@@ -87,7 +97,7 @@ export function SellerOrderAfterSales({ order }: { order: SellerOrderAfterSalesD
   );
 }
 
-function CancellationBlock({ request, orderItems }: { request: CancellationSummary; orderItems: string }) {
+function CancellationBlock({ request, orderItems }: { request: CancellationSummary; orderItems: ReactNode }) {
   return (
     <AfterSalesBlock
       title="Cancelamento"
@@ -104,8 +114,8 @@ function CancellationBlock({ request, orderItems }: { request: CancellationSumma
   );
 }
 
-function ReturnBlock({ request }: { request: ReturnSummary }) {
-  const items = request.items.map((item) => toItemLine({ ...item.orderItem, quantity: item.quantity }));
+function ReturnBlock({ request, thumbnails }: { request: ReturnSummary; thumbnails: Thumbnails }) {
+  const items = request.items.map((item) => ({ ...item.orderItem, quantity: item.quantity }));
 
   return (
     <AfterSalesBlock
@@ -113,7 +123,7 @@ function ReturnBlock({ request }: { request: ReturnSummary }) {
       domain="return"
       status={request.status}
       details={[
-        ["Itens", describeItems(items)],
+        ["Itens", describeItemLines(items, thumbnails)],
         ["Motivo", returnReasonLabels[request.reason] ?? request.reason],
         ["Mensagem do cliente", request.customerMessage],
         ["Valor estimado", formatMoneyInCents(request.amountInCents)],
@@ -129,7 +139,7 @@ function ReturnBlock({ request }: { request: ReturnSummary }) {
   );
 }
 
-function DisputeBlock({ dispute, orderItems }: { dispute: DisputeSummary; orderItems: string }) {
+function DisputeBlock({ dispute, orderItems }: { dispute: DisputeSummary; orderItems: ReactNode }) {
   return (
     <AfterSalesBlock
       title="Disputa"
@@ -173,7 +183,7 @@ function AfterSalesBlock({
       </div>
       <dl className="grid gap-1">
         {details.map(([label, value]) =>
-          hasText(value) ? (
+          hasContent(value) ? (
             <div key={label} className="text-muted-foreground break-words">
               <dt className="text-foreground inline font-medium">{label}:</dt> <dd className="inline">{value}</dd>
             </div>
@@ -186,12 +196,30 @@ function AfterSalesBlock({
   );
 }
 
-function toItemLine(item: { quantity: number; productNameSnapshot: string; skuSnapshot: string }): string {
-  return `${item.quantity} × ${item.productNameSnapshot} · SKU ${item.skuSnapshot}`;
+type ItemLine = { id: string; quantity: number; productNameSnapshot: string; skuSnapshot: string };
+
+/** The item lines, or nothing without items, so the "Itens" row is left out as an empty text was. */
+function describeItemLines(items: readonly ItemLine[], thumbnails: Thumbnails): ReactNode {
+  if (items.length === 0) return null;
+
+  return <ItemLines items={items} thumbnails={thumbnails} />;
 }
 
-function describeItems(lines: readonly string[]): string {
-  return lines.join("; ");
+/** The item lines as before ("1 × Name · SKU X; ..."), each with the product photo at its start. */
+function ItemLines({ items, thumbnails }: { items: readonly ItemLine[]; thumbnails: Thumbnails }) {
+  return items.map((item, index) => (
+    <Fragment key={item.id}>
+      {index > 0 ? "; " : null}
+      <InlineItemThumbnail url={thumbnails.get(item.id)?.url} />
+      {`${item.quantity} × ${item.productNameSnapshot} · SKU ${item.skuSnapshot}`}
+    </Fragment>
+  ));
+}
+
+function hasContent(value: ReactNode): boolean {
+  if (typeof value === "string") return hasText(value);
+
+  return value != null;
 }
 
 /** A detail with only spaces says nothing, so it is left out like an empty one. */
