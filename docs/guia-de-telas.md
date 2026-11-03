@@ -158,6 +158,7 @@ Com `review.pendente@example.test`, a Central mostra a loja aguardando aprovaç�
 | Tela              | Endereço                   | O que observar                                     |
 | ----------------- | -------------------------- | -------------------------------------------------- |
 | Painel            | `/admin`                   | Contadores de pendências e saúde das integrações   |
+| Vendas            | `/admin/sales`             | Repasse por loja e "Baixar planilha" (CSV)         |
 | Lojistas          | `/admin/sellers`           | Aprovar a loja pendente, suspender e reativar      |
 | Produtos          | `/admin/products`          | Moderação do produto em análise (aprovar/rejeitar) |
 | Catálogo          | `/admin/catalog`           | Categorias, marcas, fabricantes, modelos e motos   |
