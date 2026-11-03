@@ -12,7 +12,7 @@ export type CreatePaymentInput = {
   installments?: number;
   applicationFeeInCents?: number;
   idempotencyKey: string;
-  sellerCount: number;
+  sellerIds: readonly string[];
 };
 
 export type CreatePaymentResult = {
@@ -41,5 +41,5 @@ export interface PaymentProvider {
   createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult>;
   getPayment(externalId: string): Promise<GetPaymentResult>;
   refund(input: RefundPaymentInput): Promise<CreatePaymentResult>;
-  supportsSellerCount(sellerCount: number): boolean;
+  supportsSellers(sellerIds: readonly string[]): boolean;
 }

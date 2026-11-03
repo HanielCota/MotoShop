@@ -50,7 +50,7 @@ vi.mock("@/config/env", () => ({ env: { BETTER_AUTH_SECRET: "secret" } }));
 vi.mock("@/lib/database", () => ({ db: mocks.db }));
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("@/lib/payment/mercado-pago-provider", () => ({
-  mercadoPagoProvider: { createPayment: mocks.createPayment, supportsSellerCount: () => true },
+  mercadoPagoProvider: { createPayment: mocks.createPayment, supportsSellers: () => true },
 }));
 vi.mock("@/modules/payments/application/assert-payment-ready", () => ({
   assertPaymentConfigured: vi.fn(),

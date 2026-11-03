@@ -20,8 +20,8 @@ vi.mock("@/config/env", () => ({
 import { MercadoPagoProvider } from "./mercado-pago-provider";
 
 class ConnectedSellerTestProvider extends MercadoPagoProvider {
-  override supportsSellerCount(sellerCount: number): boolean {
-    return sellerCount === 1;
+  override supportsSellers(sellerIds: readonly string[]): boolean {
+    return sellerIds.length === 1;
   }
 }
 
@@ -48,7 +48,7 @@ it("sends only the card token, issuer and one installment with a scoped webhook 
     issuerId: "25",
     installments: 1,
     idempotencyKey: "card-attempt",
-    sellerCount: 1,
+    sellerIds: ["seller-1"],
   });
   const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string);
   expect(body).toMatchObject({
@@ -75,7 +75,7 @@ it("gives a Pix charge a 30-minute expiration so an unpaid one stops holding sto
     payerTaxId: "19119119100",
     paymentMethodId: "pix",
     idempotencyKey: "pix-attempt",
-    sellerCount: 1,
+    sellerIds: ["seller-1"],
   });
 
   const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string);
@@ -116,7 +116,7 @@ it("keeps only payment-matching fields and Pix instructions from provider respon
     payerTaxId: "19119119100",
     paymentMethodId: "pix",
     idempotencyKey: "privacy-test",
-    sellerCount: 1,
+    sellerIds: ["seller-1"],
   });
 
   expect(result.providerMetadata).toEqual({
@@ -144,7 +144,7 @@ it("rejects a scoped webhook URL without its secret before sending a charge", as
       payerTaxId: "19119119100",
       paymentMethodId: "pix",
       idempotencyKey: "attempt",
-      sellerCount: 1,
+      sellerIds: ["seller-1"],
     }),
   ).rejects.toThrow("assinatura");
   expect(fetchMock).not.toHaveBeenCalled();
@@ -189,7 +189,7 @@ it("classifies validation failures as definitive and transient failures as uncer
     payerTaxId: "19119119100",
     paymentMethodId: "pix",
     idempotencyKey: "attempt",
-    sellerCount: 1,
+    sellerIds: ["seller-1"],
   } as const;
 
   await expect(provider.createPayment(input)).rejects.toMatchObject({
@@ -225,7 +225,7 @@ it("sends the validated payer CPF when creating a Pix payment", async () => {
     payerTaxId: "19119119100",
     paymentMethodId: "pix",
     idempotencyKey: "checkout-123",
-    sellerCount: 1,
+    sellerIds: ["seller-1"],
   });
 
   const request = fetchMock.mock.calls[0]?.[1];
@@ -249,7 +249,7 @@ it("does not call the gateway when a Pix payment has no CPF", async () => {
       payerEmail: "buyer@example.test",
       paymentMethodId: "pix",
       idempotencyKey: "checkout-123",
-      sellerCount: 1,
+      sellerIds: ["seller-1"],
     }),
   ).rejects.toThrow("CPF válido");
   expect(fetchMock).not.toHaveBeenCalled();
@@ -260,7 +260,7 @@ it("blocks marketplace charges until seller-linked Mercado Pago OAuth is availab
   vi.stubGlobal("fetch", fetchMock);
   const provider = new MercadoPagoProvider();
 
-  expect(provider.supportsSellerCount(1)).toBe(false);
+  expect(provider.supportsSellers(["seller-1"])).toBe(false);
   await expect(
     provider.createPayment({
       orderNumber: "MS-NO-SELLER-AUTH",
@@ -269,7 +269,7 @@ it("blocks marketplace charges until seller-linked Mercado Pago OAuth is availab
       paymentMethodId: "pix",
       payerTaxId: "19119119100",
       idempotencyKey: "blocked-payment",
-      sellerCount: 1,
+      sellerIds: ["seller-1"],
     }),
   ).rejects.toThrow("Nenhuma cobrança foi criada");
   expect(fetchMock).not.toHaveBeenCalled();
@@ -282,8 +282,8 @@ it("charges a one-store order on the platform test account without a marketplace
   vi.stubGlobal("fetch", fetchMock);
   const provider = new MercadoPagoProvider();
 
-  expect(provider.supportsSellerCount(1)).toBe(true);
-  expect(provider.supportsSellerCount(2)).toBe(false);
+  expect(provider.supportsSellers(["seller-1"])).toBe(true);
+  expect(provider.supportsSellers(["seller-1", "seller-2"])).toBe(false);
   await provider.createPayment({
     orderNumber: "MS-TEST-MODE",
     amountInCents: 100,
@@ -292,7 +292,7 @@ it("charges a one-store order on the platform test account without a marketplace
     payerTaxId: "19119119100",
     applicationFeeInCents: 12,
     idempotencyKey: "test-mode-payment",
-    sellerCount: 1,
+    sellerIds: ["seller-1"],
   });
 
   const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string);
@@ -308,7 +308,7 @@ it("keeps blocking charges in the Vercel production deployment even with the tes
   vi.stubGlobal("fetch", fetchMock);
   const provider = new MercadoPagoProvider();
 
-  expect(provider.supportsSellerCount(1)).toBe(false);
+  expect(provider.supportsSellers(["seller-1"])).toBe(false);
   await expect(
     provider.createPayment({
       orderNumber: "MS-TEST-MODE-PROD",
@@ -317,7 +317,7 @@ it("keeps blocking charges in the Vercel production deployment even with the tes
       paymentMethodId: "pix",
       payerTaxId: "19119119100",
       idempotencyKey: "test-mode-production",
-      sellerCount: 1,
+      sellerIds: ["seller-1"],
     }),
   ).rejects.toThrow("Nenhuma cobrança foi criada");
   expect(fetchMock).not.toHaveBeenCalled();
@@ -347,7 +347,7 @@ it("treats a rate-limited (429) charge request as definitively not processed", a
       payerTaxId: "19119119100",
       paymentMethodId: "pix",
       idempotencyKey: "rate-attempt",
-      sellerCount: 1,
+      sellerIds: ["seller-1"],
     }),
   ).rejects.toMatchObject({ details: { httpStatus: 429, outcome: "DEFINITIVE_REJECTION" } });
 });

@@ -23,22 +23,22 @@ const SINGLE_SELLER = 1;
  * HTTP + error classification live in ./mercado-pago/http.ts, response mapping in ./mercado-pago/mappers.ts.
  */
 export class MercadoPagoProvider implements PaymentProvider {
-  supportsSellerCount(sellerCount: number): boolean {
+  supportsSellers(sellerIds: readonly string[]): boolean {
     // The marketplace has no seller-linked Mercado Pago OAuth connection yet.
     // A platform token plus application_fee is not a safe substitute for it.
-    if (!Number.isSafeInteger(sellerCount) || sellerCount < 1) return false;
+    if (sellerIds.length === 0) return false;
 
     // Test mode only: one store, charged on the platform's own test account, with nothing to split.
-    return sellerCount === SINGLE_SELLER && this.isSingleAccountTestMode();
+    return sellerIds.length === SINGLE_SELLER && this.isSingleAccountTestMode();
   }
 
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
     this.assertConfigured();
-    if (!this.supportsSellerCount(input.sellerCount)) {
+    if (!this.supportsSellers(input.sellerIds)) {
       throw new ApplicationError({
         code: "CONFIGURATION_ERROR",
         message:
-          input.sellerCount > 1
+          input.sellerIds.length > 1
             ? "O checkout com vários lojistas ainda depende da habilitação do split 1:N no Mercado Pago."
             : "O lojista ainda não conectou uma conta Mercado Pago ao marketplace. Nenhuma cobrança foi criada.",
         statusCode: 503,

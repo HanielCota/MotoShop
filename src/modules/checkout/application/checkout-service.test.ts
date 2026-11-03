@@ -70,7 +70,7 @@ const provider = (createPayment: PaymentProvider["createPayment"]): PaymentProvi
   createPayment,
   getPayment: vi.fn(),
   refund: vi.fn(),
-  supportsSellerCount: () => true,
+  supportsSellers: () => true,
 });
 
 beforeEach(() => {
