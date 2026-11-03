@@ -4,10 +4,10 @@
  * the platform's own account with one payment and no marketplace fee. Orders still record each store's
  * net and commission, which the platform pays out by hand.
  *
- * Production credentials charge real money into that account, which is the point in production.
- * TEST- credentials cannot move money but test cards mark orders as paid, so with them the mode is tied to
- * a test database: MERCADO_PAGO_TEST_MODE_DATABASE_HOST must name the host the server writes to, and the
- * Vercel production deployment is refused.
+ * The Vercel production deployment charges real money, so it refuses TEST- credentials. Anywhere else the
+ * credentials may accept test cards even without the TEST- prefix (Mercado Pago test users get APP_USR-
+ * ones), and a test card would mark an order as paid, so the mode only runs against a test database:
+ * MERCADO_PAGO_TEST_MODE_DATABASE_HOST must name the host the server writes to.
  */
 const TEST_CREDENTIAL_PREFIX = "TEST-";
 const PRODUCTION_DEPLOYMENT = "production";
@@ -35,14 +35,13 @@ export function isSingleAccountModeActive(settings: SingleAccountModeSettings): 
   const testCredentials = isTestCredential(settings.accessToken);
   // Cards need the Public Key in the browser; it must belong to the same environment as the Access Token.
   if (settings.publicKey != null && isTestCredential(settings.publicKey) !== testCredentials) return false;
-  if (testCredentials) return isTestDatabase(settings);
+  if (settings.deploymentEnvironment === PRODUCTION_DEPLOYMENT) return testCredentials === false;
 
-  return true;
+  return isTestDatabase(settings);
 }
 
 function isTestDatabase(settings: SingleAccountModeSettings): boolean {
   if (settings.testDatabaseHost == null) return false;
-  if (settings.deploymentEnvironment === PRODUCTION_DEPLOYMENT) return false;
 
   return databaseHostOf(settings.databaseUrl) === settings.testDatabaseHost.trim().toLowerCase();
 }

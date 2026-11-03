@@ -58,6 +58,18 @@ it("keeps test credentials off when the server writes to any other database, suc
   expect(isSingleAccountModeActive({ ...testMode, databaseUrl: "not a url" })).toBe(false);
 });
 
+// Regression: Mercado Pago test users get APP_USR- credentials that accept test cards, so outside the
+// Vercel production deployment the prefix alone must not let the mode charge into another database.
+it("keeps APP_USR- credentials off outside Vercel production unless the server writes to the test database", () => {
+  const appUserCredentials = { accessToken: productionMode.accessToken, publicKey: productionMode.publicKey };
+
+  expect(isSingleAccountModeActive({ ...testMode, ...appUserCredentials, databaseUrl: PRODUCTION_DATABASE_URL })).toBe(
+    false,
+  );
+  expect(isSingleAccountModeActive({ ...productionMode, deploymentEnvironment: "preview" })).toBe(false);
+  expect(isSingleAccountModeActive({ ...testMode, ...appUserCredentials })).toBe(true);
+});
+
 it("refuses test credentials in the Vercel production deployment even with the test database", () => {
   expect(isSingleAccountModeActive({ ...testMode, deploymentEnvironment: "production" })).toBe(false);
 });
