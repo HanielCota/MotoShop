@@ -69,10 +69,7 @@ export async function executeCheckout(
   assertPaymentConfigured(paymentProvider, input.data.paymentMethodId);
 
   const { cart, coupon, sellerCharges } = await calculateCheckoutCharges(input, now);
-  assertPaymentCanHandleSellers(
-    sellerCharges.map((charge) => charge.sellerId),
-    paymentProvider,
-  );
+  assertPaymentCanHandleSellers(sellerCharges.length, paymentProvider);
 
   const orderNumber = createOrderNumber(now);
   const order = await reserveCartAndCreateOrder({
@@ -177,7 +174,7 @@ type CheckoutPaymentRequest = {
   data: CheckoutInput;
   order: PendingOrder;
   orderNumber: string;
-  sellerCharges: ReadonlyArray<{ sellerId: string; commissionInCents: number }>;
+  sellerCharges: ReadonlyArray<{ commissionInCents: number }>;
   requestSentAt: Date;
 };
 
@@ -206,7 +203,7 @@ async function requestCheckoutPayment(
       // Enquanto isso, calculateSellerCharges recusa cedo (erro do cupom) qualquer fee > total do seller.
       applicationFeeInCents: sumMoneyInCents(sellerCharges.map((charge) => charge.commissionInCents)),
       idempotencyKey: data.checkoutIdempotencyKey,
-      sellerIds: sellerCharges.map((charge) => charge.sellerId),
+      sellerCount: sellerCharges.length,
     });
     return await settleCheckoutPayment(order, paymentResult, "Payment declined");
   } catch (error) {

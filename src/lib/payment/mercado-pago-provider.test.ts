@@ -21,8 +21,8 @@ vi.mock("@/config/env", () => ({
 import { MercadoPagoProvider } from "./mercado-pago-provider";
 
 class ConnectedSellerTestProvider extends MercadoPagoProvider {
-  override supportsSellers(sellerIds: readonly string[]): boolean {
-    return sellerIds.length === 1;
+  override supportsSellerCount(sellerCount: number): boolean {
+    return sellerCount === 1;
   }
 }
 
@@ -50,7 +50,7 @@ it("sends only the card token, issuer and one installment with a scoped webhook 
     issuerId: "25",
     installments: 1,
     idempotencyKey: "card-attempt",
-    sellerIds: ["seller-1"],
+    sellerCount: 1,
   });
   const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string);
   expect(body).toMatchObject({
@@ -77,7 +77,7 @@ it("gives a Pix charge a 30-minute expiration so an unpaid one stops holding sto
     payerTaxId: "19119119100",
     paymentMethodId: "pix",
     idempotencyKey: "pix-attempt",
-    sellerIds: ["seller-1"],
+    sellerCount: 1,
   });
 
   const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string);
@@ -118,7 +118,7 @@ it("keeps only payment-matching fields and Pix instructions from provider respon
     payerTaxId: "19119119100",
     paymentMethodId: "pix",
     idempotencyKey: "privacy-test",
-    sellerIds: ["seller-1"],
+    sellerCount: 1,
   });
 
   expect(result.providerMetadata).toEqual({
@@ -146,7 +146,7 @@ it("rejects a scoped webhook URL without its secret before sending a charge", as
       payerTaxId: "19119119100",
       paymentMethodId: "pix",
       idempotencyKey: "attempt",
-      sellerIds: ["seller-1"],
+      sellerCount: 1,
     }),
   ).rejects.toThrow("assinatura");
   expect(fetchMock).not.toHaveBeenCalled();
@@ -191,7 +191,7 @@ it("classifies validation failures as definitive and transient failures as uncer
     payerTaxId: "19119119100",
     paymentMethodId: "pix",
     idempotencyKey: "attempt",
-    sellerIds: ["seller-1"],
+    sellerCount: 1,
   } as const;
 
   await expect(provider.createPayment(input)).rejects.toMatchObject({
@@ -227,7 +227,7 @@ it("sends the validated payer CPF when creating a Pix payment", async () => {
     payerTaxId: "19119119100",
     paymentMethodId: "pix",
     idempotencyKey: "checkout-123",
-    sellerIds: ["seller-1"],
+    sellerCount: 1,
   });
 
   const request = fetchMock.mock.calls[0]?.[1];
@@ -251,7 +251,7 @@ it("does not call the gateway when a Pix payment has no CPF", async () => {
       payerEmail: "buyer@example.test",
       paymentMethodId: "pix",
       idempotencyKey: "checkout-123",
-      sellerIds: ["seller-1"],
+      sellerCount: 1,
     }),
   ).rejects.toThrow("CPF válido");
   expect(fetchMock).not.toHaveBeenCalled();
@@ -262,7 +262,7 @@ it("blocks marketplace charges until seller-linked Mercado Pago OAuth is availab
   vi.stubGlobal("fetch", fetchMock);
   const provider = new MercadoPagoProvider();
 
-  expect(provider.supportsSellers(["seller-1"])).toBe(false);
+  expect(provider.supportsSellerCount(1)).toBe(false);
   await expect(
     provider.createPayment({
       orderNumber: "MS-NO-SELLER-AUTH",
@@ -271,7 +271,7 @@ it("blocks marketplace charges until seller-linked Mercado Pago OAuth is availab
       paymentMethodId: "pix",
       payerTaxId: "19119119100",
       idempotencyKey: "blocked-payment",
-      sellerIds: ["seller-1"],
+      sellerCount: 1,
     }),
   ).rejects.toThrow("Nenhuma cobrança foi criada");
   expect(fetchMock).not.toHaveBeenCalled();
@@ -285,8 +285,8 @@ it("charges an order on the platform test account without a marketplace fee in t
   vi.stubGlobal("fetch", fetchMock);
   const provider = new MercadoPagoProvider();
 
-  expect(provider.supportsSellers(["seller-1"])).toBe(true);
-  expect(provider.supportsSellers(["seller-1", "seller-2"])).toBe(true);
+  expect(provider.supportsSellerCount(1)).toBe(true);
+  expect(provider.supportsSellerCount(2)).toBe(true);
   await provider.createPayment({
     orderNumber: "MS-TEST-MODE",
     amountInCents: 100,
@@ -295,7 +295,7 @@ it("charges an order on the platform test account without a marketplace fee in t
     payerTaxId: "19119119100",
     applicationFeeInCents: 12,
     idempotencyKey: "test-mode-payment",
-    sellerIds: ["seller-1"],
+    sellerCount: 1,
   });
 
   const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string);
@@ -312,7 +312,7 @@ it("keeps blocking charges in the Vercel production deployment even with the tes
   vi.stubGlobal("fetch", fetchMock);
   const provider = new MercadoPagoProvider();
 
-  expect(provider.supportsSellers(["seller-1"])).toBe(false);
+  expect(provider.supportsSellerCount(1)).toBe(false);
   await expect(
     provider.createPayment({
       orderNumber: "MS-TEST-MODE-PROD",
@@ -321,7 +321,7 @@ it("keeps blocking charges in the Vercel production deployment even with the tes
       paymentMethodId: "pix",
       payerTaxId: "19119119100",
       idempotencyKey: "test-mode-production",
-      sellerIds: ["seller-1"],
+      sellerCount: 1,
     }),
   ).rejects.toThrow("Nenhuma cobrança foi criada");
   expect(fetchMock).not.toHaveBeenCalled();
@@ -339,7 +339,7 @@ it("charges any store in production on the platform account without a marketplac
   vi.stubGlobal("fetch", fetchMock);
   const provider = new MercadoPagoProvider();
 
-  expect(provider.supportsSellers(["seller-2"])).toBe(true);
+  expect(provider.supportsSellerCount(1)).toBe(true);
   await provider.createPayment({
     orderNumber: "MS-SINGLE-ACCOUNT",
     amountInCents: 15_000,
@@ -348,7 +348,7 @@ it("charges any store in production on the platform account without a marketplac
     payerTaxId: "19119119100",
     applicationFeeInCents: 1_800,
     idempotencyKey: "single-account-payment",
-    sellerIds: ["seller-2"],
+    sellerCount: 1,
   });
 
   const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string);
@@ -363,7 +363,7 @@ it("charges an order with several stores in production as one payment without a 
   vi.stubGlobal("fetch", fetchMock);
   const provider = new MercadoPagoProvider();
 
-  expect(provider.supportsSellers(["seller-1", "seller-2"])).toBe(true);
+  expect(provider.supportsSellerCount(2)).toBe(true);
   await provider.createPayment({
     orderNumber: "MS-SEVERAL-STORES",
     amountInCents: 25_000,
@@ -372,7 +372,7 @@ it("charges an order with several stores in production as one payment without a 
     payerTaxId: "19119119100",
     applicationFeeInCents: 3_000,
     idempotencyKey: "several-stores-payment",
-    sellerIds: ["seller-1", "seller-2"],
+    sellerCount: 2,
   });
 
   expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -387,8 +387,8 @@ it("refuses every order in production while the switch is off", async () => {
   vi.stubGlobal("fetch", fetchMock);
   const provider = new MercadoPagoProvider();
 
-  expect(provider.supportsSellers(["seller-1"])).toBe(false);
-  expect(provider.supportsSellers(["seller-1", "seller-2"])).toBe(false);
+  expect(provider.supportsSellerCount(1)).toBe(false);
+  expect(provider.supportsSellerCount(2)).toBe(false);
   await expect(
     provider.createPayment({
       orderNumber: "MS-SWITCH-OFF",
@@ -397,7 +397,7 @@ it("refuses every order in production while the switch is off", async () => {
       paymentMethodId: "pix",
       payerTaxId: "19119119100",
       idempotencyKey: "switch-off-payment",
-      sellerIds: ["seller-1", "seller-2"],
+      sellerCount: 2,
     }),
   ).rejects.toThrow("split 1:N");
   expect(fetchMock).not.toHaveBeenCalled();
@@ -407,7 +407,7 @@ it("refuses an order without stores even with the switch on", () => {
   useProductionCredentials();
   paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = true;
 
-  expect(new MercadoPagoProvider().supportsSellers([])).toBe(false);
+  expect(new MercadoPagoProvider().supportsSellerCount(0)).toBe(false);
 });
 
 it.each([
@@ -434,7 +434,7 @@ it("treats a rate-limited (429) charge request as definitively not processed", a
       payerTaxId: "19119119100",
       paymentMethodId: "pix",
       idempotencyKey: "rate-attempt",
-      sellerIds: ["seller-1"],
+      sellerCount: 1,
     }),
   ).rejects.toMatchObject({ details: { httpStatus: 429, outcome: "DEFINITIVE_REJECTION" } });
 });

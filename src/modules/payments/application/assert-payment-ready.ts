@@ -30,17 +30,17 @@ export function assertPaymentConfigured(paymentProvider: PaymentProvider, paymen
  * up front instead of after they type personal data. The service still re-validates on submit.
  */
 export function getCheckoutPaymentAvailability(
-  sellerIds: readonly string[],
+  sellerCount: number,
   paymentProvider: PaymentProvider = mercadoPagoProvider,
 ): { available: boolean; cardPublicKey: string | undefined } {
   try {
     assertPaymentConfigured(paymentProvider, "pix");
-    assertPaymentCanHandleSellers(sellerIds, paymentProvider);
+    assertPaymentCanHandleSellers(sellerCount, paymentProvider);
   } catch (error) {
     // Missing configuration and unsupported seller counts are expected states; anything else is a bug
     // that would otherwise look like "payment unavailable" with no trace.
     if (!(error instanceof ApplicationError)) {
-      logger.error({ event: "checkout.payment_availability.failed", sellerCount: sellerIds.length, error });
+      logger.error({ event: "checkout.payment_availability.failed", sellerCount, error });
     }
 
     return { available: false, cardPublicKey: undefined };
@@ -49,12 +49,12 @@ export function getCheckoutPaymentAvailability(
   return { available: true, cardPublicKey: env.MERCADO_PAGO_PUBLIC_KEY };
 }
 
-export function assertPaymentCanHandleSellers(sellerIds: readonly string[], provider: PaymentProvider): void {
-  if (!provider.supportsSellers(sellerIds)) {
+export function assertPaymentCanHandleSellers(sellerCount: number, provider: PaymentProvider): void {
+  if (!provider.supportsSellerCount(sellerCount)) {
     throw new ApplicationError({
       code: "CONFIGURATION_ERROR",
       message:
-        sellerIds.length > 1
+        sellerCount > 1
           ? "O checkout com vários lojistas depende da habilitação do split 1:N no Mercado Pago."
           : "O lojista ainda não conectou uma conta Mercado Pago ao marketplace. Nenhum pedido ou cobrança foi criado.",
       statusCode: 503,

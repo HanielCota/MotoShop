@@ -10,16 +10,16 @@ import type { PaymentProvider } from "@/shared/payment/payment-provider";
 
 import { getCheckoutPaymentAvailability } from "./assert-payment-ready";
 
-function providerSupporting(supportsSellers: PaymentProvider["supportsSellers"]) {
-  return { supportsSellers } as unknown as PaymentProvider;
+function providerSupporting(supportsSellerCount: PaymentProvider["supportsSellerCount"]) {
+  return { supportsSellerCount } as unknown as PaymentProvider;
 }
 
 beforeEach(() => logger.error.mockClear());
 
 describe("getCheckoutPaymentAvailability", () => {
-  it("reports unsupported sellers as unavailable without logging", () => {
+  it("reports an unsupported seller count as unavailable without logging", () => {
     const result = getCheckoutPaymentAvailability(
-      ["seller-1", "seller-2"],
+      2,
       providerSupporting(() => false),
     );
 
@@ -30,7 +30,7 @@ describe("getCheckoutPaymentAvailability", () => {
   it("logs unexpected failures instead of hiding them behind the unavailable state", () => {
     const failure = new TypeError("provider exploded");
     const result = getCheckoutPaymentAvailability(
-      ["seller-1"],
+      1,
       providerSupporting(() => {
         throw failure;
       }),
@@ -45,7 +45,7 @@ describe("getCheckoutPaymentAvailability", () => {
   it("exposes only the public key when the provider is ready", () => {
     expect(
       getCheckoutPaymentAvailability(
-        ["seller-1"],
+        1,
         providerSupporting(() => true),
       ),
     ).toEqual({

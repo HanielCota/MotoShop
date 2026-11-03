@@ -52,7 +52,7 @@ const methods: string[] = [];
 let couponCode = "";
 function provider(status: CreatePaymentResult["status"] = "APPROVED"): PaymentProvider {
   return {
-    supportsSellers: () => true,
+    supportsSellerCount: () => true,
     createPayment: vi.fn(async () => ({
       externalId: `test-${randomUUID()}`,
       status,

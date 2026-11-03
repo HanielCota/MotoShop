@@ -49,7 +49,7 @@ export default async function CheckoutPage() {
     lineTotalInCents: getCurrentPriceInCents(item.variant, now) * item.quantity,
     thumbnailUrl: thumbnails.get(item.variantId)?.url ?? null,
   }));
-  const payment = getCheckoutPaymentAvailability([...new Set(cart.items.map((item) => item.variant.product.sellerId))]);
+  const payment = getCheckoutPaymentAvailability(new Set(cart.items.map((item) => item.variant.product.sellerId)).size);
   // Test products end in the simulated purchase: Pix only, nothing recorded.
   const testOnlyCart = cart.items.every((item) => item.variant.product.isDemo);
   const cartSummary = {
