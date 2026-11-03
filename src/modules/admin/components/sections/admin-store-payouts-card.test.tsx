@@ -18,7 +18,13 @@ const report = buildStorePayoutReport({
       customerShippingAmountInCents: 59_800,
     },
   ],
-  refunds: [{ amountInCents: 25_480, sellerOrderId: null, orderSellerOrders: [{ id: "so-b", sellerId: "seller-b" }] }],
+  refunds: [
+    {
+      amountInCents: 25_480,
+      sellerOrderId: null,
+      orderSellerOrders: [{ id: "so-b", sellerId: "seller-b", countsAsSale: true }],
+    },
+  ],
   storeNames: new Map([
     ["seller-a", "Cross Center Campinas"],
     ["seller-b", "Box 77"],
@@ -36,6 +42,25 @@ describe("AdminStorePayoutsCard", () => {
     expect(rows[2]).toHaveTextContent("R$ 254,80");
     expect(rows.at(-1)).toHaveTextContent("Total");
     expect(rows.at(-1)).toHaveTextContent("R$ 39.033,68");
+  });
+
+  it("says which part of a store's refunds already left the payout", () => {
+    const cancelled = buildStorePayoutReport({
+      sales: [],
+      refunds: [
+        {
+          amountInCents: 10_000,
+          sellerOrderId: "so-b",
+          orderSellerOrders: [{ id: "so-b", sellerId: "seller-b", countsAsSale: false }],
+        },
+      ],
+      storeNames: new Map([["seller-b", "Box 77"]]),
+    });
+
+    render(<AdminStorePayoutsCard report={cancelled} downloadHref="/api/admin/store-payouts?salesPeriod=30d" />);
+
+    const rows = within(screen.getByRole("table")).getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("R$ 100,00 já fora do líquido");
   });
 
   it("links the spreadsheet download of the same period", () => {

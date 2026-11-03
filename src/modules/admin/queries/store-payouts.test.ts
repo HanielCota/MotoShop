@@ -35,8 +35,8 @@ beforeEach(() => {
       payment: {
         order: {
           sellerOrders: [
-            { id: "so-a", sellerId: "seller-a" },
-            { id: "so-b", sellerId: "seller-b" },
+            { id: "so-a", sellerId: "seller-a", status: "DELIVERED" },
+            { id: "so-b", sellerId: "seller-b", status: "CANCELLED" },
           ],
         },
       },
@@ -44,7 +44,7 @@ beforeEach(() => {
     {
       amountInCents: 800,
       providerMetadata: null,
-      payment: { order: { sellerOrders: [{ id: "so-c", sellerId: "seller-a" }] } },
+      payment: { order: { sellerOrders: [{ id: "so-c", sellerId: "seller-a", status: "DELIVERED" }] } },
     },
   ]);
   db.seller.findMany.mockResolvedValue([
@@ -71,12 +71,17 @@ it("uses the sales summary rules: confirmed seller orders created in the range a
   );
 });
 
-it("gives each refund to its store, including a store that only had a refund", async () => {
+it("gives each refund to its store, including a store that only had a refund, and tells a cancelled order apart", async () => {
   const report = await getStorePayoutReport(range);
 
   expect(report.rows).toEqual([
     expect.objectContaining({ storeName: "Garagem MX", sellerNetAmountInCents: 25_520, refundedInCents: 800 }),
-    expect.objectContaining({ storeName: "Box 77", sellerNetAmountInCents: 0, refundedInCents: 4_990 }),
+    expect.objectContaining({
+      storeName: "Box 77",
+      sellerNetAmountInCents: 0,
+      refundedInCents: 4_990,
+      refundedOutsidePayoutInCents: 4_990,
+    }),
   ]);
   expect(report.totals.refundedInCents).toBe(5_790);
 });

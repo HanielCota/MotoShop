@@ -11,18 +11,27 @@ export type StorePayoutSales = {
   customerShippingAmountInCents: number;
 };
 
+/** A seller order of a refunded order; `countsAsSale` is false once it was cancelled. */
+export type PayoutRefundSellerOrder = { id: string; sellerId: string; countsAsSale: boolean };
+
 /** A completed refund and the seller orders of the order it was paid for. */
 export type PayoutRefund = {
   amountInCents: number;
   /** Recorded by the post-sale refund flow; refunds made another way do not carry it. */
   sellerOrderId: string | null;
-  orderSellerOrders: ReadonlyArray<{ id: string; sellerId: string }>;
+  orderSellerOrders: readonly PayoutRefundSellerOrder[];
 };
 
-export type StorePayoutRow = StorePayoutSales & { storeName: string; refundedInCents: number };
+type RefundSums = {
+  refundedInCents: number;
+  /** Refunds of cancelled seller orders, which already left the payout; return refunds are still inside it. */
+  refundedOutsidePayoutInCents: number;
+};
+
+export type StorePayoutRow = StorePayoutSales & RefundSums & { storeName: string };
 
 /** Column sums; `refundedInCents` also holds the refunds no store could take, as the "Reembolsos" card does. */
-export type StorePayoutTotals = Omit<StorePayoutSales, "sellerId"> & { refundedInCents: number };
+export type StorePayoutTotals = Omit<StorePayoutSales, "sellerId"> & RefundSums;
 
 export type StorePayoutReport = {
   rows: StorePayoutRow[];
@@ -40,16 +49,18 @@ const emptySales = {
   customerShippingAmountInCents: 0,
 } as const satisfies Omit<StorePayoutSales, "sellerId">;
 
-/** The seller a refund belongs to: the recorded seller order, or the only store of the order. */
-function refundSellerId(refund: PayoutRefund): string | null {
+const noRefunds = { refundedInCents: 0, refundedOutsidePayoutInCents: 0 } as const satisfies RefundSums;
+
+/** The seller order a refund belongs to: the recorded one, or the only one of the order. */
+function refundedSellerOrder(refund: PayoutRefund): PayoutRefundSellerOrder | null {
   if (refund.sellerOrderId != null) {
-    return refund.orderSellerOrders.find((sellerOrder) => sellerOrder.id === refund.sellerOrderId)?.sellerId ?? null;
+    return refund.orderSellerOrders.find((sellerOrder) => sellerOrder.id === refund.sellerOrderId) ?? null;
   }
 
   const [onlySellerOrder, ...otherSellerOrders] = refund.orderSellerOrders;
   if (onlySellerOrder == null || otherSellerOrders.length > 0) return null;
 
-  return onlySellerOrder.sellerId;
+  return onlySellerOrder;
 }
 
 /**
@@ -57,17 +68,22 @@ function refundSellerId(refund: PayoutRefund): string | null {
  * apart, so the refunds column still adds up to the "Reembolsos" card.
  */
 export function sumRefundsBySeller(refunds: readonly PayoutRefund[]) {
-  const bySeller = new Map<string, number>();
+  const bySeller = new Map<string, RefundSums>();
   let unattributedInCents = 0;
 
   for (const refund of refunds) {
-    const sellerId = refundSellerId(refund);
-    if (sellerId == null) {
+    const sellerOrder = refundedSellerOrder(refund);
+    if (sellerOrder == null) {
       unattributedInCents += refund.amountInCents;
       continue;
     }
 
-    bySeller.set(sellerId, (bySeller.get(sellerId) ?? 0) + refund.amountInCents);
+    const current = bySeller.get(sellerOrder.sellerId) ?? noRefunds;
+    const outsidePayoutInCents = sellerOrder.countsAsSale ? 0 : refund.amountInCents;
+    bySeller.set(sellerOrder.sellerId, {
+      refundedInCents: current.refundedInCents + refund.amountInCents,
+      refundedOutsidePayoutInCents: current.refundedOutsidePayoutInCents + outsidePayoutInCents,
+    });
   }
 
   return { bySeller, unattributedInCents };
@@ -102,7 +118,7 @@ export function buildStorePayoutReport(input: {
         ...salesBySeller.get(sellerId),
         sellerId,
         storeName,
-        refundedInCents: refunds.bySeller.get(sellerId) ?? 0,
+        ...(refunds.bySeller.get(sellerId) ?? noRefunds),
       };
     })
     .toSorted(
@@ -121,7 +137,7 @@ export function buildStorePayoutReport(input: {
 }
 
 function sumStorePayouts(rows: readonly StorePayoutRow[]): StorePayoutTotals {
-  const totals: StorePayoutTotals = { ...emptySales, refundedInCents: 0 };
+  const totals: StorePayoutTotals = { ...emptySales, ...noRefunds };
 
   for (const row of rows) {
     totals.orderCount += row.orderCount;
@@ -131,6 +147,7 @@ function sumStorePayouts(rows: readonly StorePayoutRow[]): StorePayoutTotals {
     totals.sellerNetAmountInCents += row.sellerNetAmountInCents;
     totals.customerShippingAmountInCents += row.customerShippingAmountInCents;
     totals.refundedInCents += row.refundedInCents;
+    totals.refundedOutsidePayoutInCents += row.refundedOutsidePayoutInCents;
   }
 
   return totals;

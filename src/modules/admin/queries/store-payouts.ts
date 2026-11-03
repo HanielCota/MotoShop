@@ -1,6 +1,7 @@
 import "server-only";
 
 import { db } from "@/lib/database";
+import { confirmedSellerOrderStatuses } from "@/modules/orders/domain/confirmed-sales";
 
 import { buildStorePayoutReport, type PayoutRefund, type StorePayoutSales } from "../domain/store-payouts";
 import { completedRefundsIn, confirmedSellerOrdersIn } from "./sales-summary";
@@ -39,20 +40,28 @@ function recordedSellerOrderId(providerMetadata: unknown): string | null {
   return typeof sellerOrderId === "string" && sellerOrderId.trim() !== "" ? sellerOrderId : null;
 }
 
+const confirmedStatuses: ReadonlySet<string> = new Set(confirmedSellerOrderStatuses);
+
 async function listPayoutRefunds(range: SalesDateRange): Promise<PayoutRefund[]> {
   const refunds = await db.paymentTransaction.findMany({
     where: completedRefundsIn(range),
     select: {
       amountInCents: true,
       providerMetadata: true,
-      payment: { select: { order: { select: { sellerOrders: { select: { id: true, sellerId: true } } } } } },
+      payment: {
+        select: { order: { select: { sellerOrders: { select: { id: true, sellerId: true, status: true } } } } },
+      },
     },
   });
 
   return refunds.map((refund) => ({
     amountInCents: refund.amountInCents,
     sellerOrderId: recordedSellerOrderId(refund.providerMetadata),
-    orderSellerOrders: refund.payment.order.sellerOrders,
+    orderSellerOrders: refund.payment.order.sellerOrders.map((sellerOrder) => ({
+      id: sellerOrder.id,
+      sellerId: sellerOrder.sellerId,
+      countsAsSale: confirmedStatuses.has(sellerOrder.status),
+    })),
   }));
 }
 

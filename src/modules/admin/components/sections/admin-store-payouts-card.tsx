@@ -42,7 +42,14 @@ function MoneyCells({ totals, emphasized }: { totals: Omit<StorePayoutTotals, "o
       <td className={cellClass}>{formatMoneyInCents(totals.marketplaceCommissionInCents)}</td>
       <td className={payoutCellClassName}>{formatMoneyInCents(totals.sellerNetAmountInCents)}</td>
       <td className={cellClass}>{formatMoneyInCents(totals.customerShippingAmountInCents)}</td>
-      <td className={cellClass}>{formatMoneyInCents(totals.refundedInCents)}</td>
+      <td className={cellClass}>
+        {formatMoneyInCents(totals.refundedInCents)}
+        {totals.refundedOutsidePayoutInCents > 0 ? (
+          <span className="text-muted-foreground block text-xs font-normal">
+            {formatMoneyInCents(totals.refundedOutsidePayoutInCents)} já fora do líquido
+          </span>
+        ) : null}
+      </td>
     </>
   );
 }
@@ -69,7 +76,7 @@ export function AdminStorePayoutsCard({ report, downloadHref }: { report: StoreP
       title={title}
       description="Todas as lojas com venda paga ou reembolso no período. Líquido = produtos − cupom da loja − comissão (sem frete)."
       actions={
-        <a href={downloadHref} download className={buttonVariants()}>
+        <a href={downloadHref} className={buttonVariants()}>
           <Download aria-hidden="true" />
           Baixar planilha
         </a>
@@ -102,7 +109,9 @@ export function AdminStorePayoutsCard({ report, downloadHref }: { report: StoreP
         </tr>
       </AdminTable>
       <p className="text-muted-foreground text-xs">
-        A soma do líquido é igual ao cartão “Líquido das lojas”. Frete e reembolsos aparecem à parte.
+        A soma do líquido é igual ao cartão “Líquido das lojas”. Frete e reembolsos aparecem à parte: o reembolso de um
+        pedido cancelado já saiu do líquido; o de uma devolução ainda está dentro. Um pedido com mais de uma loja conta
+        uma vez em cada loja.
       </p>
     </AdminCard>
   );

@@ -20,6 +20,7 @@ const header = [
   "Líquido a repassar (R$)",
   "Frete do cliente (R$)",
   "Reembolsos (R$)",
+  "Reembolsos já fora do líquido (R$)",
 ];
 
 /** Text typed by a store: a leading apostrophe keeps a name such as "=HYPERLINK(...)" as plain text. */
@@ -38,6 +39,7 @@ function moneyCells(totals: Omit<StorePayoutTotals, "orderCount">): string[] {
     totals.sellerNetAmountInCents,
     totals.customerShippingAmountInCents,
     totals.refundedInCents,
+    totals.refundedOutsidePayoutInCents,
   ].map(formatMoneyInCentsForSpreadsheet);
 }
 
@@ -52,8 +54,9 @@ export function storePayoutsCsv(report: StorePayoutReport): string {
       ? [
           [
             textCell("Reembolsos sem loja identificada"),
-            ...Array.from({ length: header.length - 2 }, () => ""),
+            ...Array.from({ length: header.length - 3 }, () => ""),
             formatMoneyInCentsForSpreadsheet(report.unattributedRefundInCents),
+            "",
           ],
         ]
       : [];

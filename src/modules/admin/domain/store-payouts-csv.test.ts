@@ -31,15 +31,15 @@ describe("storePayoutsCsv", () => {
 
     expect(csv.startsWith("﻿")).toBe(true);
     expect(linesOf(csv)[0]).toBe(
-      "Loja;Pedidos;Produtos (R$);Cupom da loja (R$);Comissão (R$);Líquido a repassar (R$);Frete do cliente (R$);Reembolsos (R$)",
+      "Loja;Pedidos;Produtos (R$);Cupom da loja (R$);Comissão (R$);Líquido a repassar (R$);Frete do cliente (R$);Reembolsos (R$);Reembolsos já fora do líquido (R$)",
     );
   });
 
   it("writes one line per store and a total, with semicolons and decimal commas", () => {
     const lines = linesOf(storePayoutsCsv(reportFor("Trilha Forte Motopeças")));
 
-    expect(lines[1]).toBe("Trilha Forte Motopeças;2;44356,50;403,94;5322,82;38629,74;598,00;0,00");
-    expect(lines[2]).toBe("Total;2;44356,50;403,94;5322,82;38629,74;598,00;0,00");
+    expect(lines[1]).toBe("Trilha Forte Motopeças;2;44356,50;403,94;5322,82;38629,74;598,00;0,00;0,00");
+    expect(lines[2]).toBe("Total;2;44356,50;403,94;5322,82;38629,74;598,00;0,00;0,00");
     expect(lines[3]).toBe("");
   });
 
@@ -66,8 +66,8 @@ describe("storePayoutsCsv", () => {
           amountInCents: 2_500,
           sellerOrderId: null,
           orderSellerOrders: [
-            { id: "so-a", sellerId: "seller-a" },
-            { id: "so-b", sellerId: "seller-b" },
+            { id: "so-a", sellerId: "seller-a", countsAsSale: true },
+            { id: "so-b", sellerId: "seller-b", countsAsSale: true },
           ],
         },
       ],
@@ -76,7 +76,7 @@ describe("storePayoutsCsv", () => {
 
     const lines = linesOf(storePayoutsCsv(report));
 
-    expect(lines[1]).toBe("Reembolsos sem loja identificada;;;;;;;25,00");
-    expect(lines[2]).toBe("Total;0;0,00;0,00;0,00;0,00;0,00;25,00");
+    expect(lines[1]).toBe("Reembolsos sem loja identificada;;;;;;;25,00;");
+    expect(lines[2]).toBe("Total;0;0,00;0,00;0,00;0,00;0,00;25,00;0,00");
   });
 });

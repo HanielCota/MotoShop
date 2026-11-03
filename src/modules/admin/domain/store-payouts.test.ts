@@ -28,23 +28,44 @@ describe("sumRefundsBySeller", () => {
         amountInCents: 4_990,
         sellerOrderId: "so-b",
         orderSellerOrders: [
-          { id: "so-a", sellerId: "seller-a" },
-          { id: "so-b", sellerId: "seller-b" },
+          { id: "so-a", sellerId: "seller-a", countsAsSale: true },
+          { id: "so-b", sellerId: "seller-b", countsAsSale: true },
         ],
       },
     ]);
 
-    expect(refunds.bySeller.get("seller-b")).toBe(4_990);
+    expect(refunds.bySeller.get("seller-b")?.refundedInCents).toBe(4_990);
     expect(refunds.bySeller.has("seller-a")).toBe(false);
     expect(refunds.unattributedInCents).toBe(0);
   });
 
-  it("gives a refund without a recorded store to the only store of the order", () => {
+  it("marks a refund of a cancelled seller order as already outside the payout, unlike a return refund", () => {
     const refunds = sumRefundsBySeller([
-      { amountInCents: 1_000, sellerOrderId: null, orderSellerOrders: [{ id: "so-a", sellerId: "seller-a" }] },
+      {
+        amountInCents: 10_000,
+        sellerOrderId: "so-a",
+        orderSellerOrders: [{ id: "so-a", sellerId: "seller-a", countsAsSale: false }],
+      },
+      {
+        amountInCents: 5_000,
+        sellerOrderId: "so-c",
+        orderSellerOrders: [{ id: "so-c", sellerId: "seller-a", countsAsSale: true }],
+      },
     ]);
 
-    expect(refunds.bySeller.get("seller-a")).toBe(1_000);
+    expect(refunds.bySeller.get("seller-a")).toEqual({ refundedInCents: 15_000, refundedOutsidePayoutInCents: 10_000 });
+  });
+
+  it("gives a refund without a recorded store to the only store of the order", () => {
+    const refunds = sumRefundsBySeller([
+      {
+        amountInCents: 1_000,
+        sellerOrderId: null,
+        orderSellerOrders: [{ id: "so-a", sellerId: "seller-a", countsAsSale: true }],
+      },
+    ]);
+
+    expect(refunds.bySeller.get("seller-a")?.refundedInCents).toBe(1_000);
   });
 
   it("keeps apart a refund of an order split among stores when no store was recorded", () => {
@@ -53,8 +74,8 @@ describe("sumRefundsBySeller", () => {
         amountInCents: 2_500,
         sellerOrderId: null,
         orderSellerOrders: [
-          { id: "so-a", sellerId: "seller-a" },
-          { id: "so-b", sellerId: "seller-b" },
+          { id: "so-a", sellerId: "seller-a", countsAsSale: true },
+          { id: "so-b", sellerId: "seller-b", countsAsSale: true },
         ],
       },
     ]);
@@ -65,7 +86,11 @@ describe("sumRefundsBySeller", () => {
 
   it("keeps apart a refund whose recorded seller order is not in the order", () => {
     const refunds = sumRefundsBySeller([
-      { amountInCents: 700, sellerOrderId: "so-x", orderSellerOrders: [{ id: "so-a", sellerId: "seller-a" }] },
+      {
+        amountInCents: 700,
+        sellerOrderId: "so-x",
+        orderSellerOrders: [{ id: "so-a", sellerId: "seller-a", countsAsSale: true }],
+      },
     ]);
 
     expect(refunds.unattributedInCents).toBe(700);
@@ -91,7 +116,11 @@ describe("buildStorePayoutReport", () => {
     const report = buildStorePayoutReport({
       sales: [sales("seller-a", 8_800)],
       refunds: [
-        { amountInCents: 3_000, sellerOrderId: null, orderSellerOrders: [{ id: "so-c", sellerId: "seller-c" }] },
+        {
+          amountInCents: 3_000,
+          sellerOrderId: null,
+          orderSellerOrders: [{ id: "so-c", sellerId: "seller-c", countsAsSale: true }],
+        },
       ],
       storeNames,
     });
@@ -105,13 +134,17 @@ describe("buildStorePayoutReport", () => {
     const report = buildStorePayoutReport({
       sales: [sales("seller-a", 8_800)],
       refunds: [
-        { amountInCents: 1_000, sellerOrderId: null, orderSellerOrders: [{ id: "so-a", sellerId: "seller-a" }] },
+        {
+          amountInCents: 1_000,
+          sellerOrderId: null,
+          orderSellerOrders: [{ id: "so-a", sellerId: "seller-a", countsAsSale: true }],
+        },
         {
           amountInCents: 2_500,
           sellerOrderId: null,
           orderSellerOrders: [
-            { id: "so-a", sellerId: "seller-a" },
-            { id: "so-b", sellerId: "seller-b" },
+            { id: "so-a", sellerId: "seller-a", countsAsSale: true },
+            { id: "so-b", sellerId: "seller-b", countsAsSale: true },
           ],
         },
       ],
