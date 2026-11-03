@@ -10,8 +10,10 @@ import { adminHref } from "../../admin-href";
 import { getMarketplaceConfiguration } from "../../queries/marketplace-configuration";
 import { lastDayOf, resolveSalesDateRange, type SalesDateRange, type SalesPeriod } from "../../queries/sales-period";
 import { getAdminSalesSummary, type AdminSalesSummary } from "../../queries/sales-summary";
+import { getStorePayoutReport } from "../../queries/store-payouts";
 import { loadAdminSalesSearchParams } from "../../search-params";
 import { AdminCard, AdminFilterForm, AdminTable, cellClassName, FilterDateRange } from "../admin-ui";
+import { AdminStorePayoutsCard, storePayoutsDownloadHref } from "./admin-store-payouts-card";
 import type { AdminSectionProps } from "./types";
 
 const periodOptions: { value: SalesPeriod; label: string }[] = [
@@ -36,7 +38,11 @@ export async function AdminSalesSection({ searchParams }: AdminSectionProps) {
     <div className="space-y-4">
       <PeriodFilter selected={params.salesPeriod} />
       {params.salesPeriod === "custom" ? <CustomRangeForm from={params.salesFrom} to={params.salesTo} /> : null}
-      {range == null ? <MissingRangeHint from={params.salesFrom} to={params.salesTo} /> : <SalesPanel range={range} />}
+      {range == null ? (
+        <MissingRangeHint from={params.salesFrom} to={params.salesTo} />
+      ) : (
+        <SalesPanel range={range} downloadHref={storePayoutsDownloadHref(params)} />
+      )}
     </div>
   );
 }
@@ -81,8 +87,12 @@ function describeRange(range: SalesDateRange) {
   return firstDay === lastDay ? firstDay : `${firstDay} a ${lastDay}`;
 }
 
-async function SalesPanel({ range }: { range: SalesDateRange }) {
-  const [summary, configuration] = await Promise.all([getAdminSalesSummary(range), getMarketplaceConfiguration()]);
+async function SalesPanel({ range, downloadHref }: { range: SalesDateRange; downloadHref: string }) {
+  const [summary, configuration, payouts] = await Promise.all([
+    getAdminSalesSummary(range),
+    getMarketplaceConfiguration(),
+    getStorePayoutReport(range),
+  ]);
   const commissionHint =
     configuration == null
       ? "O percentual gravado em cada pedido"
@@ -131,6 +141,7 @@ async function SalesPanel({ range }: { range: SalesDateRange }) {
           }
         />
       </div>
+      <AdminStorePayoutsCard report={payouts} downloadHref={downloadHref} />
       <div className="grid gap-3 lg:grid-cols-2">
         <TopStores stores={summary.topStores} />
         <TopProducts products={summary.topProducts} />
