@@ -14,9 +14,7 @@ import type {
 import { mercadoPagoRequest } from "./mercado-pago/http";
 import { mapPaymentResponse, mapRefundResponse } from "./mercado-pago/mappers";
 import { pixExpirationDate } from "./mercado-pago/pix-expiration";
-import { singleAccountSellerId } from "./mercado-pago/single-account-mode";
-
-const SINGLE_SELLER = 1;
+import { isSingleAccountModeActive } from "./mercado-pago/single-account-mode";
 
 /**
  * Mercado Pago adapter: input validation and endpoint orchestration only.
@@ -26,11 +24,11 @@ export class MercadoPagoProvider implements PaymentProvider {
   supportsSellers(sellerIds: readonly string[]): boolean {
     // The marketplace has no seller-linked Mercado Pago OAuth connection yet.
     // A platform token plus application_fee is not a safe substitute for it.
-    // Until then, the only charge allowed is the single-account one: one configured store, nothing to split.
-    const allowedSellerId = this.singleAccountSellerId();
-    if (allowedSellerId == null) return false;
+    // Until then, the only charge allowed is the single-account one: one payment on the platform's own
+    // account, whatever stores the order has; the stores are paid out by hand from what the order records.
+    if (sellerIds.length === 0) return false;
 
-    return sellerIds.length === SINGLE_SELLER && sellerIds[0] === allowedSellerId;
+    return this.isSingleAccountMode();
   }
 
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
@@ -82,7 +80,7 @@ export class MercadoPagoProvider implements PaymentProvider {
         ...(input.paymentMethodId === "pix" ? { date_of_expiration: pixExpirationDate(new Date()) } : {}),
         ...(env.MERCADO_PAGO_NOTIFICATION_URL ? { notification_url: env.MERCADO_PAGO_NOTIFICATION_URL } : {}),
         // The platform's own account charges itself: a marketplace fee only exists with a seller's token.
-        ...(input.applicationFeeInCents !== undefined && this.singleAccountSellerId() == null
+        ...(input.applicationFeeInCents !== undefined && this.isSingleAccountMode() === false
           ? { application_fee: input.applicationFeeInCents / 100 }
           : {}),
       },
@@ -136,9 +134,9 @@ export class MercadoPagoProvider implements PaymentProvider {
     return mapRefundResponse(response);
   }
 
-  private singleAccountSellerId(): string | null {
-    return singleAccountSellerId({
-      sellerId: env.MERCADO_PAGO_SINGLE_ACCOUNT_SELLER_ID,
+  private isSingleAccountMode(): boolean {
+    return isSingleAccountModeActive({
+      enabled: env.MERCADO_PAGO_SINGLE_ACCOUNT_MODE,
       testDatabaseHost: env.MERCADO_PAGO_TEST_MODE_DATABASE_HOST,
       databaseUrl: env.DATABASE_URL,
       accessToken: env.MERCADO_PAGO_ACCESS_TOKEN,

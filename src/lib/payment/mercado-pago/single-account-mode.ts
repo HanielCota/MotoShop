@@ -1,8 +1,8 @@
 /**
  * Single-account mode (decisions of 26/10 and 03/11/2026): until stores connect their own Mercado Pago
- * accounts, an order from the one store named by MERCADO_PAGO_SINGLE_ACCOUNT_SELLER_ID is charged on the
- * platform's own account, with no marketplace fee. Any other store, and any order with several stores,
- * stays refused.
+ * accounts, MERCADO_PAGO_SINGLE_ACCOUNT_MODE charges every order, from any store or from several stores, on
+ * the platform's own account with one payment and no marketplace fee. Orders still record each store's
+ * net and commission, which the platform pays out by hand.
  *
  * Production credentials charge real money into that account, which is the point in production.
  * TEST- credentials cannot move money but test cards mark orders as paid, so with them the mode is tied to
@@ -12,9 +12,9 @@
 const TEST_CREDENTIAL_PREFIX = "TEST-";
 const PRODUCTION_DEPLOYMENT = "production";
 
-/** The configured store, database and Mercado Pago credentials the mode is decided from. */
+/** The switch, database and Mercado Pago credentials the mode is decided from. */
 export type SingleAccountModeSettings = {
-  sellerId: string | undefined;
+  enabled: boolean | undefined;
   testDatabaseHost: string | undefined;
   databaseUrl: string;
   accessToken: string | undefined;
@@ -23,22 +23,21 @@ export type SingleAccountModeSettings = {
 };
 
 /**
- * Tells which store the platform's Mercado Pago account may charge for.
+ * Tells whether the platform's Mercado Pago account may charge orders.
  *
- * @param settings - The configured store, database and credentials.
- * @returns The id of that store, or null when the mode is off.
+ * @param settings - The switch, database and credentials in use.
+ * @returns Whether orders are charged on the platform account.
  */
-export function singleAccountSellerId(settings: SingleAccountModeSettings): string | null {
-  const sellerId = settings.sellerId?.trim();
-  if (sellerId == null || sellerId === "") return null;
-  if (settings.accessToken == null) return null;
+export function isSingleAccountModeActive(settings: SingleAccountModeSettings): boolean {
+  if (settings.enabled !== true) return false;
+  if (settings.accessToken == null) return false;
 
   const testCredentials = isTestCredential(settings.accessToken);
   // Cards need the Public Key in the browser; it must belong to the same environment as the Access Token.
-  if (settings.publicKey != null && isTestCredential(settings.publicKey) !== testCredentials) return null;
-  if (testCredentials && isTestDatabase(settings) === false) return null;
+  if (settings.publicKey != null && isTestCredential(settings.publicKey) !== testCredentials) return false;
+  if (testCredentials) return isTestDatabase(settings);
 
-  return sellerId;
+  return true;
 }
 
 function isTestDatabase(settings: SingleAccountModeSettings): boolean {
