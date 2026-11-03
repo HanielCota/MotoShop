@@ -65,6 +65,8 @@ export function calculateSellerCharges<Item extends SellerChargeItem, Quote exte
   coupon?: SellerChargeCoupon | undefined;
   defaultCommissionBps: number;
   now: Date;
+  /** False when the provider takes no marketplace fee, so the commission need not fit in each store's charge. */
+  marketplaceFeeCharged?: boolean;
 }): Array<SellerCharge<Item, Quote>> {
   const pricedItems = input.items.map((item) => ({
     ...item,
@@ -76,7 +78,13 @@ export function calculateSellerCharges<Item extends SellerChargeItem, Quote exte
   const discounts = allocateCouponDiscounts(rawCharges, input.coupon);
 
   return rawCharges.map((charge, index) =>
-    completeSellerCharge(charge, discounts[index] ?? 0, input.coupon, input.defaultCommissionBps),
+    completeSellerCharge(
+      charge,
+      discounts[index] ?? 0,
+      input.coupon,
+      input.defaultCommissionBps,
+      input.marketplaceFeeCharged ?? true,
+    ),
   );
 }
 
@@ -174,6 +182,7 @@ function completeSellerCharge<Item extends SellerChargeItem, Quote extends Selle
   discountInCents: number,
   coupon: SellerChargeCoupon | undefined,
   defaultCommissionBps: number,
+  marketplaceFeeCharged: boolean,
 ): SellerCharge<Item, Quote> {
   const totals = calculateOrderTotals({
     lines: toOrderLines(charge.items),
@@ -187,7 +196,14 @@ function completeSellerCharge<Item extends SellerChargeItem, Quote extends Selle
     commissionBps,
   );
   const sellerNetAmountInCents = totals.itemsSubtotalInCents - sellerFundedDiscount - commissionInCents;
-  assertSellerChargeIsPayable({ charge, totals, commissionInCents, sellerNetAmountInCents, coupon });
+  assertSellerChargeIsPayable({
+    charge,
+    totals,
+    commissionInCents,
+    sellerNetAmountInCents,
+    coupon,
+    marketplaceFeeCharged,
+  });
 
   return {
     ...charge,
@@ -215,6 +231,7 @@ function assertSellerChargeIsPayable(input: {
   commissionInCents: number;
   sellerNetAmountInCents: number;
   coupon: SellerChargeCoupon | undefined;
+  marketplaceFeeCharged: boolean;
 }): void {
   if (input.sellerNetAmountInCents < 0)
     throw new ApplicationError({
@@ -224,7 +241,8 @@ function assertSellerChargeIsPayable(input: {
   // The marketplace fee (application_fee) is taken from what the customer pays to THIS
   // seller. A large marketplace-funded coupon can push that below the commission, which the
   // provider rejects. Fail before creating the order; the commission policy is unchanged.
-  if (input.commissionInCents > input.totals.totalAmountInCents)
+  // Without a fee (single-account mode) the platform keeps the commission from the whole payment.
+  if (input.marketplaceFeeCharged && input.commissionInCents > input.totals.totalAmountInCents)
     throw new ApplicationError({
       code: "CONFLICT",
       message: input.coupon

@@ -8,7 +8,7 @@ const paymentEnv = vi.hoisted(() => ({
   MERCADO_PAGO_WEBHOOK_SECRET: undefined as string | undefined,
   MERCADO_PAGO_PUBLIC_KEY: undefined as string | undefined,
   MERCADO_PAGO_TEST_MODE_DATABASE_HOST: undefined as string | undefined,
-  MERCADO_PAGO_SINGLE_ACCOUNT_MODE: undefined as boolean | undefined,
+  MERCADO_PAGO_SINGLE_ACCOUNT_MODE: undefined as string | undefined,
   DATABASE_URL: "postgresql://user:password@test-branch.example.test/neondb",
   VERCEL_ENV: undefined as string | undefined,
 }));
@@ -280,7 +280,7 @@ it("blocks marketplace charges until seller-linked Mercado Pago OAuth is availab
 it("charges an order on the platform test account without a marketplace fee in test mode", async () => {
   paymentEnv.MERCADO_PAGO_ACCESS_TOKEN = "TEST-1234567890";
   paymentEnv.MERCADO_PAGO_TEST_MODE_DATABASE_HOST = "test-branch.example.test";
-  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = true;
+  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = "true";
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 789, status: "approved" }) });
   vi.stubGlobal("fetch", fetchMock);
   const provider = new MercadoPagoProvider();
@@ -306,7 +306,7 @@ it("charges an order on the platform test account without a marketplace fee in t
 it("keeps blocking charges in the Vercel production deployment even with the test database", async () => {
   paymentEnv.MERCADO_PAGO_ACCESS_TOKEN = "TEST-1234567890";
   paymentEnv.MERCADO_PAGO_TEST_MODE_DATABASE_HOST = "test-branch.example.test";
-  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = true;
+  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = "true";
   paymentEnv.VERCEL_ENV = "production";
   const fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);
@@ -334,7 +334,7 @@ function useProductionCredentials(): void {
 
 it("charges any store in production on the platform account without a marketplace fee", async () => {
   useProductionCredentials();
-  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = true;
+  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = "true";
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 790, status: "pending" }) });
   vi.stubGlobal("fetch", fetchMock);
   const provider = new MercadoPagoProvider();
@@ -358,7 +358,7 @@ it("charges any store in production on the platform account without a marketplac
 
 it("charges an order with several stores in production as one payment without a marketplace fee", async () => {
   useProductionCredentials();
-  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = true;
+  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = "true";
   const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 791, status: "pending" }) });
   vi.stubGlobal("fetch", fetchMock);
   const provider = new MercadoPagoProvider();
@@ -399,13 +399,13 @@ it("refuses every order in production while the switch is off", async () => {
       idempotencyKey: "switch-off-payment",
       sellerCount: 2,
     }),
-  ).rejects.toThrow("split 1:N");
+  ).rejects.toThrow("Nenhuma cobrança foi criada");
   expect(fetchMock).not.toHaveBeenCalled();
 });
 
 it("refuses an order without stores even with the switch on", () => {
   useProductionCredentials();
-  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = true;
+  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = "true";
 
   expect(new MercadoPagoProvider().supportsSellerCount(0)).toBe(false);
 });

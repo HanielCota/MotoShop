@@ -68,7 +68,11 @@ export async function executeCheckout(
     return createCheckoutResult(existingOrder.orderNumber, guestAccessToken, existingOrder.paymentDeclined);
   assertPaymentConfigured(paymentProvider, input.data.paymentMethodId);
 
-  const { cart, coupon, sellerCharges } = await calculateCheckoutCharges(input, now);
+  const { cart, coupon, sellerCharges } = await calculateCheckoutCharges(
+    input,
+    now,
+    paymentProvider.chargesMarketplaceFee(),
+  );
   assertPaymentCanHandleSellers(sellerCharges.length, paymentProvider);
 
   const orderNumber = createOrderNumber(now);
@@ -117,10 +121,10 @@ function createCheckoutResult(
 }
 
 /** Loads the cart for a real order, then prices it. */
-async function calculateCheckoutCharges(input: CheckoutRequest, now: Date) {
+async function calculateCheckoutCharges(input: CheckoutRequest, now: Date, marketplaceFeeCharged: boolean) {
   const selections = parseShippingSelections(input.data.shippingSelections);
   const cart = await loadCheckoutCart(input.identity);
-  return priceCheckoutCart(input, cart, now, selections);
+  return priceCheckoutCart(input, cart, now, selections, marketplaceFeeCharged);
 }
 
 /**
@@ -132,6 +136,7 @@ export async function priceCheckoutCart(
   cart: CheckoutCart,
   now: Date,
   selections: Record<string, string> = parseShippingSelections(input.data.shippingSelections),
+  marketplaceFeeCharged = true,
 ) {
   const coupon = await loadCheckoutCoupon(
     input.data.couponCode,
@@ -147,6 +152,7 @@ export async function priceCheckoutCart(
     coupon,
     defaultCommissionBps,
     now,
+    marketplaceFeeCharged,
   });
   return { cart, coupon, sellerCharges };
 }

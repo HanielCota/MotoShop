@@ -8,7 +8,7 @@ vi.mock("@/lib/payment/mercado-pago-provider", () => ({ mercadoPagoProvider: {} 
 
 import type { PaymentProvider } from "@/shared/payment/payment-provider";
 
-import { getCheckoutPaymentAvailability } from "./assert-payment-ready";
+import { assertPaymentCanHandleSellers, getCheckoutPaymentAvailability } from "./assert-payment-ready";
 
 function providerSupporting(supportsSellerCount: PaymentProvider["supportsSellerCount"]) {
   return { supportsSellerCount } as unknown as PaymentProvider;
@@ -40,6 +40,15 @@ describe("getCheckoutPaymentAvailability", () => {
     expect(logger.error).toHaveBeenCalledWith(
       expect.objectContaining({ event: "checkout.payment_availability.failed", error: failure }),
     );
+  });
+
+  // Regression: a platform misconfiguration used to be reported as a store that hadn't connected Mercado Pago.
+  it("blames the platform configuration, not the store, when the provider refuses the order", () => {
+    const provider = providerSupporting(() => false);
+
+    const refuse = () => assertPaymentCanHandleSellers(1, provider);
+
+    expect(refuse).toThrow("O pagamento ainda não está liberado no Moto Shop");
   });
 
   it("exposes only the public key when the provider is ready", () => {

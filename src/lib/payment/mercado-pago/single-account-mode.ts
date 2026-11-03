@@ -11,10 +11,12 @@
  */
 const TEST_CREDENTIAL_PREFIX = "TEST-";
 const PRODUCTION_DEPLOYMENT = "production";
+const SWITCH_ON = "true";
 
 /** The switch, database and Mercado Pago credentials the mode is decided from. */
 export type SingleAccountModeSettings = {
-  enabled: boolean | undefined;
+  /** Raw switch value: "true" in any case turns the mode on; anything else leaves it off without failing. */
+  enabled: string | undefined;
   testDatabaseHost: string | undefined;
   databaseUrl: string;
   accessToken: string | undefined;
@@ -29,7 +31,7 @@ export type SingleAccountModeSettings = {
  * @returns Whether orders are charged on the platform account.
  */
 export function isSingleAccountModeActive(settings: SingleAccountModeSettings): boolean {
-  if (settings.enabled !== true) return false;
+  if (settings.enabled?.trim().toLowerCase() !== SWITCH_ON) return false;
   if (settings.accessToken == null) return false;
 
   const testCredentials = isTestCredential(settings.accessToken);

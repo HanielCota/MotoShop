@@ -31,15 +31,19 @@ export class MercadoPagoProvider implements PaymentProvider {
     return this.isSingleAccountMode();
   }
 
+  chargesMarketplaceFee(): boolean {
+    // The platform's own account charges itself: a marketplace fee only exists with a seller's token.
+    return this.isSingleAccountMode() === false;
+  }
+
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
     this.assertConfigured();
     if (this.supportsSellerCount(input.sellerCount) === false) {
+      // Without the single-account switch (or with mismatched credentials) nothing is charged: a platform
+      // configuration problem, not something a store can fix.
       throw new ApplicationError({
         code: "CONFIGURATION_ERROR",
-        message:
-          input.sellerCount > 1
-            ? "O checkout com vários lojistas ainda depende da habilitação do split 1:N no Mercado Pago."
-            : "O lojista ainda não conectou uma conta Mercado Pago ao marketplace. Nenhuma cobrança foi criada.",
+        message: "O pagamento ainda não está liberado no Moto Shop. Nenhuma cobrança foi criada.",
         statusCode: 503,
       });
     }
@@ -79,8 +83,7 @@ export class MercadoPagoProvider implements PaymentProvider {
         // An unpaid Pix must not hold stock and coupons forever (M-06).
         ...(input.paymentMethodId === "pix" ? { date_of_expiration: pixExpirationDate(new Date()) } : {}),
         ...(env.MERCADO_PAGO_NOTIFICATION_URL ? { notification_url: env.MERCADO_PAGO_NOTIFICATION_URL } : {}),
-        // The platform's own account charges itself: a marketplace fee only exists with a seller's token.
-        ...(input.applicationFeeInCents !== undefined && this.isSingleAccountMode() === false
+        ...(input.applicationFeeInCents !== undefined && this.chargesMarketplaceFee()
           ? { application_fee: input.applicationFeeInCents / 100 }
           : {}),
       },
