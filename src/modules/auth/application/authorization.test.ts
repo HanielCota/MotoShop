@@ -14,7 +14,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/config/env", () => ({ env: { ADMIN_EMAILS: "admin@example.test" } }));
 vi.mock("@/lib/database", () => ({ db: { sellerMember: { findFirst: mocks.membershipFindFirst } } }));
 vi.mock("@/modules/auth/infrastructure/auth", () => ({ auth: { api: { getSession: mocks.session } } }));
-import { requireAdminAccess, requireSellerAccess } from "./authorization";
+import { getAdminSession, requireAdminAccess, requireSellerAccess } from "./authorization";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -44,6 +44,21 @@ describe("administrator authorization", () => {
   });
 });
 
+describe("administrator session for Route Handlers", () => {
+  it("answers null to a visitor, a customer and an unverified allowlisted email", async () => {
+    mocks.session.mockResolvedValueOnce(null);
+    await expect(getAdminSession()).resolves.toBeNull();
+    mocks.session.mockResolvedValueOnce({ user: { email: "other@example.test", emailVerified: true } });
+    await expect(getAdminSession()).resolves.toBeNull();
+    mocks.session.mockResolvedValueOnce({ user: { email: "admin@example.test", emailVerified: null } });
+    await expect(getAdminSession()).resolves.toBeNull();
+  });
+  it("answers the session of a verified allowlisted user", async () => {
+    const session = { user: { email: "admin@example.test", emailVerified: true } };
+    mocks.session.mockResolvedValue(session);
+    await expect(getAdminSession()).resolves.toEqual(session);
+  });
+});
 describe("seller authorization", () => {
   it("resolves the active seller membership by session user and checks the requested permission", async () => {
     const result = await requireSellerAccess("ORDER_READ");
