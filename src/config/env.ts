@@ -43,7 +43,9 @@ const serverEnvSchema = z
     MERCADO_PAGO_API_URL: optionalUrl,
     MERCADO_PAGO_MULTI_SELLER_ENABLED: optionalBoolean,
     MERCADO_PAGO_WEBHOOK_SECRET: optionalString,
-    // Host of the test database the single-account test mode may charge into (single-account-test-mode.ts).
+    // Store charged on the platform's own account, and the test database TEST- credentials may charge into
+    // (single-account-mode.ts).
+    MERCADO_PAGO_SINGLE_ACCOUNT_SELLER_ID: optionalString,
     MERCADO_PAGO_TEST_MODE_DATABASE_HOST: optionalString,
     VERCEL_ENV: optionalString,
     MELHOR_ENVIO_CLIENT_ID: optionalString,
