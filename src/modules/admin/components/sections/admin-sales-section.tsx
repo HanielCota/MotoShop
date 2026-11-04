@@ -36,8 +36,10 @@ export async function AdminSalesSection({ searchParams }: AdminSectionProps) {
 
   return (
     <div className="space-y-4">
-      <PeriodFilter selected={params.salesPeriod} />
-      {params.salesPeriod === "custom" ? <CustomRangeForm from={params.salesFrom} to={params.salesTo} /> : null}
+      <PeriodFilter selected={params.salesPeriod} storeSearch={params.payoutQ} />
+      {params.salesPeriod === "custom" ? (
+        <CustomRangeForm from={params.salesFrom} to={params.salesTo} storeSearch={params.payoutQ} />
+      ) : null}
       {range == null ? (
         <MissingRangeHint from={params.salesFrom} to={params.salesTo} />
       ) : (
@@ -47,13 +49,14 @@ export async function AdminSalesSection({ searchParams }: AdminSectionProps) {
   );
 }
 
-function PeriodFilter({ selected }: { selected: SalesPeriod }) {
+/** A new period keeps the payout store search, but starts its list again from page 1. */
+function PeriodFilter({ selected, storeSearch }: { selected: SalesPeriod; storeSearch: string | null }) {
   return (
     <nav aria-label="Período" className="flex flex-wrap gap-2">
       {periodOptions.map((option) => (
         <Link
           key={option.value}
-          href={adminHref("sales", { salesPeriod: option.value }, { salesPeriod: "30d" })}
+          href={adminHref("sales", { salesPeriod: option.value, payoutQ: storeSearch }, { salesPeriod: "30d" })}
           aria-current={option.value === selected ? "page" : undefined}
           className="hover:bg-muted aria-[current=page]:bg-foreground aria-[current=page]:text-background inline-flex min-h-11 items-center rounded-md border px-3 text-sm font-semibold whitespace-nowrap transition-colors sm:min-h-9"
         >
@@ -64,10 +67,19 @@ function PeriodFilter({ selected }: { selected: SalesPeriod }) {
   );
 }
 
-function CustomRangeForm({ from, to }: { from: string | null; to: string | null }) {
+function CustomRangeForm({
+  from,
+  to,
+  storeSearch,
+}: {
+  from: string | null;
+  to: string | null;
+  storeSearch: string | null;
+}) {
   return (
     <AdminFilterForm resetHref={adminHref("sales", {})} label="Escolher datas">
       <input type="hidden" name="salesPeriod" value="custom" />
+      {storeSearch == null ? null : <input type="hidden" name="payoutQ" value={storeSearch} />}
       <FilterDateRange fromName="salesFrom" toName="salesTo" from={from} to={to} />
     </AdminFilterForm>
   );
