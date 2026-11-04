@@ -152,3 +152,43 @@ function sumStorePayouts(rows: readonly StorePayoutRow[]): StorePayoutTotals {
 
   return totals;
 }
+
+export const STORE_PAYOUT_PAGE_SIZE = 20;
+/** Longer than any store name; the search text comes from the URL. */
+const MAX_STORE_SEARCH_LENGTH = 100;
+
+/** Lower case without accents, so "motopecas" finds "Motopeças". */
+function searchableName(value: string) {
+  return value
+    .normalize("NFD")
+    .replaceAll(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase("pt-BR")
+    .trim();
+}
+
+/**
+ * The stores of one page of the payout list, after an optional name search. The page is cut here, after
+ * the report is built, because the list is ordered by each store's summed payout and also holds stores
+ * that only had a refund: the database cannot page that order without summing every store first, and a
+ * period has at most a few hundred stores. The totals stay those of the whole report.
+ *
+ * @param page - Requested page, 1-based; a page past the end shows the last one.
+ */
+export function pageStorePayoutRows(
+  rows: readonly StorePayoutRow[],
+  options: { query: string | null; page: number; pageSize?: number },
+) {
+  const pageSize = options.pageSize ?? STORE_PAYOUT_PAGE_SIZE;
+  const search = options.query == null ? "" : searchableName(options.query.slice(0, MAX_STORE_SEARCH_LENGTH));
+  const matches = search === "" ? rows : rows.filter((row) => searchableName(row.storeName).includes(search));
+  const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
+  const page = Math.min(Math.max(1, Math.trunc(options.page)), pageCount);
+
+  return {
+    rows: matches.slice((page - 1) * pageSize, page * pageSize),
+    page,
+    pageCount,
+    matchCount: matches.length,
+    isSearching: search !== "",
+  };
+}

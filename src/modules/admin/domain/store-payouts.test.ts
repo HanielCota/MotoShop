@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildStorePayoutReport, sumRefundsBySeller, type StorePayoutSales } from "./store-payouts";
+import {
+  buildStorePayoutReport,
+  pageStorePayoutRows,
+  sumRefundsBySeller,
+  type StorePayoutSales,
+} from "./store-payouts";
 
 function sales(sellerId: string, sellerNetAmountInCents: number, overrides: Partial<StorePayoutSales> = {}) {
   return {
@@ -177,5 +182,47 @@ describe("buildStorePayoutReport", () => {
     expect(() => buildStorePayoutReport({ sales: [sales("seller-z", 1)], refunds: [], storeNames })).toThrow(
       "Store name missing for seller seller-z",
     );
+  });
+});
+
+describe("pageStorePayoutRows", () => {
+  const rows = buildStorePayoutReport({
+    sales: [sales("seller-a", 8_000), sales("seller-b", 6_000), sales("seller-c", 4_000)],
+    refunds: [],
+    storeNames: new Map([
+      ["seller-a", "Garagem MX"],
+      ["seller-b", "Trilha Forte Motopeças"],
+      ["seller-c", "Areia Motos"],
+    ]),
+  }).rows;
+
+  it("cuts the list into pages of the given size", () => {
+    const view = pageStorePayoutRows(rows, { query: null, page: 2, pageSize: 2 });
+
+    expect(view.rows.map((row) => row.storeName)).toEqual(["Areia Motos"]);
+    expect(view).toMatchObject({ page: 2, pageCount: 2, matchCount: 3, isSearching: false });
+  });
+
+  it("finds a store ignoring case and accents", () => {
+    const view = pageStorePayoutRows(rows, { query: "  MOTOPECAS ", page: 1 });
+
+    expect(view.rows.map((row) => row.storeName)).toEqual(["Trilha Forte Motopeças"]);
+    expect(view.isSearching).toBe(true);
+  });
+
+  it("shows the last page when the page asked for is past the end", () => {
+    const view = pageStorePayoutRows(rows, { query: "motos", page: 9 });
+
+    expect(view).toMatchObject({ page: 1, pageCount: 1, matchCount: 1 });
+  });
+
+  it("returns no rows and one empty page when nothing matches", () => {
+    const view = pageStorePayoutRows(rows, { query: "Box", page: 1 });
+
+    expect(view).toMatchObject({ rows: [], page: 1, pageCount: 1, matchCount: 0 });
+  });
+
+  it("treats a blank search as no search", () => {
+    expect(pageStorePayoutRows(rows, { query: "   ", page: 1 }).isSearching).toBe(false);
   });
 });

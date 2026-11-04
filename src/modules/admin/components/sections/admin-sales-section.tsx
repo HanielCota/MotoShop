@@ -13,7 +13,7 @@ import { getAdminSalesSummary, type AdminSalesSummary } from "../../queries/sale
 import { getStorePayoutReport } from "../../queries/store-payouts";
 import { loadAdminSalesSearchParams } from "../../search-params";
 import { AdminCard, AdminFilterForm, AdminTable, cellClassName, FilterDateRange } from "../admin-ui";
-import { AdminStorePayoutsCard, storePayoutsDownloadHref } from "./admin-store-payouts-card";
+import { AdminStorePayoutsCard, type StorePayoutsParams } from "./admin-store-payouts-card";
 import type { AdminSectionProps } from "./types";
 
 const periodOptions: { value: SalesPeriod; label: string }[] = [
@@ -41,7 +41,7 @@ export async function AdminSalesSection({ searchParams }: AdminSectionProps) {
       {range == null ? (
         <MissingRangeHint from={params.salesFrom} to={params.salesTo} />
       ) : (
-        <SalesPanel range={range} downloadHref={storePayoutsDownloadHref(params)} />
+        <SalesPanel range={range} params={params} />
       )}
     </div>
   );
@@ -87,7 +87,7 @@ function describeRange(range: SalesDateRange) {
   return firstDay === lastDay ? firstDay : `${firstDay} a ${lastDay}`;
 }
 
-async function SalesPanel({ range, downloadHref }: { range: SalesDateRange; downloadHref: string }) {
+async function SalesPanel({ range, params }: { range: SalesDateRange; params: StorePayoutsParams }) {
   const [summary, configuration, payouts] = await Promise.all([
     getAdminSalesSummary(range),
     getMarketplaceConfiguration(),
@@ -141,7 +141,7 @@ async function SalesPanel({ range, downloadHref }: { range: SalesDateRange; down
           }
         />
       </div>
-      <AdminStorePayoutsCard report={payouts} downloadHref={downloadHref} />
+      <AdminStorePayoutsCard report={payouts} params={params} />
       <div className="grid gap-3 lg:grid-cols-2">
         <TopStores stores={summary.topStores} />
         <TopProducts products={summary.topProducts} />
