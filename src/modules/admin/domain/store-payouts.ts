@@ -153,7 +153,7 @@ function sumStorePayouts(rows: readonly StorePayoutRow[]): StorePayoutTotals {
   return totals;
 }
 
-export const STORE_PAYOUT_PAGE_SIZE = 20;
+const STORE_PAYOUT_PAGE_SIZE = 20;
 /** Longer than any store name; the search text comes from the URL. */
 const MAX_STORE_SEARCH_LENGTH = 100;
 
