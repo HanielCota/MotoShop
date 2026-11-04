@@ -205,6 +205,38 @@ describe("simulated purchase of test products", () => {
     expect(mocks.writes.map((write) => write.model)).toEqual(["cartItem"]);
   });
 
+  it("prices like the real checkout when the provider takes no marketplace fee", async () => {
+    // Regression: the simulation always applied the fee rule, so a marketplace coupon above the commission
+    // was refused here while the real checkout in single-account mode accepted it.
+    useCart([cartItem("a", { price: 100_000 })]);
+    mocks.findCoupon.mockResolvedValueOnce({
+      id: "coupon-2",
+      code: "MOTO950",
+      ownerType: "MARKETPLACE",
+      sellerId: null,
+      fundedBy: "MARKETPLACE",
+      discountType: "FIXED_AMOUNT",
+      percentageBps: null,
+      fixedAmountInCents: 95_000,
+      minimumPurchaseInCents: 0,
+    });
+    const noFeeProvider = {
+      createPayment: mocks.createPayment,
+      getPayment: vi.fn(),
+      refund: vi.fn(),
+      supportsSellerCount: () => true,
+      chargesMarketplaceFee: () => false,
+    };
+
+    const submission = await submitCheckout({ ...input, data: { ...data, couponCode: "MOTO950" } }, noFeeProvider);
+
+    expect(submission.kind === "simulated" && submission.purchase.totals).toMatchObject({
+      discountInCents: 95_000,
+      totalInCents: 6_990,
+    });
+    expect(mocks.createPayment).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["the card", { ...data, paymentMethodId: "visa", paymentToken: "a".repeat(32) } as CheckoutInput, [cartItem("a")]],
     ["missing stock", data, [cartItem("a", { quantity: 3, stock: 2 })]],

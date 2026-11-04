@@ -21,7 +21,10 @@ export async function submitCheckout(
 ): Promise<CheckoutSubmission> {
   const cart = await findCheckoutCart(input.identity);
   if (cart && isTestOnlyCart(cart))
-    return { kind: "simulated", purchase: await simulateTestCheckout(input, cart, new Date()) };
+    return {
+      kind: "simulated",
+      purchase: await simulateTestCheckout(input, cart, new Date(), paymentProvider.chargesMarketplaceFee()),
+    };
 
   return { kind: "order", result: await executeCheckout(input, paymentProvider) };
 }

@@ -20,18 +20,21 @@ export function isTestOnlyCart(cart: CheckoutCart): boolean {
  * checkout (data, shipping, coupon, stock), then answers with the summary. Nothing about a
  * purchase is written: no order, stock reservation, coupon redemption, payment, e-mail, job or
  * payment provider call. The only write is emptying the customer's own cart, as a purchase would.
+ * `marketplaceFeeCharged` comes from the same provider the real checkout would use, so both apply the
+ * same coupon limits.
  */
 export async function simulateTestCheckout(
   input: CheckoutRequest,
   cart: CheckoutCart,
   now: Date,
+  marketplaceFeeCharged: boolean,
 ): Promise<SimulatedPurchase> {
   // No card for now: the card fields would already call Mercado Pago (decision of 16/10/2026).
   if (input.data.paymentMethodId !== "pix")
     throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Escolha o Pix para concluir a compra." });
   assertItemsStillPurchasable(cart);
 
-  const { sellerCharges } = await priceCheckoutCart(input, cart, now);
+  const { sellerCharges } = await priceCheckoutCart(input, cart, now, undefined, marketplaceFeeCharged);
   const purchase = buildSimulatedPurchase(input.data, sellerCharges);
 
   // Shipping quotes await network calls. Preserve items added or changed in another tab
