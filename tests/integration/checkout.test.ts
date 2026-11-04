@@ -53,6 +53,7 @@ let couponCode = "";
 function provider(status: CreatePaymentResult["status"] = "APPROVED"): PaymentProvider {
   return {
     supportsSellerCount: () => true,
+    chargesMarketplaceFee: () => true,
     createPayment: vi.fn(async () => ({
       externalId: `test-${randomUUID()}`,
       status,

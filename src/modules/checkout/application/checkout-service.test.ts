@@ -71,6 +71,7 @@ const provider = (createPayment: PaymentProvider["createPayment"]): PaymentProvi
   getPayment: vi.fn(),
   refund: vi.fn(),
   supportsSellerCount: () => true,
+  chargesMarketplaceFee: () => true,
 });
 
 beforeEach(() => {

@@ -50,13 +50,11 @@ export function getCheckoutPaymentAvailability(
 }
 
 export function assertPaymentCanHandleSellers(sellerCount: number, provider: PaymentProvider): void {
-  if (!provider.supportsSellerCount(sellerCount)) {
+  if (provider.supportsSellerCount(sellerCount) === false) {
+    // A platform configuration problem (switch off or mismatched credentials), not something a store can fix.
     throw new ApplicationError({
       code: "CONFIGURATION_ERROR",
-      message:
-        sellerCount > 1
-          ? "O checkout com vários lojistas depende da habilitação do split 1:N no Mercado Pago."
-          : "O lojista ainda não conectou uma conta Mercado Pago ao marketplace. Nenhum pedido ou cobrança foi criado.",
+      message: "O pagamento ainda não está liberado no Moto Shop. Nenhum pedido ou cobrança foi criado.",
       statusCode: 503,
     });
   }

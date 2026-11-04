@@ -50,7 +50,11 @@ vi.mock("@/config/env", () => ({ env: { BETTER_AUTH_SECRET: "secret" } }));
 vi.mock("@/lib/database", () => ({ db: mocks.db }));
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("@/lib/payment/mercado-pago-provider", () => ({
-  mercadoPagoProvider: { createPayment: mocks.createPayment, supportsSellerCount: () => true },
+  mercadoPagoProvider: {
+    createPayment: mocks.createPayment,
+    supportsSellerCount: () => true,
+    chargesMarketplaceFee: () => true,
+  },
 }));
 vi.mock("@/modules/payments/application/assert-payment-ready", () => ({
   assertPaymentConfigured: vi.fn(),
@@ -199,6 +203,38 @@ describe("simulated purchase of test products", () => {
       totalInCents: 10_990,
     });
     expect(mocks.writes.map((write) => write.model)).toEqual(["cartItem"]);
+  });
+
+  it("prices like the real checkout when the provider takes no marketplace fee", async () => {
+    // Regression: the simulation always applied the fee rule, so a marketplace coupon above the commission
+    // was refused here while the real checkout in single-account mode accepted it.
+    useCart([cartItem("a", { price: 100_000 })]);
+    mocks.findCoupon.mockResolvedValueOnce({
+      id: "coupon-2",
+      code: "MOTO950",
+      ownerType: "MARKETPLACE",
+      sellerId: null,
+      fundedBy: "MARKETPLACE",
+      discountType: "FIXED_AMOUNT",
+      percentageBps: null,
+      fixedAmountInCents: 95_000,
+      minimumPurchaseInCents: 0,
+    });
+    const noFeeProvider = {
+      createPayment: mocks.createPayment,
+      getPayment: vi.fn(),
+      refund: vi.fn(),
+      supportsSellerCount: () => true,
+      chargesMarketplaceFee: () => false,
+    };
+
+    const submission = await submitCheckout({ ...input, data: { ...data, couponCode: "MOTO950" } }, noFeeProvider);
+
+    expect(submission.kind === "simulated" && submission.purchase.totals).toMatchObject({
+      discountInCents: 95_000,
+      totalInCents: 6_990,
+    });
+    expect(mocks.createPayment).not.toHaveBeenCalled();
   });
 
   it.each([

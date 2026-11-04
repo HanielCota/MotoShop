@@ -84,6 +84,22 @@ it("fails early with a coupon message when the marketplace fee would exceed a se
   ).toThrow(/cupom.*Loja s1/);
 });
 
+// Regression: with no marketplace fee sent (single-account mode) the cap blocked valid orders.
+it("accepts a marketplace coupon above the commission when no marketplace fee is charged", () => {
+  const [charge] = calculateSellerCharges({
+    items: [item("s1")],
+    quoteGroups,
+    selections: { s1: "pac" },
+    coupon: marketplaceCoupon(14_000),
+    defaultCommissionBps: 3_000,
+    now: new Date("2026-10-07T11:00:00.000Z"),
+    marketplaceFeeCharged: false,
+  });
+
+  expect(charge?.commissionInCents).toBe(4_800);
+  expect(charge?.totals.totalAmountInCents).toBe(3_500);
+});
+
 it("accepts a marketplace coupon while the fee still fits the charged total", () => {
   const [charge] = calculateSellerCharges({
     items: [item("s1")],

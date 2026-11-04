@@ -1,0 +1,59 @@
+/**
+ * Single-account mode (decisions of 26/10 and 03/11/2026): until stores connect their own Mercado Pago
+ * accounts, MERCADO_PAGO_SINGLE_ACCOUNT_MODE charges every order, from any store or from several stores, on
+ * the platform's own account with one payment and no marketplace fee. Orders still record each store's
+ * net and commission, which the platform pays out by hand.
+ *
+ * The Vercel production deployment charges real money, so it refuses TEST- credentials. Anywhere else the
+ * credentials may accept test cards even without the TEST- prefix (Mercado Pago test users get APP_USR-
+ * ones), and a test card would mark an order as paid, so the mode only runs against a test database:
+ * MERCADO_PAGO_TEST_MODE_DATABASE_HOST must name the host the server writes to.
+ */
+const TEST_CREDENTIAL_PREFIX = "TEST-";
+const PRODUCTION_DEPLOYMENT = "production";
+const SWITCH_ON = "true";
+
+/** The switch, database and Mercado Pago credentials the mode is decided from. */
+export type SingleAccountModeSettings = {
+  /** Raw switch value: "true" in any case turns the mode on; anything else leaves it off without failing. */
+  enabled: string | undefined;
+  testDatabaseHost: string | undefined;
+  databaseUrl: string;
+  accessToken: string | undefined;
+  publicKey: string | undefined;
+  deploymentEnvironment: string | undefined;
+};
+
+/**
+ * Tells whether the platform's Mercado Pago account may charge orders.
+ *
+ * @param settings - The switch, database and credentials in use.
+ * @returns Whether orders are charged on the platform account.
+ */
+export function isSingleAccountModeActive(settings: SingleAccountModeSettings): boolean {
+  if (settings.enabled?.trim().toLowerCase() !== SWITCH_ON) return false;
+  if (settings.accessToken == null) return false;
+
+  const testCredentials = isTestCredential(settings.accessToken);
+  // Cards need the Public Key in the browser; it must belong to the same environment as the Access Token.
+  if (settings.publicKey != null && isTestCredential(settings.publicKey) !== testCredentials) return false;
+  if (settings.deploymentEnvironment === PRODUCTION_DEPLOYMENT) return testCredentials === false;
+
+  return isTestDatabase(settings);
+}
+
+function isTestDatabase(settings: SingleAccountModeSettings): boolean {
+  if (settings.testDatabaseHost == null) return false;
+
+  return databaseHostOf(settings.databaseUrl) === settings.testDatabaseHost.trim().toLowerCase();
+}
+
+function databaseHostOf(databaseUrl: string): string | null {
+  if (URL.canParse(databaseUrl) === false) return null;
+
+  return new URL(databaseUrl).hostname.toLowerCase();
+}
+
+function isTestCredential(credential: string): boolean {
+  return credential.startsWith(TEST_CREDENTIAL_PREFIX);
+}

@@ -14,6 +14,7 @@ import type {
 import { mercadoPagoRequest } from "./mercado-pago/http";
 import { mapPaymentResponse, mapRefundResponse } from "./mercado-pago/mappers";
 import { pixExpirationDate } from "./mercado-pago/pix-expiration";
+import { isSingleAccountModeActive } from "./mercado-pago/single-account-mode";
 
 /**
  * Mercado Pago adapter: input validation and endpoint orchestration only.
@@ -23,19 +24,26 @@ export class MercadoPagoProvider implements PaymentProvider {
   supportsSellerCount(sellerCount: number): boolean {
     // The marketplace has no seller-linked Mercado Pago OAuth connection yet.
     // A platform token plus application_fee is not a safe substitute for it.
-    if (!Number.isSafeInteger(sellerCount) || sellerCount < 1) return false;
-    return false;
+    // Until then, the only charge allowed is the single-account one: one payment on the platform's own
+    // account, whatever stores the order has; the stores are paid out by hand from what the order records.
+    if (Number.isSafeInteger(sellerCount) === false || sellerCount < 1) return false;
+
+    return this.isSingleAccountMode();
+  }
+
+  chargesMarketplaceFee(): boolean {
+    // The platform's own account charges itself: a marketplace fee only exists with a seller's token.
+    return this.isSingleAccountMode() === false;
   }
 
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
     this.assertConfigured();
-    if (!this.supportsSellerCount(input.sellerCount)) {
+    if (this.supportsSellerCount(input.sellerCount) === false) {
+      // Without the single-account switch (or with mismatched credentials) nothing is charged: a platform
+      // configuration problem, not something a store can fix.
       throw new ApplicationError({
         code: "CONFIGURATION_ERROR",
-        message:
-          input.sellerCount > 1
-            ? "O checkout com vários lojistas ainda depende da habilitação do split 1:N no Mercado Pago."
-            : "O lojista ainda não conectou uma conta Mercado Pago ao marketplace. Nenhuma cobrança foi criada.",
+        message: "O pagamento ainda não está liberado no Moto Shop. Nenhuma cobrança foi criada.",
         statusCode: 503,
       });
     }
@@ -75,7 +83,9 @@ export class MercadoPagoProvider implements PaymentProvider {
         // An unpaid Pix must not hold stock and coupons forever (M-06).
         ...(input.paymentMethodId === "pix" ? { date_of_expiration: pixExpirationDate(new Date()) } : {}),
         ...(env.MERCADO_PAGO_NOTIFICATION_URL ? { notification_url: env.MERCADO_PAGO_NOTIFICATION_URL } : {}),
-        ...(input.applicationFeeInCents !== undefined ? { application_fee: input.applicationFeeInCents / 100 } : {}),
+        ...(input.applicationFeeInCents !== undefined && this.chargesMarketplaceFee()
+          ? { application_fee: input.applicationFeeInCents / 100 }
+          : {}),
       },
     });
 
@@ -125,6 +135,17 @@ export class MercadoPagoProvider implements PaymentProvider {
     });
 
     return mapRefundResponse(response);
+  }
+
+  private isSingleAccountMode(): boolean {
+    return isSingleAccountModeActive({
+      enabled: env.MERCADO_PAGO_SINGLE_ACCOUNT_MODE,
+      testDatabaseHost: env.MERCADO_PAGO_TEST_MODE_DATABASE_HOST,
+      databaseUrl: env.DATABASE_URL,
+      accessToken: env.MERCADO_PAGO_ACCESS_TOKEN,
+      publicKey: env.MERCADO_PAGO_PUBLIC_KEY,
+      deploymentEnvironment: env.VERCEL_ENV,
+    });
   }
 
   private assertConfigured(): void {

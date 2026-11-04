@@ -42,4 +42,6 @@ export interface PaymentProvider {
   getPayment(externalId: string): Promise<GetPaymentResult>;
   refund(input: RefundPaymentInput): Promise<CreatePaymentResult>;
   supportsSellerCount(sellerCount: number): boolean;
+  /** Whether a marketplace fee is taken from the charge, which caps it at what each store receives. */
+  chargesMarketplaceFee(): boolean;
 }
