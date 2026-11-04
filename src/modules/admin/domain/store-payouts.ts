@@ -172,17 +172,18 @@ function searchableName(value: string) {
  * that only had a refund: the database cannot page that order without summing every store first, and a
  * period has at most a few hundred stores. The totals stay those of the whole report.
  *
- * @param page - Requested page, 1-based; a page past the end shows the last one.
+ * @param options - `page` is 1-based; a page past the end shows the last one, and a non-finite page the first.
  */
 export function pageStorePayoutRows(
   rows: readonly StorePayoutRow[],
   options: { query: string | null; page: number; pageSize?: number },
 ) {
-  const pageSize = options.pageSize ?? STORE_PAYOUT_PAGE_SIZE;
+  const pageSize = Math.max(1, Math.trunc(options.pageSize ?? STORE_PAYOUT_PAGE_SIZE));
+  const requestedPage = Number.isFinite(options.page) ? Math.trunc(options.page) : 1;
   const search = options.query == null ? "" : searchableName(options.query.slice(0, MAX_STORE_SEARCH_LENGTH));
   const matches = search === "" ? rows : rows.filter((row) => searchableName(row.storeName).includes(search));
   const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
-  const page = Math.min(Math.max(1, Math.trunc(options.page)), pageCount);
+  const page = Math.min(Math.max(1, requestedPage), pageCount);
 
   return {
     rows: matches.slice((page - 1) * pageSize, page * pageSize),
@@ -190,5 +191,6 @@ export function pageStorePayoutRows(
     pageCount,
     matchCount: matches.length,
     isSearching: search !== "",
+    isLastPage: page === pageCount,
   };
 }

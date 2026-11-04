@@ -135,6 +135,23 @@ describe("AdminStorePayoutsCard", () => {
     expect(tableRows()[1]).toHaveTextContent("R$ 3.250,00");
   });
 
+  it("lists the refunds no store could take once, at the end of the full list only", () => {
+    const withUnattributed = { ...manyStores, unattributedRefundInCents: 2_500 };
+
+    render(<AdminStorePayoutsCard report={withUnattributed} params={params} />);
+    expect(screen.queryByText("Reembolsos sem loja identificada")).toBeNull();
+    cleanup();
+
+    render(
+      <AdminStorePayoutsCard report={withUnattributed} params={{ ...params, payoutQ: "Garagem", payoutPage: 2 }} />,
+    );
+    expect(screen.queryByText("Reembolsos sem loja identificada")).toBeNull();
+    cleanup();
+
+    render(<AdminStorePayoutsCard report={withUnattributed} params={{ ...params, payoutPage: 2 }} />);
+    expect(screen.getByText("Reembolsos sem loja identificada")).toBeInTheDocument();
+  });
+
   it("downloads the whole period, whatever the search or page", () => {
     render(<AdminStorePayoutsCard report={manyStores} params={{ ...params, payoutQ: "loja 2", payoutPage: 2 }} />);
 

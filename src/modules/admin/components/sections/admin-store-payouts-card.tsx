@@ -143,7 +143,8 @@ export function AdminStorePayoutsCard({ report, params }: { report: StorePayoutR
             <MoneyCells totals={row} />
           </tr>
         ))}
-        {report.unattributedRefundInCents > 0 ? (
+        {/* Not a store: shown once, at the end of the full list, so it never reads as part of a search result. */}
+        {report.unattributedRefundInCents > 0 && view.isSearching === false && view.isLastPage ? (
           <tr>
             <td className={cellClassName} colSpan={columns.length - 1}>
               Reembolsos sem loja identificada

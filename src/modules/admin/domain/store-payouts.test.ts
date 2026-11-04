@@ -222,6 +222,13 @@ describe("pageStorePayoutRows", () => {
     expect(view).toMatchObject({ rows: [], page: 1, pageCount: 1, matchCount: 0 });
   });
 
+  it("shows the first page for a page number that is not a number", () => {
+    const view = pageStorePayoutRows(rows, { query: null, page: Number.NaN, pageSize: 2 });
+
+    expect(view).toMatchObject({ page: 1, pageCount: 2, isLastPage: false });
+    expect(view.rows).toHaveLength(2);
+  });
+
   it("treats a blank search as no search", () => {
     expect(pageStorePayoutRows(rows, { query: "   ", page: 1 }).isSearching).toBe(false);
   });
