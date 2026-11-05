@@ -46,6 +46,20 @@ describe("marketplaceLimitsSchema", () => {
     expect(result.success).toBe(false);
     expect(result.error?.issues[0]?.message).toMatch(/use um número inteiro de \d+ a \d+/);
   });
+
+  it("answers in Portuguese when a field is missing or is not text", () => {
+    const withoutReturnPhotos = Object.fromEntries(
+      Object.entries(blankForm).filter(([field]) => field !== "returnPhotoLimit"),
+    );
+
+    const missing = marketplaceLimitsSchema.safeParse(withoutReturnPhotos);
+    const notText = marketplaceLimitsSchema.safeParse({ ...blankForm, lowStockThreshold: 5 });
+
+    expect(missing.error?.issues[0]?.message).toBe(
+      "Em “Fotos por pedido de devolução”, use um número inteiro de 1 a 5, ou deixe em branco.",
+    );
+    expect(notText.error?.issues[0]?.message).toContain("use um número inteiro de 1 a 50");
+  });
 });
 
 describe("marketplaceLimitsFormValues", () => {

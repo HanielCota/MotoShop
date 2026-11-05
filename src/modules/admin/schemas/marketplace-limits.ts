@@ -8,7 +8,7 @@ import {
   type StoredMarketplaceLimits,
 } from "../domain/marketplace-limits";
 
-/** Labels of the Limites card, also used in the validation messages and the audit log. */
+/** Labels of the Limites card, also used in the validation messages and the audit log (`audit-log-presentation.ts`). */
 export const marketplaceLimitLabels = {
   productPhotoLimit: "Fotos por produto",
   photoMaxSizeInMegabytes: "Tamanho máximo de cada foto (MB)",
@@ -32,7 +32,7 @@ function optionalLimit(field: MarketplaceLimitField) {
   const message = rangeMessage(field);
 
   return z
-    .string()
+    .string({ error: message })
     .max(MAX_LIMIT_INPUT_LENGTH, message)
     .transform((value) => value.trim())
     .refine((value) => value === "" || DIGITS_ONLY.test(value), message)
