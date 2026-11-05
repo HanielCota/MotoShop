@@ -60,13 +60,19 @@ async function denyNonMember(userId: string): Promise<never> {
   notFound();
 }
 
+/** The signed-in administrator, or null for anyone else; for Route Handlers, which answer the 404 themselves. */
+export async function getAdminSession() {
+  const session = await getCurrentSession();
+  if (session == null || session.user.emailVerified !== true) return null;
+  if (isConfiguredAdminEmail(session.user.email, env.ADMIN_EMAILS) === false) return null;
+
+  return session;
+}
+
 /** Anyone who is not an administrator, signed in or not, gets the plain 404 for every /admin address. */
 export async function requireAdminAccess() {
-  const session = await getCurrentSession();
-
-  if (!session?.user.emailVerified || !isConfiguredAdminEmail(session.user.email, env.ADMIN_EMAILS)) {
-    notFound();
-  }
+  const session = await getAdminSession();
+  if (session == null) notFound();
 
   return session;
 }

@@ -10,8 +10,10 @@ import { adminHref } from "../../admin-href";
 import { getMarketplaceConfiguration } from "../../queries/marketplace-configuration";
 import { lastDayOf, resolveSalesDateRange, type SalesDateRange, type SalesPeriod } from "../../queries/sales-period";
 import { getAdminSalesSummary, type AdminSalesSummary } from "../../queries/sales-summary";
+import { getStorePayoutReport } from "../../queries/store-payouts";
 import { loadAdminSalesSearchParams } from "../../search-params";
 import { AdminCard, AdminFilterForm, AdminTable, cellClassName, FilterDateRange } from "../admin-ui";
+import { AdminStorePayoutsCard, type StorePayoutsParams } from "./admin-store-payouts-card";
 import type { AdminSectionProps } from "./types";
 
 const periodOptions: { value: SalesPeriod; label: string }[] = [
@@ -34,20 +36,27 @@ export async function AdminSalesSection({ searchParams }: AdminSectionProps) {
 
   return (
     <div className="space-y-4">
-      <PeriodFilter selected={params.salesPeriod} />
-      {params.salesPeriod === "custom" ? <CustomRangeForm from={params.salesFrom} to={params.salesTo} /> : null}
-      {range == null ? <MissingRangeHint from={params.salesFrom} to={params.salesTo} /> : <SalesPanel range={range} />}
+      <PeriodFilter selected={params.salesPeriod} storeSearch={params.payoutQ} />
+      {params.salesPeriod === "custom" ? (
+        <CustomRangeForm from={params.salesFrom} to={params.salesTo} storeSearch={params.payoutQ} />
+      ) : null}
+      {range == null ? (
+        <MissingRangeHint from={params.salesFrom} to={params.salesTo} />
+      ) : (
+        <SalesPanel range={range} params={params} />
+      )}
     </div>
   );
 }
 
-function PeriodFilter({ selected }: { selected: SalesPeriod }) {
+/** A new period keeps the payout store search, but starts its list again from page 1. */
+function PeriodFilter({ selected, storeSearch }: { selected: SalesPeriod; storeSearch: string | null }) {
   return (
     <nav aria-label="Período" className="flex flex-wrap gap-2">
       {periodOptions.map((option) => (
         <Link
           key={option.value}
-          href={adminHref("sales", { salesPeriod: option.value }, { salesPeriod: "30d" })}
+          href={adminHref("sales", { salesPeriod: option.value, payoutQ: storeSearch }, { salesPeriod: "30d" })}
           aria-current={option.value === selected ? "page" : undefined}
           className="hover:bg-muted aria-[current=page]:bg-foreground aria-[current=page]:text-background inline-flex min-h-11 items-center rounded-md border px-3 text-sm font-semibold whitespace-nowrap transition-colors sm:min-h-9"
         >
@@ -58,10 +67,19 @@ function PeriodFilter({ selected }: { selected: SalesPeriod }) {
   );
 }
 
-function CustomRangeForm({ from, to }: { from: string | null; to: string | null }) {
+function CustomRangeForm({
+  from,
+  to,
+  storeSearch,
+}: {
+  from: string | null;
+  to: string | null;
+  storeSearch: string | null;
+}) {
   return (
     <AdminFilterForm resetHref={adminHref("sales", {})} label="Escolher datas">
       <input type="hidden" name="salesPeriod" value="custom" />
+      {storeSearch == null ? null : <input type="hidden" name="payoutQ" value={storeSearch} />}
       <FilterDateRange fromName="salesFrom" toName="salesTo" from={from} to={to} />
     </AdminFilterForm>
   );
@@ -81,8 +99,12 @@ function describeRange(range: SalesDateRange) {
   return firstDay === lastDay ? firstDay : `${firstDay} a ${lastDay}`;
 }
 
-async function SalesPanel({ range }: { range: SalesDateRange }) {
-  const [summary, configuration] = await Promise.all([getAdminSalesSummary(range), getMarketplaceConfiguration()]);
+async function SalesPanel({ range, params }: { range: SalesDateRange; params: StorePayoutsParams }) {
+  const [summary, configuration, payouts] = await Promise.all([
+    getAdminSalesSummary(range),
+    getMarketplaceConfiguration(),
+    getStorePayoutReport(range),
+  ]);
   const commissionHint =
     configuration == null
       ? "O percentual gravado em cada pedido"
@@ -131,6 +153,7 @@ async function SalesPanel({ range }: { range: SalesDateRange }) {
           }
         />
       </div>
+      <AdminStorePayoutsCard report={payouts} params={params} />
       <div className="grid gap-3 lg:grid-cols-2">
         <TopStores stores={summary.topStores} />
         <TopProducts products={summary.topProducts} />

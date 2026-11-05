@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { currentMarketplaceYear, formatCount, formatPercentFromBps } from "./format";
+import { currentMarketplaceYear, formatCount, formatMoneyInCentsForSpreadsheet, formatPercentFromBps } from "./format";
 
 describe("formatCount", () => {
   it("uses the singular only for exactly one", () => {
@@ -19,6 +19,14 @@ describe("formatPercentFromBps", () => {
     expect(formatPercentFromBps(1200)).toBe("12%");
     expect(formatPercentFromBps(1050)).toBe("10,5%");
     expect(formatPercentFromBps(1)).toBe("0,01%");
+  });
+});
+
+describe("formatMoneyInCentsForSpreadsheet", () => {
+  it("writes reais with a decimal comma and no thousands dot or currency symbol", () => {
+    expect(formatMoneyInCentsForSpreadsheet(3_903_368)).toBe("39033,68");
+    expect(formatMoneyInCentsForSpreadsheet(0)).toBe("0,00");
+    expect(formatMoneyInCentsForSpreadsheet(5)).toBe("0,05");
   });
 });
 

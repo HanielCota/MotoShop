@@ -16,7 +16,8 @@ import {
 
 export type AdminSalesSummary = Awaited<ReturnType<typeof getAdminSalesSummary>>;
 
-function confirmedSellerOrdersIn(range: SalesDateRange) {
+/** Seller orders that count as sales in the range; the payout list uses the same rule. */
+export function confirmedSellerOrdersIn(range: SalesDateRange) {
   return {
     status: { in: [...confirmedSellerOrderStatuses] },
     createdAt: { gte: range.start, lt: range.end },
@@ -121,9 +122,14 @@ async function countOrdersByStatus(range: SalesDateRange): Promise<{ status: Ord
   return groups.map((group) => ({ status: group.status, count: group._count._all }));
 }
 
+/** Refunds completed in the range, whenever they were requested; the payout list uses the same rule. */
+export function completedRefundsIn(range: SalesDateRange) {
+  return { type: "REFUND", status: "SUCCEEDED", processedAt: { gte: range.start, lt: range.end } } as const;
+}
+
 async function sumRefunds(range: SalesDateRange) {
   const refunds = await db.paymentTransaction.aggregate({
-    where: { type: "REFUND", status: "SUCCEEDED", processedAt: { gte: range.start, lt: range.end } },
+    where: completedRefundsIn(range),
     _count: { _all: true },
     _sum: { amountInCents: true },
   });

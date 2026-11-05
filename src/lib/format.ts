@@ -14,6 +14,11 @@ const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
   timeZone: MARKETPLACE_TIME_ZONE,
 });
 const moneyFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const spreadsheetMoneyFormatter = new Intl.NumberFormat("pt-BR", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+  useGrouping: false,
+});
 const yearFormatter = new Intl.DateTimeFormat("pt-BR", { year: "numeric", timeZone: MARKETPLACE_TIME_ZONE });
 
 type DateInput = Date | string | number;
@@ -41,6 +46,11 @@ export function formatDateTime(value: DateInput): string {
 
 export function formatMoneyInCents(amountInCents: number): string {
   return moneyFormatter.format(amountInCents / 100);
+}
+
+/** Reais with a decimal comma and no thousands dot or symbol, which Excel in Portuguese reads as a number: 3903368 → "39033,68". */
+export function formatMoneyInCentsForSpreadsheet(amountInCents: number): string {
+  return spreadsheetMoneyFormatter.format(amountInCents / 100);
 }
 
 const percentFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });

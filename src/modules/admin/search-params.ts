@@ -167,6 +167,8 @@ export const adminSalesSearchParams = {
   salesPeriod: parseAsStringLiteral(salesPeriodValues).withDefault("30d"),
   salesFrom: parseAsAdminText,
   salesTo: parseAsAdminText,
+  payoutQ: parseAsAdminText,
+  payoutPage: parseAsAdminPage,
 };
 
 /** Cada seção do Admin carrega somente os próprios parâmetros. */
