@@ -24,14 +24,14 @@ afterEach(cleanup);
 
 describe("ProductBuyBox", () => {
   it("keeps the cart button without any payment or demo notice", () => {
-    render(<ProductBuyBox variants={[variant]} hasPriceRange={false} />);
+    render(<ProductBuyBox variants={[variant]} hasPriceRange={false} lastUnitsThreshold={3} />);
 
     expect(screen.getByRole("button", { name: "Adicionar ao carrinho" })).toBeInTheDocument();
     expect(screen.queryByText(removedNotices)).not.toBeInTheDocument();
   });
 
   it("shows the SKU with the stock and no illustrative labels", () => {
-    render(<ProductBuyBox variants={[{ ...variant, stock: 10 }]} hasPriceRange={false} />);
+    render(<ProductBuyBox variants={[{ ...variant, stock: 10 }]} hasPriceRange={false} lastUnitsThreshold={3} />);
 
     expect(screen.getByText("SKU SKU-1 · 10 em estoque")).toBeInTheDocument();
     expect(screen.queryByText(removedNotices)).not.toBeInTheDocument();
@@ -39,16 +39,22 @@ describe("ProductBuyBox", () => {
 
   it("marks an option without stock as sold out", () => {
     const soldOut = { ...variant, id: "variant-2", title: "Branco · G", stock: 0 };
-    render(<ProductBuyBox variants={[variant, soldOut]} hasPriceRange={false} />);
+    render(<ProductBuyBox variants={[variant, soldOut]} hasPriceRange={false} lastUnitsThreshold={3} />);
 
     expect(screen.getByText(/R\$ 199,90 · Esgotado/)).toBeInTheDocument();
   });
 
   it("reads the old price and the offer as separate phrases", () => {
     const onSale = { ...variant, priceInCents: 89990, currentPriceInCents: 79990, onSale: true };
-    render(<ProductBuyBox variants={[onSale]} hasPriceRange={false} />);
+    render(<ProductBuyBox variants={[onSale]} hasPriceRange={false} lastUnitsThreshold={3} />);
 
     const oldPrice = screen.getByText(/Preço anterior/).parentElement;
     expect(oldPrice?.textContent?.replace(/\s/g, " ")).toMatch(/R\$ 899,90\. Oferta · 11% de desconto/);
+  });
+
+  it("shows Últimas unidades with the threshold configured in the Admin", () => {
+    render(<ProductBuyBox variants={[{ ...variant, stock: 8 }]} hasPriceRange={false} lastUnitsThreshold={10} />);
+
+    expect(screen.getByText(/Últimas unidades · restam 8/)).toBeInTheDocument();
   });
 });

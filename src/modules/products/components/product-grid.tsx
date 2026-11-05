@@ -8,9 +8,12 @@ import {
   type ProductCardData,
 } from "@/components/storefront/product-card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { getMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
+import type { MarketplaceLimits } from "@/modules/admin/domain/marketplace-limits";
 import { getCategoryLabel } from "@/modules/catalog/category-labels";
 import { getProductOffer } from "@/modules/products/domain/product-offer";
 import { isNewProduct } from "@/modules/products/domain/product-novelty";
+import { getPublicStockStatus } from "@/modules/products/domain/stock-status";
 import { getCurrentPriceInCents, hasActivePromotion } from "@/modules/products/domain/pricing";
 import { getPublicStorageImageUrl } from "@/shared/storage/public-storage-url";
 import type { listApprovedProducts } from "@/modules/products/queries/products";
@@ -35,8 +38,19 @@ type CardSourceProduct = {
   variants: CardSourceVariant[];
 };
 
-/** Converte um produto aprovado no modelo de apresentação do card, sempre no servidor. */
-export function toProductCardData(product: CardSourceProduct, now = new Date()): ProductCardData {
+/** Limits that decide the card badges: "Últimas unidades" and "Novidade". */
+export type ProductCardRules = Pick<MarketplaceLimits, "lastUnitsThreshold" | "newProductDays">;
+
+/**
+ * Turns an approved product into the card model, always on the server.
+ *
+ * @param rules - Badge limits from Admin › Configurações › Limites.
+ */
+export function toProductCardData(
+  product: CardSourceProduct,
+  rules: ProductCardRules,
+  now = new Date(),
+): ProductCardData {
   const offer = getProductOffer(product.variants, now);
   const cheapest = product.variants
     .filter((variant) => variant.active !== false)
@@ -61,12 +75,13 @@ export function toProductCardData(product: CardSourceProduct, now = new Date()):
     compareAtPriceInCents: compareAt,
     hasPriceRange: offer.hasPriceRange,
     availableQuantity: offer.availableQuantity,
+    stockStatus: getPublicStockStatus(offer.availableQuantity, rules.lastUnitsThreshold),
     sponsored: Boolean(product.isVip),
-    isNew: isNewProduct(product, now),
+    isNew: isNewProduct(product, now, rules.newProductDays),
   };
 }
 
-export function ProductGrid({
+export async function ProductGrid({
   products,
   emptyMessage = "Nenhum produto aprovado corresponde aos filtros.",
   emptyTitle = "Nenhum produto encontrado",
@@ -85,13 +100,14 @@ export function ProductGrid({
     );
   }
 
+  const rules = await getMarketplaceLimits();
   // oxlint-disable-next-line react/purity -- Server Component: it renders once per request, on the server, so the date cannot drift between renders.
   const now = new Date();
   return (
     <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
       {products.map((product, index) => (
         <li key={product.id} className="flex min-w-0">
-          <ProductCard product={toProductCardData(product, now)} eager={index < EAGER_PRODUCT_CARDS} />
+          <ProductCard product={toProductCardData(product, rules, now)} eager={index < EAGER_PRODUCT_CARDS} />
         </li>
       ))}
     </ul>

@@ -20,6 +20,7 @@ import { listActiveMotorcycleFitments } from "@/modules/motorcycles/queries/moto
 import { getPrimarySavedMotorcycle } from "@/modules/motorcycles/queries/saved-motorcycles";
 import { buildProductJsonLd, serializeJsonLd } from "@/modules/products/application/build-product-json-ld";
 import { ProductBreadcrumb } from "@/modules/products/components/detail/product-breadcrumb";
+import { getMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
 import { ProductBuyBox } from "@/modules/products/components/detail/product-buy-box";
 import {
   formatFitmentLabel,
@@ -103,9 +104,10 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
   ]);
   if (!product) notFound();
 
-  const [coupons, universal, [isFavorite, primaryMotorcycle]] = await Promise.all([
+  const [coupons, universal, limits, [isFavorite, primaryMotorcycle]] = await Promise.all([
     listProductPageCoupons(product.id),
     isUniversalCategory(product.categoryId),
+    getMarketplaceLimits(),
     session
       ? Promise.all([isProductFavorited(session.user.id, product.id), getPrimarySavedMotorcycle(session.user.id)])
       : Promise.resolve([false, null] as const),
@@ -201,7 +203,9 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
             {offer.hasPromotion ? <Badge>Oferta</Badge> : null}
             {product.seller.subscriptions.length > 0 ? <Badge variant="brand">Patrocinado · Loja VIP</Badge> : null}
             {/* oxlint-disable-next-line react/purity -- Server Component: it renders once per request, on the server, so the date cannot drift between renders. */}
-            {isNewProduct(product, new Date()) ? <Badge variant="inverse">Novidade</Badge> : null}
+            {isNewProduct(product, new Date(), limits.newProductDays) ? (
+              <Badge variant="inverse">Novidade</Badge>
+            ) : null}
           </div>
           <h1 id="product-title" className="text-foreground mt-5 text-3xl leading-tight sm:text-4xl">
             {product.name}
@@ -235,6 +239,7 @@ async function ProductDetail({ slug, searchParams }: { slug: string; searchParam
             <ProductBuyBox
               variants={buyBoxVariants}
               hasPriceRange={offer.hasPriceRange}
+              lastUnitsThreshold={limits.lastUnitsThreshold}
               fitment={<ProductFitmentBanner status={fitmentStatus} picker={motorcyclePicker} />}
             />
           </div>

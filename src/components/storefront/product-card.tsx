@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { formatMoneyInCents } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { getPublicStockStatus, publicStockStatusLabel } from "@/modules/products/domain/stock-status";
+import { publicStockStatusLabel, type PublicStockStatus } from "@/modules/products/domain/stock-status";
 
 import { getProductCardBadges, type ProductCardBadge } from "./product-card-badges";
 
@@ -37,8 +37,10 @@ export type ProductCardData = {
   compareAtPriceInCents?: number | null | undefined;
   hasPriceRange: boolean;
   availableQuantity: number;
+  /** Computed on the server with the "Últimas unidades" limit from the Admin. */
+  stockStatus: PublicStockStatus;
   sponsored: boolean;
-  /** Approved in the last 30 days (computed on the server, see `isNewProduct`). */
+  /** Approved within the "Novidade" days set in the Admin (computed on the server, see `isNewProduct`). */
   isNew: boolean;
 };
 
@@ -69,7 +71,7 @@ export function ProductCard({
   action?: ReactNode;
 }) {
   const Heading = headingLevel;
-  const stockStatus = getPublicStockStatus(product.availableQuantity);
+  const stockStatus = product.stockStatus;
   const onSale =
     product.compareAtPriceInCents != null &&
     product.priceInCents !== null &&

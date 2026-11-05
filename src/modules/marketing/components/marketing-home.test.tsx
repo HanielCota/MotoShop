@@ -64,6 +64,7 @@ function makeProduct(id: string, name: string, overrides: Partial<ProductCardDat
     priceInCents: 89990,
     hasPriceRange: false,
     availableQuantity: 3,
+    stockStatus: "last-units",
     sponsored: false,
     isNew: false,
     ...overrides,

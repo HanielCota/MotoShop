@@ -1,5 +1,6 @@
 import "server-only";
 
+import { MARKETPLACE_LIMIT_DEFAULTS } from "@/modules/admin/domain/marketplace-limits";
 import { toProductCardData } from "@/modules/products/components/product-grid";
 
 import { SEARCH_SUGGESTION_LIMIT, type SearchSuggestion } from "../schemas/search-suggestions";
@@ -21,7 +22,8 @@ export async function listSearchSuggestions(input: {
   const now = new Date();
 
   return result.products.map((product) => {
-    const card = toProductCardData(product, now);
+    // Suggestions show neither stock nor "Novidade", so the badge limits are not read from the database.
+    const card = toProductCardData(product, MARKETPLACE_LIMIT_DEFAULTS, now);
     return {
       id: card.id,
       name: card.name,
