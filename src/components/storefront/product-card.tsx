@@ -36,7 +36,6 @@ export type ProductCardData = {
   /** Preço normal da variante mais barata quando ela está em promoção ativa. */
   compareAtPriceInCents?: number | null | undefined;
   hasPriceRange: boolean;
-  availableQuantity: number;
   /** Computed on the server with the "Últimas unidades" limit from the Admin. */
   stockStatus: PublicStockStatus;
   sponsored: boolean;

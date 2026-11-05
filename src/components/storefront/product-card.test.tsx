@@ -18,7 +18,6 @@ function card(imageUrl: string): ProductCardData {
     category: { label: "Capacetes" },
     priceInCents: 149990,
     hasPriceRange: false,
-    availableQuantity: 3,
     stockStatus: "last-units",
     sponsored: false,
     isNew: false,

@@ -63,7 +63,6 @@ function makeProduct(id: string, name: string, overrides: Partial<ProductCardDat
     seller: { name: "Loja de teste" },
     priceInCents: 89990,
     hasPriceRange: false,
-    availableQuantity: 3,
     stockStatus: "last-units",
     sponsored: false,
     isNew: false,

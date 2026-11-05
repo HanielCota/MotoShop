@@ -41,6 +41,9 @@ type CardSourceProduct = {
 /** Limits that decide the card badges: "Últimas unidades" and "Novidade". */
 export type ProductCardRules = Pick<MarketplaceLimits, "lastUnitsThreshold" | "newProductDays">;
 
+/** Card fields that do not depend on the Admin limits: names, links, image and price. */
+export type ProductCardSummary = Omit<ProductCardData, "stockStatus" | "isNew">;
+
 /**
  * Turns an approved product into the card model, always on the server.
  *
@@ -52,6 +55,23 @@ export function toProductCardData(
   now = new Date(),
 ): ProductCardData {
   const offer = getProductOffer(product.variants, now);
+  return {
+    ...buildProductCardSummary(product, offer, now),
+    stockStatus: getPublicStockStatus(offer.availableQuantity, rules.lastUnitsThreshold),
+    isNew: isNewProduct(product, now, rules.newProductDays),
+  };
+}
+
+/** The card fields without the badges, for lists that show neither stock nor "Novidade" (search suggestions). */
+export function toProductCardSummary(product: CardSourceProduct, now = new Date()): ProductCardSummary {
+  return buildProductCardSummary(product, getProductOffer(product.variants, now), now);
+}
+
+function buildProductCardSummary(
+  product: CardSourceProduct,
+  offer: ReturnType<typeof getProductOffer>,
+  now: Date,
+): ProductCardSummary {
   const cheapest = product.variants
     .filter((variant) => variant.active !== false)
     .find((variant) => getCurrentPriceInCents(variant, now) === offer.priceInCents);
@@ -74,10 +94,7 @@ export function toProductCardData(
     priceInCents: offer.priceInCents,
     compareAtPriceInCents: compareAt,
     hasPriceRange: offer.hasPriceRange,
-    availableQuantity: offer.availableQuantity,
-    stockStatus: getPublicStockStatus(offer.availableQuantity, rules.lastUnitsThreshold),
     sponsored: Boolean(product.isVip),
-    isNew: isNewProduct(product, now, rules.newProductDays),
   };
 }
 
