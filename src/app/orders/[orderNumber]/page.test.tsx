@@ -19,6 +19,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect, notFound: mocks.notFound }));
+vi.mock("@/modules/admin/application/marketplace-limits", async () => {
+  const { MARKETPLACE_LIMIT_DEFAULTS } = await import("@/modules/admin/domain/marketplace-limits");
+  return { getMarketplaceLimits: async () => ({ ...MARKETPLACE_LIMIT_DEFAULTS }) };
+});
 vi.mock("@/modules/auth/application/authorization", () => ({ getCurrentSession: mocks.session }));
 vi.mock("@/modules/orders/application/resolve-customer-order-access", () => ({
   resolveCustomerOrderIdentity: mocks.identity,
