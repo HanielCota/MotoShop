@@ -43,6 +43,12 @@ const serverEnvSchema = z
     MERCADO_PAGO_API_URL: optionalUrl,
     MERCADO_PAGO_MULTI_SELLER_ENABLED: optionalBoolean,
     MERCADO_PAGO_WEBHOOK_SECRET: optionalString,
+    // Switch for charging every order on the platform's own account, and the test database TEST- credentials
+    // may charge into (single-account-mode.ts).
+    // A plain string, so a mistyped value leaves charging off instead of failing the whole environment.
+    MERCADO_PAGO_SINGLE_ACCOUNT_MODE: optionalString,
+    MERCADO_PAGO_TEST_MODE_DATABASE_HOST: optionalString,
+    VERCEL_ENV: optionalString,
     MELHOR_ENVIO_CLIENT_ID: optionalString,
     MELHOR_ENVIO_CLIENT_SECRET: optionalString,
     MELHOR_ENVIO_REDIRECT_URI: optionalUrl,

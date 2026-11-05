@@ -6,6 +6,11 @@ const paymentEnv = vi.hoisted(() => ({
   MERCADO_PAGO_API_URL: "https://api.mercadopago.com",
   MERCADO_PAGO_NOTIFICATION_URL: undefined as string | undefined,
   MERCADO_PAGO_WEBHOOK_SECRET: undefined as string | undefined,
+  MERCADO_PAGO_PUBLIC_KEY: undefined as string | undefined,
+  MERCADO_PAGO_TEST_MODE_DATABASE_HOST: undefined as string | undefined,
+  MERCADO_PAGO_SINGLE_ACCOUNT_MODE: undefined as string | undefined,
+  DATABASE_URL: "postgresql://user:password@test-branch.example.test/neondb",
+  VERCEL_ENV: undefined as string | undefined,
 }));
 
 vi.mock("server-only", () => ({}));
@@ -25,6 +30,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
   paymentEnv.MERCADO_PAGO_NOTIFICATION_URL = undefined;
   paymentEnv.MERCADO_PAGO_WEBHOOK_SECRET = undefined;
+  paymentEnv.MERCADO_PAGO_ACCESS_TOKEN = "TEST_TOKEN";
+  paymentEnv.MERCADO_PAGO_TEST_MODE_DATABASE_HOST = undefined;
+  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = undefined;
+  paymentEnv.VERCEL_ENV = undefined;
 });
 
 it("sends only the card token, issuer and one installment with a scoped webhook URL", async () => {
@@ -266,6 +275,139 @@ it("blocks marketplace charges until seller-linked Mercado Pago OAuth is availab
     }),
   ).rejects.toThrow("Nenhuma cobrança foi criada");
   expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it("charges an order on the platform test account without a marketplace fee in test mode", async () => {
+  paymentEnv.MERCADO_PAGO_ACCESS_TOKEN = "TEST-1234567890";
+  paymentEnv.MERCADO_PAGO_TEST_MODE_DATABASE_HOST = "test-branch.example.test";
+  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = "true";
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 789, status: "approved" }) });
+  vi.stubGlobal("fetch", fetchMock);
+  const provider = new MercadoPagoProvider();
+
+  expect(provider.supportsSellerCount(1)).toBe(true);
+  expect(provider.supportsSellerCount(2)).toBe(true);
+  await provider.createPayment({
+    orderNumber: "MS-TEST-MODE",
+    amountInCents: 100,
+    payerEmail: "buyer@example.test",
+    paymentMethodId: "pix",
+    payerTaxId: "19119119100",
+    applicationFeeInCents: 12,
+    idempotencyKey: "test-mode-payment",
+    sellerCount: 1,
+  });
+
+  const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string);
+  expect(body).toMatchObject({ transaction_amount: 1, payment_method_id: "pix" });
+  expect(body).not.toHaveProperty("application_fee");
+});
+
+it("keeps blocking charges in the Vercel production deployment even with the test database", async () => {
+  paymentEnv.MERCADO_PAGO_ACCESS_TOKEN = "TEST-1234567890";
+  paymentEnv.MERCADO_PAGO_TEST_MODE_DATABASE_HOST = "test-branch.example.test";
+  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = "true";
+  paymentEnv.VERCEL_ENV = "production";
+  const fetchMock = vi.fn();
+  vi.stubGlobal("fetch", fetchMock);
+  const provider = new MercadoPagoProvider();
+
+  expect(provider.supportsSellerCount(1)).toBe(false);
+  await expect(
+    provider.createPayment({
+      orderNumber: "MS-TEST-MODE-PROD",
+      amountInCents: 100,
+      payerEmail: "buyer@example.test",
+      paymentMethodId: "pix",
+      payerTaxId: "19119119100",
+      idempotencyKey: "test-mode-production",
+      sellerCount: 1,
+    }),
+  ).rejects.toThrow("Nenhuma cobrança foi criada");
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+function useProductionCredentials(): void {
+  paymentEnv.MERCADO_PAGO_ACCESS_TOKEN = "APP_USR-1234567890";
+  paymentEnv.VERCEL_ENV = "production";
+}
+
+it("charges any store in production on the platform account without a marketplace fee", async () => {
+  useProductionCredentials();
+  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = "true";
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 790, status: "pending" }) });
+  vi.stubGlobal("fetch", fetchMock);
+  const provider = new MercadoPagoProvider();
+
+  expect(provider.supportsSellerCount(1)).toBe(true);
+  await provider.createPayment({
+    orderNumber: "MS-SINGLE-ACCOUNT",
+    amountInCents: 15_000,
+    payerEmail: "buyer@example.test",
+    paymentMethodId: "pix",
+    payerTaxId: "19119119100",
+    applicationFeeInCents: 1_800,
+    idempotencyKey: "single-account-payment",
+    sellerCount: 1,
+  });
+
+  const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string);
+  expect(body).toMatchObject({ transaction_amount: 150, payment_method_id: "pix" });
+  expect(body).not.toHaveProperty("application_fee");
+});
+
+it("charges an order with several stores in production as one payment without a marketplace fee", async () => {
+  useProductionCredentials();
+  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = "true";
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 791, status: "pending" }) });
+  vi.stubGlobal("fetch", fetchMock);
+  const provider = new MercadoPagoProvider();
+
+  expect(provider.supportsSellerCount(2)).toBe(true);
+  await provider.createPayment({
+    orderNumber: "MS-SEVERAL-STORES",
+    amountInCents: 25_000,
+    payerEmail: "buyer@example.test",
+    paymentMethodId: "pix",
+    payerTaxId: "19119119100",
+    applicationFeeInCents: 3_000,
+    idempotencyKey: "several-stores-payment",
+    sellerCount: 2,
+  });
+
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  const body = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string);
+  expect(body).toMatchObject({ transaction_amount: 250, payment_method_id: "pix" });
+  expect(body).not.toHaveProperty("application_fee");
+});
+
+it("refuses every order in production while the switch is off", async () => {
+  useProductionCredentials();
+  const fetchMock = vi.fn();
+  vi.stubGlobal("fetch", fetchMock);
+  const provider = new MercadoPagoProvider();
+
+  expect(provider.supportsSellerCount(1)).toBe(false);
+  expect(provider.supportsSellerCount(2)).toBe(false);
+  await expect(
+    provider.createPayment({
+      orderNumber: "MS-SWITCH-OFF",
+      amountInCents: 100,
+      payerEmail: "buyer@example.test",
+      paymentMethodId: "pix",
+      payerTaxId: "19119119100",
+      idempotencyKey: "switch-off-payment",
+      sellerCount: 2,
+    }),
+  ).rejects.toThrow("Nenhuma cobrança foi criada");
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it("refuses an order without stores even with the switch on", () => {
+  useProductionCredentials();
+  paymentEnv.MERCADO_PAGO_SINGLE_ACCOUNT_MODE = "true";
+
+  expect(new MercadoPagoProvider().supportsSellerCount(0)).toBe(false);
 });
 
 it.each([
