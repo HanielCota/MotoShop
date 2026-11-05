@@ -26,6 +26,8 @@ it("opens blank, with today's value shown inside each field and the accepted ran
   expect(photos).toHaveValue("");
   expect(photos).toHaveAttribute("placeholder", "8");
   expect(screen.getByText("De 1 a 12. Quem já tem mais fotos não perde nenhuma.")).toBeInTheDocument();
+  expect(screen.getByText("De 1 a 5.")).toBeInTheDocument();
+  expect(screen.getByText("De 1 a 50 unidades.")).toBeInTheDocument();
 });
 
 it("sends the typed fields for the server to validate again and refreshes the page", async () => {

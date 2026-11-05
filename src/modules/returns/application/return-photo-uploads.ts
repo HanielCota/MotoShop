@@ -99,9 +99,9 @@ export async function removeReturnPhotoUpload(target: ReturnPhotoTarget, key: st
 }
 
 /**
- * Confere no ImageKit cada foto enviada antes de gravar: caminho dentro da pasta do item, imagem
- * JPG/PNG/WebP, dentro do tamanho e da quantidade de Admin › Configurações › Limites, e marcada como
- * privada. Fica fora da transação do banco (AGENTS §36). Chamada só depois de conferir o dono do item.
+ * Checks each uploaded photo on ImageKit before saving: path inside the item's folder, a JPG, PNG or
+ * WebP image within the size and count from Admin › Configurações › Limites, and marked private.
+ * Runs outside the database transaction (AGENTS §36), and only after the item owner was confirmed.
  */
 export async function verifyReturnPhotos(
   orderItemId: string,
