@@ -1,15 +1,22 @@
 import { InlineNotice } from "@/components/ui/inline-notice";
 
 import { getCompanyContact } from "../../application/company-contact";
+import { getStoredMarketplaceLimits } from "../../application/marketplace-limits";
 import { getMarketplaceConfiguration } from "../../queries/marketplace-configuration";
 import { companyContactFormValues } from "../../schemas/company-contact";
+import { marketplaceLimitsFormValues } from "../../schemas/marketplace-limits";
 import { AdminCard } from "../admin-ui";
 import { CommissionForm } from "../commission-form";
 import { CompanyContactForm } from "../company-contact-form";
+import { MarketplaceLimitsForm } from "../marketplace-limits-form";
 
 /** Admin › Configurações: one card per group, each saved on its own. */
 export async function AdminCommissionSection() {
-  const [configuration, companyContact] = await Promise.all([getMarketplaceConfiguration(), getCompanyContact()]);
+  const [configuration, companyContact, storedLimits] = await Promise.all([
+    getMarketplaceConfiguration(),
+    getCompanyContact(),
+    getStoredMarketplaceLimits(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -31,6 +38,13 @@ export async function AdminCommissionSection() {
         description="Aparece no rodapé do site e no rodapé dos e-mails. Campo em branco usa o texto de hoje."
       >
         <CompanyContactForm defaultValues={companyContactFormValues(companyContact)} />
+      </AdminCard>
+      <AdminCard
+        id="admin-limits"
+        title="Limites"
+        description="Valem a partir de agora para lojas e clientes. Campo em branco usa o valor de hoje, que aparece cinza dentro do campo."
+      >
+        <MarketplaceLimitsForm defaultValues={marketplaceLimitsFormValues(storedLimits)} />
       </AdminCard>
     </div>
   );

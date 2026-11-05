@@ -21,6 +21,7 @@ export const auditActionLabels: Record<string, string> = {
   DISPUTE_UNDER_REVIEW: "Disputa em análise",
   MARKETPLACE_COMMISSION_UPDATED: "Comissão padrão alterada",
   MARKETPLACE_COMPANY_CONTACT_UPDATED: "Empresa e contato alterados",
+  MARKETPLACE_LIMITS_UPDATED: "Limites alterados",
   MARKETPLACE_COUPON_ACTIVATED: "Cupom do Moto Shop ativado",
   MARKETPLACE_COUPON_DEACTIVATED: "Cupom do Moto Shop desativado",
   MOTORCYCLE_FITMENT_CREATED: "Ano de moto criado",
@@ -160,6 +161,13 @@ const metadataKeyLabels: Record<string, string> = {
   weekdayHours: "Segunda a sexta",
   saturdayHours: "Sábado",
   sundayHolidayHours: "Domingos e feriados",
+  productPhotoLimit: "Fotos por produto",
+  photoMaxSizeInMegabytes: "Tamanho máximo de cada foto (MB)",
+  returnPhotoLimit: "Fotos por pedido de devolução",
+  lastUnitsThreshold: "Últimas unidades a partir de",
+  lowStockThreshold: "Estoque baixo a partir de",
+  newProductDays: "Dias com o selo Novidade",
+  sellerInviteTtlDays: "Validade do convite (dias)",
 };
 
 export type AuditMetadataLine = Readonly<{ label: string; value: string }>;

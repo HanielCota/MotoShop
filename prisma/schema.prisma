@@ -1269,20 +1269,28 @@ model SellerSubscription {
 }
 
 model MarketplaceConfiguration {
-  key                  String   @id
-  defaultCommissionBps Int
+  key                     String   @id
+  defaultCommissionBps    Int
   // Company and contact shown in the site and e-mail footers; null falls back to the code default.
-  companyLegalName     String?
-  companyCnpj          String?
-  supportEmail         String?
-  supportPhone         String?
-  instagramUrl         String?
-  youtubeUrl           String?
-  weekdayHours         String?
-  saturdayHours        String?
-  sundayHolidayHours   String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  companyLegalName        String?
+  companyCnpj             String?
+  supportEmail            String?
+  supportPhone            String?
+  instagramUrl            String?
+  youtubeUrl              String?
+  weekdayHours            String?
+  saturdayHours           String?
+  sundayHolidayHours      String?
+  // Limits edited in Admin › Configurações › Limites; null falls back to the code default.
+  productPhotoLimit       Int?
+  photoMaxSizeInMegabytes Int?
+  returnPhotoLimit        Int?
+  lastUnitsThreshold      Int?
+  lowStockThreshold       Int?
+  newProductDays          Int?
+  sellerInviteTtlDays     Int?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 
   @@map("marketplace_configurations")
 }

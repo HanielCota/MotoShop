@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   audit: vi.fn(),
   revalidate: vi.fn(),
   updateCompanyContact: vi.fn(),
+  updateMarketplaceLimits: vi.fn(),
 }));
 
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
@@ -23,10 +24,15 @@ vi.mock("@/lib/database", () => ({
 }));
 
 vi.mock("../application/company-contact", () => ({ updateCompanyContact: mocks.updateCompanyContact }));
+vi.mock("../application/marketplace-limits", () => ({ updateMarketplaceLimits: mocks.updateMarketplaceLimits }));
 
 import { ApplicationError } from "@/shared/errors/application-error";
 
-import { updateCompanyContactAction, updateMarketplaceCommissionAction } from "./marketplace-configuration-actions";
+import {
+  updateCompanyContactAction,
+  updateMarketplaceCommissionAction,
+  updateMarketplaceLimitsAction,
+} from "./marketplace-configuration-actions";
 
 function form(value?: string) {
   const data = new FormData();
@@ -144,5 +150,53 @@ describe("company and contact", () => {
 
     await expect(updateCompanyContactAction(blankForm)).rejects.toThrow("FORBIDDEN");
     expect(mocks.updateCompanyContact).not.toHaveBeenCalled();
+  });
+});
+
+describe("marketplace limits", () => {
+  const blankLimits = {
+    productPhotoLimit: "",
+    photoMaxSizeInMegabytes: "",
+    returnPhotoLimit: "",
+    lastUnitsThreshold: "",
+    lowStockThreshold: "",
+    newProductDays: "",
+    sellerInviteTtlDays: "",
+  };
+
+  it("validates on the server and saves nothing when a limit is out of range", async () => {
+    const result = await updateMarketplaceLimitsAction({ ...blankLimits, productPhotoLimit: "20" });
+
+    expect(result.error).toMatch(/Fotos por produto/);
+    expect(mocks.updateMarketplaceLimits).not.toHaveBeenCalled();
+  });
+
+  it("saves the parsed limits for the signed-in admin and refreshes the whole site", async () => {
+    mocks.updateMarketplaceLimits.mockResolvedValue({ changed: true });
+
+    const result = await updateMarketplaceLimitsAction({ ...blankLimits, returnPhotoLimit: "5" });
+
+    expect(result.success).toBeTruthy();
+    expect(mocks.updateMarketplaceLimits).toHaveBeenCalledWith(
+      "admin-a",
+      expect.objectContaining({ returnPhotoLimit: 5, productPhotoLimit: null }),
+    );
+    expect(mocks.revalidate).toHaveBeenCalledWith("/", "layout");
+  });
+
+  it("tells the admin nothing changed and refreshes nothing", async () => {
+    mocks.updateMarketplaceLimits.mockResolvedValue({ changed: false });
+
+    const result = await updateMarketplaceLimitsAction(blankLimits);
+
+    expect(result).toEqual({ success: "Nada mudou: os limites continuam iguais." });
+    expect(mocks.revalidate).not.toHaveBeenCalled();
+  });
+
+  it("requires admin permission before reading the input", async () => {
+    mocks.authorize.mockRejectedValueOnce(new Error("FORBIDDEN"));
+
+    await expect(updateMarketplaceLimitsAction(blankLimits)).rejects.toThrow("FORBIDDEN");
+    expect(mocks.updateMarketplaceLimits).not.toHaveBeenCalled();
   });
 });
