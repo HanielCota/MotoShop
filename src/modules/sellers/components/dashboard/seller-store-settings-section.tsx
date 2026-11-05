@@ -22,7 +22,16 @@ type Store = ComponentProps<typeof ShippingOriginForm>["store"] & {
  * Perfil público, identidade visual e dados de remetente, todos só para quem gerencia a loja.
  * O documento e o endereço de origem não chegam ao navegador dos outros perfis (L-11).
  */
-export function SellerStoreSettingsSection({ store, canManageStore }: { store: Store; canManageStore: boolean }) {
+export function SellerStoreSettingsSection({
+  store,
+  canManageStore,
+  photoMaxSizeInBytes,
+}: {
+  store: Store;
+  canManageStore: boolean;
+  /** Largest logo or banner accepted, in bytes (Admin › Configurações › Limites). */
+  photoMaxSizeInBytes: number;
+}) {
   return (
     <>
       {canManageStore ? (
@@ -57,6 +66,7 @@ export function SellerStoreSettingsSection({ store, canManageStore }: { store: S
           </CardHeader>
           <CardContent>
             <StoreBrandingManager
+              maxSizeInBytes={photoMaxSizeInBytes}
               initialImages={{
                 logoUrl: store.logoStorageKey ? getPublicStorageUrl(store.logoStorageKey) : null,
                 bannerUrl: store.bannerStorageKey ? getPublicStorageUrl(store.bannerStorageKey) : null,

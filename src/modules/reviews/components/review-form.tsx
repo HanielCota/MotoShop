@@ -12,6 +12,7 @@ import {
   removeReviewUploadAction,
   type ReviewActionState,
 } from "@/modules/reviews/actions/review-actions";
+import { REVIEW_PHOTO_MAX_SIZE_IN_BYTES } from "@/modules/reviews/schemas/review";
 
 import { useServerActionState } from "@/shared/forms/server-action-submit";
 
@@ -52,7 +53,9 @@ export function ReviewForm({
     try {
       const selected = Array.from(selectedFiles);
       if (files.length + selected.length > 3) throw new Error("Anexe no máximo 3 arquivos por avaliação.");
-      const problem = selected.map(findImageFileProblem).find((message) => message != null);
+      const problem = selected
+        .map((file) => findImageFileProblem(file, REVIEW_PHOTO_MAX_SIZE_IN_BYTES))
+        .find((message) => message != null);
       if (problem != null) throw new Error(problem);
       setFiles((current) => [...current, ...selected]);
     } catch (error) {

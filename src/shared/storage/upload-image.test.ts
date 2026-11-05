@@ -16,15 +16,24 @@ function image(type: string, size: number, name = "foto.png") {
 afterEach(() => vi.unstubAllGlobals());
 
 it.each(["image/jpeg", "image/png", "image/webp"])("accepts a %s image of up to 5 MB", (type) => {
-  expect(findImageFileProblem(image(type, FIVE_MEGABYTES))).toBeNull();
+  expect(findImageFileProblem(image(type, FIVE_MEGABYTES), FIVE_MEGABYTES)).toBeNull();
 });
 
 it("names the file that is another type or over 5 MB", () => {
-  expect(findImageFileProblem(image("image/gif", 1024, "anim.gif"))).toBe(
+  expect(findImageFileProblem(image("image/gif", 1024, "anim.gif"), FIVE_MEGABYTES)).toBe(
     'A imagem "anim.gif" precisa ser JPG, PNG ou WebP e ter até 5 MB.',
   );
-  expect(findImageFileProblem(image("image/png", FIVE_MEGABYTES + 1, "grande.png"))).toBe(
+  expect(findImageFileProblem(image("image/png", FIVE_MEGABYTES + 1, "grande.png"), FIVE_MEGABYTES)).toBe(
     'A imagem "grande.png" precisa ser JPG, PNG ou WebP e ter até 5 MB.',
+  );
+});
+
+it("follows the size limit configured in the Admin, in the check and in the message", () => {
+  const tenMegabytes = 10 * 1024 * 1024;
+
+  expect(findImageFileProblem(image("image/png", FIVE_MEGABYTES + 1), tenMegabytes)).toBeNull();
+  expect(findImageFileProblem(image("image/png", tenMegabytes + 1, "enorme.png"), tenMegabytes)).toBe(
+    'A imagem "enorme.png" precisa ser JPG, PNG ou WebP e ter até 10 MB.',
   );
 });
 

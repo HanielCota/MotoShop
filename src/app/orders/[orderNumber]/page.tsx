@@ -5,6 +5,8 @@ import { Suspense } from "react";
 
 import { pageContainerClassName } from "@/components/ui/page-container";
 import { PageHeader, SectionHeader } from "@/components/ui/page-header";
+import { getMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
+import { photoMaxSizeInBytes } from "@/modules/admin/domain/marketplace-limits";
 import { getCurrentSession } from "@/modules/auth/application/authorization";
 import { CustomerAccountNavigation } from "@/modules/customers/components/customer-account-navigation";
 import {
@@ -72,11 +74,16 @@ async function CustomerOrderDetail({
   identity: CustomerOrderIdentity;
   accessToken: string | undefined;
 }) {
-  const [order, session] = await Promise.all([getCustomerOrder(orderNumber, identity), getCurrentSession()]);
+  const [order, session, limits] = await Promise.all([
+    getCustomerOrder(orderNumber, identity),
+    getCurrentSession(),
+    getMarketplaceLimits(),
+  ]);
   if (order == null) notFound();
 
   const thumbnails = await getOrderItemThumbnails(order.sellerOrders.flatMap((sellerOrder) => sellerOrder.items));
 
+  const returnPhotoRules = { maxPhotos: limits.returnPhotoLimit, maxSizeInBytes: photoMaxSizeInBytes(limits) };
   const pendingPayment = order.status === "PENDING_PAYMENT";
   const isOwner = Boolean(session && order.userId === session.user.id);
   const canClaim =
@@ -111,6 +118,7 @@ async function CustomerOrderDetail({
             thumbnails={thumbnails}
             canReview={isOwner}
             sellerAlreadyReviewed={order.sellerReviews.some((review) => review.sellerId === sellerOrder.sellerId)}
+            returnPhotoRules={returnPhotoRules}
           />
         ))}
       </section>

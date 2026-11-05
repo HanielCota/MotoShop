@@ -1,8 +1,11 @@
 import { z } from "zod";
 
-/** Regras das fotos da devolução: até 3 imagens privadas por solicitação. */
-export const MAX_RETURN_PHOTOS = 3;
-export const MAX_RETURN_PHOTO_SIZE_IN_BYTES = 5 * 1024 * 1024;
+import { formatCount } from "@/lib/format";
+import { MARKETPLACE_LIMIT_BOUNDS } from "@/modules/admin/domain/marketplace-limits";
+
+/** How many private photos one return takes and how big each can be (Admin › Configurações › Limites). */
+export type ReturnPhotoRules = { maxPhotos: number; maxSizeInBytes: number };
+
 /** Validade do link assinado que abre a foto privada. */
 export const RETURN_PHOTO_LINK_TTL_IN_SECONDS = 10 * 60;
 /** Largura da miniatura assinada (tr:w-N), a mesma desenhada na galeria. */
@@ -22,10 +25,21 @@ export const returnPhotoContentTypeSchema = z.enum(["image/jpeg", "image/png", "
   error: "Use imagens JPG, PNG ou WebP.",
 });
 
-/** Foto já enviada ao ImageKit, ainda sem conferência: o servidor confere antes de gravar. */
+/**
+ * Photos already sent to ImageKit, not yet checked: the server checks them before saving. The schema
+ * only stops counts no configuration allows; the configured count is checked with the order item.
+ */
 export const uploadedReturnPhotosSchema = z
   .array(z.object({ key: z.string().min(1).max(300), fileId: z.string().min(1).max(100) }))
-  .max(MAX_RETURN_PHOTOS, `Anexe no máximo ${MAX_RETURN_PHOTOS} fotos.`);
+  .max(
+    MARKETPLACE_LIMIT_BOUNDS.returnPhotoLimit.max,
+    `Anexe no máximo ${MARKETPLACE_LIMIT_BOUNDS.returnPhotoLimit.max} fotos.`,
+  );
+
+/** Message for a selection or request with more photos than the configured limit. */
+export function tooManyReturnPhotosMessage(maxPhotos: number): string {
+  return `Anexe no máximo ${formatCount(maxPhotos, "foto", "fotos")}.`;
+}
 
 export type UploadedReturnPhoto = z.infer<typeof uploadedReturnPhotosSchema>[number];
 

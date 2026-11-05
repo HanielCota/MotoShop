@@ -1,9 +1,12 @@
 import { z } from "zod";
 
+/** Review photos keep a fixed size limit: the Admin photo limit covers products, stores and returns only. */
+export const REVIEW_PHOTO_MAX_SIZE_IN_BYTES = 5 * 1024 * 1024;
+
 export const reviewMediaTypes = {
-  "image/jpeg": { extension: "jpg", mediaType: "image" as const, maxSizeInBytes: 5 * 1024 * 1024 },
-  "image/png": { extension: "png", mediaType: "image" as const, maxSizeInBytes: 5 * 1024 * 1024 },
-  "image/webp": { extension: "webp", mediaType: "image" as const, maxSizeInBytes: 5 * 1024 * 1024 },
+  "image/jpeg": { extension: "jpg", mediaType: "image" as const, maxSizeInBytes: REVIEW_PHOTO_MAX_SIZE_IN_BYTES },
+  "image/png": { extension: "png", mediaType: "image" as const, maxSizeInBytes: REVIEW_PHOTO_MAX_SIZE_IN_BYTES },
+  "image/webp": { extension: "webp", mediaType: "image" as const, maxSizeInBytes: REVIEW_PHOTO_MAX_SIZE_IN_BYTES },
 } as const;
 // Client decision (08/10/2026): videos are out of scope in reviews. Old video media still render.
 

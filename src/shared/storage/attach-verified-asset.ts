@@ -10,9 +10,9 @@ import type { StorageProvider } from "./storage-provider";
  * Direct-upload image flow shared by product galleries and store branding:
  * the server issues a key under a tenant-scoped prefix, the browser uploads to
  * ImageKit, and before any database association the server re-checks that the
- * key is under the expected prefix and that the stored asset matches type/size.
+ * key is under the expected prefix and that the stored asset matches type/size. The size limit comes
+ * from Admin › Configurações › Limites, read by each caller.
  */
-export const IMAGE_MAX_SIZE_IN_BYTES = 5 * 1024 * 1024;
 export const imageContentTypes = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -32,6 +32,7 @@ export function isStorageKeyUnderPrefix(storageKey: string, prefix: string, name
 export async function createImageUploadUrl(input: {
   prefix: string;
   contentType: ImageContentType;
+  maxSizeInBytes: number;
   storage?: StorageProvider;
 }) {
   const storage = input.storage ?? new ImageKitStorageProvider();
@@ -39,7 +40,7 @@ export async function createImageUploadUrl(input: {
   const result = await storage.createUploadUrl({
     key,
     contentType: input.contentType,
-    maxSizeInBytes: IMAGE_MAX_SIZE_IN_BYTES,
+    maxSizeInBytes: input.maxSizeInBytes,
   });
   return { url: result.url, key: result.key, expiresAt: result.expiresAt.toISOString(), fields: result.fields };
 }
@@ -56,6 +57,7 @@ export async function attachVerifiedAsset<T>(input: {
   fileId: string;
   prefix: string;
   namePattern: RegExp;
+  maxSizeInBytes: number;
   persist: () => Promise<T>;
   storage?: StorageProvider;
 }): Promise<AttachVerifiedAssetResult<T>> {
@@ -66,7 +68,7 @@ export async function attachVerifiedAsset<T>(input: {
   await storage.verifyImage({
     key: input.storageKey,
     fileId: input.fileId,
-    maxSizeInBytes: IMAGE_MAX_SIZE_IN_BYTES,
+    maxSizeInBytes: input.maxSizeInBytes,
     contentTypes: Object.keys(imageContentTypes),
   });
   return { ok: true, value: await input.persist() };

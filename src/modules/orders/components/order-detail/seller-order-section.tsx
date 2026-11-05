@@ -10,6 +10,7 @@ import { canOpenDispute } from "@/modules/disputes/domain/dispute-eligibility";
 import { RequestDisputeForm } from "@/modules/disputes/components/request-dispute-form";
 import { RequestCancellationForm } from "@/modules/returns/components/request-cancellation-form";
 import { RequestReturnForm } from "@/modules/returns/components/request-return-form";
+import type { ReturnPhotoRules } from "@/modules/returns/domain/return-photos";
 import { canRequestCancellation } from "@/modules/returns/domain/cancellation-eligibility";
 import { canRequestReturn, getReturnableQuantity } from "@/modules/returns/domain/return-eligibility";
 import { ReviewForm } from "@/modules/reviews/components/review-form";
@@ -27,6 +28,8 @@ type SellerOrderSectionProps = {
   /** Avaliações exigem conta: só aparecem para o cliente logado dono do pedido. */
   canReview: boolean;
   sellerAlreadyReviewed: boolean;
+  /** Photo count and size for return requests (Admin › Configurações › Limites). */
+  returnPhotoRules: ReturnPhotoRules;
 };
 
 export function SellerOrderSection({
@@ -35,6 +38,7 @@ export function SellerOrderSection({
   thumbnails,
   canReview,
   sellerAlreadyReviewed,
+  returnPhotoRules,
 }: SellerOrderSectionProps) {
   const latestCancellation = sellerOrder.cancellationRequests.at(-1);
   const latestDispute = sellerOrder.disputes.at(-1);
@@ -96,6 +100,7 @@ export function SellerOrderSection({
                 thumbnailUrl={thumbnails.get(item.id)?.url}
                 orderNumber={orderNumber}
                 sellerOrderStatus={sellerOrder.status}
+                returnPhotoRules={returnPhotoRules}
                 showReview={reviewableItems.includes(item)}
                 // A nota da loja é pedida uma única vez: no primeiro item ainda avaliável.
                 sellerAlreadyReviewed={sellerAlreadyReviewed || reviewableItems[0] !== item}
@@ -137,6 +142,7 @@ function OrderItemRow({
   thumbnailUrl,
   orderNumber,
   sellerOrderStatus,
+  returnPhotoRules,
   showReview,
   sellerAlreadyReviewed,
 }: {
@@ -144,6 +150,7 @@ function OrderItemRow({
   thumbnailUrl: string | undefined;
   orderNumber: string;
   sellerOrderStatus: string;
+  returnPhotoRules: ReturnPhotoRules;
   showReview: boolean;
   sellerAlreadyReviewed: boolean;
 }) {
@@ -181,6 +188,7 @@ function OrderItemRow({
                 orderItemId={item.id}
                 maxQuantity={getReturnableQuantity(item)}
                 idempotencyKey={randomUUID()}
+                photoRules={returnPhotoRules}
               />
             </Disclosure>
           ) : null}

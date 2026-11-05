@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { InlineNotice } from "@/components/ui/inline-notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { getMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
+import { photoMaxSizeInBytes } from "@/modules/admin/domain/marketplace-limits";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { listActiveMotorcycleFitmentsForProduct } from "@/modules/catalog/queries/admin-catalog";
 import { ProductImageManager } from "@/modules/products/components/product-image-manager";
@@ -36,11 +38,12 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 }
 
 async function EditProduct({ sellerId, productId }: { sellerId: string; productId: string }) {
-  const [product, categories, brands, fitments] = await Promise.all([
+  const [product, categories, brands, fitments, limits] = await Promise.all([
     getSellerProductForEdit(sellerId, productId),
     listProductCategories(),
     listProductBrands(),
     listActiveMotorcycleFitmentsForProduct(),
+    getMarketplaceLimits(),
   ]);
   if (product == null || product.variants.length === 0) notFound();
 
@@ -96,6 +99,8 @@ async function EditProduct({ sellerId, productId }: { sellerId: string; productI
           <div className="mt-6">
             <ProductImageManager
               productId={product.id}
+              maxImages={limits.productPhotoLimit}
+              maxSizeInBytes={photoMaxSizeInBytes(limits)}
               initialImages={product.images.map((image) => ({
                 id: image.id,
                 storageKey: image.storageKey,

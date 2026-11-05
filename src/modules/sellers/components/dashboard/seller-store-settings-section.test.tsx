@@ -17,14 +17,14 @@ afterEach(cleanup);
 const store = { name: "Garagem MX", originDocument: "12345678000190" } as never;
 
 it("does not render the shipping origin form for members without SELLER_MANAGE (L-11)", () => {
-  render(<SellerStoreSettingsSection store={store} canManageStore={false} />);
+  render(<SellerStoreSettingsSection store={store} canManageStore={false} photoMaxSizeInBytes={5 * 1024 * 1024} />);
 
   expect(screen.queryByText(/12345678000190/)).not.toBeInTheDocument();
   expect(screen.getByText("Só quem gerencia a loja vê o documento e o endereço de origem.")).toBeInTheDocument();
 });
 
 it("keeps the shipping origin form for store managers", () => {
-  render(<SellerStoreSettingsSection store={store} canManageStore />);
+  render(<SellerStoreSettingsSection store={store} canManageStore photoMaxSizeInBytes={5 * 1024 * 1024} />);
 
   expect(screen.getByText(/12345678000190/)).toBeInTheDocument();
 });
