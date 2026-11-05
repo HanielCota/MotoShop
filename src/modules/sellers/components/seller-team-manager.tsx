@@ -8,6 +8,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DesignSelect } from "@/components/ui/design-select";
 import { FormMessage } from "@/components/ui/form-message";
 import { Input } from "@/components/ui/input";
+import { formatCount } from "@/lib/format";
 import {
   inviteSellerMemberAction,
   removeSellerMemberAction,
@@ -59,7 +60,7 @@ function ManualLink({ url }: { url: string | null }) {
   );
 }
 
-function InviteForm() {
+function InviteForm({ validForDays }: { validForDays: number }) {
   const [state, formAction, pending] = useServerActionState(inviteSellerMemberAction, initialState);
   const { clientError, onSubmit } = useClientValidation(validateSellerInviteForm);
   const { copied, manualUrl, copy } = useCopyLink();
@@ -100,7 +101,7 @@ function InviteForm() {
               {copied === "new" ? "Link copiado" : "Copiar link"}
             </Button>
             <span className="text-muted-foreground text-xs">
-              Envie o link só para a pessoa convidada. Ele vale por 7 dias.
+              Envie o link só para a pessoa convidada. Ele vale por {formatCount(validForDays, "dia", "dias")}.
             </span>
           </div>
         ) : null}
@@ -166,10 +167,19 @@ function PendingInvites({ invites }: { invites: PendingInvite[] }) {
   );
 }
 
-export function SellerTeamManager({ members, invites }: { members: Member[]; invites: PendingInvite[] }) {
+export function SellerTeamManager({
+  members,
+  invites,
+  inviteValidForDays,
+}: {
+  members: Member[];
+  invites: PendingInvite[];
+  /** Days a new invite link stays valid (Admin › Configurações › Limites). */
+  inviteValidForDays: number;
+}) {
   return (
     <div className="space-y-4">
-      <InviteForm />
+      <InviteForm validForDays={inviteValidForDays} />
       <PendingInvites invites={invites} />
 
       <div className="divide-border divide-y">

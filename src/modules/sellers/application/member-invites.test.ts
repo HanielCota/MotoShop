@@ -67,7 +67,11 @@ beforeEach(() => {
 
 describe("createSellerMemberInvite (M-04)", () => {
   it("stores only the token hash and audits the invite", async () => {
-    const result = await createSellerMemberInvite(owner, { email: " Pedro@Oficina.com ", role: "ORDERS" }, now);
+    const result = await createSellerMemberInvite(
+      owner,
+      { email: " Pedro@Oficina.com ", role: "ORDERS", validForDays: 7 },
+      now,
+    );
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -82,10 +86,17 @@ describe("createSellerMemberInvite (M-04)", () => {
     );
   });
 
+  it("expires after the number of days configured in the Admin", async () => {
+    await createSellerMemberInvite(owner, { email: "pedro@oficina.com", role: "ORDERS", validForDays: 2 }, now);
+
+    const data = mocks.inviteCreate.mock.calls[0]?.[0].data;
+    expect(data.expiresAt.toISOString()).toBe("2026-10-17T12:00:00.000Z");
+  });
+
   it("renews the pending invite of the same e-mail instead of creating another", async () => {
     mocks.inviteFindFirst.mockResolvedValue({ id: "invite-1" });
 
-    await createSellerMemberInvite(owner, { email: "pedro@oficina.com", role: "CATALOG" }, now);
+    await createSellerMemberInvite(owner, { email: "pedro@oficina.com", role: "CATALOG", validForDays: 7 }, now);
 
     expect(mocks.inviteCreate).not.toHaveBeenCalled();
     expect(mocks.inviteUpdate).toHaveBeenCalledWith(
@@ -96,7 +107,7 @@ describe("createSellerMemberInvite (M-04)", () => {
   it("keeps admin invites to the owner (L-17)", async () => {
     const result = await createSellerMemberInvite(
       { ...owner, actorRole: "ADMIN" },
-      { email: "a@b.com", role: "ADMIN" },
+      { email: "a@b.com", role: "ADMIN", validForDays: 7 },
     );
 
     expect(result).toEqual({ ok: false, error: "Só o responsável pela loja pode convidar administradores." });

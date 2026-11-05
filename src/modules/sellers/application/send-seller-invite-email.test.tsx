@@ -20,6 +20,7 @@ it("keeps the invite link unchanged in the button, writes it out and shows the t
     roleLabel: "Catálogo",
     url,
     token: "invite-secret-token",
+    validForDays: 7,
   });
 
   const html = renderToStaticMarkup(sendNotificationEmail.mock.calls[0]?.[0].react);
@@ -28,4 +29,21 @@ it("keeps the invite link unchanged in the button, writes it out and shows the t
   expect(html).toMatch(/Convite para a equipe da (<!-- -->)?Garagem MX/);
   expect(html.split(url).join("")).not.toContain("invite-secret-token");
   expect(html).not.toContain("member@example.test");
+});
+
+it("tells how many days the link lasts, as configured in the Admin", async () => {
+  sendNotificationEmail.mockClear();
+
+  await sendSellerInviteEmail({
+    inviteId: "invite-2",
+    to: "member@example.test",
+    storeName: "Garagem MX",
+    roleLabel: "Catálogo",
+    url: "https://motoshopbrasil.com.br/convite/other-token",
+    token: "other-token",
+    validForDays: 15,
+  });
+
+  const html = renderToStaticMarkup(sendNotificationEmail.mock.calls[0]?.[0].react);
+  expect(html).toMatch(/O link vale por (<!-- -->)?15 dias/);
 });
