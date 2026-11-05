@@ -1,6 +1,7 @@
 import { formatDateTime, formatMoneyInCents } from "@/lib/format";
 
 import { marketplaceLimitFields } from "../domain/marketplace-limits";
+import { marketplaceLimitLabels } from "../schemas/marketplace-limits";
 
 /** Rótulos pt-BR das ações gravadas em `AuditLog.action` (UX-15). Ação nova sem rótulo aparece como está. */
 export const auditActionLabels: Record<string, string> = {
@@ -163,13 +164,8 @@ const metadataKeyLabels: Record<string, string> = {
   weekdayHours: "Segunda a sexta",
   saturdayHours: "Sábado",
   sundayHolidayHours: "Domingos e feriados",
-  productPhotoLimit: "Fotos por produto",
-  photoMaxSizeInMegabytes: "Tamanho máximo de cada foto (MB)",
-  returnPhotoLimit: "Fotos por pedido de devolução",
-  lastUnitsThreshold: "Últimas unidades a partir de",
-  lowStockThreshold: "Estoque baixo a partir de",
-  newProductDays: "Dias com o selo Novidade",
-  sellerInviteTtlDays: "Validade do convite (dias)",
+  // Same wording as the Limites card, so the audit log names each limit the way the Admin saw it.
+  ...marketplaceLimitLabels,
 };
 
 // Limits from Admin › Configurações › Limites: a blank one means the site uses the code default.
