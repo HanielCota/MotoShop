@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { db } from "@/lib/database";
-import { getMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
+import { requireMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { toActionError } from "@/shared/errors/action-error";
 
@@ -56,7 +56,7 @@ export async function inviteSellerMemberAction(
       actorUserId: context.session.user.id,
       actorRole: context.membership.role,
     };
-    const { sellerInviteTtlDays } = await getMarketplaceLimits();
+    const { sellerInviteTtlDays } = await requireMarketplaceLimits();
     const result = await createSellerMemberInvite(actor, { ...parsed.data, validForDays: sellerInviteTtlDays });
     if (!result.ok) return { error: result.error };
 
@@ -89,7 +89,7 @@ export async function renewSellerInviteLinkAction(inviteId: string): Promise<Sel
       actorUserId: context.session.user.id,
       actorRole: context.membership.role,
     };
-    const { sellerInviteTtlDays } = await getMarketplaceLimits();
+    const { sellerInviteTtlDays } = await requireMarketplaceLimits();
     const result = await renewSellerMemberInviteLink(actor, parsedInviteId.data, sellerInviteTtlDays);
     if (!result.ok) return { error: result.error };
     revalidatePath("/seller/settings");

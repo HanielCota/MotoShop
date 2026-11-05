@@ -6,8 +6,8 @@ import { z } from "zod";
 
 import { db } from "@/lib/database";
 import { ImageKitStorageProvider } from "@/lib/storage/imagekit-storage-provider";
-import { getMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
-import { MARKETPLACE_LIMIT_BOUNDS, photoMaxSizeInBytes } from "@/modules/admin/domain/marketplace-limits";
+import { requireMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
+import { PHOTO_SIZE_HARD_CAP_IN_BYTES, photoMaxSizeInBytes } from "@/modules/admin/domain/marketplace-limits";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { toActionError } from "@/shared/errors/action-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
@@ -18,18 +18,13 @@ import {
   isStorageKeyUnderPrefix,
 } from "@/shared/storage/attach-verified-asset";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
-import { formatImageSizeLimit } from "@/shared/storage/upload-image";
-
-// The schema stops sizes no configuration allows; the configured limit is checked after parsing.
-const HARD_MAX_PHOTO_SIZE_IN_BYTES = photoMaxSizeInBytes({
-  photoMaxSizeInMegabytes: MARKETPLACE_LIMIT_BOUNDS.photoMaxSizeInMegabytes.max,
-});
+import { imageTooLargeMessage } from "@/shared/storage/upload-image";
 
 const imageTypeSchema = z.enum(["logo", "banner"]);
 const uploadInputSchema = z.object({
   imageType: imageTypeSchema,
   contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
-  sizeInBytes: z.number().int().positive().max(HARD_MAX_PHOTO_SIZE_IN_BYTES),
+  sizeInBytes: z.number().int().positive().max(PHOTO_SIZE_HARD_CAP_IN_BYTES),
 });
 const attachInputSchema = z.object({
   imageType: imageTypeSchema,
@@ -68,10 +63,12 @@ export async function createStoreBrandingUploadUrlAction(input: unknown): Promis
   try {
     const context = await requireSellerAccess("SELLER_MANAGE");
     const parsed = uploadInputSchema.parse(input);
-    await assertRateLimit({ key: `store-branding-upload:${context.seller.id}`, windowSeconds: 60, max: 10 });
-    const maxSizeInBytes = photoMaxSizeInBytes(await getMarketplaceLimits());
-    if (parsed.sizeInBytes > maxSizeInBytes)
-      return { error: `Cada imagem pode ter até ${formatImageSizeLimit(maxSizeInBytes)}.` };
+    const [, limits] = await Promise.all([
+      assertRateLimit({ key: `store-branding-upload:${context.seller.id}`, windowSeconds: 60, max: 10 }),
+      requireMarketplaceLimits(),
+    ]);
+    const maxSizeInBytes = photoMaxSizeInBytes(limits);
+    if (parsed.sizeInBytes > maxSizeInBytes) return { error: imageTooLargeMessage(maxSizeInBytes) };
 
     return await createImageUploadUrl({
       prefix: storeImagePrefix(context.seller.id, parsed.imageType),
@@ -117,7 +114,7 @@ export async function attachStoreBrandingImageAction(input: unknown): Promise<St
     const context = await requireSellerAccess("SELLER_MANAGE");
     const parsed = attachInputSchema.parse(input);
     const field = fieldForImageType(parsed.imageType);
-    const maxSizeInBytes = photoMaxSizeInBytes(await getMarketplaceLimits());
+    const maxSizeInBytes = photoMaxSizeInBytes(await requireMarketplaceLimits());
     const attached = await attachVerifiedAsset({
       storageKey: parsed.storageKey,
       fileId: parsed.fileId,

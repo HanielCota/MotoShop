@@ -3,7 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { db } from "@/lib/database";
-import { getMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
+import { requireMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
 import { photoMaxSizeInBytes } from "@/modules/admin/domain/marketplace-limits";
 import { ImageKitStorageProvider } from "@/lib/storage/imagekit-storage-provider";
 import {
@@ -60,14 +60,13 @@ export async function createReturnPhotoUpload(
   target: ReturnPhotoTarget,
   file: { contentType: ReturnPhotoContentType; sizeInBytes: number },
 ): ReturnType<ImageKitStorageProvider["createUploadUrl"]> {
-  const maxSizeInBytes = photoMaxSizeInBytes(await getMarketplaceLimits());
+  const [limits, item] = await Promise.all([requireMarketplaceLimits(), findReturnableOrderItem(target)]);
+  const maxSizeInBytes = photoMaxSizeInBytes(limits);
   if (file.sizeInBytes > maxSizeInBytes)
     throw new ApplicationError({
       code: "VALIDATION_ERROR",
       message: `Cada foto pode ter até ${formatImageSizeLimit(maxSizeInBytes)}.`,
     });
-
-  const item = await findReturnableOrderItem(target);
 
   // Counted only after the item is confirmed to be the caller's: nobody spends another customer's quota.
   await assertRateLimit({ key: `return-photo-upload:${item.id}`, ...RETURN_PHOTO_UPLOAD_LIMIT });
@@ -107,7 +106,7 @@ export async function verifyReturnPhotos(
   orderItemId: string,
   photos: readonly UploadedReturnPhoto[],
 ): Promise<VerifiedReturnPhoto[]> {
-  const limits = await getMarketplaceLimits();
+  const limits = await requireMarketplaceLimits();
   if (photos.length > limits.returnPhotoLimit)
     throw new ApplicationError({
       code: "VALIDATION_ERROR",

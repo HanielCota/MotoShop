@@ -24,7 +24,7 @@ vi.mock("@/lib/database", () => ({
 import { ApplicationError } from "@/shared/errors/application-error";
 
 import type { StoredMarketplaceLimits } from "../domain/marketplace-limits";
-import { getMarketplaceLimits, updateMarketplaceLimits } from "./marketplace-limits";
+import { getMarketplaceLimits, requireMarketplaceLimits, updateMarketplaceLimits } from "./marketplace-limits";
 
 const blank: StoredMarketplaceLimits = {
   productPhotoLimit: null,
@@ -57,6 +57,16 @@ describe("getMarketplaceLimits", () => {
 
     expect(limits.productPhotoLimit).toBe(8);
     expect(mocks.logError).toHaveBeenCalledWith(expect.objectContaining({ event: "marketplace_limits.read_failed" }));
+  });
+});
+
+describe("requireMarketplaceLimits", () => {
+  it("fails instead of falling back to the looser defaults when the read fails", async () => {
+    mocks.findUnique.mockRejectedValue(new Error("database unavailable"));
+
+    const read = requireMarketplaceLimits();
+
+    await expect(read).rejects.toThrow("database unavailable");
   });
 });
 

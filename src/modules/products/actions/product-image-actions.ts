@@ -8,8 +8,12 @@ import { db } from "@/lib/database";
 import { formatCount } from "@/lib/format";
 import { logger } from "@/lib/logger";
 import { ImageKitStorageProvider } from "@/lib/storage/imagekit-storage-provider";
-import { getMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
-import { MARKETPLACE_LIMIT_BOUNDS, photoMaxSizeInBytes } from "@/modules/admin/domain/marketplace-limits";
+import { requireMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
+import {
+  MARKETPLACE_LIMIT_BOUNDS,
+  PHOTO_SIZE_HARD_CAP_IN_BYTES,
+  photoMaxSizeInBytes,
+} from "@/modules/admin/domain/marketplace-limits";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 import {
@@ -21,17 +25,12 @@ import {
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 import { ApplicationError } from "@/shared/errors/application-error";
 import { toActionError } from "@/shared/errors/action-error";
-import { formatImageSizeLimit } from "@/shared/storage/upload-image";
-
-// Schemas stop values no configuration allows; the configured limits are checked after parsing.
-const HARD_MAX_PHOTO_SIZE_IN_BYTES = photoMaxSizeInBytes({
-  photoMaxSizeInMegabytes: MARKETPLACE_LIMIT_BOUNDS.photoMaxSizeInMegabytes.max,
-});
+import { imageTooLargeMessage } from "@/shared/storage/upload-image";
 
 const uploadInputSchema = z.object({
   productId: z.string().cuid(),
   contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
-  sizeInBytes: z.number().int().positive().max(HARD_MAX_PHOTO_SIZE_IN_BYTES),
+  sizeInBytes: z.number().int().positive().max(PHOTO_SIZE_HARD_CAP_IN_BYTES),
 });
 
 const attachInputSchema = z.object({
@@ -89,13 +88,12 @@ export async function createProductImageUploadUrlAction(input: unknown): Promise
 
     const [imageCount, limits] = await Promise.all([
       db.productImage.count({ where: { productId: parsed.productId } }),
-      getMarketplaceLimits(),
+      requireMarketplaceLimits(),
     ]);
     if (imageCount >= limits.productPhotoLimit) return { error: tooManyImagesMessage(limits.productPhotoLimit) };
 
     const maxSizeInBytes = photoMaxSizeInBytes(limits);
-    if (parsed.sizeInBytes > maxSizeInBytes)
-      return { error: `Cada imagem pode ter até ${formatImageSizeLimit(maxSizeInBytes)}.` };
+    if (parsed.sizeInBytes > maxSizeInBytes) return { error: imageTooLargeMessage(maxSizeInBytes) };
 
     return await createImageUploadUrl({
       prefix: productImagePrefix(context.seller.id, parsed.productId),
@@ -134,7 +132,7 @@ export async function attachProductImageAction(input: unknown): Promise<ProductI
     const parsed = attachInputSchema.parse(input);
     const [, limits] = await Promise.all([
       getEditableProduct(parsed.productId, context.seller.id),
-      getMarketplaceLimits(),
+      requireMarketplaceLimits(),
     ]);
 
     const attached = await attachVerifiedAsset({

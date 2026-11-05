@@ -20,7 +20,7 @@ vi.mock("@/config/get-application-base-url", () => ({ getApplicationBaseUrl: () 
 vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ consumeRateLimit: vi.fn(async () => ({ allowed: true })) }));
 vi.mock("../application/send-seller-invite-email", () => ({ sendSellerInviteEmail: vi.fn() }));
 vi.mock("@/modules/admin/application/marketplace-limits", () => ({
-  getMarketplaceLimits: async () => ({ sellerInviteTtlDays: 7 }),
+  requireMarketplaceLimits: async () => ({ sellerInviteTtlDays: 7 }),
 }));
 vi.mock("@/modules/auth/application/authorization", () => ({
   requireSellerAccess: vi.fn(async () => ({

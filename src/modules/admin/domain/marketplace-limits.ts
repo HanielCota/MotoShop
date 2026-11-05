@@ -1,3 +1,5 @@
+import { BYTES_PER_MEGABYTE } from "@/shared/storage/upload-image";
+
 /** Limits the site applies, each one already resolved to a number. */
 export type MarketplaceLimits = {
   /** Photos a product can have. */
@@ -59,8 +61,6 @@ export const marketplaceLimitFields = [
   "sellerInviteTtlDays",
 ] as const satisfies readonly MarketplaceLimitField[];
 
-const BYTES_PER_MEGABYTE = 1024 * 1024;
-
 /** Whether a value is an integer inside the accepted range of the field. */
 export function isMarketplaceLimitInRange(field: MarketplaceLimitField, value: number): boolean {
   const bounds = MARKETPLACE_LIMIT_BOUNDS[field];
@@ -93,6 +93,11 @@ export function resolveMarketplaceLimits(stored: StoredMarketplaceLimits | null)
 export function photoMaxSizeInBytes(limits: Pick<MarketplaceLimits, "photoMaxSizeInMegabytes">): number {
   return limits.photoMaxSizeInMegabytes * BYTES_PER_MEGABYTE;
 }
+
+/** Largest photo any configuration allows, in bytes; input schemas stop bigger files before reading the limits. */
+export const PHOTO_SIZE_HARD_CAP_IN_BYTES = photoMaxSizeInBytes({
+  photoMaxSizeInMegabytes: MARKETPLACE_LIMIT_BOUNDS.photoMaxSizeInMegabytes.max,
+});
 
 /** Fields whose stored value changes, with both sides, for the audit log. */
 export function diffStoredMarketplaceLimits(previous: StoredMarketplaceLimits, next: StoredMarketplaceLimits) {

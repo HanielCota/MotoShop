@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   deleteObject: vi.fn(),
   createUploadUrl: vi.fn(),
   revalidatePath: vi.fn(),
-  getMarketplaceLimits: vi.fn(),
+  requireMarketplaceLimits: vi.fn(),
 }));
 
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
@@ -26,7 +26,9 @@ vi.mock("@/lib/database", () => ({
   },
 }));
 vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
-vi.mock("@/modules/admin/application/marketplace-limits", () => ({ getMarketplaceLimits: mocks.getMarketplaceLimits }));
+vi.mock("@/modules/admin/application/marketplace-limits", () => ({
+  requireMarketplaceLimits: mocks.requireMarketplaceLimits,
+}));
 vi.mock("@/modules/auth/application/authorization", () => ({ requireSellerAccess: mocks.requireSellerAccess }));
 vi.mock("@/lib/storage/imagekit-storage-provider", () => ({
   ImageKitStorageProvider: class {
@@ -62,7 +64,7 @@ beforeEach(() => {
   mocks.requireSellerAccess.mockResolvedValue(context);
   mocks.verifyImage.mockResolvedValue(undefined);
   mocks.deleteObject.mockResolvedValue(undefined);
-  mocks.getMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS });
+  mocks.requireMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS });
   mocks.createUploadUrl.mockImplementation(async ({ key }: { key: string }) => ({
     key,
     url: "https://storage.example.test/upload",
@@ -180,7 +182,7 @@ it("does not attach a branding image stored under another seller's prefix", asyn
 });
 
 it("refuses a logo or banner over the size configured in the Admin", async () => {
-  mocks.getMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS, photoMaxSizeInMegabytes: 1 });
+  mocks.requireMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS, photoMaxSizeInMegabytes: 1 });
 
   const result = await createStoreBrandingUploadUrlAction({
     imageType: "logo",

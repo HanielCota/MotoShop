@@ -1,5 +1,5 @@
 const ALLOWED_IMAGE_TYPES: readonly string[] = ["image/jpeg", "image/png", "image/webp"];
-const BYTES_PER_MEGABYTE = 1024 * 1024;
+export const BYTES_PER_MEGABYTE = 1024 * 1024;
 const megabyteFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
 
 /** The file already passed the type and size check, so a refusal here does not blame it. */
@@ -11,6 +11,11 @@ export const IMAGE_SERVICE_UNREACHABLE_MESSAGE =
 /** Size limit as people read it, e.g. "5 MB". */
 export function formatImageSizeLimit(maxSizeInBytes: number): string {
   return `${megabyteFormatter.format(maxSizeInBytes / BYTES_PER_MEGABYTE)} MB`;
+}
+
+/** Server message for an image over the configured size. */
+export function imageTooLargeMessage(maxSizeInBytes: number): string {
+  return `Cada imagem pode ter até ${formatImageSizeLimit(maxSizeInBytes)}.`;
 }
 
 /** Names the file, so a selection of several photos shows which one breaks the rule. */

@@ -35,15 +35,27 @@ export async function getStoredMarketplaceLimits(): Promise<StoredMarketplaceLim
 }
 
 /**
- * Reads the limits the site applies, once per request.
+ * Reads the limits a write must enforce, once per request.
  *
- * @remarks A failed read logs and falls back to the code defaults: catalog, product pages, uploads
- * and invites all depend on it, so it must never take them down.
+ * @remarks Uploads, attachments and invites use this one: a failed read fails the action, so a
+ * stricter limit set in the Admin is never replaced by the looser code default.
+ * @returns Every limit, blank ones filled by the code default.
+ * @throws When the configuration cannot be read.
+ */
+export const requireMarketplaceLimits = cache(async (): Promise<MarketplaceLimits> => {
+  return resolveMarketplaceLimits(await getStoredMarketplaceLimits());
+});
+
+/**
+ * Reads the limits pages display, once per request.
+ *
+ * @remarks A failed read logs and falls back to the code defaults: catalog, product pages and the
+ * seller area show them, so it must never take those pages down. Writes use `requireMarketplaceLimits`.
  * @returns Every limit, blank ones filled by the code default.
  */
 export const getMarketplaceLimits = cache(async (): Promise<MarketplaceLimits> => {
   try {
-    return resolveMarketplaceLimits(await getStoredMarketplaceLimits());
+    return await requireMarketplaceLimits();
   } catch (error) {
     logger.error({ event: "marketplace_limits.read_failed", error });
     return resolveMarketplaceLimits(null);

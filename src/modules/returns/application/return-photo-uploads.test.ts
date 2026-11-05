@@ -7,10 +7,12 @@ const mocks = vi.hoisted(() => ({
   verifyAsset: vi.fn(),
   deleteObject: vi.fn(),
   assertRateLimit: vi.fn(),
-  getMarketplaceLimits: vi.fn(),
+  requireMarketplaceLimits: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/modules/admin/application/marketplace-limits", () => ({ getMarketplaceLimits: mocks.getMarketplaceLimits }));
+vi.mock("@/modules/admin/application/marketplace-limits", () => ({
+  requireMarketplaceLimits: mocks.requireMarketplaceLimits,
+}));
 vi.mock("@/lib/database", () => ({
   db: { orderItem: { findFirst: mocks.findItem }, returnRequestPhoto: { findUnique: mocks.findPhoto } },
 }));
@@ -40,7 +42,7 @@ beforeEach(() => {
   mocks.findPhoto.mockResolvedValue(null);
   mocks.createUploadUrl.mockImplementation(async ({ key }: { key: string }) => ({ key, url: "u", fields: {} }));
   mocks.verifyAsset.mockResolvedValue({ mediaType: "image", contentType: "image/jpeg", sizeInBytes: 2048 });
-  mocks.getMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS });
+  mocks.requireMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS });
 });
 
 describe("createReturnPhotoUpload", () => {
@@ -77,6 +79,8 @@ describe("createReturnPhotoUpload", () => {
     await expect(createReturnPhotoUpload(target, { contentType: "image/png", sizeInBytes: 1 })).rejects.toThrow(
       "após a entrega",
     );
+    // The item lookup and the limits read run together, so the size is checked on a delivered item.
+    mocks.findItem.mockResolvedValue({ id: "item-1", sellerOrder: { status: "DELIVERED" } });
     await expect(
       createReturnPhotoUpload(target, { contentType: "image/png", sizeInBytes: 5 * 1024 * 1024 + 1 }),
     ).rejects.toThrow("até 5 MB");
@@ -188,7 +192,7 @@ describe("removeReturnPhotoUpload", () => {
 
 describe("return photos with the Admin limits", () => {
   it("authorizes uploads up to the size configured in the Admin", async () => {
-    mocks.getMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS, photoMaxSizeInMegabytes: 2 });
+    mocks.requireMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS, photoMaxSizeInMegabytes: 2 });
 
     await expect(
       createReturnPhotoUpload(target, { contentType: "image/png", sizeInBytes: 2 * 1024 * 1024 + 1 }),
@@ -199,7 +203,7 @@ describe("return photos with the Admin limits", () => {
   });
 
   it("refuses more photos than the Admin allows without asking ImageKit", async () => {
-    mocks.getMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS, returnPhotoLimit: 1 });
+    mocks.requireMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS, returnPhotoLimit: 1 });
     const second = "returns/item-1/1c9b9f1f-7d49-4f9f-8f4d-2e3f4a5b6c7d.jpg";
 
     await expect(
