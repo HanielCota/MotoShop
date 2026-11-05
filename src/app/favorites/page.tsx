@@ -31,17 +31,19 @@ export default async function FavoritesPage({
 }) {
   const session = await requireAuthenticatedUser("/favorites");
   const params = await loadFavoriteSearchParams(searchParams);
-  const result = await listFavoriteProducts(session.user.id, {
-    query: params.favoriteQ,
-    availability: params.favoriteAvailability,
-    sort: params.favoriteSort,
-    page: params.favoritePage,
-  });
+  const [result, cardRules] = await Promise.all([
+    listFavoriteProducts(session.user.id, {
+      query: params.favoriteQ,
+      availability: params.favoriteAvailability,
+      sort: params.favoriteSort,
+      page: params.favoritePage,
+    }),
+    getMarketplaceLimits(),
+  ]);
   const hasFilters = Boolean(
     params.favoriteQ?.trim() || params.favoriteAvailability !== "ALL" || params.favoriteSort !== "newest",
   );
   const allFavorites = hasFilters ? await listFavoriteProducts(session.user.id, { pageSize: 1 }) : result;
-  const cardRules = await getMarketplaceLimits();
 
   function pageHref(page: number): Route {
     const query = new URLSearchParams();
