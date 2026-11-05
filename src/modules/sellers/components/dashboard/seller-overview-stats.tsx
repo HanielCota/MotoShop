@@ -2,13 +2,13 @@ import { CircleDollarSign, MessageCircleQuestion } from "lucide-react";
 
 import { StatCard } from "@/components/ui/stat-card";
 import { formatCount, formatMoneyInCents } from "@/lib/format";
+import { getMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
 import type { SellerDashboardPermissions } from "@/modules/sellers/application/get-seller-dashboard-context";
 import {
   countSellerOrdersToPrepare,
   countSellerStockAlerts,
   countSellerUnansweredQuestions,
   getSellerMonthNetSales,
-  LOW_STOCK_THRESHOLD,
 } from "@/modules/sellers/queries/seller-overview-metrics";
 import { overviewStatsGridClassName } from "@/modules/sellers/domain/dashboard-grid";
 import { domainIcons } from "@/shared/presentation/domain-icons";
@@ -21,10 +21,11 @@ export async function SellerOverviewStats({
   sellerId: string;
   permissions: SellerDashboardPermissions;
 }) {
+  const { lowStockThreshold } = await getMarketplaceLimits();
   const [ordersToPrepare, unansweredQuestions, lowStock, monthSales] = await Promise.all([
     permissions.canReadOrders ? countSellerOrdersToPrepare(sellerId) : null,
     permissions.canManageCatalog ? countSellerUnansweredQuestions(sellerId) : null,
-    permissions.canManageCatalog ? countSellerStockAlerts(sellerId) : null,
+    permissions.canManageCatalog ? countSellerStockAlerts(sellerId, lowStockThreshold) : null,
     permissions.canReadFinances ? getSellerMonthNetSales(sellerId) : null,
   ]);
 
@@ -56,7 +57,7 @@ export async function SellerOverviewStats({
         key="stock"
         label="Estoque baixo"
         value={lowStock.low + lowStock.out}
-        hint={`${lowStock.low} com até ${LOW_STOCK_THRESHOLD} un. · ${formatCount(lowStock.out, "esgotada", "esgotadas")}`}
+        hint={`${lowStock.low} com até ${lowStockThreshold} un. · ${formatCount(lowStock.out, "esgotada", "esgotadas")}`}
         href="/seller/products?productStock=LOW"
         icon={domainIcons.stock}
         tone={lowStock.low + lowStock.out > 0 ? "attention" : "default"}

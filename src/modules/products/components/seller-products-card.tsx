@@ -24,18 +24,22 @@ import {
   loadSellerProductSearchParams,
   serializeSellerProductSearchParams,
 } from "@/modules/products/seller-search-params";
+import { getMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
 import { getStatusOptions } from "@/shared/presentation/status-labels";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const basePath = "/seller/products";
 const productStatusOptions = [{ value: "ALL", label: "Todos" }, ...getStatusOptions("product")];
-const productStockOptions = [
-  { value: "ALL", label: "Todos" },
-  { value: "IN", label: "Em estoque" },
-  { value: "LOW", label: "Baixo (1–5)" },
-  { value: "OUT", label: "Esgotado" },
-];
+/** Stock filter options; "Baixo" names the range set in Admin › Configurações › Limites. */
+function productStockOptions(lowStockThreshold: number) {
+  return [
+    { value: "ALL", label: "Todos" },
+    { value: "IN", label: "Em estoque" },
+    { value: "LOW", label: `Baixo (até ${lowStockThreshold})` },
+    { value: "OUT", label: "Esgotado" },
+  ];
+}
 const productPromotionOptions = [
   { value: "ALL", label: "Todas" },
   { value: "ON_SALE", label: "Em promoção" },
@@ -56,9 +60,9 @@ export async function SellerProductsCard({
   searchParams: SearchParams;
   canCreateProduct: boolean;
 }) {
-  const params = await loadSellerProductSearchParams(searchParams);
+  const [params, limits] = await Promise.all([loadSellerProductSearchParams(searchParams), getMarketplaceLimits()]);
   const [result, categories, brands] = await Promise.all([
-    listSellerProducts(sellerId, {
+    listSellerProducts(sellerId, limits.lowStockThreshold, {
       query: params.productQ,
       categoryId: params.productCategory,
       brandId: params.productBrand,
@@ -154,7 +158,7 @@ export async function SellerProductsCard({
               label="Estoque"
               name="productStock"
               value={params.productStock}
-              options={productStockOptions}
+              options={productStockOptions(limits.lowStockThreshold)}
             />
             <FilterSelect
               label="Promoção"

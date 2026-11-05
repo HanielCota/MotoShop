@@ -51,7 +51,15 @@ export async function getSellerFinancialSummary(sellerId: string) {
   };
 }
 
-export async function listSellerLowStockVariants(sellerId: string, threshold = 5, limit = 5) {
+// The dashboard card lists only the first few variants; the product list shows the rest.
+const LOW_STOCK_CARD_ITEMS = 5;
+
+/**
+ * Lists the seller's sold-out and low-stock variants for the dashboard card, sold out first.
+ *
+ * @param threshold - Units at or below which a variant counts as low stock (Admin › Configurações › Limites).
+ */
+export async function listSellerLowStockVariants(sellerId: string, threshold: number, limit = LOW_STOCK_CARD_ITEMS) {
   return db.inventory.findMany({
     where: {
       sellerId,
