@@ -48,3 +48,9 @@ describe("audit log presentation", () => {
     expect(formatAuditMetadata([1, 2])).toEqual([]);
   });
 });
+
+it("shows a limit cleared in the Admin as the default value, not as an empty one", () => {
+  const lines = formatAuditMetadata({ previous: { productPhotoLimit: 10 }, next: { productPhotoLimit: null } });
+
+  expect(lines).toEqual([{ label: "Fotos por produto", value: "10 → valor padrão" }]);
+});

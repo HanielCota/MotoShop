@@ -1,5 +1,7 @@
 import { formatDateTime, formatMoneyInCents } from "@/lib/format";
 
+import { marketplaceLimitFields } from "../domain/marketplace-limits";
+
 /** Rótulos pt-BR das ações gravadas em `AuditLog.action` (UX-15). Ação nova sem rótulo aparece como está. */
 export const auditActionLabels: Record<string, string> = {
   BRAND_ACTIVATED: "Marca ativada",
@@ -170,6 +172,14 @@ const metadataKeyLabels: Record<string, string> = {
   sellerInviteTtlDays: "Validade do convite (dias)",
 };
 
+// Limits from Admin › Configurações › Limites: a blank one means the site uses the code default.
+const blankMeansDefaultKeys = new Set<string>(marketplaceLimitFields);
+const BLANK_LIMIT_LABEL = "valor padrão";
+
+function blankLabelFor(key: string): string {
+  return blankMeansDefaultKeys.has(key) ? BLANK_LIMIT_LABEL : "—";
+}
+
 export type AuditMetadataLine = Readonly<{ label: string; value: string }>;
 
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
@@ -187,7 +197,7 @@ export function formatAuditMetadata(metadata: unknown): AuditMetadataLine[] {
     const previous = formatMetadataValue(key, change.previous);
     const next = formatMetadataValue(key, change.next);
     if (previous === null && next === null) continue;
-    lines.push({ label: labelFor(key), value: `${previous ?? "—"} → ${next ?? "—"}` });
+    lines.push({ label: labelFor(key), value: `${previous ?? blankLabelFor(key)} → ${next ?? blankLabelFor(key)}` });
   }
 
   for (const [key, value] of Object.entries(metadata)) {

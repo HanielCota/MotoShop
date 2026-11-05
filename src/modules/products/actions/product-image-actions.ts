@@ -132,8 +132,10 @@ export async function attachProductImageAction(input: unknown): Promise<ProductI
   const context = await requireSellerAccess("PRODUCT_UPDATE");
   try {
     const parsed = attachInputSchema.parse(input);
-    await getEditableProduct(parsed.productId, context.seller.id);
-    const limits = await getMarketplaceLimits();
+    const [, limits] = await Promise.all([
+      getEditableProduct(parsed.productId, context.seller.id),
+      getMarketplaceLimits(),
+    ]);
 
     const attached = await attachVerifiedAsset({
       storageKey: parsed.storageKey,
