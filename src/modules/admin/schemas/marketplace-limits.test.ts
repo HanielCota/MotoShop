@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  marketplaceLimitLabels,
   marketplaceLimitsFormValues,
   marketplaceLimitsSchema,
   type MarketplaceLimitsFormInput,
@@ -59,6 +60,15 @@ describe("marketplaceLimitsSchema", () => {
       "Em “Fotos por pedido de devolução”, use um número inteiro de 1 a 5, ou deixe em branco.",
     );
     expect(notText.error?.issues[0]?.message).toContain("use um número inteiro de 1 a 50");
+  });
+});
+
+describe("marketplaceLimitLabels", () => {
+  it("names the stock thresholds as an upper bound, the way the site applies them", () => {
+    expect(marketplaceLimitLabels.lastUnitsThreshold).toContain("até");
+    expect(marketplaceLimitLabels.lowStockThreshold).toContain("até");
+    expect(marketplaceLimitLabels.lastUnitsThreshold).not.toContain("a partir de");
+    expect(marketplaceLimitLabels.lowStockThreshold).not.toContain("a partir de");
   });
 });
 

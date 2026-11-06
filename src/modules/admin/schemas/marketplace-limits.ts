@@ -13,8 +13,8 @@ export const marketplaceLimitLabels = {
   productPhotoLimit: "Fotos por produto",
   photoMaxSizeInMegabytes: "Tamanho máximo de cada foto (MB)",
   returnPhotoLimit: "Fotos por pedido de devolução",
-  lastUnitsThreshold: "“Últimas unidades” na loja a partir de",
-  lowStockThreshold: "“Estoque baixo” na Central do Lojista a partir de",
+  lastUnitsThreshold: "“Últimas unidades” na loja quando restam até",
+  lowStockThreshold: "“Estoque baixo” na Central do Lojista com até",
   newProductDays: "Dias com o selo “Novidade”",
   sellerInviteTtlDays: "Validade do convite da equipe (dias)",
 } as const satisfies Record<MarketplaceLimitField, string>;
