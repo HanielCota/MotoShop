@@ -9,7 +9,9 @@ import { logActionFailure, toActionError } from "@/shared/errors/action-error";
 import { readSubmittedValues } from "@/shared/forms/submitted-values";
 
 import { updateCompanyContact } from "../application/company-contact";
+import { updateMarketplaceLimits } from "../application/marketplace-limits";
 import { companyContactSchema } from "../schemas/company-contact";
+import { marketplaceLimitsSchema } from "../schemas/marketplace-limits";
 
 import {
   commissionSchema,
@@ -87,6 +89,35 @@ export async function updateCompanyContactAction(input: unknown): Promise<Compan
         applicationError.code === "INTERNAL_ERROR"
           ? "Não foi possível salvar empresa e contato."
           : applicationError.message,
+    };
+  }
+}
+
+export type MarketplaceLimitsActionState = { error?: string; success?: string };
+
+/**
+ * Saves Admin › Configurações › Limites for the signed-in admin.
+ *
+ * @param input - The raw form fields; validated again here, never trusted from the browser.
+ * @returns A message in Portuguese for the form: the first validation problem, or the result.
+ */
+export async function updateMarketplaceLimitsAction(input: unknown): Promise<MarketplaceLimitsActionState> {
+  const session = await requireAdminAccess();
+  const parsed = marketplaceLimitsSchema.safeParse(input);
+  if (parsed.success === false) return { error: parsed.error.issues[0]?.message ?? "Confira os limites informados." };
+
+  try {
+    const result = await updateMarketplaceLimits(session.user.id, parsed.data);
+    if (result.changed === false) return { success: "Nada mudou: os limites continuam iguais." };
+
+    // Limits show on the catalog, product pages, the seller area and the admin audit log.
+    revalidatePath("/", "layout");
+    return { success: "Limites atualizados. O site já usa os novos valores." };
+  } catch (error) {
+    const applicationError = toActionError(error, "updateMarketplaceLimitsAction");
+    return {
+      error:
+        applicationError.code === "INTERNAL_ERROR" ? "Não foi possível salvar os limites." : applicationError.message,
     };
   }
 }

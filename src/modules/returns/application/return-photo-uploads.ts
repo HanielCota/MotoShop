@@ -3,6 +3,8 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import { db } from "@/lib/database";
+import { requireMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
+import { photoMaxSizeInBytes } from "@/modules/admin/domain/marketplace-limits";
 import { ImageKitStorageProvider } from "@/lib/storage/imagekit-storage-provider";
 import {
   customerOrderIdentityWhere,
@@ -10,19 +12,20 @@ import {
 } from "@/modules/orders/application/resolve-customer-order-access";
 import { ApplicationError } from "@/shared/errors/application-error";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
+import { formatImageSizeLimit } from "@/shared/storage/upload-image";
 
 import { isSellerOrderEligibleForReturn } from "../domain/return-eligibility";
 import {
   buildReturnPhotoKey,
   isReturnPhotoKeyOf,
-  MAX_RETURN_PHOTO_SIZE_IN_BYTES,
   returnPhotoContentTypes,
+  tooManyReturnPhotosMessage,
   type ReturnPhotoContentType,
   type UploadedReturnPhoto,
 } from "../domain/return-photos";
 
 const RETURN_PHOTO_UPLOAD_LIMIT = { windowSeconds: 60, max: 10 };
-// A return takes at most 3 photos; 15 a day per item leaves room to retry without letting a script
+// A return takes at most 5 photos; 15 a day per item leaves room to retry without letting a script
 // fill the free ImageKit storage.
 const RETURN_PHOTO_DAILY_UPLOAD_LIMIT = { windowSeconds: 24 * 60 * 60, max: 15 };
 
@@ -57,10 +60,13 @@ export async function createReturnPhotoUpload(
   target: ReturnPhotoTarget,
   file: { contentType: ReturnPhotoContentType; sizeInBytes: number },
 ): ReturnType<ImageKitStorageProvider["createUploadUrl"]> {
-  if (file.sizeInBytes > MAX_RETURN_PHOTO_SIZE_IN_BYTES)
-    throw new ApplicationError({ code: "VALIDATION_ERROR", message: "Cada foto pode ter até 5 MB." });
-
-  const item = await findReturnableOrderItem(target);
+  const [limits, item] = await Promise.all([requireMarketplaceLimits(), findReturnableOrderItem(target)]);
+  const maxSizeInBytes = photoMaxSizeInBytes(limits);
+  if (file.sizeInBytes > maxSizeInBytes)
+    throw new ApplicationError({
+      code: "VALIDATION_ERROR",
+      message: `Cada foto pode ter até ${formatImageSizeLimit(maxSizeInBytes)}.`,
+    });
 
   // Counted only after the item is confirmed to be the caller's: nobody spends another customer's quota.
   await assertRateLimit({ key: `return-photo-upload:${item.id}`, ...RETURN_PHOTO_UPLOAD_LIMIT });
@@ -71,7 +77,7 @@ export async function createReturnPhotoUpload(
   return new ImageKitStorageProvider().createUploadUrl({
     key,
     contentType: file.contentType,
-    maxSizeInBytes: MAX_RETURN_PHOTO_SIZE_IN_BYTES,
+    maxSizeInBytes,
     isPrivate: true,
   });
 }
@@ -92,13 +98,22 @@ export async function removeReturnPhotoUpload(target: ReturnPhotoTarget, key: st
 }
 
 /**
- * Confere no ImageKit cada foto enviada antes de gravar: caminho dentro da pasta do item, imagem
- * JPG/PNG/WebP, até 5 MB e marcada como privada. Fica fora da transação do banco (AGENTS §36).
+ * Checks each uploaded photo on ImageKit before saving: path inside the item's folder, a JPG, PNG or
+ * WebP image within the size and count from Admin › Configurações › Limites, and marked private.
+ * Runs outside the database transaction (AGENTS §36), and only after the item owner was confirmed.
  */
 export async function verifyReturnPhotos(
   orderItemId: string,
   photos: readonly UploadedReturnPhoto[],
 ): Promise<VerifiedReturnPhoto[]> {
+  const limits = await requireMarketplaceLimits();
+  if (photos.length > limits.returnPhotoLimit)
+    throw new ApplicationError({
+      code: "VALIDATION_ERROR",
+      message: tooManyReturnPhotosMessage(limits.returnPhotoLimit),
+    });
+
+  const maxSizeInBytes = photoMaxSizeInBytes(limits);
   const keys = new Set(photos.map((photo) => photo.key));
   if (keys.size !== photos.length)
     throw new ApplicationError({ code: "VALIDATION_ERROR", message: "A mesma foto foi anexada duas vezes." });
@@ -121,7 +136,7 @@ export async function verifyReturnPhotos(
       const asset = await provider.verifyAsset({
         key: photo.key,
         fileId: photo.fileId,
-        maxSizeInBytes: MAX_RETURN_PHOTO_SIZE_IN_BYTES,
+        maxSizeInBytes,
         contentTypes: returnPhotoContentTypes,
         requirePrivate: true,
       });

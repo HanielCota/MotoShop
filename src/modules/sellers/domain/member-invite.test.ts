@@ -3,13 +3,19 @@ import { describe, expect, it } from "vitest";
 import { canUseSellerInvite, getSellerInviteDaysLeft, getSellerInviteExpiry } from "./member-invite";
 
 const now = new Date("2026-10-15T12:00:00Z");
-const invite = { status: "PENDING" as const, expiresAt: getSellerInviteExpiry(now), email: "pedro@oficina.com" };
+const invite = { status: "PENDING" as const, expiresAt: getSellerInviteExpiry(now, 7), email: "pedro@oficina.com" };
 const account = { email: "Pedro@Oficina.com", emailVerified: true };
 
 describe("seller member invite", () => {
   it("expires seven days after it is created", () => {
     expect(invite.expiresAt.toISOString()).toBe("2026-10-22T12:00:00.000Z");
     expect(getSellerInviteDaysLeft(invite.expiresAt, now)).toBe(7);
+  });
+
+  it("lasts the number of days configured in the Admin", () => {
+    const expiresAt = getSellerInviteExpiry(now, 30);
+
+    expect(expiresAt.toISOString()).toBe("2026-11-14T12:00:00.000Z");
   });
 
   it("accepts only the verified account of the invited e-mail", () => {

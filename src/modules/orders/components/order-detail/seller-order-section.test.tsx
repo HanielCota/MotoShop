@@ -47,6 +47,7 @@ it("shows each item's product photo, and the placeholder when the item has none"
       thumbnails={new Map([["i-1", { url: "https://ik.example/filtro.webp", alt: "" }]])}
       canReview={false}
       sellerAlreadyReviewed={false}
+      returnPhotoRules={{ maxPhotos: 3, maxSizeInBytes: 5 * 1024 * 1024 }}
     />,
   );
 

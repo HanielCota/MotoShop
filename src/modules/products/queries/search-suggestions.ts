@@ -1,6 +1,6 @@
 import "server-only";
 
-import { toProductCardData } from "@/modules/products/components/product-grid";
+import { toProductCardSummary } from "@/modules/products/components/product-grid";
 
 import { SEARCH_SUGGESTION_LIMIT, type SearchSuggestion } from "../schemas/search-suggestions";
 import { listApprovedProducts } from "./products";
@@ -21,7 +21,7 @@ export async function listSearchSuggestions(input: {
   const now = new Date();
 
   return result.products.map((product) => {
-    const card = toProductCardData(product, now);
+    const card = toProductCardSummary(product, now);
     return {
       id: card.id,
       name: card.name,

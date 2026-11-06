@@ -42,10 +42,19 @@ type SellerProductListInput = {
   pageSize?: number;
 };
 
-export async function listSellerProducts(sellerId: string, input: SellerProductListInput = {}) {
+/**
+ * Lists the seller's own products for the Central do Lojista.
+ *
+ * @param lowStockThreshold - Units at or below which the "Baixo" stock filter matches a variant.
+ */
+export async function listSellerProducts(
+  sellerId: string,
+  lowStockThreshold: number,
+  input: SellerProductListInput = {},
+) {
   const pageSize = Math.min(Math.max(input.pageSize ?? 20, 1), 50);
   const requestedPage = normalizeRequestedPage(input.page);
-  const where = buildSellerProductWhere(sellerId, input);
+  const where = buildSellerProductWhere(sellerId, lowStockThreshold, input);
   const [total, products] = await Promise.all([
     db.product.count({ where }),
     db.product.findMany({
@@ -69,10 +78,14 @@ function parsePriceFilter(value: number | null | undefined) {
   return Math.min(value, MAX_INT4);
 }
 
-function buildSellerProductWhere(sellerId: string, input: SellerProductListInput): Prisma.ProductWhereInput {
+function buildSellerProductWhere(
+  sellerId: string,
+  lowStockThreshold: number,
+  input: SellerProductListInput,
+): Prisma.ProductWhereInput {
   const query = input.query?.trim();
   const status = input.status && input.status !== "ALL" ? (input.status as ProductStatus) : undefined;
-  const variantFilter = buildSellerVariantFilter(input);
+  const variantFilter = buildSellerVariantFilter(input, lowStockThreshold);
   return {
     sellerId,
     ...(input.categoryId ? { categoryId: input.categoryId } : {}),
@@ -91,13 +104,16 @@ function buildSellerProductWhere(sellerId: string, input: SellerProductListInput
   };
 }
 
-function buildSellerVariantFilter(input: SellerProductListInput): Prisma.ProductVariantWhereInput {
+function buildSellerVariantFilter(
+  input: SellerProductListInput,
+  lowStockThreshold: number,
+): Prisma.ProductVariantWhereInput {
   const minPrice = parsePriceFilter(input.minPriceInCents);
   const maxPrice = parsePriceFilter(input.maxPriceInCents);
   const hasPriceFilter = minPrice !== undefined || maxPrice !== undefined;
   return {
     ...(hasPriceFilter ? { active: true } : {}),
-    ...sellerStockFilter(input.stock),
+    ...sellerStockFilter(input.stock, lowStockThreshold),
     ...(input.promotion === "ON_SALE" ? activePromotionFilter() : {}),
     ...(hasPriceFilter
       ? {
@@ -110,10 +126,13 @@ function buildSellerVariantFilter(input: SellerProductListInput): Prisma.Product
   };
 }
 
-function sellerStockFilter(stock: SellerProductStock | undefined): Prisma.ProductVariantWhereInput {
+function sellerStockFilter(
+  stock: SellerProductStock | undefined,
+  lowStockThreshold: number,
+): Prisma.ProductVariantWhereInput {
   if (stock === "OUT") return { active: true, inventory: { availableQuantity: 0 } };
   if (stock === "IN") return { active: true, inventory: { availableQuantity: { gt: 0 } } };
-  if (stock === "LOW") return { active: true, inventory: { availableQuantity: { gt: 0, lte: 5 } } };
+  if (stock === "LOW") return { active: true, inventory: { availableQuantity: { gt: 0, lte: lowStockThreshold } } };
   return {};
 }
 

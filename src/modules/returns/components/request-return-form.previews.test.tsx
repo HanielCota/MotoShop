@@ -44,7 +44,15 @@ function previewSources() {
 }
 
 function renderForm() {
-  render(<RequestReturnForm orderNumber="MS-1" orderItemId="item-1" maxQuantity={1} idempotencyKey="key-1" />);
+  render(
+    <RequestReturnForm
+      orderNumber="MS-1"
+      orderItemId="item-1"
+      maxQuantity={1}
+      idempotencyKey="key-1"
+      photoRules={{ maxPhotos: 3, maxSizeInBytes: 5 * 1024 * 1024 }}
+    />,
+  );
 }
 
 it("shows a local preview of each chosen photo without sending anything", () => {

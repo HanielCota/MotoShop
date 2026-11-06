@@ -12,6 +12,7 @@ import { requestReturnAction, type ReturnActionState } from "../actions/return-a
 import { useClientValidation } from "@/shared/forms/client-validation";
 import { useServerActionState } from "@/shared/forms/server-action-submit";
 
+import type { ReturnPhotoRules } from "../domain/return-photos";
 import { discardReturnPhotos, ReturnPhotoPicker, uploadReturnPhotos } from "./return-photo-picker";
 
 type RequestReturnFormProps = {
@@ -19,6 +20,7 @@ type RequestReturnFormProps = {
   orderItemId: string;
   maxQuantity: number;
   idempotencyKey: string;
+  photoRules: ReturnPhotoRules;
 };
 
 const initialState: ReturnActionState = {};
@@ -59,7 +61,13 @@ export async function submitReturnWithoutOrphanPhotos(input: {
   }
 }
 
-export function RequestReturnForm({ orderNumber, orderItemId, maxQuantity, idempotencyKey }: RequestReturnFormProps) {
+export function RequestReturnForm({
+  orderNumber,
+  orderItemId,
+  maxQuantity,
+  idempotencyKey,
+  photoRules,
+}: RequestReturnFormProps) {
   const [photos, setPhotos] = useState<File[]>([]);
   const [state, action, pending] = useServerActionState(
     async (previousState: ReturnActionState, formData: FormData): Promise<ReturnActionState> => {
@@ -123,7 +131,12 @@ export function RequestReturnForm({ orderNumber, orderItemId, maxQuantity, idemp
         Observação (opcional)
         <Textarea className="h-20 min-h-20" name="customerMessage" maxLength={1000} />
       </label>
-      <ReturnPhotoPicker files={photos} onFilesChange={setPhotos} disabled={pending || Boolean(state.result)} />
+      <ReturnPhotoPicker
+        files={photos}
+        onFilesChange={setPhotos}
+        disabled={pending || Boolean(state.result)}
+        rules={photoRules}
+      />
       <FormMessage
         error={clientError ?? state.error ?? null}
         success={clientError ? null : (state.success ?? null)}

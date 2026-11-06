@@ -10,6 +10,7 @@ import { Heart, SearchX } from "lucide-react";
 import { EAGER_PRODUCT_CARDS, ProductCard } from "@/components/storefront/product-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { getMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
 import { requireAuthenticatedUser } from "@/modules/auth/application/authorization";
 import { FavoriteButton } from "@/modules/favorites/components/favorite-button";
 import { listFavoriteProducts } from "@/modules/favorites/queries/favorites";
@@ -30,12 +31,15 @@ export default async function FavoritesPage({
 }) {
   const session = await requireAuthenticatedUser("/favorites");
   const params = await loadFavoriteSearchParams(searchParams);
-  const result = await listFavoriteProducts(session.user.id, {
-    query: params.favoriteQ,
-    availability: params.favoriteAvailability,
-    sort: params.favoriteSort,
-    page: params.favoritePage,
-  });
+  const [result, cardRules] = await Promise.all([
+    listFavoriteProducts(session.user.id, {
+      query: params.favoriteQ,
+      availability: params.favoriteAvailability,
+      sort: params.favoriteSort,
+      page: params.favoritePage,
+    }),
+    getMarketplaceLimits(),
+  ]);
   const hasFilters = Boolean(
     params.favoriteQ?.trim() || params.favoriteAvailability !== "ALL" || params.favoriteSort !== "newest",
   );
@@ -127,7 +131,7 @@ export default async function FavoritesPage({
           {result.favorites.map(({ product }, index) => (
             <li key={product.id} className="flex min-w-0">
               <ProductCard
-                product={toProductCardData(product)}
+                product={toProductCardData(product, cardRules)}
                 eager={index < EAGER_PRODUCT_CARDS}
                 headingLevel="h2"
                 action={<FavoriteButton productId={product.id} initialIsFavorite />}

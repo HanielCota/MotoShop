@@ -21,17 +21,20 @@ export type BuyBoxVariant = {
 export function ProductBuyBox({
   variants,
   hasPriceRange,
+  lastUnitsThreshold,
   fitment,
 }: {
   variants: BuyBoxVariant[];
   hasPriceRange: boolean;
+  /** Units at or below which the shopper sees "Últimas unidades" (Admin › Configurações › Limites). */
+  lastUnitsThreshold: number;
   /** Faixa "Minha Moto", renderizada no servidor e posicionada antes da escolha de opção. */
   fitment?: ReactNode;
 }) {
   const initial = variants.find((variant) => variant.stock > 0) ?? variants[0];
   const [selectedId, setSelectedId] = useState(initial?.id ?? "");
   const selected = variants.find((variant) => variant.id === selectedId) ?? initial;
-  const stockStatus = selected ? getPublicStockStatus(selected.stock) : "out-of-stock";
+  const stockStatus = selected ? getPublicStockStatus(selected.stock, lastUnitsThreshold) : "out-of-stock";
   const discountPercentage =
     selected?.onSale && selected.priceInCents > 0
       ? Math.round(((selected.priceInCents - selected.currentPriceInCents) / selected.priceInCents) * 100)

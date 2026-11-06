@@ -1,6 +1,3 @@
-/** Convite para a equipe da loja (M-04): vale 7 dias e só pode ser usado uma vez. */
-export const SELLER_INVITE_TTL_DAYS = 7;
-
 /**
  * Resposta única para link vencido, já usado, cancelado ou de outro e-mail: não revela se o
  * convite existe nem para quem foi enviado.
@@ -23,8 +20,13 @@ export function normalizeInviteEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-export function getSellerInviteExpiry(now: Date): Date {
-  return new Date(now.getTime() + SELLER_INVITE_TTL_DAYS * 24 * 60 * 60 * 1000);
+/**
+ * When a store team invite (M-04) stops working; it can be used only once before that.
+ *
+ * @param validForDays - Invite validity from Admin › Configurações › Limites.
+ */
+export function getSellerInviteExpiry(now: Date, validForDays: number): Date {
+  return new Date(now.getTime() + validForDays * 24 * 60 * 60 * 1000);
 }
 
 /** O convite só serve para a conta do mesmo e-mail, já verificado, enquanto estiver pendente e no prazo. */

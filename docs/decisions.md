@@ -111,7 +111,7 @@ Decisões pontuais tomadas ao longo do MVP, agrupadas por domínio. Complementam
 ### Pós-venda
 
 - Lojista vê devolução, cancelamento e disputa (UX-13, decisão do responsável em 16/10/2026): o card do pedido na Central mostra motivo, itens e status das três solicitações, sem ações para o lojista. A mediação e as decisões continuam no Admin. Toda consulta filtra `sellerId`.
-- Fotos na devolução (decisão do responsável em 16/10/2026): o cliente anexa até 3 fotos opcionais ao solicitar devolução, com upload direto ao ImageKit e conferência do asset no servidor, como nas fotos de produto. As fotos aparecem para o Admin e para o lojista.
+- Fotos na devolução (decisão do responsável em 16/10/2026): o cliente anexa fotos opcionais ao solicitar devolução (até 3 por padrão; quantidade e tamanho definidos em Admin › Configurações › Limites desde 05/11/2026, de 1 a 5 fotos), com upload direto ao ImageKit e conferência do asset no servidor, como nas fotos de produto. As fotos aparecem para o Admin e para o lojista.
 
 ---
 
@@ -205,7 +205,7 @@ Filtros e ordenações já existentes, todos sob a regra acima:
 
 ### Página de produto, avaliações e perguntas
 
-- Selo "Novidade" (13/10/2026): produtos aprovados nos últimos 30 dias, pela data de aprovação (`reviewedAt`) ou, sem ela, pela de criação; calculado no servidor (`products/domain/product-novelty.ts`). O card mostra no máximo dois selos, nesta prioridade: Patrocinado, Oferta, Novidade (`product-card-badges.ts`). Não existe selo de demonstração (16/10/2026). Na página do produto todos aparecem.
+- Selo "Novidade" (13/10/2026): produtos aprovados nos últimos 30 dias (desde 05/11/2026 o número de dias vem de Admin › Configurações › Limites, de 0 a 90; com 0 o selo some), pela data de aprovação (`reviewedAt`) ou, sem ela, pela de criação; calculado no servidor (`products/domain/product-novelty.ts`). O card mostra no máximo dois selos, nesta prioridade: Patrocinado, Oferta, Novidade (`product-card-badges.ts`). Não existe selo de demonstração (16/10/2026). Na página do produto todos aparecem.
 - Cards públicos de produto podem exibir apenas a primeira `ProductImage` associada; a URL é derivada no servidor e o card sempre mantém fallback textual quando não houver imagem pública.
 - Avaliações e perguntas públicas têm paginação independente; médias e contagens são agregadas no servidor, sem depender apenas da página carregada.
 - O filtro de nota nas avaliações do detalhe público é aplicado no banco, recalculando média, contagem e paginação para o mesmo recorte.

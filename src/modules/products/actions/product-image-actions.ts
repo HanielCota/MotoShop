@@ -5,25 +5,32 @@ import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 
 import { db } from "@/lib/database";
+import { formatCount } from "@/lib/format";
 import { logger } from "@/lib/logger";
 import { ImageKitStorageProvider } from "@/lib/storage/imagekit-storage-provider";
+import { requireMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
+import {
+  MARKETPLACE_LIMIT_BOUNDS,
+  PHOTO_SIZE_HARD_CAP_IN_BYTES,
+  photoMaxSizeInBytes,
+} from "@/modules/admin/domain/marketplace-limits";
 import { requireSellerAccess } from "@/modules/auth/application/authorization";
 import { assertRateLimit } from "@/shared/rate-limit/consume-rate-limit";
 import {
   attachVerifiedAsset,
   createImageUploadUrl,
-  IMAGE_MAX_SIZE_IN_BYTES,
   isStorageKeyUnderPrefix,
   SAFE_IMAGE_NAME,
 } from "@/shared/storage/attach-verified-asset";
 import { getPublicStorageUrl } from "@/shared/storage/public-storage-url";
 import { ApplicationError } from "@/shared/errors/application-error";
 import { toActionError } from "@/shared/errors/action-error";
+import { imageTooLargeMessage } from "@/shared/storage/upload-image";
 
 const uploadInputSchema = z.object({
   productId: z.string().cuid(),
   contentType: z.enum(["image/jpeg", "image/png", "image/webp"]),
-  sizeInBytes: z.number().int().positive().max(IMAGE_MAX_SIZE_IN_BYTES),
+  sizeInBytes: z.number().int().positive().max(PHOTO_SIZE_HARD_CAP_IN_BYTES),
 });
 
 const attachInputSchema = z.object({
@@ -34,7 +41,7 @@ const attachInputSchema = z.object({
 });
 const reorderInputSchema = z.object({
   productId: z.string().cuid(),
-  imageIds: z.array(z.string().cuid()).min(1).max(8),
+  imageIds: z.array(z.string().cuid()).min(1).max(MARKETPLACE_LIMIT_BOUNDS.productPhotoLimit.max),
 });
 const removeInputSchema = z.object({ imageId: z.string().cuid() });
 const discardInputSchema = z.object({ productId: z.string().cuid(), storageKey: z.string().min(1).max(300) });
@@ -46,6 +53,10 @@ export type ProductImageUploadResult =
 export type ProductImageResult =
   | { error: string; image?: never }
   | { error?: never; image: { id: string; storageKey: string; altText: string | null; url: string | null } };
+
+function tooManyImagesMessage(productPhotoLimit: number): string {
+  return `O produto pode ter no máximo ${formatCount(productPhotoLimit, "imagem", "imagens")}.`;
+}
 
 function productImagePrefix(sellerId: string, productId: string) {
   return `products/${sellerId}/${productId}/`;
@@ -75,12 +86,19 @@ export async function createProductImageUploadUrlAction(input: unknown): Promise
     await getEditableProduct(parsed.productId, context.seller.id);
     await assertRateLimit({ key: `product-image-upload:${context.seller.id}`, windowSeconds: 60, max: 20 });
 
-    const imageCount = await db.productImage.count({ where: { productId: parsed.productId } });
-    if (imageCount >= 8) return { error: "O produto pode ter no máximo 8 imagens." };
+    const [imageCount, limits] = await Promise.all([
+      db.productImage.count({ where: { productId: parsed.productId } }),
+      requireMarketplaceLimits(),
+    ]);
+    if (imageCount >= limits.productPhotoLimit) return { error: tooManyImagesMessage(limits.productPhotoLimit) };
+
+    const maxSizeInBytes = photoMaxSizeInBytes(limits);
+    if (parsed.sizeInBytes > maxSizeInBytes) return { error: imageTooLargeMessage(maxSizeInBytes) };
 
     return await createImageUploadUrl({
       prefix: productImagePrefix(context.seller.id, parsed.productId),
       contentType: parsed.contentType,
+      maxSizeInBytes,
     });
   } catch (error) {
     return { error: toActionError(error, "createProductImageUploadUrlAction").message };
@@ -112,13 +130,17 @@ export async function attachProductImageAction(input: unknown): Promise<ProductI
   const context = await requireSellerAccess("PRODUCT_UPDATE");
   try {
     const parsed = attachInputSchema.parse(input);
-    await getEditableProduct(parsed.productId, context.seller.id);
+    const [, limits] = await Promise.all([
+      getEditableProduct(parsed.productId, context.seller.id),
+      requireMarketplaceLimits(),
+    ]);
 
     const attached = await attachVerifiedAsset({
       storageKey: parsed.storageKey,
       fileId: parsed.fileId,
       prefix: productImagePrefix(context.seller.id, parsed.productId),
       namePattern: SAFE_IMAGE_NAME,
+      maxSizeInBytes: photoMaxSizeInBytes(limits),
       persist: () =>
         db.$transaction(async (tx) => {
           await tx.$queryRaw`SELECT id FROM "products" WHERE id = ${parsed.productId} FOR UPDATE`;
@@ -128,8 +150,8 @@ export async function attachProductImageAction(input: unknown): Promise<ProductI
           });
           if (existing) return existing;
           const imageCount = await tx.productImage.count({ where: { productId: parsed.productId } });
-          if (imageCount >= 8)
-            throw new ApplicationError({ code: "CONFLICT", message: "O produto pode ter no máximo 8 imagens." });
+          if (imageCount >= limits.productPhotoLimit)
+            throw new ApplicationError({ code: "CONFLICT", message: tooManyImagesMessage(limits.productPhotoLimit) });
           return tx.productImage.create({
             data: {
               storageKey: parsed.storageKey,

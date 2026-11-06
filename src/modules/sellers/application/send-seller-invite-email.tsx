@@ -1,11 +1,11 @@
 import "server-only";
 
+import { formatCount } from "@/lib/format";
 import { logger } from "@/lib/logger";
 import { authEmailConfigured } from "@/modules/auth/infrastructure/auth";
 import { sendNotificationEmail } from "@/modules/notifications/application/send-notification-email";
 import { EmailButton, EmailNote, EmailText, EmailTitle } from "@/modules/notifications/emails/email-layout";
 
-import { SELLER_INVITE_TTL_DAYS } from "../domain/member-invite";
 import { hashInviteToken } from "./member-invites";
 
 /**
@@ -19,6 +19,8 @@ export async function sendSellerInviteEmail(input: {
   roleLabel: string;
   url: string;
   token: string;
+  /** Days the link stays valid, as set in Admin › Configurações › Limites. */
+  validForDays: number;
 }): Promise<void> {
   if (!authEmailConfigured) return;
 
@@ -37,8 +39,8 @@ export async function sendSellerInviteEmail(input: {
           </EmailText>
           <EmailButton href={input.url}>Ver convite</EmailButton>
           <EmailNote>
-            O link vale por {SELLER_INVITE_TTL_DAYS} dias e não deve ser compartilhado. Se você não esperava este
-            convite, ignore esta mensagem.
+            O link vale por {formatCount(input.validForDays, "dia", "dias")} e não deve ser compartilhado. Se você não
+            esperava este convite, ignore esta mensagem.
           </EmailNote>
         </>
       ),

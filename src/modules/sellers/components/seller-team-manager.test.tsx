@@ -17,6 +17,7 @@ it("shows role names, not internal values, in the role selects", () => {
   render(
     <SellerTeamManager
       invites={[]}
+      inviteValidForDays={7}
       members={[{ id: "cmember0001", name: "Juliana Prado", email: "juliana@example.test", role: "CATALOG" }]}
     />,
   );

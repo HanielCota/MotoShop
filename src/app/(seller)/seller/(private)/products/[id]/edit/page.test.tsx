@@ -13,6 +13,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
+vi.mock("@/modules/admin/application/marketplace-limits", async () => {
+  const { MARKETPLACE_LIMIT_DEFAULTS } = await import("@/modules/admin/domain/marketplace-limits");
+  return { getMarketplaceLimits: async () => ({ ...MARKETPLACE_LIMIT_DEFAULTS }) };
+});
 vi.mock("@/modules/auth/application/authorization", () => ({
   requireSellerAccess: vi.fn(async () => ({ seller: { id: "seller-1" } })),
 }));

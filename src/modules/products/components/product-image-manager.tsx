@@ -17,7 +17,7 @@ import {
   reorderProductImagesAction,
   type ProductImageResult,
 } from "@/modules/products/actions/product-image-actions";
-import { findImageFileProblem, uploadImageToImageKit } from "@/shared/storage/upload-image";
+import { findImageFileProblem, formatImageSizeLimit, uploadImageToImageKit } from "@/shared/storage/upload-image";
 import { formatCount } from "@/lib/format";
 
 type ProductImage = { id: string; storageKey: string; altText: string | null; url: string | null };
@@ -77,9 +77,15 @@ async function uploadProductImage(productId: string, file: File): Promise<Produc
 export function ProductImageManager({
   productId,
   initialImages,
+  maxImages,
+  maxSizeInBytes,
 }: {
   productId: string;
   initialImages: ProductImage[];
+  /** Photos a product can have (Admin › Configurações › Limites). */
+  maxImages: number;
+  /** Largest photo accepted, in bytes (Admin › Configurações › Limites). */
+  maxSizeInBytes: number;
 }) {
   const [images, setImages] = useState(initialImages);
   const [error, setError] = useState<string>();
@@ -92,15 +98,15 @@ export function ProductImageManager({
     if (!files || files.length === 0) return;
     setError(undefined);
     setSuccess(undefined);
-    if (images.length + files.length > 8) {
+    if (images.length + files.length > maxImages) {
       setError(
-        `Você pode adicionar mais ${formatCount(Math.max(0, 8 - images.length), "imagem", "imagens")} a este produto.`,
+        `Você pode adicionar mais ${formatCount(Math.max(0, maxImages - images.length), "imagem", "imagens")} a este produto.`,
       );
       return;
     }
     // Every file is checked before the first upload, so a bad file never leaves the others half sent.
     const fileProblem = Array.from(files)
-      .map(findImageFileProblem)
+      .map((file) => findImageFileProblem(file, maxSizeInBytes))
       .find((problem) => problem != null);
     if (fileProblem != null) {
       setError(fileProblem);
@@ -176,7 +182,10 @@ export function ProductImageManager({
     <div className="space-y-3 rounded-lg border p-4">
       <div>
         <h3 className="font-medium">Imagens do produto</h3>
-        <p className="text-muted-foreground text-xs">Até 8 imagens JPG, PNG ou WebP, com no máximo 5 MB cada.</p>
+        <p className="text-muted-foreground text-xs">
+          Até {formatCount(maxImages, "imagem", "imagens")} JPG, PNG ou WebP, com no máximo{" "}
+          {formatImageSizeLimit(maxSizeInBytes)} cada.
+        </p>
       </div>
       {images.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -260,7 +269,7 @@ export function ProductImageManager({
         type="file"
         accept="image/jpeg,image/png,image/webp"
         multiple
-        disabled={uploading || images.length >= 8}
+        disabled={uploading || images.length >= maxImages}
         onChange={(event) => {
           const files = event.currentTarget.files;
           void uploadFiles(files);

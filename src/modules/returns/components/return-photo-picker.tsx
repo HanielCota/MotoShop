@@ -3,19 +3,31 @@
 import { useCallback, useId, useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { findImageFileProblem, uploadFileToImageKit } from "@/shared/storage/upload-image";
+import { formatCount } from "@/lib/format";
+import { findImageFileProblem, formatImageSizeLimit, uploadFileToImageKit } from "@/shared/storage/upload-image";
 
 import { createReturnPhotoUploadAction, removeReturnPhotoUploadAction } from "../actions/return-actions";
-import { MAX_RETURN_PHOTOS, returnPhotoContentTypes } from "../domain/return-photos";
+import { returnPhotoContentTypes, tooManyReturnPhotosMessage, type ReturnPhotoRules } from "../domain/return-photos";
 
 type ReturnPhotoTarget = { orderNumber: string; orderItemId: string };
 type UploadedPhoto = { key: string; fileId: string };
 
-/** Confere tipo, tamanho e quantidade antes de aceitar a seleção; devolve a mensagem de erro ou null. */
-export function validateReturnPhotoSelection(current: readonly File[], selected: readonly File[]): string | null {
-  if (current.length + selected.length > MAX_RETURN_PHOTOS) return `Anexe no máximo ${MAX_RETURN_PHOTOS} fotos.`;
+/**
+ * Checks type, size and count before accepting the selection.
+ *
+ * @param rules - Photo count and size from Admin › Configurações › Limites.
+ * @returns The error message in Portuguese, or null when the selection fits.
+ */
+export function validateReturnPhotoSelection(
+  current: readonly File[],
+  selected: readonly File[],
+  rules: ReturnPhotoRules,
+): string | null {
+  if (current.length + selected.length > rules.maxPhotos) return tooManyReturnPhotosMessage(rules.maxPhotos);
 
-  return selected.map(findImageFileProblem).find((problem) => problem != null) ?? null;
+  return (
+    selected.map((file) => findImageFileProblem(file, rules.maxSizeInBytes)).find((problem) => problem != null) ?? null
+  );
 }
 
 /**
@@ -91,15 +103,17 @@ function ReturnPhotoPreview({ file }: { file: File }) {
   );
 }
 
-/** Seleção de até 3 fotos opcionais para a devolução; o envio acontece só ao confirmar o formulário. */
+/** Optional photos for the return; they are sent only when the form is confirmed. */
 export function ReturnPhotoPicker({
   files,
   onFilesChange,
   disabled,
+  rules,
 }: {
   files: readonly File[];
   onFilesChange: (files: File[]) => void;
   disabled: boolean;
+  rules: ReturnPhotoRules;
 }) {
   const inputId = useId();
   const [error, setError] = useState<string | null>(null);
@@ -108,7 +122,7 @@ export function ReturnPhotoPicker({
     if (list == null || list.length === 0) return;
 
     const selected = Array.from(list);
-    const selectionError = validateReturnPhotoSelection(files, selected);
+    const selectionError = validateReturnPhotoSelection(files, selected, rules);
     setError(selectionError);
     if (selectionError != null) return;
 
@@ -118,7 +132,10 @@ export function ReturnPhotoPicker({
   return (
     <section aria-label="Fotos da devolução" className="space-y-2 sm:col-span-2">
       <p id={`${inputId}-label`} className="text-foreground text-xs font-medium">
-        Fotos <span className="text-muted-foreground font-normal">(opcional, até 3 imagens)</span>
+        Fotos{" "}
+        <span className="text-muted-foreground font-normal">
+          (opcional, até {formatCount(rules.maxPhotos, "imagem", "imagens")})
+        </span>
       </p>
       <input
         id={inputId}
@@ -127,7 +144,7 @@ export function ReturnPhotoPicker({
         type="file"
         accept={returnPhotoContentTypes.join(",")}
         multiple
-        disabled={disabled || files.length >= MAX_RETURN_PHOTOS}
+        disabled={disabled || files.length >= rules.maxPhotos}
         onChange={(event) => {
           selectFiles(event.currentTarget.files);
           event.currentTarget.value = "";
@@ -141,7 +158,8 @@ export function ReturnPhotoPicker({
         Selecionar fotos
       </label>
       <p id={`${inputId}-hint`} className="text-muted-foreground text-xs">
-        Imagens JPG, PNG ou WebP de até 5 MB cada. Só você, a loja e a equipe do Moto Shop veem as fotos.
+        Imagens JPG, PNG ou WebP de até {formatImageSizeLimit(rules.maxSizeInBytes)} cada. Só você, a loja e a equipe do
+        Moto Shop veem as fotos.
       </p>
       {error ? (
         <p role="alert" className="text-destructive text-xs font-medium">

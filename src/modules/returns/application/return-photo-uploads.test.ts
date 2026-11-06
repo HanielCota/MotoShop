@@ -7,8 +7,12 @@ const mocks = vi.hoisted(() => ({
   verifyAsset: vi.fn(),
   deleteObject: vi.fn(),
   assertRateLimit: vi.fn(),
+  requireMarketplaceLimits: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
+vi.mock("@/modules/admin/application/marketplace-limits", () => ({
+  requireMarketplaceLimits: mocks.requireMarketplaceLimits,
+}));
 vi.mock("@/lib/database", () => ({
   db: { orderItem: { findFirst: mocks.findItem }, returnRequestPhoto: { findUnique: mocks.findPhoto } },
 }));
@@ -24,6 +28,7 @@ vi.mock("@/lib/storage/imagekit-storage-provider", () => ({
   },
 }));
 
+import { MARKETPLACE_LIMIT_DEFAULTS } from "@/modules/admin/domain/marketplace-limits";
 import { ApplicationError } from "@/shared/errors/application-error";
 
 import { createReturnPhotoUpload, removeReturnPhotoUpload, verifyReturnPhotos } from "./return-photo-uploads";
@@ -37,6 +42,7 @@ beforeEach(() => {
   mocks.findPhoto.mockResolvedValue(null);
   mocks.createUploadUrl.mockImplementation(async ({ key }: { key: string }) => ({ key, url: "u", fields: {} }));
   mocks.verifyAsset.mockResolvedValue({ mediaType: "image", contentType: "image/jpeg", sizeInBytes: 2048 });
+  mocks.requireMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS });
 });
 
 describe("createReturnPhotoUpload", () => {
@@ -73,6 +79,8 @@ describe("createReturnPhotoUpload", () => {
     await expect(createReturnPhotoUpload(target, { contentType: "image/png", sizeInBytes: 1 })).rejects.toThrow(
       "após a entrega",
     );
+    // The item lookup and the limits read run together, so the size is checked on a delivered item.
+    mocks.findItem.mockResolvedValue({ id: "item-1", sellerOrder: { status: "DELIVERED" } });
     await expect(
       createReturnPhotoUpload(target, { contentType: "image/png", sizeInBytes: 5 * 1024 * 1024 + 1 }),
     ).rejects.toThrow("até 5 MB");
@@ -179,5 +187,31 @@ describe("removeReturnPhotoUpload", () => {
   it("refuses a key outside the item's folder", async () => {
     await expect(removeReturnPhotoUpload(target, "products/seller-1/photo.webp")).rejects.toThrow("não encontrado");
     expect(mocks.findItem).not.toHaveBeenCalled();
+  });
+});
+
+describe("return photos with the Admin limits", () => {
+  it("authorizes uploads up to the size configured in the Admin", async () => {
+    mocks.requireMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS, photoMaxSizeInMegabytes: 2 });
+
+    await expect(
+      createReturnPhotoUpload(target, { contentType: "image/png", sizeInBytes: 2 * 1024 * 1024 + 1 }),
+    ).rejects.toThrow("Cada foto pode ter até 2 MB.");
+    await createReturnPhotoUpload(target, { contentType: "image/png", sizeInBytes: 1024 });
+
+    expect(mocks.createUploadUrl).toHaveBeenCalledWith(expect.objectContaining({ maxSizeInBytes: 2 * 1024 * 1024 }));
+  });
+
+  it("refuses more photos than the Admin allows without asking ImageKit", async () => {
+    mocks.requireMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS, returnPhotoLimit: 1 });
+    const second = "returns/item-1/1c9b9f1f-7d49-4f9f-8f4d-2e3f4a5b6c7d.jpg";
+
+    await expect(
+      verifyReturnPhotos("item-1", [
+        { key: validKey, fileId: "file-1" },
+        { key: second, fileId: "file-2" },
+      ]),
+    ).rejects.toThrow("Anexe no máximo 1 foto.");
+    expect(mocks.verifyAsset).not.toHaveBeenCalled();
   });
 });

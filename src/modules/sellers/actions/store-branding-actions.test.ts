@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   deleteObject: vi.fn(),
   createUploadUrl: vi.fn(),
   revalidatePath: vi.fn(),
+  requireMarketplaceLimits: vi.fn(),
 }));
 
 vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
@@ -25,6 +26,9 @@ vi.mock("@/lib/database", () => ({
   },
 }));
 vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
+vi.mock("@/modules/admin/application/marketplace-limits", () => ({
+  requireMarketplaceLimits: mocks.requireMarketplaceLimits,
+}));
 vi.mock("@/modules/auth/application/authorization", () => ({ requireSellerAccess: mocks.requireSellerAccess }));
 vi.mock("@/lib/storage/imagekit-storage-provider", () => ({
   ImageKitStorageProvider: class {
@@ -33,6 +37,8 @@ vi.mock("@/lib/storage/imagekit-storage-provider", () => ({
     createUploadUrl = mocks.createUploadUrl;
   },
 }));
+
+import { MARKETPLACE_LIMIT_DEFAULTS } from "@/modules/admin/domain/marketplace-limits";
 
 import {
   attachStoreBrandingImageAction,
@@ -58,6 +64,7 @@ beforeEach(() => {
   mocks.requireSellerAccess.mockResolvedValue(context);
   mocks.verifyImage.mockResolvedValue(undefined);
   mocks.deleteObject.mockResolvedValue(undefined);
+  mocks.requireMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS });
   mocks.createUploadUrl.mockImplementation(async ({ key }: { key: string }) => ({
     key,
     url: "https://storage.example.test/upload",
@@ -172,4 +179,17 @@ it("does not attach a branding image stored under another seller's prefix", asyn
   expect(mocks.verifyImage).not.toHaveBeenCalled();
   expect(mocks.transaction).not.toHaveBeenCalled();
   expect(mocks.revalidatePath).not.toHaveBeenCalled();
+});
+
+it("refuses a logo or banner over the size configured in the Admin", async () => {
+  mocks.requireMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS, photoMaxSizeInMegabytes: 1 });
+
+  const result = await createStoreBrandingUploadUrlAction({
+    imageType: "logo",
+    contentType: "image/png",
+    sizeInBytes: 1024 * 1024 + 1,
+  });
+
+  expect(result).toEqual({ error: "Cada imagem pode ter até 1 MB." });
+  expect(mocks.createUploadUrl).not.toHaveBeenCalled();
 });

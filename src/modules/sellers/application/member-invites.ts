@@ -47,7 +47,7 @@ export function getSellerInviteUrl(token: string): string {
  */
 export async function createSellerMemberInvite(
   actor: InviteActor,
-  input: { email: string; role: InvitableRole },
+  input: { email: string; role: InvitableRole; validForDays: number },
   now = new Date(),
 ): Promise<Result<{ inviteId: string; token: string; storeName: string }>> {
   if (!canManageSellerMember({ actorRole: actor.actorRole, currentRole: null, nextRole: input.role })) {
@@ -67,7 +67,7 @@ export async function createSellerMemberInvite(
     const data = {
       role: input.role,
       tokenHash,
-      expiresAt: getSellerInviteExpiry(now),
+      expiresAt: getSellerInviteExpiry(now, input.validForDays),
       invitedByUserId: actor.actorUserId,
     };
     const pending = await tx.sellerMemberInvite.findFirst({
@@ -95,12 +95,13 @@ export async function createSellerMemberInvite(
 export async function renewSellerMemberInviteLink(
   actor: InviteActor,
   inviteId: string,
+  validForDays: number,
   now = new Date(),
 ): Promise<Result<{ token: string }>> {
   const { token, tokenHash } = createInviteToken();
   const updated = await db.sellerMemberInvite.updateMany({
     where: { id: inviteId, sellerId: actor.sellerId, status: "PENDING" },
-    data: { tokenHash, expiresAt: getSellerInviteExpiry(now) },
+    data: { tokenHash, expiresAt: getSellerInviteExpiry(now, validForDays) },
   });
   if (updated.count !== 1) return { ok: false, error: "Este convite não está mais pendente." };
   return { ok: true, token };

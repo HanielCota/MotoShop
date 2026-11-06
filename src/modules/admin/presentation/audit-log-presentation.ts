@@ -1,5 +1,8 @@
 import { formatDateTime, formatMoneyInCents } from "@/lib/format";
 
+import { marketplaceLimitFields } from "../domain/marketplace-limits";
+import { marketplaceLimitLabels } from "../schemas/marketplace-limits";
+
 /** Rótulos pt-BR das ações gravadas em `AuditLog.action` (UX-15). Ação nova sem rótulo aparece como está. */
 export const auditActionLabels: Record<string, string> = {
   BRAND_ACTIVATED: "Marca ativada",
@@ -21,6 +24,7 @@ export const auditActionLabels: Record<string, string> = {
   DISPUTE_UNDER_REVIEW: "Disputa em análise",
   MARKETPLACE_COMMISSION_UPDATED: "Comissão padrão alterada",
   MARKETPLACE_COMPANY_CONTACT_UPDATED: "Empresa e contato alterados",
+  MARKETPLACE_LIMITS_UPDATED: "Limites alterados",
   MARKETPLACE_COUPON_ACTIVATED: "Cupom do Moto Shop ativado",
   MARKETPLACE_COUPON_DEACTIVATED: "Cupom do Moto Shop desativado",
   MOTORCYCLE_FITMENT_CREATED: "Ano de moto criado",
@@ -160,7 +164,17 @@ const metadataKeyLabels: Record<string, string> = {
   weekdayHours: "Segunda a sexta",
   saturdayHours: "Sábado",
   sundayHolidayHours: "Domingos e feriados",
+  // Same wording as the Limites card, so the audit log names each limit the way the Admin saw it.
+  ...marketplaceLimitLabels,
 };
+
+// Limits from Admin › Configurações › Limites: a blank one means the site uses the code default.
+const blankMeansDefaultKeys = new Set<string>(marketplaceLimitFields);
+const BLANK_LIMIT_LABEL = "valor padrão";
+
+function blankLabelFor(key: string): string {
+  return blankMeansDefaultKeys.has(key) ? BLANK_LIMIT_LABEL : "—";
+}
 
 export type AuditMetadataLine = Readonly<{ label: string; value: string }>;
 
@@ -179,7 +193,7 @@ export function formatAuditMetadata(metadata: unknown): AuditMetadataLine[] {
     const previous = formatMetadataValue(key, change.previous);
     const next = formatMetadataValue(key, change.next);
     if (previous === null && next === null) continue;
-    lines.push({ label: labelFor(key), value: `${previous ?? "—"} → ${next ?? "—"}` });
+    lines.push({ label: labelFor(key), value: `${previous ?? blankLabelFor(key)} → ${next ?? blankLabelFor(key)}` });
   }
 
   for (const [key, value] of Object.entries(metadata)) {

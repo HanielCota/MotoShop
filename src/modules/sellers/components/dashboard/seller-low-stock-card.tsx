@@ -5,23 +5,23 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { getMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
 import { listSellerLowStockVariants } from "@/modules/sellers/queries/seller-dashboard";
-import { countSellerStockAlerts, LOW_STOCK_THRESHOLD } from "@/modules/sellers/queries/seller-overview-metrics";
+import { countSellerStockAlerts } from "@/modules/sellers/queries/seller-overview-metrics";
 import { domainIcons } from "@/shared/presentation/domain-icons";
 
 export async function SellerLowStockCard({ sellerId }: { sellerId: string }) {
+  const { lowStockThreshold } = await getMarketplaceLimits();
   const [variants, alerts] = await Promise.all([
-    listSellerLowStockVariants(sellerId),
-    countSellerStockAlerts(sellerId),
+    listSellerLowStockVariants(sellerId, lowStockThreshold),
+    countSellerStockAlerts(sellerId, lowStockThreshold),
   ]);
 
   return (
     <Card id="seller-stock" className="scroll-mt-24">
       <CardHeader>
         <CardTitle>Estoque baixo e esgotado</CardTitle>
-        <CardDescription>
-          Esgotadas primeiro, depois as variações com até {LOW_STOCK_THRESHOLD} unidades.
-        </CardDescription>
+        <CardDescription>Esgotadas primeiro, depois as variações com até {lowStockThreshold} unidades.</CardDescription>
       </CardHeader>
       <CardContent>
         {variants.length === 0 ? (

@@ -11,7 +11,7 @@ import {
   type StoreBrandingImageType,
   type StoreBrandingResult,
 } from "../actions/store-branding-actions";
-import { findImageFileProblem, uploadImageToImageKit } from "@/shared/storage/upload-image";
+import { findImageFileProblem, formatImageSizeLimit, uploadImageToImageKit } from "@/shared/storage/upload-image";
 import { buttonVariants } from "@/components/ui/button";
 
 type StoreBrandingImages = {
@@ -48,7 +48,14 @@ async function attachUploadedImage(input: {
   return attached;
 }
 
-export function StoreBrandingManager({ initialImages }: { initialImages: StoreBrandingImages }) {
+export function StoreBrandingManager({
+  initialImages,
+  maxSizeInBytes,
+}: {
+  initialImages: StoreBrandingImages;
+  /** Largest logo or banner accepted, in bytes (Admin › Configurações › Limites). */
+  maxSizeInBytes: number;
+}) {
   const [images, setImages] = useState(initialImages);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
@@ -61,7 +68,7 @@ export function StoreBrandingManager({ initialImages }: { initialImages: StoreBr
     setUploading(imageType);
 
     try {
-      const problem = findImageFileProblem(file);
+      const problem = findImageFileProblem(file, maxSizeInBytes);
       if (problem != null) throw new Error(problem);
 
       const upload = await createStoreBrandingUploadUrlAction({
@@ -106,7 +113,9 @@ export function StoreBrandingManager({ initialImages }: { initialImages: StoreBr
     <div className="space-y-4 rounded-lg border p-4">
       <div>
         <h3 className="font-medium">Identidade visual</h3>
-        <p className="text-muted-foreground text-xs">Use JPG, PNG ou WebP, com no máximo 5 MB por imagem.</p>
+        <p className="text-muted-foreground text-xs">
+          Use JPG, PNG ou WebP, com no máximo {formatImageSizeLimit(maxSizeInBytes)} por imagem.
+        </p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <BrandingImageField

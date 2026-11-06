@@ -4,8 +4,6 @@ import { db } from "@/lib/database";
 import { MARKETPLACE_TIME_ZONE } from "@/lib/format";
 import { confirmedSellerOrderStatuses } from "@/modules/orders/domain/confirmed-sales";
 
-export const LOW_STOCK_THRESHOLD = 5;
-
 /** Início do mês corrente no fuso do marketplace (São Paulo, UTC-3 sem horário de verão). */
 function startOfCurrentMonth(now = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -26,8 +24,12 @@ export async function countSellerUnansweredQuestions(sellerId: string) {
   return db.productQuestion.count({ where: { sellerId, hiddenAt: null, answeredAt: null } });
 }
 
-/** Variações ativas com estoque baixo (1 a 5) e esgotadas, como os filtros LOW e OUT da lista de produtos. */
-export async function countSellerStockAlerts(sellerId: string, threshold = LOW_STOCK_THRESHOLD) {
+/**
+ * Counts active variants with low stock and sold out, like the LOW and OUT filters of the product list.
+ *
+ * @param threshold - Units at or below which a variant counts as low stock (Admin › Configurações › Limites).
+ */
+export async function countSellerStockAlerts(sellerId: string, threshold: number) {
   const activeVariant = { variant: { sellerId, active: true, product: { sellerId } } };
   const [low, out] = await Promise.all([
     db.inventory.count({ where: { sellerId, availableQuantity: { gt: 0, lte: threshold }, ...activeVariant } }),

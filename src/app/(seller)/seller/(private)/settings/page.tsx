@@ -3,6 +3,8 @@ import type { Metadata, Route } from "next";
 import { ChevronRight, TicketPercent, Truck } from "lucide-react";
 
 import { PageHeader } from "@/components/ui/page-header";
+import { getMarketplaceLimits } from "@/modules/admin/application/marketplace-limits";
+import { photoMaxSizeInBytes } from "@/modules/admin/domain/marketplace-limits";
 import { requireSellerDashboardContext } from "@/modules/sellers/application/get-seller-dashboard-context";
 import { SellerStoreSettingsSection } from "@/modules/sellers/components/dashboard/seller-store-settings-section";
 import { SellerMembershipCard } from "@/modules/sellers/components/dashboard/seller-membership-card";
@@ -43,7 +45,10 @@ function SettingsShortcut({
 }
 
 export default async function SellerSettingsPage() {
-  const { seller, store, permissions, membership } = await requireSellerDashboardContext();
+  const [{ seller, store, permissions, membership }, limits] = await Promise.all([
+    requireSellerDashboardContext(),
+    getMarketplaceLimits(),
+  ]);
 
   return (
     <>
@@ -72,7 +77,11 @@ export default async function SellerSettingsPage() {
           ) : null}
         </nav>
       ) : null}
-      <SellerStoreSettingsSection store={store} canManageStore={permissions.canManageStore} />
+      <SellerStoreSettingsSection
+        store={store}
+        canManageStore={permissions.canManageStore}
+        photoMaxSizeInBytes={photoMaxSizeInBytes(limits)}
+      />
       {permissions.canManageStore ? <SellerTeamCard sellerId={seller.id} members={seller.members} /> : null}
       {membership.role !== "OWNER" ? <SellerMembershipCard storeName={store.name} role={membership.role} /> : null}
       <SellerVipCard subscription={seller.subscriptions[0]} />

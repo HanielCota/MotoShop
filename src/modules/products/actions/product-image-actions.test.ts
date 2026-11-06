@@ -13,11 +13,12 @@ const mocks = vi.hoisted(() => ({
   createUploadUrl: vi.fn(),
   verifyImage: vi.fn(),
   revalidatePath: vi.fn(),
+  requireMarketplaceLimits: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/logger", () => ({ logger: { warn: vi.fn() } }));
+vi.mock("@/lib/logger", () => ({ logger: { warn: vi.fn(), error: vi.fn() } }));
 vi.mock("@/lib/database", () => ({
   db: {
     product: { findFirst: mocks.productFindFirst },
@@ -49,6 +50,11 @@ vi.mock("@/lib/storage/imagekit-storage-provider", () => ({
 }));
 vi.mock("@/shared/storage/public-storage-url", () => ({ getPublicStorageUrl: vi.fn(() => null) }));
 vi.mock("@/shared/rate-limit/consume-rate-limit", () => ({ assertRateLimit: vi.fn() }));
+vi.mock("@/modules/admin/application/marketplace-limits", () => ({
+  requireMarketplaceLimits: mocks.requireMarketplaceLimits,
+}));
+
+import { MARKETPLACE_LIMIT_DEFAULTS } from "@/modules/admin/domain/marketplace-limits";
 
 import {
   attachProductImageAction,
@@ -65,6 +71,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.productFindFirst.mockResolvedValue({ id: productId, sellerId: "seller-a" });
   mocks.imageCount.mockResolvedValue(0);
+  mocks.requireMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS });
   mocks.imageFindFirst.mockResolvedValue(null);
   mocks.deleteObject.mockResolvedValue(undefined);
   mocks.createUploadUrl.mockResolvedValue({
@@ -76,6 +83,41 @@ beforeEach(() => {
     id: "image-a",
     storageKey: `products/seller-a/${productId}/photo.jpg`,
     altText: "Capacete",
+  });
+});
+
+describe("seller product images with the Admin limits", () => {
+  it("refuses a new photo when the product reached the count configured in the Admin", async () => {
+    mocks.requireMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS, productPhotoLimit: 3 });
+    mocks.imageCount.mockResolvedValue(3);
+
+    const result = await createProductImageUploadUrlAction({ productId, contentType: "image/jpeg", sizeInBytes: 1024 });
+
+    expect(result.error).toBe("O produto pode ter no máximo 3 imagens.");
+    expect(mocks.createUploadUrl).not.toHaveBeenCalled();
+  });
+
+  it("refuses a photo over the size configured in the Admin and authorizes up to that size", async () => {
+    mocks.requireMarketplaceLimits.mockResolvedValue({ ...MARKETPLACE_LIMIT_DEFAULTS, photoMaxSizeInMegabytes: 8 });
+
+    const tooBig = await createProductImageUploadUrlAction({
+      productId,
+      contentType: "image/jpeg",
+      sizeInBytes: 8 * 1024 * 1024 + 1,
+    });
+    await createProductImageUploadUrlAction({ productId, contentType: "image/jpeg", sizeInBytes: 6 * 1024 * 1024 });
+
+    expect(tooBig.error).toBe("Cada imagem pode ter até 8 MB.");
+    expect(mocks.createUploadUrl).toHaveBeenCalledWith(expect.objectContaining({ maxSizeInBytes: 8 * 1024 * 1024 }));
+  });
+
+  it("refuses the upload instead of using the looser defaults when the limits cannot be read", async () => {
+    mocks.requireMarketplaceLimits.mockRejectedValue(new Error("database unavailable"));
+
+    const result = await createProductImageUploadUrlAction({ productId, contentType: "image/jpeg", sizeInBytes: 1024 });
+
+    expect(result).toHaveProperty("error");
+    expect(mocks.createUploadUrl).not.toHaveBeenCalled();
   });
 });
 

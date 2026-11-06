@@ -347,7 +347,7 @@ O seller define preço normal, preço promocional, data inicial e data final. Gu
 
 # 24. Devoluções
 
-O cliente solicita devolução dentro do Moto Shop, por item, com até 3 fotos opcionais, enviadas direto ao ImageKit como as fotos de produto e visíveis para o Admin e para o lojista (decisão de 16/10/2026). Status: `REQUESTED`, `UNDER_REVIEW`, `APPROVED`, `WAITING_RETURN`, `RETURNED`, `REFUNDED`, `REJECTED`.
+O cliente solicita devolução dentro do Moto Shop, por item, com fotos opcionais (até 3 por padrão; quantidade e tamanho em Admin › Configurações › Limites), enviadas direto ao ImageKit como as fotos de produto e visíveis para o Admin e para o lojista (decisão de 16/10/2026). Status: `REQUESTED`, `UNDER_REVIEW`, `APPROVED`, `WAITING_RETURN`, `RETURNED`, `REFUNDED`, `REJECTED`.
 
 ---
 
