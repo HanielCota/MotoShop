@@ -23,7 +23,7 @@ export type MarketplaceLimitField = keyof MarketplaceLimits;
 /** Limits as stored in `MarketplaceConfiguration`; null means "use the code default". */
 export type StoredMarketplaceLimits = Record<MarketplaceLimitField, number | null>;
 
-/** What the site did before the limits became configurable (Margot decisions up to 05/11/2026). */
+/** What the site did before the limits became configurable (decisions up to 05/11/2026, see docs/decisions.md). */
 export const MARKETPLACE_LIMIT_DEFAULTS = {
   productPhotoLimit: 8,
   photoMaxSizeInMegabytes: 5,
